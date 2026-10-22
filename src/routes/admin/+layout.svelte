@@ -20,7 +20,10 @@
 		User,
 		LogOut,
 		Info,
-		PanelLeftOpen
+		PanelLeftOpen,
+		LayoutGrid,
+		ShoppingBag,
+		ReceiptText
 	} from 'lucide-svelte';
 
 	let { data, children }: { data: any; children: Snippet } = $props();
@@ -28,6 +31,7 @@
 	// Sidebar responsive collapse states
 	let isSidebarCollapsed = $state(false);
 	let isMobileSidebarOpen = $state(false);
+	let isMobileSearchOpen = $state(false);
 	let isOrdersOpen = $state(false);
 	let ordersDropdownRef = $state<HTMLDivElement | null>(null);
 
@@ -563,20 +567,25 @@
 	<!-- ============================================== -->
 	<div class="flex-1 flex flex-col min-w-0 min-h-screen">
 
-		<!-- TOP COMMAND BAR (Exact Match with User's Navbar Reference) -->
+		<!-- TOP COMMAND BAR (Exact Match with User's Mobile & Desktop Reference) -->
 		<header class="h-16 md:h-20 bg-white border-b border-slate-200/80 px-4 md:px-8 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
 			<div class="flex items-center gap-3 md:gap-4 min-w-0">
-				<!-- Mobile Hamburger Toggle -->
-				<button
-					onclick={() => isMobileSidebarOpen = true}
-					class="md:hidden p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors shrink-0"
-					aria-label="Open sidebar"
-				>
-					<Menu class="w-5 h-5" />
-				</button>
+				
+				<!-- Mobile Store Brand Logo (Exact match with user reference screenshot) -->
+				<a href="/admin" class="flex md:hidden items-center gap-1.5 shrink-0 group" title="হোমপেজ">
+					<div class="flex flex-col items-center justify-center">
+						<svg class="w-6 h-6 text-slate-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z" />
+							<polyline points="9 21 9 12 15 12 15 21" />
+						</svg>
+						<span class="text-[6.5px] font-black text-pink-500 uppercase tracking-tighter leading-none -mt-0.5">
+							COLOR LIGHT
+						</span>
+					</div>
+				</a>
 
-				<!-- Page Title -->
-				<div class="flex items-center gap-3 md:gap-4 shrink-0">
+				<!-- Desktop Page Title & Action Buttons -->
+				<div class="hidden md:flex items-center gap-3 md:gap-4 shrink-0">
 					<h1 class="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
 						{#if isDashboard}
 							<span>Dashboard</span>
@@ -599,7 +608,7 @@
 						{/if}
 					</h1>
 
-					<!-- Tutorial & Support Action Buttons (Exact Replica) -->
+					<!-- Tutorial & Support Action Buttons (Desktop) -->
 					<div class="hidden sm:flex items-center gap-2.5">
 						<!-- Tutorial Button -->
 						<button
@@ -625,44 +634,50 @@
 				</div>
 			</div>
 
-			<!-- Right Navbar Actions (Exact Replica) -->
-			<div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
+			<!-- Right Navbar Actions (Exact Match with Reference Screenshot) -->
+			<div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
 
-				<!-- 1. Globe Button (Live Store) -->
+				<!-- 1. Mobile Support Button (Purple rounded tile matching screenshot) -->
+				<a
+					href="/admin/support"
+					class="md:hidden w-9 h-9 rounded-2xl bg-[#5845eb] hover:bg-[#4936d6] text-white flex items-center justify-center shadow-md shadow-indigo-500/25 shrink-0 transition-transform active:scale-95"
+					title="সাপোর্ট হেল্পলাইন ও সেন্টার"
+				>
+					<Headphones class="w-4 h-4 text-white" />
+				</a>
+
+				<!-- 2. Globe Button (Live Store) -->
 				<a
 					href="/"
 					target="_blank"
-					class="w-9 h-9 rounded-full border border-slate-200/90 bg-white flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors shadow-2xs"
+					class="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-slate-200/90 bg-white flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors shadow-2xs shrink-0"
 					title="লাইভ ওয়েবসাইট দেখুন"
 				>
 					<Globe class="w-4 h-4" />
 				</a>
 
-				<!-- 2. Language Switcher (文A) -->
+				<!-- 3. Language Switcher (文A) -->
 				<button
 					type="button"
 					onclick={() => alert('ভাষা: বাংলা এবং English উভয়ই সক্রিয়')}
-					class="w-9 h-9 rounded-full border border-slate-200/90 bg-white flex items-center justify-center text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+					class="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-slate-200/90 bg-white flex items-center justify-center text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer shrink-0"
 					title="ভাষা পরিবর্তন (Bangla / English)"
 				>
 					<Languages class="w-4 h-4" />
 				</button>
 
-				<!-- 3. Search Icon Button -->
+				<!-- 4. Search Icon Button -->
 				<button
 					type="button"
-					onclick={() => {
-						const input = document.querySelector('input[type="text"]') as HTMLInputElement;
-						if (input) input.focus();
-					}}
-					class="w-9 h-9 rounded-full border border-slate-200/90 bg-white flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+					onclick={() => (isMobileSearchOpen = !isMobileSearchOpen)}
+					class="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-slate-200/90 bg-white flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer shrink-0"
 					title="সার্চ করুন"
 				>
 					<Search class="w-4 h-4" />
 				</button>
 
-				<!-- 4. Notification Bell with Red Indicator Dot -->
-				<div class="relative">
+				<!-- 5. Notification Bell (Desktop only) -->
+				<div class="hidden md:block relative">
 					<button
 						type="button"
 						onclick={() => (isNotificationOpen = !isNotificationOpen)}
@@ -698,22 +713,22 @@
 					{/if}
 				</div>
 
-				<!-- 5. Store / Profile Circle (COLOR LIGHT) -->
+				<!-- 6. Store / Profile Circle (COLOR LIGHT) -->
 				<a
 					href="/admin/profile"
-					class="w-9 h-9 rounded-full bg-slate-950 border border-slate-200 flex items-center justify-center text-white overflow-hidden shadow-2xs hover:ring-2 hover:ring-[#5845eb]/30 transition-all cursor-pointer"
+					class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-950 border border-slate-200 flex items-center justify-center text-white overflow-hidden shadow-2xs hover:ring-2 hover:ring-[#5845eb]/30 transition-all cursor-pointer shrink-0"
 					title="প্রোফাইল সেটিংস"
 				>
-					<div class="text-[7.5px] font-black uppercase tracking-tighter text-center leading-[1.05] bg-gradient-to-tr from-pink-400 to-indigo-400 bg-clip-text text-transparent">
+					<div class="text-[7px] sm:text-[7.5px] font-black uppercase tracking-tighter text-center leading-[1.05] bg-gradient-to-tr from-pink-400 to-indigo-400 bg-clip-text text-transparent">
 						COLOR<br/>LIGHT
 					</div>
 				</a>
 
-				<!-- 6. Golden "Premium Package" Pill (Exact Match) -->
+				<!-- 7. Golden "Premium Package" Pill (Desktop Only) -->
 				<button
 					type="button"
 					onclick={() => (isPackageModalOpen = true)}
-					class="rounded-2xl bg-gradient-to-r from-[#eab308] via-[#facc15] to-[#f59e0b] p-1 pr-3 flex items-center gap-2 shadow-sm border border-amber-300 hover:brightness-105 active:scale-95 transition-all cursor-pointer"
+					class="hidden md:flex rounded-2xl bg-gradient-to-r from-[#eab308] via-[#facc15] to-[#f59e0b] p-1 pr-3 items-center gap-2 shadow-sm border border-amber-300 hover:brightness-105 active:scale-95 transition-all cursor-pointer shrink-0"
 					title="প্রিমিয়াম প্যাকেজ মেয়াদ"
 				>
 					<!-- Inner Golden Tile with Crown -->
@@ -730,6 +745,29 @@
 			</div>
 		</header>
 
+		<!-- Mobile Slide-down Search Bar -->
+		{#if isMobileSearchOpen}
+			<div class="md:hidden bg-white border-b border-slate-200 px-4 py-2.5 flex items-center gap-2 animate-in slide-in-from-top-2 duration-200 shadow-xs">
+				<div class="relative flex-1">
+					<Search class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+					<input
+						type="text"
+						placeholder="অর্ডার, কাস্টমার বা সেটিংস খুঁজুন..."
+						bind:value={orderSearchQuery}
+						class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#5845eb]"
+					/>
+				</div>
+				<button
+					type="button"
+					onclick={() => (isMobileSearchOpen = false)}
+					class="p-2 text-slate-400 hover:text-slate-700 cursor-pointer"
+					aria-label="Close search"
+				>
+					<X class="w-4 h-4" />
+				</button>
+			</div>
+		{/if}
+
 		<!-- Courier Sync Alert Banner -->
 		{#if courierSyncMessage}
 			<div class="bg-indigo-50 border-b border-indigo-200 px-4 md:px-8 py-2.5 flex items-center justify-between text-xs text-indigo-900 font-semibold animate-in fade-in duration-200">
@@ -743,11 +781,72 @@
 			</div>
 		{/if}
 
-		<!-- Page View Slot -->
-		<main class="flex-1 p-4 md:p-8">
+		<!-- Page View Slot (with bottom padding for mobile floating bar) -->
+		<main class="flex-1 p-4 md:p-8 pb-24 md:pb-8">
 			{@render children()}
 		</main>
 
+	</div>
+
+	<!-- ============================================== -->
+	<!-- 3. MOBILE BOTTOM NAVIGATION BAR (Exact Match)  -->
+	<!-- ============================================== -->
+	<div class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-2 py-1.5">
+		<div class="grid grid-cols-5 items-center">
+			
+			<!-- 1. Dashboard -->
+			<a
+				href="/admin"
+				class="flex flex-col items-center justify-center gap-1 py-1 transition-colors {isDashboard ? 'text-[#5845eb]' : 'text-slate-600 hover:text-slate-900'}"
+			>
+				<LayoutGrid class="w-5 h-5 {isDashboard ? 'stroke-[2.5]' : 'stroke-2'}" />
+				<span class="text-[11px] {isDashboard ? 'font-bold' : 'font-medium'} leading-none">Dashboard</span>
+			</a>
+
+			<!-- 2. Product -->
+			<a
+				href="/admin/orders"
+				class="flex flex-col items-center justify-center gap-1 py-1 transition-colors {currentPath === '/admin/orders' ? 'text-[#5845eb]' : 'text-slate-600 hover:text-slate-900'}"
+			>
+				<ShoppingBag class="w-5 h-5 {currentPath === '/admin/orders' ? 'stroke-[2.5]' : 'stroke-2'}" />
+				<span class="text-[11px] {currentPath === '/admin/orders' ? 'font-bold' : 'font-medium'} leading-none">Product</span>
+			</a>
+
+			<!-- 3. Order List -->
+			<a
+				href="/admin/orders/list"
+				class="flex flex-col items-center justify-center gap-1 py-1 transition-colors {currentPath === '/admin/orders/list' ? 'text-[#5845eb]' : 'text-slate-600 hover:text-slate-900'}"
+			>
+				<ReceiptText class="w-5 h-5 {currentPath === '/admin/orders/list' ? 'stroke-[2.5]' : 'stroke-2'}" />
+				<span class="text-[11px] {currentPath === '/admin/orders/list' ? 'font-bold' : 'font-medium'} leading-none">Order List</span>
+			</a>
+
+			<!-- 4. Notification -->
+			<button
+				type="button"
+				onclick={() => (isNotificationOpen = !isNotificationOpen)}
+				class="flex flex-col items-center justify-center gap-1 py-1 transition-colors text-slate-600 hover:text-slate-900 relative cursor-pointer"
+			>
+				<div class="relative">
+					<Bell class="w-5 h-5 stroke-2" />
+					<span class="absolute -top-1 -right-1.5 min-w-[15px] h-[15px] px-0.5 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center leading-none">
+						4
+					</span>
+				</div>
+				<span class="text-[11px] font-medium leading-none">Notification</span>
+			</button>
+
+			<!-- 5. Menu -->
+			<button
+				type="button"
+				onclick={() => (isMobileSidebarOpen = !isMobileSidebarOpen)}
+				class="flex flex-col items-center justify-center gap-1 py-1 transition-colors text-slate-600 hover:text-slate-900 cursor-pointer"
+			>
+				<Menu class="w-5 h-5 stroke-2" />
+				<span class="text-[11px] font-medium leading-none">Menu</span>
+			</button>
+
+		</div>
 	</div>
 
 	<!-- ============================================== -->

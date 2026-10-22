@@ -59,13 +59,6 @@
 				<a href="#faq" class="text-sm font-medium text-slate-300 hover:text-cyan-400 transition-colors">
 					FAQ
 				</a>
-				<a
-					href="/admin"
-					class="text-xs font-semibold text-violet-300 hover:text-white transition-all flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-600/15 hover:bg-violet-600/30 border border-violet-500/30"
-				>
-					<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-					Dashboard
-				</a>
 			</nav>
 
 			<!-- Actions: Auth & Cart -->
@@ -162,17 +155,6 @@
 					class="py-2 px-3 rounded-lg text-sm font-medium text-slate-200 hover:bg-white/5 hover:text-cyan-400"
 				>
 					FAQ
-				</a>
-				<a
-					href="/admin"
-					onclick={() => isMobileMenuOpen = false}
-					class="py-2 px-3 rounded-lg text-sm font-medium text-violet-300 bg-violet-600/15 border border-violet-500/30 flex items-center justify-between"
-				>
-					<span class="flex items-center gap-2">
-						<span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-						Operations Dashboard
-					</span>
-					<span class="text-xs text-violet-400">Live D1 →</span>
 				</a>
 				{#if user}
 					<a

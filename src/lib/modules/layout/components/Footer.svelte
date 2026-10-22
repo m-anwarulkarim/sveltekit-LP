@@ -102,7 +102,6 @@
 					<li><a href="#sound-engine" class="hover:text-cyan-400 transition-colors">Spatial Sound Engine</a></li>
 					<li><a href="#sound-engine" class="hover:text-cyan-400 transition-colors">Studio Equalizer Presets</a></li>
 					<li><a href="/account" class="hover:text-cyan-400 transition-colors">Creator Portal</a></li>
-					<li><a href="/admin" class="hover:text-cyan-400 transition-colors text-violet-300 flex items-center gap-1">Store Dashboard <span class="text-[9px] px-1 py-0.2 rounded bg-violet-500/20 text-violet-300 border border-violet-500/30">D1 Live</span></a></li>
 				</ul>
 			</div>
 

@@ -24,6 +24,8 @@
 		href?: string;
 		type?: 'button' | 'submit' | 'reset';
 		disabled?: boolean;
+		onclick?: (event: MouseEvent) => void;
+		title?: string;
 	}
 
 	type Props = BaseProps & Record<string, any>;

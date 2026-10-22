@@ -201,18 +201,18 @@
 					</div>
 				</a>
 
-				<!-- 2. Orders (Shopping bag icon with dropdown chevron) -->
+				<!-- 2. Orders (Shopping bag icon with dropdown chevron, defaults to /admin/orders) -->
 				<div bind:this={ordersDropdownRef} class="space-y-1 relative">
-					<button
-						type="button"
+					<a
+						href="/admin/orders"
 						onclick={() => {
 							if (isSidebarCollapsed) isSidebarCollapsed = false;
-							isOrdersOpen = !isOrdersOpen;
+							isOrdersOpen = true;
 						}}
 						class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isOrdersActive
 							? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
 							: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'} cursor-pointer"
-						title="Orders"
+						title="Orders (Web Orders)"
 					>
 						<div class="flex items-center gap-3.5">
 							<svg class="w-5 h-5 shrink-0 {isOrdersActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="currentColor">
@@ -227,10 +227,21 @@
 								<span class="text-xs font-bold px-2 py-0.5 rounded-full {isOrdersActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
 									{webOrders.length + orderListOrders.length}
 								</span>
-								<ChevronDown class="w-4 h-4 transition-transform duration-200 {isOrdersOpen ? 'rotate-180' : ''}" />
+								<button
+									type="button"
+									onclick={(e: MouseEvent) => {
+										e.preventDefault();
+										e.stopPropagation();
+										isOrdersOpen = !isOrdersOpen;
+									}}
+									class="p-0.5 rounded-lg hover:bg-black/10 transition-colors cursor-pointer"
+									aria-label="Toggle orders dropdown"
+								>
+									<ChevronDown class="w-4 h-4 transition-transform duration-200 {isOrdersOpen ? 'rotate-180' : ''}" />
+								</button>
 							</div>
 						{/if}
-					</button>
+					</a>
 
 					<!-- Orders Submenu (when expanded) -->
 					{#if !isSidebarCollapsed && isOrdersOpen}

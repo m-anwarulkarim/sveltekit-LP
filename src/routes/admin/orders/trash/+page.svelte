@@ -58,7 +58,7 @@
 						variant="destructive"
 						size="sm"
 						class="gap-1.5 shadow-2xs text-xs"
-						onclick={(e) => {
+						onclick={(e: MouseEvent) => {
 							if (!confirm('আপনি কি নিশ্চিত যে সমস্ত ট্র্যাশ অর্ডার স্থায়ীভাবে মুছে ফেলতে চান? এটি আর ফিরিয়ে আনা যাবে না!')) {
 								e.preventDefault();
 							}
@@ -202,7 +202,7 @@
 												variant="ghost"
 												class="h-8 px-2 text-xs text-slate-400 hover:text-rose-600 hover:bg-rose-50"
 												title="স্থায়ীভাবে মুছুন"
-												onclick={(e) => {
+												onclick={(e: MouseEvent) => {
 													if (!confirm('অর্ডারটি কি স্থায়ীভাবে মুছে ফেলতে চান?')) {
 														e.preventDefault();
 													}

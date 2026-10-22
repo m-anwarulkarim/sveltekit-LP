@@ -209,7 +209,7 @@
 										<select
 											name="status"
 											value={order.status}
-											onchange={(e) => (e.target as HTMLSelectElement).form?.requestSubmit()}
+											onchange={(e: Event) => (e.target as HTMLSelectElement).form?.requestSubmit()}
 											class="text-xs font-bold rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-slate-800 focus:outline-none focus:border-[#5845eb] shadow-2xs cursor-pointer"
 										>
 											<option value="pending">পেন্ডিং</option>

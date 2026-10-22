@@ -90,6 +90,7 @@
 	let isSettingsActive = $derived(currentPath.startsWith('/admin/settings'));
 	let isCustomerActive = $derived(currentPath.startsWith('/admin/customers'));
 	let isDatabaseActive = $derived(currentPath.startsWith('/admin/database'));
+	let isIpBlockActive = $derived(currentPath.startsWith('/admin/ip-block'));
 </script>
 
 <svelte:head>
@@ -410,7 +411,33 @@
 					</div>
 				</a>
 
-				<!-- 6. Customer (VIP Database) -->
+				<!-- 6. IP Block -->
+				<a
+					href="/admin/ip-block"
+					onclick={() => isMobileSidebarOpen = false}
+					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isIpBlockActive
+						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
+					title="IP Block (আইপি ও ফোন ব্লক লিস্ট)"
+				>
+					<div class="flex items-center gap-3.5">
+						<svg class="w-5 h-5 shrink-0 {isIpBlockActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<rect x="2" y="3" width="20" height="14" rx="2" />
+							<circle cx="12" cy="10" r="2.5" fill="currentColor" />
+							<path d="M8 21h8M12 17v4" stroke-width="2" stroke-linecap="round" />
+						</svg>
+						{#if !isSidebarCollapsed}
+							<span>IP Block</span>
+						{/if}
+					</div>
+					{#if !isSidebarCollapsed}
+						<span class="text-xs font-bold px-2 py-0.5 rounded-full {isIpBlockActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
+							44.9k
+						</span>
+					{/if}
+				</a>
+
+				<!-- 7. Customer (VIP Database) -->
 				<a
 					href="/admin/customers"
 					onclick={() => isMobileSidebarOpen = false}

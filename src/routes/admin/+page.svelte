@@ -72,7 +72,11 @@
 		Menu,
 		X,
 		MapPin,
-		User
+		User,
+		Code2,
+		Target,
+		Percent,
+		Map
 	} from 'lucide-svelte';
 	import type { PageData } from './$types';
 
@@ -96,6 +100,7 @@
 	let activeTab = $state<TabType>('web_orders');
 	let isSidebarCollapsed = $state(false);
 	let isMobileSidebarOpen = $state(false);
+	let isOrdersOpen = $state(true);
 
 	// Date filter state
 	let activeDateFilter = $state<'all' | 'today' | 'yesterday' | '7days' | '30days'>('all');
@@ -337,368 +342,471 @@
 <div class="min-h-screen bg-[#faf7f2] text-slate-800 flex flex-col md:flex-row font-['Hind_Siliguri',sans-serif] selection:bg-[#d97706]/20 selection:text-[#9a3412] antialiased">
 
 	<!-- ============================================== -->
-	<!-- 1. HIGH-END EXECUTIVE MIDNIGHT SIDEBAR        -->
+	<!-- ============================================== -->
+	<!-- 1. HIGH-END EXECUTIVE WHITE SAAS SIDEBAR       -->
+	<!-- (Exact match with user screenshots Image 1 & 2)-->
 	<!-- ============================================== -->
 	<aside
-		class="bg-[#0c101a] text-slate-300 border-r border-slate-800/80 flex flex-col justify-between transition-all duration-300 z-50 fixed md:sticky top-0 h-screen shrink-0 shadow-2xl {isSidebarCollapsed ? 'w-20' : 'w-72'} {isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}"
+		class="bg-white text-slate-700 border-r border-slate-200/90 flex flex-col justify-between transition-all duration-300 z-50 fixed md:sticky top-0 h-screen shrink-0 shadow-sm {isSidebarCollapsed ? 'w-20' : 'w-72'} {isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}"
 	>
-		<div class="flex-1 flex flex-col min-h-0 overflow-y-auto">
+		<div class="flex-1 flex flex-col min-h-0 overflow-y-auto scrollbar-thin">
 			
-			<!-- Workspace / Store Brand Header -->
-			<div class="h-16 md:h-20 flex items-center justify-between px-4 md:px-5 border-b border-slate-800/60 bg-[#0e1424]/40">
-				<a href="/admin" class="flex items-center gap-3 group">
-					<div class="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gradient-to-tr from-[#ea580c] via-[#d97706] to-[#f59e0b] p-[1.5px] shadow-lg shadow-amber-600/25 transition-transform group-hover:scale-105">
-						<div class="w-full h-full bg-[#0c101a] rounded-[10px] flex items-center justify-center">
-							<Flame class="w-4 h-4 md:w-5 md:h-5 text-[#f59e0b] fill-[#f59e0b]/20" />
-						</div>
-					</div>
-					
-					{#if !isSidebarCollapsed}
-						<div class="flex flex-col">
-							<div class="flex items-center gap-1.5">
-								<span class="font-['Outfit'] font-black text-base md:text-lg text-white tracking-wide">AURA</span>
-								<span class="px-1.5 py-0.2 rounded text-[8px] font-black uppercase tracking-widest bg-[#d97706]/20 text-[#fbbf24] border border-[#d97706]/30">
-									PRO
+			<!-- Header (Store Logo + Toggle Button with < > icon) -->
+			<div class="h-16 md:h-20 flex items-center {isSidebarCollapsed ? 'justify-center flex-col gap-2.5 py-3' : 'justify-between px-5'} border-b border-slate-100">
+				{#if !isSidebarCollapsed}
+					<a href="/admin" class="flex items-center gap-3 group">
+						<!-- Brand Logo matching the user's "COLOR LIGHT HOUSE" style -->
+						<div class="flex items-center gap-2.5">
+							<div class="w-9 h-9 rounded-xl border border-slate-200/80 p-1.5 flex flex-col items-center justify-center bg-white shadow-2xs group-hover:scale-105 transition-transform">
+								<!-- House Icon with chimney -->
+								<svg class="w-5 h-5 text-slate-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<path d="M3 9.5l9-7 9 7v10.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 20V9.5z" />
+									<polyline points="9 22 9 13 15 13 15 22" />
+									<path d="M18 5.5v-2h-2.5" />
+								</svg>
+							</div>
+							<div class="flex flex-col">
+								<span class="text-[9px] font-black tracking-widest text-[#ec4899] uppercase leading-none font-sans">
+									COLOR LIGHT
+								</span>
+								<span class="text-[8px] font-bold tracking-widest text-slate-400 uppercase leading-tight font-sans">
+									HOUSE
 								</span>
 							</div>
-							<span class="text-[10px] text-slate-400 font-mono -mt-0.5">lp.haqplus.com</span>
 						</div>
-					{/if}
-				</a>
+					</a>
 
-				<!-- Desktop Collapse / Mobile Close -->
-				<div class="flex items-center gap-1">
-					{#if !isSidebarCollapsed}
+					<div class="flex items-center gap-1.5">
+						<!-- Desktop <> Toggle Button (Image 1 top right) -->
 						<button
 							onclick={() => isSidebarCollapsed = true}
-							class="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors"
+							class="hidden md:flex w-9 h-9 rounded-2xl border border-slate-200/90 items-center justify-center text-slate-900 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-2xs cursor-pointer"
 							title="সাইডবার সংকুচিত করুন"
 							aria-label="Collapse sidebar"
 						>
-							<PanelLeftClose class="w-4 h-4" />
+							<svg class="w-4 h-4 text-slate-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+								<polyline points="16 18 22 12 16 6" />
+								<polyline points="8 6 2 12 8 18" />
+							</svg>
 						</button>
-					{/if}
-					
-					<!-- Mobile Drawer Close Button (X) -->
-					<button
-						onclick={() => isMobileSidebarOpen = false}
-						class="md:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-						aria-label="Close sidebar"
-					>
-						<X class="w-5 h-5" />
-					</button>
-				</div>
+
+						<!-- Mobile Close Button (X) -->
+						<button
+							onclick={() => isMobileSidebarOpen = false}
+							class="md:hidden p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+							aria-label="Close sidebar"
+						>
+							<X class="w-5 h-5" />
+						</button>
+					</div>
+				{:else}
+					<!-- Collapsed Mode Header (Centered Logo & Toggle Button - Image 2) -->
+					<div class="flex flex-col items-center gap-2.5 py-3">
+						<div class="w-9 h-9 rounded-xl border border-slate-200/80 p-1.5 flex flex-col items-center justify-center bg-white shadow-2xs">
+							<svg class="w-5 h-5 text-slate-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M3 9.5l9-7 9 7v10.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 20V9.5z" />
+								<polyline points="9 22 9 13 15 13 15 22" />
+								<path d="M18 5.5v-2h-2.5" />
+							</svg>
+						</div>
+						<button
+							onclick={() => isSidebarCollapsed = false}
+							class="w-9 h-9 rounded-2xl border border-slate-200/90 flex items-center justify-center text-slate-900 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-2xs cursor-pointer"
+							title="সাইডবার প্রসারিত করুন"
+							aria-label="Expand sidebar"
+						>
+							<svg class="w-4 h-4 text-slate-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+								<polyline points="16 18 22 12 16 6" />
+								<polyline points="8 6 2 12 8 18" />
+							</svg>
+						</button>
+					</div>
+				{/if}
 			</div>
 
-			<!-- Sidebar Quick Search Bar -->
-			{#if !isSidebarCollapsed}
-				<div class="p-3">
-					<div class="relative">
-						<Search class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-						<input
-							type="text"
-							placeholder="অনুসন্ধান করুন..."
-							bind:value={orderSearchQuery}
-							class="w-full bg-[#141b2d] border border-slate-700/60 rounded-xl pl-8 pr-3 py-2 text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:border-[#d97706] transition-all"
-						/>
-					</div>
-				</div>
-			{/if}
-
-			<!-- Navigation Links Menu -->
-			<nav class="p-3 space-y-5">
+			<!-- Menu Navigation List (Image 1 & 2 exact items) -->
+			<nav class="p-3 space-y-1.5 font-['Plus_Jakarta_Sans',sans-serif]">
 				
-				<!-- Section 0: ওভারভিউ -->
-				<div>
+				<!-- 1. Dashboard (Vivid Royal Violet pill with 4-square grid) -->
+				{#if activeTab === 'overview'}
 					<button
 						onclick={() => { activeTab = 'overview'; isMobileSidebarOpen = false; }}
-						class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'overview'
-							? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
-							: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
-						title="ওভারভিউ ও অ্যানালিটিক্স"
+						class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)] transition-all font-semibold text-[15px] cursor-pointer"
+						title="Dashboard"
 					>
-						<div class="flex items-center gap-3">
-							<LayoutGrid class="w-4 h-4 {activeTab === 'overview' ? 'text-white' : 'text-slate-400 group-hover:text-amber-400'}" />
+						<div class="flex items-center gap-3.5">
+							<svg class="w-5 h-5 text-white shrink-0" viewBox="0 0 24 24" fill="currentColor">
+								<rect x="3" y="3" width="7.5" height="7.5" rx="2" />
+								<rect x="13.5" y="3" width="7.5" height="7.5" rx="2" />
+								<rect x="3" y="13.5" width="7.5" height="7.5" rx="2" />
+								<rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2" />
+							</svg>
 							{#if !isSidebarCollapsed}
-								<span>ওভারভিউ ও মেট্রিক্স</span>
+								<span>Dashboard</span>
 							{/if}
 						</div>
-						{#if !isSidebarCollapsed && activeTab === 'overview'}
-							<span class="w-1.5 h-1.5 rounded-full bg-amber-200 animate-pulse"></span>
+					</button>
+				{:else}
+					<button
+						onclick={() => { activeTab = 'overview'; isMobileSidebarOpen = false; }}
+						class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl text-slate-800 hover:text-black hover:bg-slate-100/70 transition-all font-semibold text-[15px] cursor-pointer group"
+						title="Dashboard"
+					>
+						<div class="flex items-center gap-3.5">
+							<svg class="w-5 h-5 text-slate-800 group-hover:text-black shrink-0" viewBox="0 0 24 24" fill="currentColor">
+								<rect x="3" y="3" width="7.5" height="7.5" rx="2" />
+								<rect x="13.5" y="3" width="7.5" height="7.5" rx="2" />
+								<rect x="3" y="13.5" width="7.5" height="7.5" rx="2" />
+								<rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2" />
+							</svg>
+							{#if !isSidebarCollapsed}
+								<span>Dashboard</span>
+							{/if}
+						</div>
+					</button>
+				{/if}
+
+				<!-- 2. Orders (Shopping bag icon with dropdown chevron) -->
+				<div class="space-y-1">
+					<button
+						onclick={() => {
+							if (isSidebarCollapsed) {
+								isSidebarCollapsed = false;
+								isOrdersOpen = true;
+							} else {
+								isOrdersOpen = !isOrdersOpen;
+							}
+						}}
+						class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] cursor-pointer group {['web_orders', 'orders', 'order_list', 'pre_order', 'new_order', 'trash'].includes(activeTab) && !isOrdersOpen
+							? 'bg-slate-100 text-slate-900'
+							: 'text-slate-800 hover:text-black hover:bg-slate-100/70'}"
+						title="Orders"
+					>
+						<div class="flex items-center gap-3.5">
+							<svg class="w-5 h-5 text-slate-800 group-hover:text-black shrink-0" viewBox="0 0 24 24" fill="currentColor">
+								<path fill-rule="evenodd" clip-rule="evenodd" d="M6 5C4.89543 5 4 5.89543 4 7L3.1 17C2.98 18.3 3.99 19.5 5.3 19.5H18.7C20.01 19.5 21.02 18.3 20.9 17L20 7C20 5.89543 19.1046 5 18 5H6ZM8 8C8 7.44772 8.44772 7 9 7H15C15.5523 7 16 7.44772 16 8C16 10.2091 14.2091 12 12 12C9.79086 12 8 10.2091 8 8Z" />
+							</svg>
+							{#if !isSidebarCollapsed}
+								<span>Orders</span>
+							{/if}
+						</div>
+						{#if !isSidebarCollapsed}
+							<ChevronDown class="w-4 h-4 text-slate-400 group-hover:text-slate-700 transition-transform duration-200 {isOrdersOpen ? 'rotate-180' : ''}" />
 						{/if}
 					</button>
-				</div>
 
-				<!-- Section 1: অর্ডারসমূহ (Matches Screenshots Hierarchy) -->
-				<div>
-					{#if !isSidebarCollapsed}
-						<div class="px-3 mb-2 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
-							<span>অর্ডারসমূহ</span>
-							<ChevronDown class="w-3 h-3 text-slate-400" />
-						</div>
-					{/if}
-
-					<div class="space-y-1">
-						<!-- ১. নতুন তৈরি (+ নতুন তৈরি) -->
-						<button
-							onclick={() => { activeTab = 'new_order'; isMobileSidebarOpen = false; }}
-							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'new_order'
-								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
-								: 'text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/60'}"
-							title="নতুন অর্ডার তৈরি"
-						>
-							<div class="flex items-center gap-3">
-								<PlusCircle class="w-4 h-4 {activeTab === 'new_order' ? 'text-white' : 'text-emerald-400 group-hover:scale-110 transition-transform'}" />
-								{#if !isSidebarCollapsed}
-									<span>নতুন তৈরি</span>
-								{/if}
-							</div>
-							{#if !isSidebarCollapsed}
-								<span class="text-[9px] font-bold text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.2 rounded">
-									Manual
-								</span>
-							{/if}
-						</button>
-
-						<!-- ২. ওয়েব অর্ডার (Pre-Confirmation - Image 1) -->
-						<button
-							onclick={() => { activeTab = 'web_orders'; isMobileSidebarOpen = false; }}
-							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'web_orders' || activeTab === 'orders'
-								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
-								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
-							title="ওয়েব অর্ডার (কল ও কনফার্মেশনের আগের পর্যায়)"
-						>
-							<div class="flex items-center gap-3">
-								<Inbox class="w-4 h-4 {activeTab === 'web_orders' || activeTab === 'orders' ? 'text-white' : 'text-slate-400 group-hover:text-amber-400'}" />
-								{#if !isSidebarCollapsed}
-									<span>ওয়েব অর্ডার</span>
-								{/if}
-							</div>
-							{#if !isSidebarCollapsed}
-								<span class="text-[10px] font-black px-2 py-0.5 rounded-full {activeTab === 'web_orders' || activeTab === 'orders' ? 'bg-white/20 text-white' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'}">
+					<!-- Orders Submenu (when expanded) -->
+					{#if !isSidebarCollapsed && isOrdersOpen}
+						<div class="pl-4 pr-1 py-1 space-y-1 border-l-2 border-slate-100 ml-6 my-1">
+							<!-- ১. Web Orders -->
+							<button
+								onclick={() => { activeTab = 'web_orders'; isMobileSidebarOpen = false; }}
+								class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all {activeTab === 'web_orders' || activeTab === 'orders'
+									? 'bg-[#5845eb]/10 text-[#5845eb] font-bold'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span>Web Orders (ওয়েব অর্ডার)</span>
+								<span class="text-xs font-bold px-2 py-0.5 rounded-full {activeTab === 'web_orders' || activeTab === 'orders' ? 'bg-[#5845eb] text-white' : 'bg-slate-100 text-slate-700'}">
 									{webOrders.length}
 								</span>
-							{/if}
-						</button>
+							</button>
 
-						<!-- ৩. প্রি-অর্ডার -->
-						<button
-							onclick={() => { activeTab = 'pre_order'; isMobileSidebarOpen = false; }}
-							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'pre_order'
-								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
-								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
-							title="প্রি-অর্ডার"
-						>
-							<div class="flex items-center gap-3">
-								<Calendar class="w-4 h-4 {activeTab === 'pre_order' ? 'text-white' : 'text-slate-400 group-hover:text-amber-400'}" />
-								{#if !isSidebarCollapsed}
-									<span>প্রি-অর্ডার</span>
-								{/if}
-							</div>
-							{#if !isSidebarCollapsed && preOrders.length > 0}
-								<span class="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20">
-									{preOrders.length}
-								</span>
-							{/if}
-						</button>
-
-						<!-- ৪. অর্ডার তালিকা (Post-Confirmation - Image 2) -->
-						<button
-							onclick={() => { activeTab = 'order_list'; isMobileSidebarOpen = false; }}
-							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'order_list'
-								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
-								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
-							title="অর্ডার তালিকা (কনফার্মেশনের পর কুরিয়ার ও ডেলিভারি পর্যায়)"
-						>
-							<div class="flex items-center gap-3">
-								<ListOrdered class="w-4 h-4 {activeTab === 'order_list' ? 'text-white' : 'text-slate-400 group-hover:text-amber-400'}" />
-								{#if !isSidebarCollapsed}
-									<span>অর্ডার তালিকা</span>
-								{/if}
-							</div>
-							{#if !isSidebarCollapsed}
-								<span class="text-[10px] font-black px-2 py-0.5 rounded-full {activeTab === 'order_list' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-300 border border-slate-700/60'}">
+							<!-- ২. Order List -->
+							<button
+								onclick={() => { activeTab = 'order_list'; isMobileSidebarOpen = false; }}
+								class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all {activeTab === 'order_list'
+									? 'bg-[#5845eb]/10 text-[#5845eb] font-bold'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span>Order List (অর্ডার তালিকা)</span>
+								<span class="text-xs font-bold px-2 py-0.5 rounded-full {activeTab === 'order_list' ? 'bg-[#5845eb] text-white' : 'bg-slate-100 text-slate-700'}">
 									{orderListOrders.length}
 								</span>
-							{/if}
-						</button>
+							</button>
 
-						<!-- ৫. মুছে ফেলা (Trash) -->
-						<button
-							onclick={() => { activeTab = 'trash'; isMobileSidebarOpen = false; }}
-							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'trash'
-								? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30'
-								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
-							title="মুছে ফেলা অর্ডারসমূহ"
-						>
-							<div class="flex items-center gap-3">
-								<Trash2 class="w-4 h-4 {activeTab === 'trash' ? 'text-white' : 'text-slate-400 group-hover:text-rose-400'}" />
-								{#if !isSidebarCollapsed}
-									<span>মুছে ফেলা</span>
+							<!-- ৩. New Order -->
+							<button
+								onclick={() => { activeTab = 'new_order'; isMobileSidebarOpen = false; }}
+								class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all {activeTab === 'new_order'
+									? 'bg-[#5845eb]/10 text-[#5845eb] font-bold'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span>New Order (নতুন অর্ডার)</span>
+							</button>
+
+							<!-- ৪. Pre-Orders -->
+							<button
+								onclick={() => { activeTab = 'pre_order'; isMobileSidebarOpen = false; }}
+								class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all {activeTab === 'pre_order'
+									? 'bg-[#5845eb]/10 text-[#5845eb] font-bold'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span>Pre-Orders (প্রি-অর্ডার)</span>
+								{#if preOrders.length > 0}
+									<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+										{preOrders.length}
+									</span>
 								{/if}
-							</div>
-							{#if !isSidebarCollapsed && trashedOrders.length > 0}
-								<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
-									{trashedOrders.length}
-								</span>
-							{/if}
-						</button>
-					</div>
-				</div>
+							</button>
 
-				<!-- Section 2: পণ্য ও ইনভেন্টরি -->
-				<div>
-					{#if !isSidebarCollapsed}
-						<div class="px-3 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
-							পণ্য ও লজিস্টিকস
+							<!-- ৫. Trash -->
+							<button
+								onclick={() => { activeTab = 'trash'; isMobileSidebarOpen = false; }}
+								class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all {activeTab === 'trash'
+									? 'bg-[#5845eb]/10 text-[#5845eb] font-bold'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span>Trash (মুছে ফেলা)</span>
+								{#if trashedOrders.length > 0}
+									<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+										{trashedOrders.length}
+									</span>
+								{/if}
+							</button>
 						</div>
 					{/if}
-
-					<div class="space-y-1">
-						<!-- ক্যাটালগ ও স্টক -->
-						<button
-							onclick={() => { activeTab = 'inventory'; isMobileSidebarOpen = false; }}
-							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'inventory'
-								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
-								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
-							title="পণ্য ও ইনভেন্টরি"
-						>
-							<div class="flex items-center gap-3">
-								<Package class="w-4 h-4 {activeTab === 'inventory' ? 'text-white' : 'text-slate-400 group-hover:text-amber-400'}" />
-								{#if !isSidebarCollapsed}
-									<span>পণ্য ক্যাটালগ</span>
-								{/if}
-							</div>
-							{#if !isSidebarCollapsed}
-								<span class="text-[10px] font-mono text-slate-400">
-									{data.products.length} SKUs
-								</span>
-							{/if}
-						</button>
-
-						<!-- কুরিয়ার হাব -->
-						<button
-							onclick={() => { activeTab = 'courier'; isMobileSidebarOpen = false; }}
-							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'courier'
-								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
-								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
-							title="কুরিয়ার হাব"
-						>
-							<div class="flex items-center gap-3">
-								<Truck class="w-4 h-4 {activeTab === 'courier' ? 'text-white' : 'text-slate-400 group-hover:text-amber-400'}" />
-								{#if !isSidebarCollapsed}
-									<span>কুরিয়ার ও লজিস্টিকস</span>
-								{/if}
-							</div>
-							{#if !isSidebarCollapsed}
-								<span class="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20">
-									Steadfast
-								</span>
-							{/if}
-						</button>
-					</div>
 				</div>
 
-				<!-- Section 3: গ্রোথ ও সেটিংস -->
-				<div>
+				<!-- 3. Products -->
+				<button
+					onclick={() => { activeTab = 'inventory'; isMobileSidebarOpen = false; }}
+					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] cursor-pointer group {activeTab === 'inventory'
+						? 'bg-slate-100 text-slate-900 font-bold'
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70'}"
+					title="Products"
+				>
+					<div class="flex items-center gap-3.5">
+						<svg class="w-5 h-5 text-slate-800 group-hover:text-black shrink-0" viewBox="0 0 24 24" fill="currentColor">
+							<path d="M16 2.5l4 3.5-1.5 3.5-2.5-1V20c0 1.1-.9 2-2 2H10c-1.1 0-2-.9-2-2V8.5L5.5 9.5 4 6 8 2.5c.5 1.5 2 2.5 4 2.5s3.5-1 4-2.5z" />
+							<rect x="10" y="12.5" width="4" height="1.8" rx="0.5" fill="white" />
+							<rect x="10" y="15.8" width="4" height="1.8" rx="0.5" fill="white" />
+						</svg>
+						{#if !isSidebarCollapsed}
+							<span>Products</span>
+						{/if}
+					</div>
+				</button>
+
+				<!-- 4. Customization -->
+				<button
+					onclick={() => { activeTab = 'pixels'; isMobileSidebarOpen = false; }}
+					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] cursor-pointer group {activeTab === 'pixels'
+						? 'bg-slate-100 text-slate-900 font-bold'
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70'}"
+					title="Customization"
+				>
+					<div class="flex items-center gap-3.5">
+						<svg class="w-5 h-5 text-slate-800 group-hover:text-black shrink-0" viewBox="0 0 24 24" fill="currentColor">
+							<rect x="3" y="6" width="18" height="2" rx="1" />
+							<circle cx="9" cy="7" r="2.5" />
+							<rect x="3" y="11" width="18" height="2" rx="1" />
+							<circle cx="16" cy="12" r="2.5" />
+							<rect x="3" y="16" width="18" height="2" rx="1" />
+							<circle cx="7" cy="17" r="2.5" />
+						</svg>
+						{#if !isSidebarCollapsed}
+							<span>Customization</span>
+						{/if}
+					</div>
 					{#if !isSidebarCollapsed}
-						<div class="px-3 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
-							গ্রোথ ও সিস্টেম
-						</div>
+						<ChevronDown class="w-4 h-4 text-slate-400 group-hover:text-slate-700" />
 					{/if}
+				</button>
 
-					<div class="space-y-1">
-						<!-- পিক্সেল ও ট্র্যাকিং -->
-						<button
-							onclick={() => { activeTab = 'pixels'; isMobileSidebarOpen = false; }}
-							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'pixels'
-								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
-								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
-							title="পিক্সেল ও ট্র্যাকিং"
-						>
-							<div class="flex items-center gap-3">
-								<Radio class="w-4 h-4 {activeTab === 'pixels' ? 'text-white' : 'text-slate-400 group-hover:text-amber-400'}" />
-								{#if !isSidebarCollapsed}
-									<span>পিক্সেল ও কনভার্সন</span>
-								{/if}
-							</div>
-						</button>
-
-						<!-- গ্রাহক ডেটাবেজ -->
-						<button
-							onclick={() => { activeTab = 'customers'; isMobileSidebarOpen = false; }}
-							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'customers'
-								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
-								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
-							title="গ্রাহক ও ভিআইপি ক্লাব"
-						>
-							<div class="flex items-center gap-3">
-								<Users class="w-4 h-4 {activeTab === 'customers' ? 'text-white' : 'text-slate-400 group-hover:text-amber-400'}" />
-								{#if !isSidebarCollapsed}
-									<span>গ্রাহক ও ভিআইপি ক্লাব</span>
-								{/if}
-							</div>
-							{#if !isSidebarCollapsed}
-								<span class="text-[10px] font-bold text-slate-400">{data.newsletter.length}</span>
-							{/if}
-						</button>
-
-						<!-- Cloudflare D1 ইঞ্জিন -->
-						<button
-							onclick={() => { activeTab = 'database'; isMobileSidebarOpen = false; }}
-							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'database'
-								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
-								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
-							title="Cloudflare D1 ডেটাবেজ কনসোল"
-						>
-							<div class="flex items-center gap-3">
-								<Database class="w-4 h-4 {activeTab === 'database' ? 'text-white' : 'text-amber-400'}" />
-								{#if !isSidebarCollapsed}
-									<span>D1 ইঞ্জিন কনসোল</span>
-								{/if}
-							</div>
-							{#if !isSidebarCollapsed}
-								<span class="w-2 h-2 rounded-full {data.isD1Connected ? 'bg-emerald-400' : 'bg-amber-400'}"></span>
-							{/if}
-						</button>
+				<!-- 5. Settings (Clean gray pill background in Image 1) -->
+				<button
+					onclick={() => { activeTab = 'courier'; isMobileSidebarOpen = false; }}
+					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] cursor-pointer group {activeTab === 'courier'
+						? 'bg-slate-100 text-slate-900 font-bold'
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70'}"
+					title="Settings"
+				>
+					<div class="flex items-center gap-3.5">
+						<svg class="w-5 h-5 text-slate-800 group-hover:text-black shrink-0" viewBox="0 0 24 24" fill="currentColor">
+							<path fill-rule="evenodd" clip-rule="evenodd" d="M11.078 2.053a1.5 1.5 0 0 1 1.844 0l.478.36a1.5 1.5 0 0 0 1.52.19l.564-.23a1.5 1.5 0 0 1 1.77.534l.354.482a1.5 1.5 0 0 0 1.344.697l.608-.04a1.5 1.5 0 0 1 1.524 1.077l.18.577a1.5 1.5 0 0 0 1.02 1.02l.577.18a1.5 1.5 0 0 1 1.077 1.524l-.04.608a1.5 1.5 0 0 0 .697 1.344l.482.354a1.5 1.5 0 0 1 .534 1.77l-.23.564a1.5 1.5 0 0 0 .19 1.52l.36.478a1.5 1.5 0 0 1 0 1.844l-.36.478a1.5 1.5 0 0 0-.19 1.52l.23.564a1.5 1.5 0 0 1-.534 1.77l-.482.354a1.5 1.5 0 0 0-.697 1.344l.04.608a1.5 1.5 0 0 1-1.077 1.524l-.577.18a1.5 1.5 0 0 0-1.02 1.02l-.18.577a1.5 1.5 0 0 1-1.524 1.077l-.608-.04a1.5 1.5 0 0 0-1.344.697l-.354.482a1.5 1.5 0 0 1-1.77.534l-.564-.23a1.5 1.5 0 0 0-1.52.19l-.478.36a1.5 1.5 0 0 1-1.844 0l-.478-.36a1.5 1.5 0 0 0-1.52-.19l-.564.23a1.5 1.5 0 0 1-1.77-.534l-.354-.482a1.5 1.5 0 0 0-1.344-.697l-.608.04a1.5 1.5 0 0 1-1.524-1.077l-.18-.577a1.5 1.5 0 0 0-1.02-1.02l-.577-.18a1.5 1.5 0 0 1-1.077-1.524l.04-.608a1.5 1.5 0 0 0-.697-1.344l-.482-.354a1.5 1.5 0 0 1-.534-1.77l.23-.564a1.5 1.5 0 0 0-.19-1.52l-.36-.478a1.5 1.5 0 0 1 0-1.844l.36-.478a1.5 1.5 0 0 0 .19-1.52l-.23-.564a1.5 1.5 0 0 1 .534-1.77l.482-.354a1.5 1.5 0 0 0 .697-1.344l-.04-.608a1.5 1.5 0 0 1 1.077-1.524l.577-.18a1.5 1.5 0 0 0 1.02-1.02l.18-.577a1.5 1.5 0 0 1 1.524-1.077l.608.04a1.5 1.5 0 0 0 1.344-.697l.354-.482a1.5 1.5 0 0 1 1.77-.534l.564.23a1.5 1.5 0 0 0 1.52-.19l.478-.36ZM12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" />
+						</svg>
+						{#if !isSidebarCollapsed}
+							<span>Settings</span>
+						{/if}
 					</div>
-				</div>
+				</button>
+
+				<!-- 6. Catalog -->
+				<button
+					onclick={() => { activeTab = 'inventory'; isMobileSidebarOpen = false; }}
+					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] cursor-pointer group text-slate-800 hover:text-black hover:bg-slate-100/70"
+					title="Catalog"
+				>
+					<div class="flex items-center gap-3.5">
+						<svg class="w-5 h-5 text-slate-800 group-hover:text-black shrink-0" viewBox="0 0 24 24" fill="currentColor">
+							<rect x="3" y="3" width="7" height="18" rx="2.5" />
+							<rect x="13" y="3" width="8" height="8" rx="2.5" />
+							<rect x="13" y="13" width="8" height="8" rx="2.5" />
+						</svg>
+						{#if !isSidebarCollapsed}
+							<span>Catalog</span>
+						{/if}
+					</div>
+					{#if !isSidebarCollapsed}
+						<ChevronDown class="w-4 h-4 text-slate-400 group-hover:text-slate-700" />
+					{/if}
+				</button>
+
+				<!-- 7. Landing page -->
+				<a
+					href="/"
+					target="_blank"
+					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] text-slate-800 hover:text-black hover:bg-slate-100/70"
+					title="Landing page"
+				>
+					<div class="flex items-center gap-3.5">
+						<svg class="w-5 h-5 text-slate-800 group-hover:text-black shrink-0" viewBox="0 0 24 24" fill="currentColor">
+							<rect x="4" y="4" width="16" height="12" rx="2" />
+							<path d="M2 19h20c0 .6-.4 1-1 1H3c-.6 0-1-.4-1-1z" />
+							<rect x="10" y="13" width="4" height="1.5" rx="0.5" fill="white" />
+						</svg>
+						{#if !isSidebarCollapsed}
+							<span>Landing page</span>
+						{/if}
+					</div>
+					{#if !isSidebarCollapsed}
+						<ChevronDown class="w-4 h-4 text-slate-400 group-hover:text-slate-700" />
+					{/if}
+				</a>
+
+				<!-- 8. Daily Target -->
+				<button
+					onclick={() => { activeTab = 'overview'; isMobileSidebarOpen = false; }}
+					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] cursor-pointer group text-slate-800 hover:text-black hover:bg-slate-100/70"
+					title="Daily Target"
+				>
+					<div class="flex items-center gap-3.5">
+						<svg class="w-5 h-5 text-slate-800 group-hover:text-black shrink-0" viewBox="0 0 24 24" fill="currentColor">
+							<path fill-rule="evenodd" clip-rule="evenodd" d="M13 2.05v2.02A8.003 8.003 0 0 1 19.93 11h2.02a1 1 0 0 1 0 2h-2.02A8.003 8.003 0 0 1 13 19.93v2.02a1 1 0 1 1-2 0v-2.02A8.003 8.003 0 0 1 4.07 13H2.05a1 1 0 1 1 0-2h2.02A8.003 8.003 0 0 1 11 4.07V2.05a1 1 0 1 1 2 0ZM12 6a6 6 0 1 0 0 12 6 6 0 0 0 0-12Zm0 3.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z" />
+						</svg>
+						{#if !isSidebarCollapsed}
+							<span>Daily Target</span>
+						{/if}
+					</div>
+				</button>
+
+				<!-- 9. Coupon -->
+				<button
+					onclick={() => { activeTab = 'overview'; isMobileSidebarOpen = false; }}
+					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] cursor-pointer group text-slate-800 hover:text-black hover:bg-slate-100/70"
+					title="Coupon"
+				>
+					<div class="flex items-center gap-3.5">
+						<svg class="w-5 h-5 text-slate-800 group-hover:text-black shrink-0" viewBox="0 0 24 24" fill="currentColor">
+							<path fill-rule="evenodd" clip-rule="evenodd" d="M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3a2.5 2.5 0 0 0 0 5v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2.5 2.5 0 0 0 0-5V6Zm6.5 3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm5 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm-4.8 4.2a.8.8 0 0 0 1.1 0l4.5-6.5a.8.8 0 1 0-1.3-.9l-4.5 6.5a.8.8 0 0 0 .2.9Z" />
+						</svg>
+						{#if !isSidebarCollapsed}
+							<span>Coupon</span>
+						{/if}
+					</div>
+				</button>
+
+				<!-- 10. Customer -->
+				<button
+					onclick={() => { activeTab = 'customers'; isMobileSidebarOpen = false; }}
+					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] cursor-pointer group {activeTab === 'customers'
+						? 'bg-slate-100 text-slate-900 font-bold'
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70'}"
+					title="Customer"
+				>
+					<div class="flex items-center gap-3.5">
+						<svg class="w-5 h-5 text-slate-800 group-hover:text-black shrink-0" viewBox="0 0 24 24" fill="currentColor">
+							<path d="M12 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm-5.5 8c0-2.5 3-4 5.5-4s5.5 1.5 5.5 4v1h-11v-1Z" />
+							<path d="M5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm-3 10c0-1.8 1.8-3 3.8-3.4-.5.8-.8 1.8-.8 2.9v1.5H2V18Z" opacity="0.8" />
+							<path d="M19 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm-1 9.5c0-1.1-.3-2.1-.8-2.9 2 .4 3.8 1.6 3.8 3.4v1H18v-1.5Z" opacity="0.8" />
+						</svg>
+						{#if !isSidebarCollapsed}
+							<span>Customer</span>
+						{/if}
+					</div>
+					{#if !isSidebarCollapsed}
+						<ChevronDown class="w-4 h-4 text-slate-400 group-hover:text-slate-700" />
+					{/if}
+				</button>
+
+				<!-- 11. Reports -->
+				<button
+					onclick={() => { activeTab = 'overview'; isMobileSidebarOpen = false; }}
+					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] cursor-pointer group text-slate-800 hover:text-black hover:bg-slate-100/70"
+					title="Reports"
+				>
+					<div class="flex items-center gap-3.5">
+						<svg class="w-5 h-5 text-slate-800 group-hover:text-black shrink-0" viewBox="0 0 24 24" fill="currentColor">
+							<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z" />
+							<rect x="7" y="15" width="2" height="4" rx="0.5" fill="white" />
+							<rect x="11" y="12" width="2" height="7" rx="0.5" fill="white" />
+							<rect x="15" y="9" width="2" height="10" rx="0.5" fill="white" />
+						</svg>
+						{#if !isSidebarCollapsed}
+							<span>Reports</span>
+						{/if}
+					</div>
+					{#if !isSidebarCollapsed}
+						<ChevronDown class="w-4 h-4 text-slate-400 group-hover:text-slate-700" />
+					{/if}
+				</button>
+
+				<!-- 12. Sub Area -->
+				<button
+					onclick={() => { activeTab = 'courier'; isMobileSidebarOpen = false; }}
+					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] cursor-pointer group text-slate-800 hover:text-black hover:bg-slate-100/70"
+					title="Sub Area"
+				>
+					<div class="flex items-center gap-3.5">
+						<svg class="w-5 h-5 text-slate-800 group-hover:text-black shrink-0" viewBox="0 0 24 24" fill="currentColor">
+							<path d="M9 4.2L3 6.6V20.8L9 18.4V4.2Z" />
+							<path d="M9 4.2L15 2.2V16.4L9 18.4V4.2Z" opacity="0.75" />
+							<path d="M15 2.2L21 4.6V18.8L15 16.4V2.2Z" />
+						</svg>
+						{#if !isSidebarCollapsed}
+							<span>Sub Area</span>
+						{/if}
+					</div>
+				</button>
+
+				<!-- 13. Requisition -->
+				<button
+					onclick={() => { activeTab = 'database'; isMobileSidebarOpen = false; }}
+					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] cursor-pointer group {activeTab === 'database'
+						? 'bg-slate-100 text-slate-900 font-bold'
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70'}"
+					title="Requisition"
+				>
+					<div class="flex items-center gap-3.5">
+						<svg class="w-5 h-5 text-slate-800 group-hover:text-black shrink-0" viewBox="0 0 24 24" fill="currentColor">
+							<rect x="4" y="3" width="16" height="18" rx="3.5" />
+							<rect x="8" y="7" width="8" height="2" rx="1" fill="white" />
+							<rect x="8" y="11" width="8" height="2" rx="1" fill="white" />
+							<rect x="8" y="15" width="5" height="2" rx="1" fill="white" />
+						</svg>
+						{#if !isSidebarCollapsed}
+							<span>Requisition</span>
+						{/if}
+					</div>
+				</button>
+
+				<!-- 14. Courier Hub (Delivery Truck from Image 2 bottom) -->
+				<button
+					onclick={() => { activeTab = 'courier'; isMobileSidebarOpen = false; }}
+					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] cursor-pointer group text-slate-800 hover:text-black hover:bg-slate-100/70"
+					title="Courier Hub"
+				>
+					<div class="flex items-center gap-3.5">
+						<svg class="w-5 h-5 text-slate-800 group-hover:text-black shrink-0" viewBox="0 0 24 24" fill="currentColor">
+							<path d="M2 5a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v10h-2a2.5 2.5 0 0 0-5 0H6a2.5 2.5 0 0 0-5 0H0V6a1 1 0 0 1 1-1h1v10H2V5Zm14 4h4.4a1 1 0 0 1 .8.4l2.5 3.3a1 1 0 0 1 .3.7V15h-2a2.5 2.5 0 0 0-5 0h-.2V9ZM4.5 17a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm13 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
+						</svg>
+						{#if !isSidebarCollapsed}
+							<span>Courier Hub</span>
+						{/if}
+					</div>
+				</button>
+
 			</nav>
-		</div>
-
-		<!-- Executive Superadmin Card -->
-		<div class="p-3 border-t border-slate-800/80 bg-[#0c101a]">
-			{#if !isSidebarCollapsed}
-				<div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/80 border border-slate-800">
-					<div class="flex items-center gap-3">
-						<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-[#ea580c] to-[#d97706] flex items-center justify-center font-bold text-white text-xs shadow-md">
-							<ShieldCheck class="w-4 h-4" />
-						</div>
-						<div class="flex flex-col">
-							<span class="text-xs font-bold text-slate-200">সুপার অ্যাডমিন</span>
-							<span class="text-[10px] text-slate-400">admin@haqplus.com</span>
-						</div>
-					</div>
-					<a
-						href="/"
-						target="_blank"
-						class="p-1.5 text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded-lg transition-colors"
-						title="স্টোর দেখুন"
-					>
-						<ExternalLink class="w-4 h-4" />
-					</a>
-				</div>
-			{:else}
-				<div class="flex justify-center">
-					<button
-						onclick={() => isSidebarCollapsed = false}
-						class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-						title="সাইডবার খুলুন"
-					>
-						<PanelLeftOpen class="w-5 h-5" />
-					</button>
-				</div>
-			{/if}
 		</div>
 	</aside>
 

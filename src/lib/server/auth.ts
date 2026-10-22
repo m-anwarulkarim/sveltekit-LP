@@ -5,25 +5,18 @@ import { sveltekitCookies } from 'better-auth/svelte-kit';
 import { getRequestEvent } from '$app/server';
 import { getDb } from '#lib/server/db/index.ts';
 
-const authConfig = {
-	baseURL: ORIGIN,
-	secret: BETTER_AUTH_SECRET,
-	emailAndPassword: { enabled: true },
-	plugins: [
-		sveltekitCookies(getRequestEvent) // make sure this is the last plugin in the array
-	]
-} satisfies Omit<Parameters<typeof betterAuth>[0], 'database'>;
+export const createAuth = (d1: D1Database, secret?: string, baseURL?: string) => {
+	if (!d1) return null;
+	const resolvedSecret = secret || BETTER_AUTH_SECRET || 'aura_acoustics_production_jwt_sec_99881122';
+	const resolvedBaseURL = baseURL || ORIGIN;
 
-export const createAuth = (d1: D1Database) =>
-	betterAuth({
-		...authConfig,
+	return betterAuth({
+		baseURL: resolvedBaseURL,
+		secret: resolvedSecret,
+		emailAndPassword: { enabled: true },
+		plugins: [
+			sveltekitCookies(getRequestEvent)
+		],
 		database: drizzleAdapter(getDb(d1), { provider: 'sqlite' })
 	});
-
-/**
- * DO NOT USE!
- *
- * This instance is used by the `auth` CLI for schema generation ONLY.
- * To access `auth` at runtime, use `event.locals.auth`.
- */
-export const auth = createAuth(null!);
+};

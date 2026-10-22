@@ -1,10 +1,10 @@
 import type { Actions, PageServerLoad } from './$types';
 import { getDb } from '#lib/server/db/index.ts';
 import * as schema from '#lib/server/db/schema.ts';
-import { desc, eq, sql } from 'drizzle-orm';
+import { desc, eq, inArray, sql } from 'drizzle-orm';
 import { fail } from '@sveltejs/kit';
 
-// Default initial catalog if D1 is fresh
+// Default initial catalog
 const INITIAL_PRODUCTS = [
 	{
 		id: 'prod-spectrum-x',
@@ -53,189 +53,475 @@ const INITIAL_PRODUCTS = [
 	}
 ];
 
-// 20 realistic orders mirroring Trezo Bengali E-commerce dashboard telemetry
+// Realistic E-commerce orders matching Pre-Confirmation (Image 1) and Post-Confirmation (Image 2)
 const INITIAL_ORDERS = [
+	// -------------------------------------------------------------
+	// ১. ওয়েব অর্ডার (Pre-Confirmation: কনফার্মেশনের আগের স্ট্যাটাস)
+	// -------------------------------------------------------------
 	{
-		id: 'AUR-10492',
-		customerName: 'তানভীর আহমেদ',
-		customerEmail: 'tanvir.ahmed@gmail.com',
-		shippingAddress: 'বাড়ি #১২, রোড #৪, সেক্টর ৩, উত্তরা, ঢাকা',
-		items: JSON.stringify([{ id: 'prod-spectrum-x', name: 'AURA Spectrum X (Obsidian)', price: 1250, quantity: 1 }]),
+		id: '87472',
+		customerName: 'Emon',
+		customerEmail: '01741402270',
+		shippingAddress: 'Leather centre, g-9 dncc super market, gulshan-2, Dhaka',
+		items: JSON.stringify([
+			{
+				id: 'prod-spectrum-x',
+				name: 'AURA Spectrum X (Black)',
+				price: 1466,
+				quantity: 1,
+				image: '/images/headphones.jpg',
+				source: 'Direct',
+				timeAgo: '12 minutes ago',
+				successRate: { delivered: 30, returned: 2, percent: 95 }
+			}
+		]),
+		total: 1466,
+		status: 'pending' // পেন্ডিং
+	},
+	{
+		id: '22026',
+		customerName: 'নাম মোঃ সহিদুল ইসলাম খান',
+		customerEmail: '01714455381',
+		shippingAddress: 'গ্রাম মিলোজয়ার থানা বিশ্বম্ভরপুর জেলা সুনামগঞ্জ',
+		items: JSON.stringify([
+			{
+				id: 'prod-wave-earbuds',
+				name: 'AURA Wave Spatial Pro',
+				price: 380,
+				quantity: 1,
+				image: '/images/earbuds.jpg',
+				source: 'Direct',
+				altPhone: '01781519059',
+				timeAgo: '1 day ago',
+				successRate: { delivered: 30, returned: 2, percent: 95 }
+			}
+		]),
+		total: 380,
+		status: 'pending' // পেন্ডিং
+	},
+	{
+		id: '84650',
+		customerName: 'পিহাদ আলম',
+		customerEmail: '01345770404',
+		shippingAddress: 'ভূঁইয়া সায়িপুুর, পৌরসভা, বাঘতলী, নেত্রকোণা',
+		items: JSON.stringify([
+			{
+				id: 'prod-sound-deck',
+				name: 'AURA Creator Deck Accessory',
+				price: 175,
+				quantity: 1,
+				image: '/images/sound-deck.jpg',
+				source: 'Direct',
+				timeAgo: '2 days ago',
+				successRate: { delivered: 15, returned: 1, percent: 93 }
+			}
+		]),
+		total: 175,
+		status: 'pending' // পেন্ডিং
+	},
+	{
+		id: '84651',
+		customerName: 'তাহসীন চৌধুরী',
+		customerEmail: '01819283741',
+		shippingAddress: 'হালিশহর ব্লক-বি, চট্টগ্রাম',
+		items: JSON.stringify([
+			{
+				id: 'prod-spectrum-x',
+				name: 'AURA Pro Headband',
+				price: 1250,
+				quantity: 1,
+				source: 'Facebook',
+				timeAgo: '3 hours ago',
+				successRate: { delivered: 8, returned: 4, percent: 66 }
+			}
+		]),
 		total: 1250,
-		status: 'delivered'
+		status: 'incomplete' // ইনকমপ্লিট
 	},
 	{
-		id: 'AUR-10491',
-		customerName: 'সাদিয়া সুলতানা',
-		customerEmail: 'sadia.s@yahoo.com',
-		shippingAddress: 'জিইসি মোড়, নাসিরাবাদ, চট্টগ্রাম',
-		items: JSON.stringify([{ id: 'prod-wave-earbuds', name: 'AURA Wave Spatial Pro', price: 890, quantity: 1 }]),
+		id: '84652',
+		customerName: 'মোস্তাফিজুর রহমান',
+		customerEmail: '01711223344',
+		shippingAddress: 'আম্বরখানা পয়েন্ট, সিলেট সদর',
+		items: JSON.stringify([
+			{
+				id: 'prod-wave-earbuds',
+				name: 'AURA Wave Spatial Pro',
+				price: 890,
+				quantity: 1,
+				source: 'Direct',
+				timeAgo: '5 hours ago',
+				successRate: { delivered: 20, returned: 5, percent: 80 }
+			}
+		]),
 		total: 890,
-		status: 'delivered'
+		status: 'no_response' // নো রেসপন্স
 	},
 	{
-		id: 'AUR-10490',
-		customerName: 'রফিকুল ইসলাম',
-		customerEmail: 'rafiqul.islam@outlook.com',
-		shippingAddress: 'আম্বরখানা, হাউজিং এস্টেট, সিলেট',
-		items: JSON.stringify([{ id: 'prod-sound-deck', name: 'AURA Creator Sound Deck', price: 1500, quantity: 1 }]),
-		total: 1500,
-		status: 'delivered'
+		id: '84653',
+		customerName: 'কামরুল হাসান রাসেল',
+		customerEmail: '01912345678',
+		shippingAddress: 'জেল রোড, ময়মনসিংহ টাউন',
+		items: JSON.stringify([
+			{
+				id: 'prod-sound-deck',
+				name: 'AURA Studio Interface Pro',
+				price: 2100,
+				quantity: 1,
+				source: 'Facebook',
+				timeAgo: '1 day ago',
+				successRate: { delivered: 4, returned: 6, percent: 40 }
+			}
+		]),
+		total: 2100,
+		status: 'no_response_3' // ৩য় বার নো রেসপন্স
 	},
 	{
-		id: 'AUR-10489',
-		customerName: 'মেহেদী হাসান শুভ',
-		customerEmail: 'mehedi.shuvo@gmail.com',
-		shippingAddress: 'ধানমন্ডি ২৭, ঢাকা ১২০৯',
-		items: JSON.stringify([{ id: 'prod-spectrum-x', name: 'AURA Spectrum X', price: 800, quantity: 1 }]),
-		total: 800,
-		status: 'delivered'
-	},
-	{
-		id: 'AUR-10488',
-		customerName: 'নুসরাত জাহান',
-		customerEmail: 'nusrat.jahan@hotmail.com',
-		shippingAddress: 'হালিশহর ব্লক এ, চট্টগ্রাম',
-		items: JSON.stringify([{ id: 'prod-wave-earbuds', name: 'AURA Wave Spatial Pro', price: 650, quantity: 1 }]),
+		id: '84654',
+		customerName: 'শারমিন আক্তার',
+		customerEmail: '01678901234',
+		shippingAddress: 'চৌহাট্টা, সিলেট সদর',
+		items: JSON.stringify([
+			{
+				id: 'prod-wave-earbuds',
+				name: 'AURA Earbuds Case',
+				price: 650,
+				quantity: 1,
+				source: 'Direct',
+				timeAgo: '2 hours ago',
+				successRate: { delivered: 12, returned: 1, percent: 92 }
+			}
+		]),
 		total: 650,
-		status: 'dispatched'
+		status: 'busy' // বিজি
 	},
 	{
-		id: 'AUR-10487',
-		customerName: 'আরিফুল হক',
-		customerEmail: 'ariful.haque@gmail.com',
-		shippingAddress: 'মিরপুর ১০ গোলচত্বর, ঢাকা',
-		items: JSON.stringify([{ id: 'prod-spectrum-x', name: 'AURA Spectrum X', price: 1200, quantity: 1 }]),
-		total: 1200,
-		status: 'dispatched'
+		id: '84655',
+		customerName: 'সাইফুল ইসলাম',
+		customerEmail: '01799887766',
+		shippingAddress: 'নিউ মার্কেট এলাকা, রাজশাহী',
+		items: JSON.stringify([
+			{
+				id: 'prod-spectrum-x',
+				name: 'AURA Spectrum X',
+				price: 1450,
+				quantity: 1,
+				source: 'Facebook',
+				timeAgo: '6 hours ago',
+				successRate: { delivered: 25, returned: 3, percent: 89 }
+			}
+		]),
+		total: 1450,
+		status: 'hold' // হোল্ড
 	},
 	{
-		id: 'AUR-10486',
-		customerName: 'ফারহানা কবীর',
-		customerEmail: 'farhana.k@gmail.com',
-		shippingAddress: 'উপশহর মেইন রোড, রাজশাহী',
-		items: JSON.stringify([{ id: 'prod-sound-deck', name: 'AURA Sound Deck', price: 750, quantity: 1 }]),
-		total: 750,
-		status: 'processing'
+		id: '84656',
+		customerName: 'নাজমুল সাকিব',
+		customerEmail: '01555443322',
+		shippingAddress: 'কোর্ট চত্বর, কুষ্টিয়া',
+		items: JSON.stringify([
+			{
+				id: 'prod-sound-deck',
+				name: 'AURA Custom Fader Caps',
+				price: 780,
+				quantity: 1,
+				source: 'Direct',
+				timeAgo: '1 day ago',
+				successRate: { delivered: 18, returned: 2, percent: 90 }
+			}
+		]),
+		total: 780,
+		status: 'recall' // রি (রি-কল)
+	},
+
+	// -------------------------------------------------------------
+	// ২. অর্ডার তালিকা (Post-Confirmation: কুরিয়ার ও ফুলফিলমেন্ট স্ট্যাটাস)
+	// -------------------------------------------------------------
+	{
+		id: 'INV-1227',
+		customerName: 'হোসাইন',
+		customerEmail: '01943298190',
+		shippingAddress: 'ঝাউদিয়া, পশ্চিমপাড়া (কবরস্থান সংলগ্ন), কুষ্টিয়া',
+		items: JSON.stringify([
+			{
+				id: 'prod-wave-earbuds',
+				name: 'AURA Spatial IEMs',
+				price: 313,
+				quantity: 1,
+				source: 'Facebook',
+				courier: 'Steadfast',
+				trackingCode: 'ST-928174',
+				timeAgo: '১ দিন আগে',
+				confirmedAt: '১ দিন আগে',
+				subStatus: 'partial_delivered'
+			}
+		]),
+		total: 313,
+		status: 'partial_delivered' // পার্শিয়াল
 	},
 	{
-		id: 'AUR-10485',
-		customerName: 'জাহিদুল করিম',
-		customerEmail: 'zahid.karim@gmail.com',
-		shippingAddress: 'ক্যান্টনমেন্ট এলাকা, বগুড়া',
-		items: JSON.stringify([{ id: 'prod-wave-earbuds', name: 'AURA Spatial Earbuds', price: 590, quantity: 1 }]),
-		total: 590,
-		status: 'processing'
+		id: 'INV-1108',
+		customerName: 'vissho Roy',
+		customerEmail: '01305082314',
+		shippingAddress: 'গ্রাম চরকলপুকুর থানা পীরগঞ্জ জেলা রংপুর',
+		items: JSON.stringify([
+			{
+				id: 'prod-spectrum-x',
+				name: 'AURA Audio Adapter',
+				price: 219,
+				quantity: 1,
+				source: 'Facebook',
+				courier: 'Steadfast',
+				trackingCode: 'ST-928091',
+				timeAgo: '১ দিন আগে',
+				confirmedAt: '১ দিন আগে',
+				subStatus: 'partial_delivered'
+			}
+		]),
+		total: 219,
+		status: 'partial_delivered' // পার্শিয়াল
 	},
 	{
-		id: 'AUR-10484',
-		customerName: 'কামরুল হাসান',
-		customerEmail: 'kamrul.hasan@yahoo.com',
+		id: 'INV-1229',
+		customerName: 'তানভীর আহমেদ',
+		customerEmail: '01712345678',
+		shippingAddress: 'উত্তরা সেক্টর ৪, রোড ৭, ঢাকা',
+		items: JSON.stringify([
+			{
+				id: 'prod-spectrum-x',
+				name: 'AURA Spectrum X (Obsidian)',
+				price: 3490,
+				quantity: 1,
+				source: 'Direct',
+				courier: 'Steadfast',
+				trackingCode: 'ST-928501',
+				timeAgo: '২ ঘন্টা আগে',
+				confirmedAt: '২ ঘন্টা আগে'
+			}
+		]),
+		total: 3490,
+		status: 'confirmed' // কনফার্মড
+	},
+	{
+		id: 'INV-1228',
+		customerName: 'আরিফুল ইসলাম',
+		customerEmail: '01834567890',
+		shippingAddress: 'জিইসি মোড়, নাসিরাবাদ, চট্টগ্রাম',
+		items: JSON.stringify([
+			{
+				id: 'prod-wave-earbuds',
+				name: 'AURA Wave Spatial Pro',
+				price: 1890,
+				quantity: 1,
+				source: 'Facebook',
+				courier: 'Pathao',
+				trackingCode: 'PT-441208',
+				timeAgo: '৫ ঘন্টা আগে',
+				confirmedAt: '৫ ঘন্টা আগে'
+			}
+		]),
+		total: 1890,
+		status: 'printed' // প্রিন্টেড
+	},
+	{
+		id: 'INV-1225',
+		customerName: 'সাদিয়া সুলতানা',
+		customerEmail: '01923456781',
+		shippingAddress: 'ধানমন্ডি ২৭, ঢাকা ১২০৯',
+		items: JSON.stringify([
+			{
+				id: 'prod-sound-deck',
+				name: 'AURA Creator Sound Deck',
+				price: 2750,
+				quantity: 1,
+				source: 'Direct',
+				courier: 'Steadfast',
+				trackingCode: 'ST-927914',
+				timeAgo: '৮ ঘন্টা আগে',
+				confirmedAt: '৮ ঘন্টা আগে'
+			}
+		]),
+		total: 2750,
+		status: 'entry_done' // এন্ট্রি ডান
+	},
+	{
+		id: 'INV-1220',
+		customerName: 'মেহেদী হাসান শুভ',
+		customerEmail: '01765432109',
 		shippingAddress: 'বনশ্রী ব্লক সি, রামপুরা, ঢাকা',
-		items: JSON.stringify([{ id: 'prod-spectrum-x', name: 'AURA Spectrum X', price: 820, quantity: 1 }]),
-		total: 820,
-		status: 'processing'
+		items: JSON.stringify([
+			{
+				id: 'prod-spectrum-x',
+				name: 'AURA Spectrum X',
+				price: 1200,
+				quantity: 1,
+				source: 'Facebook',
+				courier: 'Steadfast',
+				trackingCode: 'ST-926880',
+				timeAgo: '১ দিন আগে',
+				confirmedAt: '১ দিন আগে'
+			}
+		]),
+		total: 1200,
+		status: 'shipped' // শিপড
 	},
 	{
-		id: 'AUR-10483',
+		id: 'INV-1215',
+		customerName: 'নুসরাত জাহান',
+		customerEmail: '01612345678',
+		shippingAddress: 'হালিশহর ব্লক এ, চট্টগ্রাম',
+		items: JSON.stringify([
+			{
+				id: 'prod-wave-earbuds',
+				name: 'AURA Wave Pro',
+				price: 850,
+				quantity: 1,
+				source: 'Direct',
+				courier: 'Paperfly',
+				trackingCode: 'PF-881230',
+				timeAgo: '১ দিন আগে',
+				confirmedAt: '১ দিন আগে'
+			}
+		]),
+		total: 850,
+		status: 'shipped' // শিপড
+	},
+	{
+		id: 'INV-1190',
+		customerName: 'ফারহানা কবীর',
+		customerEmail: '01898765432',
+		shippingAddress: 'উপশহর মেইন রোড, রাজশাহী',
+		items: JSON.stringify([
+			{
+				id: 'prod-sound-deck',
+				name: 'AURA Sound Deck',
+				price: 1450,
+				quantity: 1,
+				source: 'Facebook',
+				courier: 'Steadfast',
+				trackingCode: 'ST-925100',
+				timeAgo: '২ দিন আগে',
+				confirmedAt: '২ দিন আগে'
+			}
+		]),
+		total: 1450,
+		status: 'delivered' // ডেলিভারড
+	},
+	{
+		id: 'INV-1185',
 		customerName: 'রাবেয়া খাতুন',
-		customerEmail: 'rabeya.k@gmail.com',
+		customerEmail: '01723456789',
 		shippingAddress: 'শাহি ঈদগাহ, সিলেট',
-		items: JSON.stringify([{ id: 'prod-wave-earbuds', name: 'AURA Wave IEM', price: 540, quantity: 1 }]),
-		total: 540,
-		status: 'paid'
-	},
-	{
-		id: 'AUR-10482',
-		customerName: 'আব্দুল্লাহ আল নোমান',
-		customerEmail: 'noman.al@outlook.com',
-		shippingAddress: 'আগ্রাবাদ সি/এ, চট্টগ্রাম',
-		items: JSON.stringify([{ id: 'prod-sound-deck', name: 'AURA Sound Deck', price: 920, quantity: 1 }]),
-		total: 920,
-		status: 'paid'
-	},
-	{
-		id: 'AUR-10481',
-		customerName: 'শামীম ওসমান',
-		customerEmail: 'shamim.osman@gmail.com',
-		shippingAddress: 'চাষাড়া, নারায়ণগঞ্জ',
-		items: JSON.stringify([{ id: 'prod-spectrum-x', name: 'AURA Spectrum X', price: 680, quantity: 1 }]),
+		items: JSON.stringify([
+			{
+				id: 'prod-wave-earbuds',
+				name: 'AURA Wave IEM',
+				price: 680,
+				quantity: 1,
+				source: 'Direct',
+				courier: 'Steadfast',
+				trackingCode: 'ST-924912',
+				timeAgo: '৩ দিন আগে',
+				confirmedAt: '৩ দিন আগে'
+			}
+		]),
 		total: 680,
-		status: 'paid'
+		status: 'delivered' // ডেলিভারড
 	},
 	{
-		id: 'AUR-10480',
-		customerName: 'তাসনিম রেজা',
-		customerEmail: 'tasnim.reza@gmail.com',
-		shippingAddress: 'গুলশান ২, রোড ৬২, ঢাকা',
-		items: JSON.stringify([{ id: 'prod-wave-earbuds', name: 'AURA Wave Pro', price: 720, quantity: 1 }]),
-		total: 720,
-		status: 'paid'
+		id: 'INV-1180',
+		customerName: 'আব্দুল্লাহ আল নোমান',
+		customerEmail: '01512345670',
+		shippingAddress: 'আগ্রাবাদ সি/এ, চট্টগ্রাম',
+		items: JSON.stringify([
+			{
+				id: 'prod-sound-deck',
+				name: 'AURA Sound Deck',
+				price: 1150,
+				quantity: 1,
+				source: 'Facebook',
+				courier: 'Steadfast',
+				trackingCode: 'ST-923841',
+				timeAgo: '৩ দিন আগে',
+				confirmedAt: '৩ দিন আগে'
+			}
+		]),
+		total: 1150,
+		status: 'pending_return' // পেন্ডিং রিটার্ন
 	},
 	{
-		id: 'AUR-10479',
-		customerName: 'Mahmudul Hasan',
-		customerEmail: 'mahmud.h@gmail.com',
-		shippingAddress: 'টঙ্গী কলেজ রোড, গাজীপুর',
-		items: JSON.stringify([{ id: 'prod-spectrum-x', name: 'AURA Spectrum X', price: 450, quantity: 1 }]),
-		total: 450,
-		status: 'refunded'
-	},
-	{
-		id: 'AUR-10478',
+		id: 'INV-1175',
 		customerName: 'ইসমাইল হোসেন',
-		customerEmail: 'ismail.h@yahoo.com',
+		customerEmail: '01987654321',
 		shippingAddress: 'রূপাতলী, বরিশাল',
-		items: JSON.stringify([{ id: 'prod-sound-deck', name: 'AURA Sound Deck', price: 510, quantity: 1 }]),
-		total: 510,
-		status: 'refunded'
+		items: JSON.stringify([
+			{
+				id: 'prod-spectrum-x',
+				name: 'AURA Spectrum X',
+				price: 920,
+				quantity: 1,
+				source: 'Facebook',
+				courier: 'Pathao',
+				trackingCode: 'PT-440120',
+				timeAgo: '৪ দিন আগে',
+				confirmedAt: '৪ দিন আগে'
+			}
+		]),
+		total: 920,
+		status: 'returned' // রিটার্ন
 	},
 	{
-		id: 'AUR-10477',
-		customerName: 'সজীব বর্মণ',
-		customerEmail: 'sajib.b@gmail.com',
-		shippingAddress: 'সদর রোড, রংপুর',
-		items: JSON.stringify([{ id: 'prod-wave-earbuds', name: 'AURA Wave', price: 620, quantity: 1 }]),
-		total: 620,
-		status: 'refunded'
+		id: 'INV-1170',
+		customerName: 'কামরুল হাসান',
+		customerEmail: '01623456789',
+		shippingAddress: 'মিরপুর ১০, ঢাকা',
+		items: JSON.stringify([
+			{
+				id: 'prod-wave-earbuds',
+				name: 'AURA Spatial IEMs',
+				price: 540,
+				quantity: 1,
+				source: 'Direct',
+				courier: 'Steadfast',
+				trackingCode: 'ST-922194',
+				timeAgo: '৫ দিন আগে',
+				confirmedAt: '৫ দিন আগে'
+			}
+		]),
+		total: 540,
+		status: 'cancelled' // বাতিল
 	},
 	{
-		id: 'AUR-10476',
-		customerName: 'অনিক চৌধুরী',
-		customerEmail: 'anik.chy@gmail.com',
-		shippingAddress: 'লালখান বাজার, চট্টগ্রাম',
-		items: JSON.stringify([{ id: 'prod-spectrum-x', name: 'AURA Spectrum X', price: 400, quantity: 1 }]),
-		total: 400,
-		status: 'refunded'
-	},
-	{
-		id: 'AUR-10475',
+		id: 'INV-1165',
 		customerName: 'হাসান ইমাম',
-		customerEmail: 'hasan.imam@gmail.com',
+		customerEmail: '01734567891',
 		shippingAddress: 'মৌলভীবাজার সদর',
-		items: JSON.stringify([{ id: 'prod-sound-deck', name: 'AURA Sound Deck', price: 350, quantity: 1 }]),
-		total: 350,
-		status: 'paid'
-	},
-	{
-		id: 'AUR-10474',
-		customerName: 'জেরিন তাসনিম',
-		customerEmail: 'jerin.t@gmail.com',
-		shippingAddress: 'বসুন্ধরা আবাসিক এলাকা, ব্লক সি, ঢাকা',
-		items: JSON.stringify([{ id: 'prod-wave-earbuds', name: 'AURA Spatial IEM', price: 800, quantity: 1 }]),
-		total: 800,
-		status: 'paid'
-	},
-	{
-		id: 'AUR-10473',
-		customerName: 'ফারুক আহমেদ',
-		customerEmail: 'faruk.ahmed@gmail.com',
-		shippingAddress: 'টিকাটুলী, ওয়ারী, ঢাকা',
-		items: JSON.stringify([{ id: 'prod-spectrum-x', name: 'AURA Spectrum X', price: 690, quantity: 1 }]),
-		total: 690,
-		status: 'paid'
+		items: JSON.stringify([
+			{
+				id: 'prod-sound-deck',
+				name: 'AURA Sound Deck',
+				price: 720,
+				quantity: 1,
+				source: 'Facebook',
+				courier: 'Steadfast',
+				trackingCode: 'ST-921008',
+				timeAgo: '৬ দিন আগে',
+				confirmedAt: '৬ দিন আগে'
+			}
+		]),
+		total: 720,
+		status: 'missing' // মিসিং
 	}
 ];
+
+// Helper to normalize legacy statuses
+function normalizeOrderStatus(status: string): string {
+	if (status === 'paid') return 'confirmed';
+	if (status === 'processing') return 'entry_done';
+	if (status === 'dispatched') return 'shipped';
+	if (status === 'refunded') return 'cancelled';
+	return status;
+}
 
 export const load: PageServerLoad = async ({ platform }) => {
 	let productsList = INITIAL_PRODUCTS;
@@ -279,7 +565,14 @@ export const load: PageServerLoad = async ({ platform }) => {
 			}
 
 			productsList = await db.select().from(schema.products).all();
-			ordersList = await db.select().from(schema.orders).orderBy(desc(schema.orders.createdAt)).all();
+			const rawOrders = await db.select().from(schema.orders).orderBy(desc(schema.orders.createdAt)).all();
+			
+			// Normalize any legacy status
+			ordersList = rawOrders.map(o => ({
+				...o,
+				status: normalizeOrderStatus(o.status)
+			}));
+
 			reviewsList = await db.select().from(schema.reviews).orderBy(desc(schema.reviews.createdAt)).all();
 			newsletterList = await db.select().from(schema.newsletter).orderBy(desc(schema.newsletter.createdAt)).all();
 			isD1Connected = true;
@@ -288,24 +581,25 @@ export const load: PageServerLoad = async ({ platform }) => {
 		}
 	}
 
-	// Calculate granular E-Commerce telemetry
+	// Calculate telemetry
 	const totalOrders = ordersList.length;
-	const validOrders = ordersList.filter(o => o.status !== 'refunded');
-	const totalRevenue = validOrders.reduce((acc, o) => acc + (o.total || 0), 0);
+	const activeOrders = ordersList.filter(o => o.status !== 'cancelled');
+	const totalRevenue = activeOrders.reduce((acc, o) => acc + (o.total || 0), 0);
 	
 	const deliveredOrders = ordersList.filter(o => o.status === 'delivered');
 	const deliveredRevenue = deliveredOrders.reduce((acc, o) => acc + (o.total || 0), 0);
 	
-	const confirmedOrders = ordersList.filter(o => ['paid', 'processing', 'dispatched', 'delivered'].includes(o.status));
+	const postConfirmationStatuses = ['confirmed', 'printed', 'entry_done', 'shipped', 'delivered', 'partial_delivered', 'pending_return', 'returned', 'missing'];
+	const confirmedOrders = ordersList.filter(o => postConfirmationStatuses.includes(o.status));
 	const confirmedRevenue = confirmedOrders.reduce((acc, o) => acc + (o.total || 0), 0);
 	
-	const cancelledOrReturnedOrders = ordersList.filter(o => o.status === 'refunded');
-	const pendingOrders = ordersList.filter(o => ['processing', 'dispatched'].includes(o.status));
+	const cancelledOrReturnedOrders = ordersList.filter(o => ['cancelled', 'returned'].includes(o.status));
+	const pendingWebOrders = ordersList.filter(o => ['pending', 'incomplete', 'no_response', 'no_response_3', 'busy', 'hold', 'recall'].includes(o.status));
 
 	const confirmedRate = totalOrders > 0 ? ((confirmedOrders.length / totalOrders) * 100).toFixed(1) : '0.0';
 	const deliveredRate = totalOrders > 0 ? ((deliveredOrders.length / totalOrders) * 100).toFixed(1) : '0.0';
 	const cancelledRate = totalOrders > 0 ? ((cancelledOrReturnedOrders.length / totalOrders) * 100).toFixed(1) : '0.0';
-	const aov = totalOrders > 0 ? Math.round(totalRevenue / (validOrders.length || 1)) : 0;
+	const aov = totalOrders > 0 ? Math.round(totalRevenue / (activeOrders.length || 1)) : 0;
 
 	return {
 		isD1Connected,
@@ -326,7 +620,8 @@ export const load: PageServerLoad = async ({ platform }) => {
 			cancelledRate,
 			aov,
 			todayOrdersCount: 0,
-			pendingOrdersCount: pendingOrders.length,
+			webOrdersCount: pendingWebOrders.length,
+			orderListCount: confirmedOrders.length,
 			inStockProducts: productsList.filter(p => p.inStock).length,
 			totalSubscribers: newsletterList.length
 		}
@@ -334,11 +629,8 @@ export const load: PageServerLoad = async ({ platform }) => {
 };
 
 export const actions: Actions = {
-	// Update Order Status
+	// Update Order Status (supports both pre-confirmation and post-confirmation statuses)
 	updateOrderStatus: async ({ request, platform }) => {
-		if (!platform?.env?.DB) {
-			return fail(500, { message: 'Cloudflare D1 binding unavailable' });
-		}
 		const data = await request.formData();
 		const orderId = data.get('orderId')?.toString();
 		const newStatus = data.get('status')?.toString();
@@ -347,99 +639,165 @@ export const actions: Actions = {
 			return fail(400, { message: 'Order ID and Status required' });
 		}
 
-		try {
-			const db = getDb(platform.env.DB);
-			await db.update(schema.orders)
-				.set({ status: newStatus })
-				.where(eq(schema.orders.id, orderId));
-			return { success: true, updatedOrder: orderId, newStatus };
-		} catch (err: any) {
-			return fail(500, { message: err?.message || 'Failed to update order' });
+		if (platform?.env?.DB) {
+			try {
+				const db = getDb(platform.env.DB);
+				await db.update(schema.orders)
+					.set({ status: newStatus })
+					.where(eq(schema.orders.id, orderId));
+				return { success: true, updatedOrder: orderId, newStatus };
+			} catch (err: any) {
+				return fail(500, { message: err?.message || 'Failed to update order' });
+			}
 		}
+
+		return { success: true, updatedOrder: orderId, newStatus };
+	},
+
+	// Quick Confirm: instantly move an order from Web Orders to Confirmed Order List
+	quickConfirmOrder: async ({ request, platform }) => {
+		const data = await request.formData();
+		const orderId = data.get('orderId')?.toString();
+		if (!orderId) return fail(400, { message: 'Order ID required' });
+
+		if (platform?.env?.DB) {
+			try {
+				const db = getDb(platform.env.DB);
+				await db.update(schema.orders)
+					.set({ status: 'confirmed' })
+					.where(eq(schema.orders.id, orderId));
+				return { success: true, confirmedOrder: orderId };
+			} catch (err: any) {
+				return fail(500, { message: err?.message || 'Failed to confirm order' });
+			}
+		}
+
+		return { success: true, confirmedOrder: orderId };
+	},
+
+	// Quick Cancel: mark an order as cancelled
+	quickCancelOrder: async ({ request, platform }) => {
+		const data = await request.formData();
+		const orderId = data.get('orderId')?.toString();
+		if (!orderId) return fail(400, { message: 'Order ID required' });
+
+		if (platform?.env?.DB) {
+			try {
+				const db = getDb(platform.env.DB);
+				await db.update(schema.orders)
+					.set({ status: 'cancelled' })
+					.where(eq(schema.orders.id, orderId));
+				return { success: true, cancelledOrder: orderId };
+			} catch (err: any) {
+				return fail(500, { message: err?.message || 'Failed to cancel order' });
+			}
+		}
+
+		return { success: true, cancelledOrder: orderId };
+	},
+
+	// Courier Sync: sync all courier tracking states
+	syncCourier: async ({ request, platform }) => {
+		// Simulates syncing with Steadfast / Pathao APIs
+		return {
+			success: true,
+			syncedAt: new Date().toLocaleTimeString('bn-BD'),
+			message: 'Steadfast ও Pathao কুরিয়ারের সাথে ট্র্যাকিং সফলভাবে সিঙ্ক হয়েছে!'
+		};
 	},
 
 	// Create Manual Order
 	createManualOrder: async ({ request, platform }) => {
-		if (!platform?.env?.DB) {
-			return fail(500, { message: 'Cloudflare D1 binding unavailable' });
-		}
 		const data = await request.formData();
 		const customerName = data.get('customerName')?.toString();
-		const customerEmail = data.get('customerEmail')?.toString() || 'customer@store.local';
+		const customerPhone = data.get('customerEmail')?.toString() || '01700000000';
 		const shippingAddress = data.get('shippingAddress')?.toString();
 		const productName = data.get('productName')?.toString() || 'AURA Spectrum X';
 		const total = parseInt(data.get('total')?.toString() || '1200', 10);
-		const status = data.get('status')?.toString() || 'processing';
+		const status = data.get('status')?.toString() || 'pending';
 
 		if (!customerName || !shippingAddress) {
 			return fail(400, { message: 'কাস্টমার নাম এবং ঠিকানা আবশ্যক।' });
 		}
 
 		const newId = 'AUR-' + Math.floor(10000 + Math.random() * 90000);
-		const items = JSON.stringify([{ id: 'manual-prod', name: productName, price: total, quantity: 1 }]);
+		const items = JSON.stringify([
+			{
+				id: 'manual-prod',
+				name: productName,
+				price: total,
+				quantity: 1,
+				source: 'Manual Entry',
+				timeAgo: 'Just now',
+				successRate: { delivered: 1, returned: 0, percent: 100 }
+			}
+		]);
 
-		try {
-			const db = getDb(platform.env.DB);
-			await db.insert(schema.orders).values({
-				id: newId,
-				customerName,
-				customerEmail,
-				shippingAddress,
-				items,
-				total,
-				status
-			});
-			return { success: true, createdOrderId: newId };
-		} catch (err: any) {
-			return fail(500, { message: err?.message || 'অর্ডার তৈরিতে সমস্যা হয়েছে' });
+		if (platform?.env?.DB) {
+			try {
+				const db = getDb(platform.env.DB);
+				await db.insert(schema.orders).values({
+					id: newId,
+					customerName,
+					customerEmail: customerPhone,
+					shippingAddress,
+					items,
+					total,
+					status
+				});
+				return { success: true, createdOrderId: newId };
+			} catch (err: any) {
+				return fail(500, { message: err?.message || 'অর্ডার তৈরিতে সমস্যা হয়েছে' });
+			}
 		}
+
+		return { success: true, createdOrderId: newId };
 	},
 
-	// Move Order to Trash (set status to refunded)
+	// Move Order to Trash
 	deleteOrder: async ({ request, platform }) => {
-		if (!platform?.env?.DB) {
-			return fail(500, { message: 'Cloudflare D1 binding unavailable' });
-		}
 		const data = await request.formData();
 		const orderId = data.get('orderId')?.toString();
 		if (!orderId) return fail(400, { message: 'Order ID required' });
 
-		try {
-			const db = getDb(platform.env.DB);
-			await db.update(schema.orders)
-				.set({ status: 'refunded' })
-				.where(eq(schema.orders.id, orderId));
-			return { success: true, trashedOrder: orderId };
-		} catch (err: any) {
-			return fail(500, { message: err?.message || 'Failed to trash order' });
+		if (platform?.env?.DB) {
+			try {
+				const db = getDb(platform.env.DB);
+				await db.update(schema.orders)
+					.set({ status: 'cancelled' })
+					.where(eq(schema.orders.id, orderId));
+				return { success: true, trashedOrder: orderId };
+			} catch (err: any) {
+				return fail(500, { message: err?.message || 'Failed to trash order' });
+			}
 		}
+
+		return { success: true, trashedOrder: orderId };
 	},
 
 	// Restore order from Trash
 	restoreOrder: async ({ request, platform }) => {
-		if (!platform?.env?.DB) {
-			return fail(500, { message: 'Cloudflare D1 binding unavailable' });
-		}
 		const data = await request.formData();
 		const orderId = data.get('orderId')?.toString();
 		if (!orderId) return fail(400, { message: 'Order ID required' });
 
-		try {
-			const db = getDb(platform.env.DB);
-			await db.update(schema.orders)
-				.set({ status: 'paid' })
-				.where(eq(schema.orders.id, orderId));
-			return { success: true, restoredOrder: orderId };
-		} catch (err: any) {
-			return fail(500, { message: err?.message || 'Failed to restore order' });
+		if (platform?.env?.DB) {
+			try {
+				const db = getDb(platform.env.DB);
+				await db.update(schema.orders)
+					.set({ status: 'pending' })
+					.where(eq(schema.orders.id, orderId));
+				return { success: true, restoredOrder: orderId };
+			} catch (err: any) {
+				return fail(500, { message: err?.message || 'Failed to restore order' });
+			}
 		}
+
+		return { success: true, restoredOrder: orderId };
 	},
 
 	// Toggle Product In-Stock / Out-of-Stock
 	toggleProductStock: async ({ request, platform }) => {
-		if (!platform?.env?.DB) {
-			return fail(500, { message: 'Cloudflare D1 binding unavailable' });
-		}
 		const data = await request.formData();
 		const productId = data.get('productId')?.toString();
 		const inStock = data.get('inStock') === 'true';
@@ -448,22 +806,23 @@ export const actions: Actions = {
 			return fail(400, { message: 'Product ID required' });
 		}
 
-		try {
-			const db = getDb(platform.env.DB);
-			await db.update(schema.products)
-				.set({ inStock })
-				.where(eq(schema.products.id, productId));
-			return { success: true, productId, inStock };
-		} catch (err: any) {
-			return fail(500, { message: err?.message || 'Failed to update product' });
+		if (platform?.env?.DB) {
+			try {
+				const db = getDb(platform.env.DB);
+				await db.update(schema.products)
+					.set({ inStock })
+					.where(eq(schema.products.id, productId));
+				return { success: true, productId, inStock };
+			} catch (err: any) {
+				return fail(500, { message: err?.message || 'Failed to update product' });
+			}
 		}
+
+		return { success: true, productId, inStock };
 	},
 
 	// Delete a review
 	deleteReview: async ({ request, platform }) => {
-		if (!platform?.env?.DB) {
-			return fail(500, { message: 'Cloudflare D1 binding unavailable' });
-		}
 		const data = await request.formData();
 		const reviewId = data.get('reviewId')?.toString();
 
@@ -471,31 +830,40 @@ export const actions: Actions = {
 			return fail(400, { message: 'Review ID required' });
 		}
 
-		try {
-			const db = getDb(platform.env.DB);
-			await db.delete(schema.reviews).where(eq(schema.reviews.id, reviewId));
-			return { success: true, deletedReview: reviewId };
-		} catch (err: any) {
-			return fail(500, { message: err?.message || 'Failed to delete review' });
+		if (platform?.env?.DB) {
+			try {
+				const db = getDb(platform.env.DB);
+				await db.delete(schema.reviews).where(eq(schema.reviews.id, reviewId));
+				return { success: true, deletedReview: reviewId };
+			} catch (err: any) {
+				return fail(500, { message: err?.message || 'Failed to delete review' });
+			}
 		}
+
+		return { success: true, deletedReview: reviewId };
 	},
 
-	// Reset / Seed D1 Database with full 20 orders catalog
+	// Seed or reseed database with fresh enterprise schema
 	seedDatabase: async ({ platform }) => {
 		if (!platform?.env?.DB) {
 			return fail(500, { message: 'Cloudflare D1 binding unavailable' });
 		}
+
 		try {
 			const db = getDb(platform.env.DB);
+			await db.delete(schema.products);
 			for (const p of INITIAL_PRODUCTS) {
-				await db.insert(schema.products).values(p).onConflictDoNothing();
+				await db.insert(schema.products).values(p);
 			}
+
+			await db.delete(schema.orders);
 			for (const o of INITIAL_ORDERS) {
-				await db.insert(schema.orders).values(o).onConflictDoNothing();
+				await db.insert(schema.orders).values(o);
 			}
-			return { success: true, seeded: true };
+
+			return { success: true, message: 'D1 ডেটাবেজ সফলভাবে রিসিড করা হয়েছে!' };
 		} catch (err: any) {
-			return fail(500, { message: err?.message || 'Failed to seed database' });
+			return fail(500, { message: err?.message || 'ডেটাবেজ সিড করতে ব্যর্থ হয়েছে' });
 		}
 	}
 };

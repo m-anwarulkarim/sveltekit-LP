@@ -52,7 +52,22 @@
 		Calendar,
 		ShoppingBag,
 		Coins,
-		Receipt
+		Receipt,
+		Phone,
+		PhoneMissed,
+		PhoneOff,
+		PhoneForwarded,
+		PauseCircle,
+		RotateCcw,
+		XCircle,
+		Eye,
+		FileEdit,
+		Undo2,
+		PackageCheck,
+		ClipboardCheck,
+		AlertCircle,
+		Inbox,
+		Send
 	} from 'lucide-svelte';
 	import type { PageData } from './$types';
 
@@ -61,8 +76,10 @@
 	// Navigation Tabs
 	type TabType =
 		| 'overview'
-		| 'orders'
+		| 'web_orders'
 		| 'order_list'
+		| 'orders'
+		| 'pre_order'
 		| 'new_order'
 		| 'trash'
 		| 'inventory'
@@ -71,17 +88,25 @@
 		| 'customers'
 		| 'database';
 
-	let activeTab = $state<TabType>('overview');
+	let activeTab = $state<TabType>('web_orders');
 	let isSidebarCollapsed = $state(false);
 	let isMobileSidebarOpen = $state(false);
 
 	// Date filter state
-	let activeDateFilter = $state<'today' | 'yesterday' | '7days' | '30days' | 'all'>('all');
+	let activeDateFilter = $state<'all' | 'today' | 'yesterday' | '7days' | '30days'>('all');
 
 	// Order Search and status filters
 	let orderSearchQuery = $state('');
-	let orderStatusFilter = $state<string>('all');
+	let webStatusFilter = $state<string>('pending');
+	let orderListStatusFilter = $state<string>('all');
+	
+	// Clipboard and Sync states
 	let isCopied = $state<string | null>(null);
+	let isCourierSyncing = $state(false);
+	let courierSyncMessage = $state<string | null>(null);
+
+	// Batch selection for Order List
+	let selectedOrderIds = $state<string[]>([]);
 
 	// Interactive chart hover state
 	let activeChartPoint = $state<{ date: string; sales: number; orders: number; aov: number } | null>(null);
@@ -97,23 +122,108 @@
 		{ date: '২২ অক্টো', sales: 3600, orders: 5, aov: 720, x: 590, ySales: 110, yOrders: 105 }
 	];
 
-	// Derived filtered orders
-	let filteredOrders = $derived(
+	// ==============================================================
+	// STATUS CONFIGURATIONS FROM USER SCREENSHOTS
+	// ==============================================================
+
+	// ১. ওয়েব অর্ডার (Pre-Confirmation: কনফার্মেশনের আগের পর্যায় - Image 1)
+	const WEB_ORDER_STATUS_TABS = [
+		{ id: 'pending', label: 'পেন্ডিং', icon: Clock },
+		{ id: 'incomplete', label: 'ইনকমপ্লিট', icon: AlertTriangle },
+		{ id: 'no_response', label: 'নো রেসপন্স', icon: PhoneMissed },
+		{ id: 'no_response_3', label: '৩য় বার নো রেসপন্স', icon: PhoneOff },
+		{ id: 'busy', label: 'বিজি', icon: Phone },
+		{ id: 'hold', label: 'হোল্ড', icon: PauseCircle },
+		{ id: 'recall', label: 'রি', icon: RotateCcw },
+		{ id: 'cancelled', label: 'বাতিল', icon: XCircle },
+		{ id: 'confirmed', label: 'কনফার্মড', icon: CheckCircle2 },
+		{ id: 'all', label: 'সব', icon: Layers }
+	];
+
+	// ২. অর্ডার তালিকা (Post-Confirmation: কুরিয়ার ও ফুলফিলমেন্ট পর্যায় - Image 2)
+	const ORDER_LIST_STATUS_TABS = [
+		{ id: 'confirmed', label: 'কনফার্মড', icon: CheckCircle2 },
+		{ id: 'printed', label: 'প্রিন্টেড', icon: Printer },
+		{ id: 'entry_done', label: 'এন্ট্রি ডান', icon: ClipboardCheck },
+		{ id: 'shipped', label: 'শিপড', icon: Truck },
+		{ id: 'delivered', label: 'ডেলিভারড', icon: ShieldCheck },
+		{ id: 'partial_delivered', label: 'পার্শিয়াল', icon: PackageCheck },
+		{ id: 'pending_return', label: 'পেন্ডিং রিটার্ন', icon: AlertCircle },
+		{ id: 'returned', label: 'রিটার্ন', icon: RotateCcw },
+		{ id: 'cancelled', label: 'বাতিল', icon: XCircle },
+		{ id: 'missing', label: 'মিসিং', icon: HelpCircle },
+		{ id: 'all', label: 'সব', icon: ListOrdered }
+	];
+
+	const PRE_CONFIRMATION_STATUSES = [
+		'pending',
+		'incomplete',
+		'no_response',
+		'no_response_3',
+		'busy',
+		'hold',
+		'recall'
+	];
+
+	const POST_CONFIRMATION_STATUSES = [
+		'confirmed',
+		'printed',
+		'entry_done',
+		'shipped',
+		'delivered',
+		'partial_delivered',
+		'pending_return',
+		'returned',
+		'missing'
+	];
+
+	// Derived: Pre-confirmation Web Orders
+	let webOrders = $derived(
 		data.orders.filter(order => {
+			if (order.status === 'cancelled') return !order.id.startsWith('INV-');
+			return PRE_CONFIRMATION_STATUSES.includes(order.status) || !order.id.startsWith('INV-');
+		})
+	);
+
+	let filteredWebOrders = $derived(
+		webOrders.filter(order => {
 			const query = orderSearchQuery.toLowerCase();
 			const matchesSearch =
 				order.id.toLowerCase().includes(query) ||
 				order.customerName.toLowerCase().includes(query) ||
 				order.customerEmail.toLowerCase().includes(query) ||
 				order.shippingAddress.toLowerCase().includes(query);
-			const matchesStatus = orderStatusFilter === 'all' || order.status === orderStatusFilter;
+			const matchesStatus = webStatusFilter === 'all' || order.status === webStatusFilter;
 			return matchesSearch && matchesStatus;
 		})
 	);
 
-	// Trashed orders (refunded or cancelled)
-	let trashedOrders = $derived(data.orders.filter(o => o.status === 'refunded'));
-	let pendingOrders = $derived(data.orders.filter(o => ['processing', 'dispatched'].includes(o.status)));
+	// Derived: Post-confirmation Confirmed Orders (Order List)
+	let orderListOrders = $derived(
+		data.orders.filter(order => {
+			if (order.status === 'cancelled') return order.id.startsWith('INV-');
+			return POST_CONFIRMATION_STATUSES.includes(order.status) || order.id.startsWith('INV-');
+		})
+	);
+
+	let filteredOrderList = $derived(
+		orderListOrders.filter(order => {
+			const query = orderSearchQuery.toLowerCase();
+			const matchesSearch =
+				order.id.toLowerCase().includes(query) ||
+				order.customerName.toLowerCase().includes(query) ||
+				order.customerEmail.toLowerCase().includes(query) ||
+				order.shippingAddress.toLowerCase().includes(query);
+			const matchesStatus = orderListStatusFilter === 'all' || order.status === orderListStatusFilter;
+			return matchesSearch && matchesStatus;
+		})
+	);
+
+	// Trashed orders (cancelled)
+	let trashedOrders = $derived(data.orders.filter(o => o.status === 'cancelled'));
+
+	// Pre-orders (special items / advance bookings)
+	let preOrders = $derived(data.orders.filter(o => o.total > 3000));
 
 	function formatTaka(amount: number) {
 		return '৳' + amount.toLocaleString('en-US');
@@ -131,6 +241,75 @@
 		navigator.clipboard.writeText(text);
 		isCopied = id;
 		setTimeout(() => (isCopied = null), 2000);
+	}
+
+	function triggerCourierSync() {
+		isCourierSyncing = true;
+		courierSyncMessage = 'Steadfast ও Pathao এপিআই-এর সাথে ডেটা সিঙ্ক হচ্ছে...';
+		setTimeout(() => {
+			isCourierSyncing = false;
+			courierSyncMessage = 'কুরিয়ার ট্র্যাকিং সফলভাবে সিঙ্ক সম্পন্ন হয়েছে!';
+			setTimeout(() => {
+				courierSyncMessage = null;
+			}, 3500);
+		}, 1200);
+	}
+
+	function toggleSelectAllOrderList() {
+		if (selectedOrderIds.length === filteredOrderList.length) {
+			selectedOrderIds = [];
+		} else {
+			selectedOrderIds = filteredOrderList.map(o => o.id);
+		}
+	}
+
+	function toggleSelectOrder(id: string) {
+		if (selectedOrderIds.includes(id)) {
+			selectedOrderIds = selectedOrderIds.filter(i => i !== id);
+		} else {
+			selectedOrderIds = [...selectedOrderIds, id];
+		}
+	}
+
+	function getStatusInfo(status: string) {
+		switch (status) {
+			case 'pending':
+				return { label: 'পেন্ডিং', icon: Clock, bg: 'bg-[#fffbeb]', text: 'text-[#b45309]', border: 'border-[#fde68a]' };
+			case 'incomplete':
+				return { label: 'ইনকমপ্লিট', icon: AlertTriangle, bg: 'bg-[#fff7ed]', text: 'text-[#c2410c]', border: 'border-[#fed7aa]' };
+			case 'no_response':
+				return { label: 'নো রেসপন্স', icon: PhoneMissed, bg: 'bg-[#f8fafc]', text: 'text-[#475569]', border: 'border-[#e2e8f0]' };
+			case 'no_response_3':
+				return { label: '৩য় বার নো রেসপন্স', icon: PhoneOff, bg: 'bg-[#faf5ff]', text: 'text-[#7e22ce]', border: 'border-[#f3e8ff]' };
+			case 'busy':
+				return { label: 'বিজি', icon: Phone, bg: 'bg-[#f0f9ff]', text: 'text-[#0369a1]', border: 'border-[#e0f2fe]' };
+			case 'hold':
+				return { label: 'হোল্ড', icon: PauseCircle, bg: 'bg-[#eef2ff]', text: 'text-[#4338ca]', border: 'border-[#e0e7ff]' };
+			case 'recall':
+				return { label: 'রি', icon: RotateCcw, bg: 'bg-[#f0fdfa]', text: 'text-[#0f766e]', border: 'border-[#ccfbf1]' };
+			case 'confirmed':
+				return { label: 'কনফার্মড', icon: CheckCircle2, bg: 'bg-[#ecfdf5]', text: 'text-[#047857]', border: 'border-[#a7f3d0]' };
+			case 'printed':
+				return { label: 'প্রিন্টেড', icon: Printer, bg: 'bg-[#eff6ff]', text: 'text-[#1d4ed8]', border: 'border-[#bfdbfe]' };
+			case 'entry_done':
+				return { label: 'এন্ট্রি ডান', icon: ClipboardCheck, bg: 'bg-[#f0fdf4]', text: 'text-[#15803d]', border: 'border-[#bbf7d0]' };
+			case 'shipped':
+				return { label: 'শিপড', icon: Truck, bg: 'bg-[#ecfeff]', text: 'text-[#0e7490]', border: 'border-[#a5f3fc]' };
+			case 'delivered':
+				return { label: 'ডেলিভারড', icon: ShieldCheck, bg: 'bg-[#f0fdf4]', text: 'text-[#166534]', border: 'border-[#86efac]' };
+			case 'partial_delivered':
+				return { label: 'পার্শিয়াল', icon: PackageCheck, bg: 'bg-[#fef3c7]', text: 'text-[#92400e]', border: 'border-[#f59e0b]' };
+			case 'pending_return':
+				return { label: 'পেন্ডিং রিটার্ন', icon: AlertCircle, bg: 'bg-[#fff7ed]', text: 'text-[#c2410c]', border: 'border-[#fed7aa]' };
+			case 'returned':
+				return { label: 'রিটার্ন', icon: RotateCcw, bg: 'bg-[#fff1f2]', text: 'text-[#be123c]', border: 'border-[#fecdd3]' };
+			case 'cancelled':
+				return { label: 'বাতিল', icon: XCircle, bg: 'bg-[#fef2f2]', text: 'text-[#b91c1c]', border: 'border-[#fecaca]' };
+			case 'missing':
+				return { label: 'মিসিং', icon: HelpCircle, bg: 'bg-[#f4f4f5]', text: 'text-[#52525b]', border: 'border-[#e4e4e7]' };
+			default:
+				return { label: status, icon: Clock, bg: 'bg-[#faf7f2]', text: 'text-slate-700', border: 'border-[#ede5d8]' };
+		}
 	}
 </script>
 
@@ -178,115 +357,160 @@
 				{#if !isSidebarCollapsed}
 					<button
 						onclick={() => isSidebarCollapsed = true}
-						class="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors"
+						class="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors"
 						title="সাইডবার সংকুচিত করুন"
+						aria-label="Collapse sidebar"
 					>
 						<PanelLeftClose class="w-4 h-4" />
 					</button>
 				{/if}
 			</div>
 
-			<!-- Quick Search shortcut bar inside Sidebar -->
+			<!-- Sidebar Quick Global Search Bar -->
 			{#if !isSidebarCollapsed}
-				<div class="px-4 pt-4 pb-2">
-					<button
-						onclick={() => { activeTab = 'orders'; }}
-						class="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-400 hover:text-slate-200 hover:border-slate-700 transition-all shadow-inner"
-					>
-						<div class="flex items-center gap-2">
-							<Search class="w-3.5 h-3.5 text-slate-400" />
-							<span>অর্ডার বা গ্রাহক খুঁজুন...</span>
-						</div>
-						<kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] font-mono text-slate-300">⌘K</kbd>
-					</button>
+				<div class="p-3">
+					<div class="relative">
+						<Search class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+						<input
+							type="text"
+							placeholder="অনুসন্ধান করুন..."
+							bind:value={orderSearchQuery}
+							class="w-full bg-[#141b2d] border border-slate-700/60 rounded-xl pl-8 pr-3 py-2 text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:border-[#d97706] transition-all"
+						/>
+					</div>
 				</div>
 			{/if}
 
-			<!-- NAVIGATION MENU -->
+			<!-- Navigation Links Menu -->
 			<nav class="p-3 space-y-6">
 				
-				<!-- Section 1: মূল নিয়ন্ত্রণ (Core) -->
+				<!-- Section 0: ওভারভিউ -->
+				<div>
+					<button
+						onclick={() => { activeTab = 'overview'; isMobileSidebarOpen = false; }}
+						class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'overview'
+							? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
+							: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
+						title="ওভারভিউ ও অ্যানালিটিক্স"
+					>
+						<div class="flex items-center gap-3">
+							<LayoutGrid class="w-4 h-4 {activeTab === 'overview' ? 'text-white' : 'text-slate-400 group-hover:text-amber-400'}" />
+							{#if !isSidebarCollapsed}
+								<span>ওভারভিউ ও মেট্রিক্স</span>
+							{/if}
+						</div>
+						{#if !isSidebarCollapsed && activeTab === 'overview'}
+							<span class="w-1.5 h-1.5 rounded-full bg-amber-200 animate-pulse"></span>
+						{/if}
+					</button>
+				</div>
+
+				<!-- Section 1: অর্ডারসমূহ (Matches Screenshots Hierarchy) -->
 				<div>
 					{#if !isSidebarCollapsed}
-						<div class="px-3 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
-							মূল নিয়ন্ত্রণ (Core)
+						<div class="px-3 mb-2 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
+							<span>অর্ডারসমূহ</span>
+							<ChevronDown class="w-3 h-3 text-slate-400" />
 						</div>
 					{/if}
 
 					<div class="space-y-1">
-						<!-- ওভারভিউ ড্যাশবোর্ড -->
-						<button
-							onclick={() => { activeTab = 'overview'; isMobileSidebarOpen = false; }}
-							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'overview'
-								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30 font-bold'
-								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
-							title="ওভারভিউ ড্যাশবোর্ড"
-						>
-							<div class="flex items-center gap-3">
-								<LayoutGrid class="w-4 h-4 {activeTab === 'overview' ? 'text-white' : 'text-slate-400 group-hover:text-amber-400'}" />
-								{#if !isSidebarCollapsed}
-									<span>ওভারভিউ ড্যাশবোর্ড</span>
-								{/if}
-							</div>
-							{#if !isSidebarCollapsed && activeTab === 'overview'}
-								<span class="w-1.5 h-1.5 rounded-full bg-amber-200 animate-pulse"></span>
-							{/if}
-						</button>
-
-						<!-- সব অর্ডারসমূহ -->
-						<button
-							onclick={() => { activeTab = 'orders'; isMobileSidebarOpen = false; }}
-							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'orders' || activeTab === 'order_list'
-								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
-								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
-							title="অর্ডারসমূহ"
-						>
-							<div class="flex items-center gap-3">
-								<ShoppingCart class="w-4 h-4 {activeTab === 'orders' || activeTab === 'order_list' ? 'text-white' : 'text-slate-400 group-hover:text-amber-400'}" />
-								{#if !isSidebarCollapsed}
-									<span>সব অর্ডারসমূহ</span>
-								{/if}
-							</div>
-							{#if !isSidebarCollapsed}
-								<span class="text-[10px] font-black px-2 py-0.5 rounded-full {activeTab === 'orders' || activeTab === 'order_list' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-300 border border-slate-700/60'}">
-									{data.orders.length}
-								</span>
-							{/if}
-						</button>
-
-						<!-- নতুন অর্ডার তৈরি -->
+						<!-- ১. নতুন তৈরি (+ নতুন তৈরি) -->
 						<button
 							onclick={() => { activeTab = 'new_order'; isMobileSidebarOpen = false; }}
 							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'new_order'
 								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
-								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
+								: 'text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/60'}"
 							title="নতুন অর্ডার তৈরি"
 						>
 							<div class="flex items-center gap-3">
-								<PlusCircle class="w-4 h-4 {activeTab === 'new_order' ? 'text-white' : 'text-amber-400 group-hover:scale-110 transition-transform'}" />
+								<PlusCircle class="w-4 h-4 {activeTab === 'new_order' ? 'text-white' : 'text-emerald-400 group-hover:scale-110 transition-transform'}" />
 								{#if !isSidebarCollapsed}
-									<span>নতুন অর্ডার এন্ট্রি</span>
+									<span>নতুন তৈরি</span>
 								{/if}
 							</div>
 							{#if !isSidebarCollapsed}
-								<span class="text-[9px] font-bold uppercase text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.2 rounded">
-									নতুন
+								<span class="text-[9px] font-bold text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.2 rounded">
+									Manual
 								</span>
 							{/if}
 						</button>
 
-						<!-- ট্র্যাশ ও বাতিল -->
+						<!-- ২. ওয়েব অর্ডার (Pre-Confirmation - Image 1) -->
+						<button
+							onclick={() => { activeTab = 'web_orders'; isMobileSidebarOpen = false; }}
+							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'web_orders' || activeTab === 'orders'
+								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
+								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
+							title="ওয়েব অর্ডার (কল ও কনফার্মেশনের আগের পর্যায়)"
+						>
+							<div class="flex items-center gap-3">
+								<Inbox class="w-4 h-4 {activeTab === 'web_orders' || activeTab === 'orders' ? 'text-white' : 'text-slate-400 group-hover:text-amber-400'}" />
+								{#if !isSidebarCollapsed}
+									<span>ওয়েব অর্ডার</span>
+								{/if}
+							</div>
+							{#if !isSidebarCollapsed}
+								<span class="text-[10px] font-black px-2 py-0.5 rounded-full {activeTab === 'web_orders' || activeTab === 'orders' ? 'bg-white/20 text-white' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'}">
+									{webOrders.length}
+								</span>
+							{/if}
+						</button>
+
+						<!-- ৩. প্রি-অর্ডার -->
+						<button
+							onclick={() => { activeTab = 'pre_order'; isMobileSidebarOpen = false; }}
+							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'pre_order'
+								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
+								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
+							title="প্রি-অর্ডার"
+						>
+							<div class="flex items-center gap-3">
+								<Calendar class="w-4 h-4 {activeTab === 'pre_order' ? 'text-white' : 'text-slate-400 group-hover:text-amber-400'}" />
+								{#if !isSidebarCollapsed}
+									<span>প্রি-অর্ডার</span>
+								{/if}
+							</div>
+							{#if !isSidebarCollapsed && preOrders.length > 0}
+								<span class="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20">
+									{preOrders.length}
+								</span>
+							{/if}
+						</button>
+
+						<!-- ৪. অর্ডার তালিকা (Post-Confirmation - Image 2) -->
+						<button
+							onclick={() => { activeTab = 'order_list'; isMobileSidebarOpen = false; }}
+							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'order_list'
+								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
+								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
+							title="অর্ডার তালিকা (কনফার্মেশনের পর কুরিয়ার ও ডেলিভারি পর্যায়)"
+						>
+							<div class="flex items-center gap-3">
+								<ListOrdered class="w-4 h-4 {activeTab === 'order_list' ? 'text-white' : 'text-slate-400 group-hover:text-amber-400'}" />
+								{#if !isSidebarCollapsed}
+									<span>অর্ডার তালিকা</span>
+								{/if}
+							</div>
+							{#if !isSidebarCollapsed}
+								<span class="text-[10px] font-black px-2 py-0.5 rounded-full {activeTab === 'order_list' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-300 border border-slate-700/60'}">
+									{orderListOrders.length}
+								</span>
+							{/if}
+						</button>
+
+						<!-- ৫. মুছে ফেলা (Trash) -->
 						<button
 							onclick={() => { activeTab = 'trash'; isMobileSidebarOpen = false; }}
 							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'trash'
 								? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30'
 								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
-							title="বাতিল ও ট্র্যাশ"
+							title="মুছে ফেলা অর্ডারসমূহ"
 						>
 							<div class="flex items-center gap-3">
 								<Trash2 class="w-4 h-4 {activeTab === 'trash' ? 'text-white' : 'text-slate-400 group-hover:text-rose-400'}" />
 								{#if !isSidebarCollapsed}
-									<span>বাতিল ও রিটার্ন</span>
+									<span>মুছে ফেলা</span>
 								{/if}
 							</div>
 							{#if !isSidebarCollapsed && trashedOrders.length > 0}
@@ -298,11 +522,11 @@
 					</div>
 				</div>
 
-				<!-- Section 2: ইনভেন্টরি ও লজিস্টিকস (Logistics) -->
+				<!-- Section 2: পণ্য ও ইনভেন্টরি -->
 				<div>
 					{#if !isSidebarCollapsed}
 						<div class="px-3 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
-							ইনভেন্টরি ও লজিস্টিকস
+							পণ্য ও লজিস্টিকস
 						</div>
 					{/if}
 
@@ -318,7 +542,7 @@
 							<div class="flex items-center gap-3">
 								<Package class="w-4 h-4 {activeTab === 'inventory' ? 'text-white' : 'text-slate-400 group-hover:text-amber-400'}" />
 								{#if !isSidebarCollapsed}
-									<span>প্রোডাক্ট ইনভেন্টরি</span>
+									<span>পণ্য ক্যাটালগ</span>
 								{/if}
 							</div>
 							{#if !isSidebarCollapsed}
@@ -351,7 +575,7 @@
 					</div>
 				</div>
 
-				<!-- Section 3: গ্রোথ ও সেটিংস (Growth & System) -->
+				<!-- Section 3: গ্রোথ ও সেটিংস -->
 				<div>
 					{#if !isSidebarCollapsed}
 						<div class="px-3 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -401,51 +625,36 @@
 							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'database'
 								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
 								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
-							title="Cloudflare D1 ইঞ্জিন"
+							title="Cloudflare D1 ডেটাবেজ কনসোল"
 						>
 							<div class="flex items-center gap-3">
 								<Database class="w-4 h-4 {activeTab === 'database' ? 'text-white' : 'text-amber-400'}" />
 								{#if !isSidebarCollapsed}
-									<span>Cloudflare D1 ইঞ্জিন</span>
+									<span>D1 ইঞ্জিন কনসোল</span>
 								{/if}
 							</div>
 							{#if !isSidebarCollapsed}
-								<span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+								<span class="w-2 h-2 rounded-full {data.isD1Connected ? 'bg-emerald-400' : 'bg-amber-400'}"></span>
 							{/if}
 						</button>
 					</div>
 				</div>
-
 			</nav>
 		</div>
 
-		<!-- SIDEBAR FOOTER: ADMIN USER PROFILE & LATENCY -->
-		<div class="p-4 border-t border-slate-800/80 bg-[#0e1424]/60 space-y-3">
+		<!-- Executive Superadmin Card -->
+		<div class="p-3 border-t border-slate-800/80 bg-[#0c101a]">
 			{#if !isSidebarCollapsed}
-				<!-- D1 Ping Telemetry Status Pill -->
-				<div class="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-800 text-[11px]">
-					<div class="flex items-center gap-2">
-						<span class="relative flex h-2 w-2">
-							<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-							<span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-						</span>
-						<span class="font-bold text-slate-200">Cloudflare D1</span>
-					</div>
-					<span class="text-[10px] font-mono text-amber-400 font-bold">12ms • Edge Live</span>
-				</div>
-
-				<!-- Superadmin Profile Box -->
-				<div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/50 border border-slate-800/60">
-					<div class="flex items-center gap-2.5">
-						<div class="w-8 h-8 rounded-full bg-gradient-to-tr from-[#ea580c] to-[#d97706] flex items-center justify-center text-white font-bold text-xs ring-2 ring-amber-500/40">
-							AK
+				<div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/80 border border-slate-800">
+					<div class="flex items-center gap-3">
+						<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-[#ea580c] to-[#d97706] flex items-center justify-center font-bold text-white text-xs shadow-md">
+							<ShieldCheck class="w-4 h-4" />
 						</div>
 						<div class="flex flex-col">
-							<span class="text-xs font-bold text-white leading-tight">আনোয়ারুল করিম</span>
-							<span class="text-[10px] text-slate-400">সুপার অ্যাডমিন</span>
+							<span class="text-xs font-bold text-slate-200">সুপার অ্যাডমিন</span>
+							<span class="text-[10px] text-slate-400">admin@haqplus.com</span>
 						</div>
 					</div>
-
 					<a
 						href="/"
 						target="_blank"
@@ -502,13 +711,15 @@
 					<span>/</span>
 					<span class="text-slate-900 font-bold capitalize">
 						{#if activeTab === 'overview'}ওভারভিউ ও অ্যানালিটিক্স
-						{:else if activeTab === 'orders' || activeTab === 'order_list'}অর্ডার লিস্ট
-						{:else if activeTab === 'new_order'}নতুন ম্যানুয়াল অর্ডার
+						{:else if activeTab === 'web_orders' || activeTab === 'orders'}ওয়েব অর্ডার (কনফার্মেশনের পূর্বে)
+						{:else if activeTab === 'order_list'}অর্ডার তালিকা (কুরিয়ার ও ফুলফিলমেন্ট)
+						{:else if activeTab === 'pre_order'}প্রি-অর্ডার পাইপলাইন
+						{:else if activeTab === 'new_order'}নতুন ম্যানুয়াল অর্ডার তৈরি
 						{:else if activeTab === 'inventory'}প্রোডাক্ট ইনভেন্টরি
 						{:else if activeTab === 'courier'}কুরিয়ার লজিস্টিকস
 						{:else if activeTab === 'pixels'}পিক্সেল ট্র্যাকিং
 						{:else if activeTab === 'customers'}ভিআইপি গ্রাহক
-						{:else if activeTab === 'trash'}বাতিল ও ট্র্যাশ
+						{:else if activeTab === 'trash'}বাতিল ও মুছে ফেলা
 						{:else if activeTab === 'database'}Cloudflare D1 সেটিংস
 						{/if}
 					</span>
@@ -521,607 +732,353 @@
 				<a
 					href="/"
 					target="_blank"
-					class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#ede5d8] text-slate-700 hover:text-[#c25e00] hover:border-[#fed7aa] text-xs font-bold transition-all bg-[#faf7f2] shadow-2xs"
+					class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#ede5d8] text-xs font-bold text-slate-700 bg-white hover:bg-[#fff7ed] hover:border-amber-300 transition-all shadow-2xs"
 				>
-					<span>লাইভ স্টোর</span>
-					<ExternalLink class="w-3.5 h-3.5" />
+					<ExternalLink class="w-3.5 h-3.5 text-[#c25e00]" />
+					<span>লাইভ স্টোর ভিজিট</span>
 				</a>
 
-				<!-- Create Order Action Button (Warm Amber Gradient) -->
+				<!-- Quick Create Order Button -->
 				<button
 					onclick={() => activeTab = 'new_order'}
-					class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#ea580c] to-[#d97706] hover:from-[#c2410c] hover:to-[#b45309] text-white font-bold text-xs shadow-md shadow-amber-600/20 transition-all hover:scale-102"
+					class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#ea580c] to-[#d97706] hover:from-[#c2410c] hover:to-[#b45309] text-white font-bold text-xs shadow-md shadow-amber-600/20 transition-all hover:scale-[1.02]"
 				>
-					<PlusCircle class="w-4 h-4" />
-					<span class="hidden sm:inline">নতুন অর্ডার</span>
-				</button>
-
-				<!-- Refresh Data Button -->
-				<button
-					onclick={() => window.location.reload()}
-					class="p-2 rounded-xl border border-[#ede5d8] text-slate-600 hover:text-[#c25e00] hover:bg-[#fff7ed] text-xs transition-colors"
-					title="রিলোড করুন"
-				>
-					<RefreshCw class="w-4 h-4" />
+					<PlusCircle class="w-3.5 h-3.5" />
+					<span>নতুন অর্ডার</span>
 				</button>
 			</div>
 		</header>
 
-		<!-- WORKSPACE BODY CONTENT -->
-		<main class="p-6 md:p-8 space-y-8 flex-1">
+		<!-- Courier Sync Toast Banner (If Triggered) -->
+		{#if courierSyncMessage}
+			<div class="bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white px-6 py-2.5 flex items-center justify-between text-xs font-bold shadow-md transition-all">
+				<div class="flex items-center gap-2">
+					<RefreshCw class="w-4 h-4 {isCourierSyncing ? 'animate-spin' : ''}" />
+					<span>{courierSyncMessage}</span>
+				</div>
+				<button onclick={() => courierSyncMessage = null} class="text-white/80 hover:text-white">
+					<XCircle class="w-4 h-4" />
+				</button>
+			</div>
+		{/if}
+
+		<!-- WORKSPACE BODY CONTENT AREA -->
+		<main class="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl w-full mx-auto">
 			
 			<!-- ============================================== -->
-			<!-- TAB 1: EXECUTIVE OVERVIEW                      -->
+			<!-- TAB 0: EXECUTIVE OVERVIEW                      -->
 			<!-- ============================================== -->
 			{#if activeTab === 'overview'}
-				<!-- Header with date filter tabs -->
-				<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-					<div>
-						<div class="flex items-center gap-2">
-							<h1 class="text-2xl font-black text-[#0f172a] tracking-tight font-['Outfit']">
-								অ্যাডমিন ওভারভিউ
-							</h1>
-							<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#fff7ed] text-[#c25e00] border border-[#fed7aa]">
-								রিয়েল-টাইম
-							</span>
-						</div>
-						<p class="text-xs text-slate-500 mt-1">
-							ব্যবসার লাইভ সেলস, দৈনিক ট্রেন্ড এবং অর্ডার ফুলফিলমেন্ট সামারি
-						</p>
-					</div>
-
-					<!-- Date Filter Pills -->
-					<div class="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-[#ede5d8] shadow-2xs">
-						{#each [
-							{ id: 'today', label: 'আজ' },
-							{ id: 'yesterday', label: 'গতকাল' },
-							{ id: '7days', label: 'গত ৭ দিন' },
-							{ id: '30days', label: 'গত ৩০ দিন' },
-							{ id: 'all', label: 'সব সময়' }
-						] as f}
-							<button
-								onclick={() => activeDateFilter = f.id as any}
-								class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all {activeDateFilter === f.id ? 'bg-[#c25e00] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-[#faf7f2]'}"
-							>
-								{f.label}
-							</button>
-						{/each}
-					</div>
-				</div>
-
-				<!-- 6 Performance Summary Cards (NO EMOJIS - Standard SVG Icons & Warm Palette) -->
-				<div>
-					<div class="flex items-center justify-between mb-3.5">
-						<div class="flex items-center gap-2 text-xs font-black text-slate-700 uppercase tracking-wider">
-							<Activity class="w-4 h-4 text-[#c25e00]" />
-							রিয়েল-টাইম পারফরম্যান্স সামারি
-						</div>
-						<span class="text-xs text-slate-400">আপডেট: এইমাত্র</span>
-					</div>
-
-					<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-						
-						<!-- Card 1: মোট সেলস (Revenue) -->
-						<div class="bg-white rounded-2xl p-4.5 border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-md hover:border-[#fde68a] transition-all group flex flex-col justify-between">
-							<div>
-								<div class="flex items-center justify-between text-slate-500 text-xs font-bold mb-2">
-									<span class="truncate">মোট সেলস (Revenue)</span>
-									<span class="w-7 h-7 rounded-lg bg-[#fff7ed] text-[#c25e00] flex items-center justify-center text-sm shadow-2xs border border-[#fed7aa]/50">
-										<DollarSign class="w-4 h-4" />
-									</span>
-								</div>
-								<div class="text-2xl font-black text-[#0f172a] font-['Outfit'] tracking-tight">
-									{formatTaka(data.stats.totalRevenue)}
-								</div>
-								<div class="flex items-center gap-1 mt-1 text-[10px] font-bold text-[#c25e00]">
-									<TrendingUp class="w-3 h-3" />
-									<span>+২৪.৮% বৃদ্ধি</span>
-								</div>
-							</div>
-							<div class="text-[11px] text-slate-400 mt-3 pt-2.5 border-t border-[#f4eee4] font-medium">
-								কনফার্মড: <strong class="text-slate-700">{formatTaka(data.stats.confirmedRevenue)}</strong>
-							</div>
-						</div>
-
-						<!-- Card 2: মোট অর্ডার (Total Orders) -->
-						<div class="bg-white rounded-2xl p-4.5 border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-md hover:border-[#fde68a] transition-all group flex flex-col justify-between">
-							<div>
-								<div class="flex items-center justify-between text-slate-500 text-xs font-bold mb-2">
-									<span class="truncate">মোট অর্ডার (Orders)</span>
-									<span class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm shadow-2xs border border-blue-200/50">
-										<ShoppingBag class="w-4 h-4" />
-									</span>
-								</div>
-								<div class="text-2xl font-black text-[#0f172a] font-['Outfit'] tracking-tight">
-									{data.stats.totalOrders} <span class="text-sm font-bold text-slate-500">টি</span>
-								</div>
-								<div class="flex items-center gap-1 mt-1 text-[10px] font-bold text-blue-600">
-									<TrendingUp class="w-3 h-3" />
-									<span>+১২.৩% বৃদ্ধি</span>
-								</div>
-							</div>
-							<div class="text-[11px] text-slate-400 mt-3 pt-2.5 border-t border-[#f4eee4] font-medium">
-								আজকে <strong class="text-slate-700">{data.stats.todayOrdersCount} টি</strong> • পেন্ডিং <strong class="text-blue-600">{data.stats.pendingOrdersCount} টি</strong>
-							</div>
-						</div>
-
-						<!-- Card 3: কনফার্মড রেট (Confirmed Rate) -->
-						<div class="bg-white rounded-2xl p-4.5 border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-md hover:border-[#fde68a] transition-all group flex flex-col justify-between">
-							<div>
-								<div class="flex items-center justify-between text-slate-500 text-xs font-bold mb-2">
-									<span class="truncate">কনফার্মড রেট (Rate)</span>
-									<span class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm shadow-2xs border border-emerald-200/50">
-										<CheckCircle2 class="w-4 h-4" />
-									</span>
-								</div>
-								<div class="text-2xl font-black text-[#0f172a] font-['Outfit'] tracking-tight">
-									{data.stats.confirmedRate}<span class="text-base font-bold text-slate-500">%</span>
-								</div>
-								<div class="flex items-center gap-1 mt-1 text-[10px] font-bold text-emerald-600">
-									<CheckCheck class="w-3 h-3" />
-									<span>লক্ষ্যমাত্রা ৭৫%</span>
-								</div>
-							</div>
-							<div class="text-[11px] text-slate-400 mt-3 pt-2.5 border-t border-[#f4eee4] font-medium">
-								<strong class="text-slate-700">{data.stats.confirmedCount} টি</strong> অর্ডার নিশ্চিত
-							</div>
-						</div>
-
-						<!-- Card 4: ডেলিভারি সফল (Delivered) -->
-						<div class="bg-white rounded-2xl p-4.5 border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-md hover:border-[#fde68a] transition-all group flex flex-col justify-between">
-							<div>
-								<div class="flex items-center justify-between text-slate-500 text-xs font-bold mb-2">
-									<span class="truncate">ডেলিভারি সম্পন্ন</span>
-									<span class="w-7 h-7 rounded-lg bg-cyan-50 text-cyan-700 flex items-center justify-center text-sm shadow-2xs border border-cyan-200/50">
-										<Truck class="w-4 h-4" />
-									</span>
-								</div>
-								<div class="text-2xl font-black text-[#0f172a] font-['Outfit'] tracking-tight">
-									{data.stats.deliveredRate}<span class="text-base font-bold text-slate-500">%</span>
-								</div>
-								<div class="flex items-center gap-1 mt-1 text-[10px] font-bold text-cyan-600">
-									<span>{data.stats.deliveredCount} টি সফল ডেলিভারি</span>
-								</div>
-							</div>
-							<div class="text-[11px] text-slate-400 mt-3 pt-2.5 border-t border-[#f4eee4] font-medium">
-								গৃহীত: <strong class="text-slate-700">{formatTaka(data.stats.deliveredRevenue)}</strong>
-							</div>
-						</div>
-
-						<!-- Card 5: ক্যানসেলড ও রিটার্ন -->
-						<div class="bg-white rounded-2xl p-4.5 border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-md hover:border-[#fde68a] transition-all group flex flex-col justify-between">
-							<div>
-								<div class="flex items-center justify-between text-slate-500 text-xs font-bold mb-2">
-									<span class="truncate">ক্যানসেলড ও রিটার্ন</span>
-									<span class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center text-sm shadow-2xs border border-rose-200/50">
-										<AlertTriangle class="w-4 h-4" />
-									</span>
-								</div>
-								<div class="text-2xl font-black text-[#0f172a] font-['Outfit'] tracking-tight">
-									{data.stats.cancelledRate}<span class="text-base font-bold text-slate-500">%</span>
-								</div>
-								<div class="flex items-center gap-1 mt-1 text-[10px] font-bold text-rose-600">
-									<span>বাতিল ০ • রিটার্ন {data.stats.cancelledCount}</span>
-								</div>
-							</div>
-							<div class="text-[11px] text-slate-400 mt-3 pt-2.5 border-t border-[#f4eee4] font-medium">
-								ক্ষতি প্রতিরোধ ব্যবস্থা সক্রিয়
-							</div>
-						</div>
-
-						<!-- Card 6: গড় অর্ডার মূল্য (AOV) -->
-						<div class="bg-white rounded-2xl p-4.5 border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-md hover:border-[#fde68a] transition-all group flex flex-col justify-between">
-							<div>
-								<div class="flex items-center justify-between text-slate-500 text-xs font-bold mb-2">
-									<span class="truncate">গড় মূল্য (AOV)</span>
-									<span class="w-7 h-7 rounded-lg bg-[#fff7ed] text-[#b45309] flex items-center justify-center text-sm shadow-2xs border border-[#fed7aa]/50">
-										<Tag class="w-4 h-4" />
-									</span>
-								</div>
-								<div class="text-2xl font-black text-[#0f172a] font-['Outfit'] tracking-tight">
-									{formatTaka(data.stats.aov)}
-								</div>
-								<div class="flex items-center gap-1 mt-1 text-[10px] font-bold text-[#b45309]">
-									<TrendingUp class="w-3 h-3" />
-									<span>প্রতি অর্ডারে সর্বোচ্চ মান</span>
-								</div>
-							</div>
-							<div class="text-[11px] text-slate-400 mt-3 pt-2.5 border-t border-[#f4eee4] font-medium">
-								সর্বোচ্চ একক টিকিট: <strong class="text-slate-700">৳১,৫০০</strong>
-							</div>
-						</div>
-					</div>
-				</div>
-
-				<!-- ============================================== -->
-				<!-- VISUAL ANALYTICS: TREND CHART & DONUT RATIO    -->
-				<!-- ============================================== -->
-				<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+				<!-- 6 KPI Metric Summary Cards -->
+				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
 					
-					<!-- Left: Sales & Orders Revenue Trend Chart (Warm Amber / Ochre Theme) -->
-					<div class="lg:col-span-8 bg-white rounded-2xl p-6 border border-[#ede5d8] shadow-[0_2px_12px_rgba(180,83,9,0.03)] space-y-4">
-						<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-							<div>
-								<h3 class="text-base font-black text-[#0f172a] flex items-center gap-2">
-									<TrendingUp class="w-4 h-4 text-[#c25e00]" />
-									সেলস ও অর্ডার ট্রেন্ড (Sales & Orders Revenue)
-								</h3>
-								<p class="text-xs text-slate-400">প্রতিদিনের অর্জিত রেভিনিউ (টাকা) এবং মোট অর্ডার সংখ্যা</p>
+					<!-- 1. Total Revenue -->
+					<div class="bg-white p-4 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-[0_4px_16px_rgba(180,83,9,0.08)] transition-all">
+						<div class="flex items-center justify-between mb-2">
+							<span class="text-xs font-bold text-slate-500">মোট বিক্রয়</span>
+							<div class="w-8 h-8 rounded-lg bg-[#fff7ed] flex items-center justify-center text-[#c25e00]">
+								<DollarSign class="w-4 h-4" />
 							</div>
+						</div>
+						<div class="text-xl font-black text-[#0f172a] font-['Outfit']">
+							{formatTaka(data.stats.totalRevenue)}
+						</div>
+						<div class="mt-2 flex items-center gap-1 text-[11px] font-bold text-emerald-600">
+							<TrendingUp class="w-3 h-3" />
+							<span>+১৮.৪% প্রবৃদ্ধি</span>
+						</div>
+					</div>
 
-							<!-- Legends -->
-							<div class="flex items-center gap-4 text-xs font-bold">
+					<!-- 2. Web Orders (Pre-Confirmation) -->
+					<button
+						onclick={() => activeTab = 'web_orders'}
+						class="text-left bg-white p-4 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-[0_4px_16px_rgba(180,83,9,0.08)] transition-all"
+					>
+						<div class="flex items-center justify-between mb-2">
+							<span class="text-xs font-bold text-slate-500">ওয়েব অর্ডার</span>
+							<div class="w-8 h-8 rounded-lg bg-[#fffbeb] flex items-center justify-center text-[#b45309]">
+								<Inbox class="w-4 h-4" />
+							</div>
+						</div>
+						<div class="text-xl font-black text-[#0f172a] font-['Outfit']">
+							{webOrders.length} টি
+						</div>
+						<div class="mt-2 text-[11px] font-bold text-amber-700">
+							কল ও কনফার্মেশন প্রয়োজন
+						</div>
+					</button>
+
+					<!-- 3. Confirmed Orders (Order List) -->
+					<button
+						onclick={() => activeTab = 'order_list'}
+						class="text-left bg-white p-4 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-[0_4px_16px_rgba(180,83,9,0.08)] transition-all"
+					>
+						<div class="flex items-center justify-between mb-2">
+							<span class="text-xs font-bold text-slate-500">কনফার্মড অর্ডার</span>
+							<div class="w-8 h-8 rounded-lg bg-[#ecfdf5] flex items-center justify-center text-[#047857]">
+								<CheckCircle2 class="w-4 h-4" />
+							</div>
+						</div>
+						<div class="text-xl font-black text-[#0f172a] font-['Outfit']">
+							{orderListOrders.length} টি
+						</div>
+						<div class="mt-2 text-[11px] font-bold text-emerald-600">
+							কুরিয়ার ও ডেলিভারি পাইপলাইন
+						</div>
+					</button>
+
+					<!-- 4. Delivered Orders -->
+					<div class="bg-white p-4 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-[0_4px_16px_rgba(180,83,9,0.08)] transition-all">
+						<div class="flex items-center justify-between mb-2">
+							<span class="text-xs font-bold text-slate-500">ডেলিভারড</span>
+							<div class="w-8 h-8 rounded-lg bg-[#f0fdf4] flex items-center justify-center text-[#166534]">
+								<Truck class="w-4 h-4" />
+							</div>
+						</div>
+						<div class="text-xl font-black text-[#0f172a] font-['Outfit']">
+							{data.stats.deliveredCount} টি
+						</div>
+						<div class="mt-2 text-[11px] font-bold text-emerald-600">
+							{data.stats.deliveredRate}% সাকসেস রেট
+						</div>
+					</div>
+
+					<!-- 5. Trashed / Cancelled -->
+					<button
+						onclick={() => activeTab = 'trash'}
+						class="text-left bg-white p-4 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-[0_4px_16px_rgba(180,83,9,0.08)] transition-all"
+					>
+						<div class="flex items-center justify-between mb-2">
+							<span class="text-xs font-bold text-slate-500">বাতিল / ট্র্যাশ</span>
+							<div class="w-8 h-8 rounded-lg bg-[#fff1f2] flex items-center justify-center text-[#be123c]">
+								<Trash2 class="w-4 h-4" />
+							</div>
+						</div>
+						<div class="text-xl font-black text-[#0f172a] font-['Outfit']">
+							{trashedOrders.length} টি
+						</div>
+						<div class="mt-2 text-[11px] font-bold text-rose-600">
+							{data.stats.cancelledRate}% বাতিল হার
+						</div>
+					</button>
+
+					<!-- 6. Average Order Value -->
+					<div class="bg-white p-4 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-[0_4px_16px_rgba(180,83,9,0.08)] transition-all">
+						<div class="flex items-center justify-between mb-2">
+							<span class="text-xs font-bold text-slate-500">গড় অর্ডার (AOV)</span>
+							<div class="w-8 h-8 rounded-lg bg-[#fff7ed] flex items-center justify-center text-[#c25e00]">
+								<Tag class="w-4 h-4" />
+							</div>
+						</div>
+						<div class="text-xl font-black text-[#0f172a] font-['Outfit']">
+							{formatTaka(data.stats.aov)}
+						</div>
+						<div class="mt-2 text-[11px] font-bold text-slate-500">
+							প্রতি কার্ট মূল্য
+						</div>
+					</div>
+				</div>
+
+				<!-- Visual Dual Analytics Section -->
+				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+					
+					<!-- Left 2 Cols: Smooth Vector Area Sales Spline Chart -->
+					<div class="lg:col-span-2 bg-white p-5 rounded-2xl border border-[#ede5d8] shadow-[0_2px_12px_rgba(180,83,9,0.03)] flex flex-col justify-between">
+						<div class="flex items-center justify-between mb-4 pb-3 border-b border-[#ede5d8]">
+							<div>
+								<h3 class="text-sm font-black text-[#0f172a]">৭ দিনের বিক্রয় ও অর্ডার প্রবাহ</h3>
+								<p class="text-xs text-slate-400">লাইভ রেভিনিউ ট্রেন্ড ও ডেলিভারি ট্র্যাকিং</p>
+							</div>
+							<div class="flex items-center gap-3 text-xs">
 								<div class="flex items-center gap-1.5">
-									<span class="w-3 h-3 rounded-md bg-[#c25e00] shadow-xs"></span>
-									<span class="text-slate-700">রেভিনিউ (৳)</span>
+									<span class="w-2.5 h-2.5 rounded-full bg-[#ea580c]"></span>
+									<span class="text-slate-600 font-bold">বিক্রয় (টাকা)</span>
 								</div>
 								<div class="flex items-center gap-1.5">
-									<span class="w-3 h-3 rounded-md bg-blue-600 shadow-xs"></span>
-									<span class="text-slate-700">অর্ডার সংখ্যা (টি)</span>
+									<span class="w-2.5 h-2.5 rounded-full bg-[#d97706]"></span>
+									<span class="text-slate-600 font-bold">অর্ডার সংখ্যা</span>
 								</div>
 							</div>
 						</div>
 
-						<!-- High-Precision SVG Spline Area Chart -->
-						<div class="relative pt-2">
-							<svg viewBox="0 0 640 220" class="w-full h-60 overflow-visible">
+						<!-- Interactive SVG Chart Canvas -->
+						<div class="relative w-full h-56 flex items-center justify-center">
+							<svg viewBox="0 0 640 220" class="w-full h-full overflow-visible">
 								<defs>
-									<!-- Amber Gradient for Sales Area -->
-									<linearGradient id="salesGradWarm" x1="0" y1="0" x2="0" y2="1">
+									<linearGradient id="areaGradientSales" x1="0" y1="0" x2="0" y2="1">
 										<stop offset="0%" stop-color="#ea580c" stop-opacity="0.25" />
 										<stop offset="100%" stop-color="#ea580c" stop-opacity="0.0" />
 									</linearGradient>
-									<!-- Blue Gradient for Orders Area -->
-									<linearGradient id="ordersGradWarm" x1="0" y1="0" x2="0" y2="1">
-										<stop offset="0%" stop-color="#2563eb" stop-opacity="0.18" />
-										<stop offset="100%" stop-color="#2563eb" stop-opacity="0.0" />
-									</linearGradient>
 								</defs>
 
-								<!-- Horizontal Gridlines & Y-Axis Labels -->
-								{#each [
-									{ label: '৳৬,০০০', rLabel: '৮টি', y: 40 },
-									{ label: '৳৪,৫০০', rLabel: '৬টি', y: 85 },
-									{ label: '৳৩,০০০', rLabel: '৪টি', y: 130 },
-									{ label: '৳১,৫০০', rLabel: '২টি', y: 175 }
-								] as grid}
-									<line x1="45" y1={grid.y} x2="595" y2={grid.y} stroke="#f5eee3" stroke-dasharray="4 4" stroke-width="1.5" />
-									<text x="38" y={grid.y + 4} text-anchor="end" fill="#94a3b8" font-size="10" font-family="'Plus Jakarta Sans', sans-serif" font-weight="600">{grid.label}</text>
-									<text x="602" y={grid.y + 4} text-anchor="start" fill="#94a3b8" font-size="10" font-family="'Plus Jakarta Sans', sans-serif" font-weight="600">{grid.rLabel}</text>
-								{/each}
+								<!-- Grid lines -->
+								<line x1="40" y1="40" x2="600" y2="40" stroke="#f4eee4" stroke-dasharray="3 3" />
+								<line x1="40" y1="90" x2="600" y2="90" stroke="#f4eee4" stroke-dasharray="3 3" />
+								<line x1="40" y1="140" x2="600" y2="140" stroke="#f4eee4" stroke-dasharray="3 3" />
+								<line x1="40" y1="190" x2="600" y2="190" stroke="#f4eee4" />
 
-								<!-- Area: Sales (Revenue) in warm ochre/terracotta -->
-								<path
-									d="M 50 190 L 50 75 C 95 120, 140 165, 140 165 C 185 145, 230 125, 230 125 C 275 150, 320 175, 320 175 C 365 135, 410 95, 410 95 C 455 70, 500 45, 500 45 C 545 75, 590 110, 590 110 L 590 190 Z"
-									fill="url(#salesGradWarm)"
+								<!-- Sales Area -->
+								<polygon
+									points="50,190 50,75 140,165 230,125 320,175 410,95 500,45 590,110 590,190"
+									fill="url(#areaGradientSales)"
 								/>
 
-								<!-- Line: Sales (Revenue) -->
-								<path
-									d="M 50 75 C 95 120, 140 165, 140 165 C 185 145, 230 125, 230 125 C 275 150, 320 175, 320 175 C 365 135, 410 95, 410 95 C 455 70, 500 45, 500 45 C 545 75, 590 110, 590 110"
+								<!-- Sales Spline Line -->
+								<polyline
+									points="50,75 140,165 230,125 320,175 410,95 500,45 590,110"
 									fill="none"
-									stroke="#c25e00"
+									stroke="#ea580c"
 									stroke-width="3"
 									stroke-linecap="round"
+									stroke-linejoin="round"
 								/>
 
-								<!-- Line: Orders -->
-								<path
-									d="M 50 70 C 95 100, 140 135, 140 135 C 185 120, 230 105, 230 105 C 275 130, 320 150, 320 150 C 365 120, 410 85, 410 85 C 455 70, 500 55, 500 55 C 545 80, 590 105, 590 105"
+								<!-- Orders Line -->
+								<polyline
+									points="50,70 140,135 230,105 320,150 410,85 500,55 590,105"
 									fill="none"
-									stroke="#2563eb"
-									stroke-width="2.5"
+									stroke="#d97706"
+									stroke-width="2"
+									stroke-dasharray="4 4"
 									stroke-linecap="round"
 								/>
 
-								<!-- Interactive Data Points & Date Axis -->
+								<!-- Interactive Points -->
 								{#each trendData as pt}
-									<!-- Date on X-Axis -->
-									<text x={pt.x} y="208" text-anchor="middle" fill="#64748b" font-size="11" font-weight="700">{pt.date}</text>
-
-									<!-- Sales Circle Node -->
 									<circle
 										cx={pt.x}
 										cy={pt.ySales}
 										r="5"
 										fill="#ffffff"
-										stroke="#c25e00"
-										stroke-width="3"
-										class="cursor-pointer transition-transform hover:scale-175 shadow-lg"
+										stroke="#ea580c"
+										stroke-width="2.5"
+										class="cursor-pointer hover:r-7 transition-all"
 										onmouseenter={() => activeChartPoint = pt}
 										onmouseleave={() => activeChartPoint = null}
 									/>
+									<text x={pt.x} y="210" font-size="10" text-anchor="middle" fill="#64748b" font-weight="600">
+										{pt.date}
+									</text>
+								{/each}
+							</svg>
+						</div>
 
-									<!-- Orders Circle Node -->
+						<div class="mt-3 flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-[#ede5d8]">
+							<span>সর্বোচ্চ সেলস: ২১ অক্টো (৳৫,৯০০)</span>
+							<span>সাপ্তাহিক মোট: ৳২২,৮০০</span>
+						</div>
+					</div>
+
+					<!-- Right 1 Col: Donut Status Ratio -->
+					<div class="bg-white p-5 rounded-2xl border border-[#ede5d8] shadow-[0_2px_12px_rgba(180,83,9,0.03)] flex flex-col justify-between">
+						<div>
+							<h3 class="text-sm font-black text-[#0f172a]">অর্ডার স্থিতি বিভাজন</h3>
+							<p class="text-xs text-slate-400">লাইভ পাইপলাইন অনুপাত</p>
+						</div>
+
+						<div class="my-4 flex items-center justify-center">
+							<div class="relative w-36 h-36 flex items-center justify-center">
+								<svg viewBox="0 0 100 100" class="w-full h-full -rotate-90">
+									<circle cx="50" cy="50" r="40" stroke="#f4eee4" stroke-width="12" fill="none" />
 									<circle
-										cx={pt.x}
-										cy={pt.yOrders}
-										r="4"
-										fill="#ffffff"
-										stroke="#2563eb"
-										stroke-width="2.5"
-										class="cursor-pointer"
+										cx="50" cy="50" r="40"
+										stroke="#047857" stroke-width="12" fill="none"
+										stroke-dasharray="251.2"
+										stroke-dashoffset={251.2 * (1 - (data.stats.deliveredCount / (data.orders.length || 1)))}
+										stroke-linecap="round"
 									/>
-								{/each}
-							</svg>
-
-							<!-- Hover Glass Tooltip (NO EMOJI - Pure Lucide Calendar Icon) -->
-							{#if activeChartPoint}
-								<div class="absolute top-2 left-1/2 -translate-x-1/2 bg-[#0c101a] text-white text-xs px-4 py-2 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-4 pointer-events-none backdrop-blur-md">
-									<div class="flex items-center gap-1.5 font-bold text-[#fbbf24]">
-										<Calendar class="w-3.5 h-3.5 text-[#fbbf24]" />
-										<span>{activeChartPoint.date}</span>
-									</div>
-									<div class="text-slate-200">
-										মোট সেলস: <strong class="text-white">{formatTaka(activeChartPoint.sales)}</strong>
-									</div>
-									<div class="text-blue-400">
-										অর্ডার: <strong>{activeChartPoint.orders} টি</strong>
-									</div>
-								</div>
-							{/if}
-						</div>
-					</div>
-
-					<!-- Right: Order Status & Fulfillment Ratio Donut -->
-					<div class="lg:col-span-4 bg-white rounded-2xl p-6 border border-[#ede5d8] shadow-[0_2px_12px_rgba(180,83,9,0.03)] flex flex-col justify-between space-y-4">
-						<div>
-							<h3 class="text-base font-black text-[#0f172a] flex items-center gap-2">
-								<CheckCircle2 class="w-4 h-4 text-[#c25e00]" />
-								অর্ডার স্ট্যাটাস রেশিও (Status Ratio)
-							</h3>
-							<p class="text-xs text-slate-400">স্ট্যাটাস অনুযায়ী অর্ডারের শতকরা ভাগ ও ডিস্ট্রিবিউশন</p>
-						</div>
-
-						<!-- Circular Donut Chart -->
-						<div class="flex items-center justify-center relative py-2">
-							<svg viewBox="0 0 160 160" class="w-48 h-48 -rotate-90">
-								<!-- Track -->
-								<circle cx="80" cy="80" r="60" fill="transparent" stroke="#f8fafc" stroke-width="16" />
-
-								<!-- 1. Delivered: 40% (Warm Amber/Ochre #c25e00) -->
-								<circle
-									cx="80"
-									cy="80"
-									r="60"
-									fill="transparent"
-									stroke="#c25e00"
-									stroke-width="16"
-									stroke-dasharray="150.8 377"
-									stroke-dashoffset="0"
-								/>
-
-								<!-- 2. Processing: 25% (Blue #2563eb) -->
-								<circle
-									cx="80"
-									cy="80"
-									r="60"
-									fill="transparent"
-									stroke="#2563eb"
-									stroke-width="16"
-									stroke-dasharray="94.2 377"
-									stroke-dashoffset="-150.8"
-								/>
-
-								<!-- 3. Confirmed: 15% (Emerald #10b981) -->
-								<circle
-									cx="80"
-									cy="80"
-									r="60"
-									fill="transparent"
-									stroke="#10b981"
-									stroke-width="16"
-									stroke-dasharray="56.5 377"
-									stroke-dashoffset="-245"
-								/>
-
-								<!-- 4. Cancelled/Returned: 20% (Rose #ef4444) -->
-								<circle
-									cx="80"
-									cy="80"
-									r="60"
-									fill="transparent"
-									stroke="#ef4444"
-									stroke-width="16"
-									stroke-dasharray="75.4 377"
-									stroke-dashoffset="-301.5"
-								/>
-							</svg>
-
-							<!-- Donut Center Value -->
-							<div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-								<div class="text-3xl font-black text-[#0f172a] font-['Outfit']">
-									{data.stats.totalOrders}
-								</div>
-								<div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-									মোট অর্ডার
+								</svg>
+								<div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+									<span class="text-2xl font-black text-[#0f172a] font-['Outfit']">{data.stats.deliveredRate}%</span>
+									<span class="text-[9px] font-bold text-slate-400 uppercase">ডেলিভারড</span>
 								</div>
 							</div>
 						</div>
 
-						<!-- Legend Grid -->
-						<div class="grid grid-cols-2 gap-2.5 text-xs pt-3 border-t border-[#f4eee4] font-medium">
-							<div class="flex items-center gap-2">
-								<span class="w-3 h-3 rounded-md bg-[#c25e00] shadow-xs"></span>
-								<span class="text-slate-700">ডেলিভার্ড ({data.stats.deliveredRate}%)</span>
+						<div class="space-y-2 text-xs">
+							<div class="flex items-center justify-between">
+								<div class="flex items-center gap-2">
+									<span class="w-2.5 h-2.5 rounded-full bg-[#047857]"></span>
+									<span class="text-slate-600">ডেলিভারড</span>
+								</div>
+								<span class="font-bold text-slate-900">{data.stats.deliveredCount} টি</span>
 							</div>
-							<div class="flex items-center gap-2">
-								<span class="w-3 h-3 rounded-md bg-blue-600 shadow-xs"></span>
-								<span class="text-slate-700">প্রসেসিং (২৫%)</span>
+							<div class="flex items-center justify-between">
+								<div class="flex items-center gap-2">
+									<span class="w-2.5 h-2.5 rounded-full bg-[#ea580c]"></span>
+									<span class="text-slate-600">ওয়েব অর্ডার</span>
+								</div>
+								<span class="font-bold text-slate-900">{webOrders.length} টি</span>
 							</div>
-							<div class="flex items-center gap-2">
-								<span class="w-3 h-3 rounded-md bg-emerald-500 shadow-xs"></span>
-								<span class="text-slate-700">কনফার্মড ({data.stats.confirmedRate}%)</span>
-							</div>
-							<div class="flex items-center gap-2">
-								<span class="w-3 h-3 rounded-md bg-rose-500 shadow-xs"></span>
-								<span class="text-slate-700">বাতিল/রিটার্ন ({data.stats.cancelledRate}%)</span>
+							<div class="flex items-center justify-between">
+								<div class="flex items-center gap-2">
+									<span class="w-2.5 h-2.5 rounded-full bg-[#be123c]"></span>
+									<span class="text-slate-600">বাতিল</span>
+								</div>
+								<span class="font-bold text-slate-900">{trashedOrders.length} টি</span>
 							</div>
 						</div>
-					</div>
-
-				</div>
-
-				<!-- ============================================== -->
-				<!-- RECENT ORDERS STREAM TABLE                    -->
-				<!-- ============================================== -->
-				<div class="bg-white rounded-2xl border border-[#ede5d8] shadow-[0_2px_12px_rgba(180,83,9,0.03)] p-6 space-y-4">
-					<div class="flex items-center justify-between">
-						<div>
-							<h3 class="text-base font-black text-[#0f172a]">সাম্প্রতিক অর্ডার স্ট্রিম (Recent Orders Stream)</h3>
-							<p class="text-xs text-slate-400">সর্বশেষ আসা কাস্টমার অর্ডার তালিকা এবং ডেলিভারি স্ট্যাটাস</p>
-						</div>
-						<button
-							onclick={() => activeTab = 'orders'}
-							class="text-xs font-bold text-[#c25e00] hover:text-[#9a3412] flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[#fff7ed] transition-colors"
-						>
-							<span>সব {data.orders.length}টি অর্ডার দেখুন</span>
-							<ChevronRight class="w-4 h-4" />
-						</button>
-					</div>
-
-					<div class="overflow-x-auto">
-						<table class="w-full text-left text-xs">
-							<thead>
-								<tr class="border-b border-[#ede5d8] text-slate-500 bg-[#faf7f2]/80">
-									<th class="py-3.5 px-4 font-bold">অর্ডার আইডি</th>
-									<th class="py-3.5 px-4 font-bold">কাস্টমার</th>
-									<th class="py-3.5 px-4 font-bold">ঠিকানা ও জেলা</th>
-									<th class="py-3.5 px-4 font-bold">পণ্য</th>
-									<th class="py-3.5 px-4 font-bold">মূল্য</th>
-									<th class="py-3.5 px-4 font-bold">স্ট্যাটাস</th>
-									<th class="py-3.5 px-4 font-bold text-right">অ্যাকশন</th>
-								</tr>
-							</thead>
-							<tbody class="divide-y divide-[#f4eee4]">
-								{#each data.orders.slice(0, 6) as ord}
-									{@const parsedItems = parseItems(ord.items)}
-									<tr class="hover:bg-[#faf7f2]/70 transition-colors">
-										<!-- ID -->
-										<td class="py-4 px-4 font-mono font-bold text-[#c25e00]">
-											<div class="flex items-center gap-1.5">
-												<span>{ord.id}</span>
-												<button
-													onclick={() => copyToClipboard(ord.id, ord.id)}
-													class="text-slate-400 hover:text-slate-700"
-													title="আইডি কপি"
-												>
-													{#if isCopied === ord.id}
-														<Check class="w-3.5 h-3.5 text-emerald-600" />
-													{:else}
-														<Copy class="w-3.5 h-3.5" />
-													{/if}
-												</button>
-											</div>
-										</td>
-
-										<!-- Customer Name & Contacts -->
-										<td class="py-4 px-4">
-											<div class="font-bold text-[#0f172a]">{ord.customerName}</div>
-											<div class="text-[11px] text-slate-400">{ord.customerEmail}</div>
-										</td>
-
-										<!-- Shipping Address -->
-										<td class="py-4 px-4 max-w-[220px] text-slate-600 truncate" title={ord.shippingAddress}>
-											{ord.shippingAddress}
-										</td>
-
-										<!-- Items -->
-										<td class="py-4 px-4">
-											{#each parsedItems as itm}
-												<div class="text-[11px] font-medium text-slate-700 truncate max-w-[160px]">
-													<strong class="text-[#c25e00]">{itm.quantity}x</strong> {itm.name}
-												</div>
-											{/each}
-										</td>
-
-										<!-- Total Amount -->
-										<td class="py-4 px-4 font-bold text-[#0f172a] font-['Outfit'] text-sm">
-											{formatTaka(ord.total)}
-										</td>
-
-										<!-- Status Badge -->
-										<td class="py-4 px-4">
-											{#if ord.status === 'delivered'}
-												<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
-													<CheckCircle2 class="w-3 h-3" /> ডেলিভার্ড
-												</span>
-											{:else if ord.status === 'dispatched'}
-												<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-cyan-50 text-cyan-700 border border-cyan-200 inline-flex items-center gap-1">
-													<Truck class="w-3 h-3" /> ইন ট্রানজিট
-												</span>
-											{:else if ord.status === 'processing'}
-												<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#fff7ed] text-[#c25e00] border border-[#fed7aa] inline-flex items-center gap-1">
-													<Clock class="w-3 h-3" /> প্যাকিং
-												</span>
-											{:else if ord.status === 'refunded'}
-												<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 inline-flex items-center gap-1">
-													<AlertTriangle class="w-3 h-3" /> বাতিল
-												</span>
-											{:else}
-												<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1">
-													পেইড
-												</span>
-											{/if}
-										</td>
-
-										<!-- Action Form Changer -->
-										<td class="py-4 px-4 text-right">
-											<form action="?/updateOrderStatus" method="POST" use:enhance class="inline-flex items-center gap-2">
-												<input type="hidden" name="orderId" value={ord.id} />
-												<select
-													name="status"
-													onchange={(e) => (e.currentTarget.form as HTMLFormElement).requestSubmit()}
-													class="bg-[#faf7f2] text-[11px] font-bold text-slate-700 border border-[#ede5d8] rounded-lg px-2 py-1 focus:outline-none focus:border-[#c25e00] shadow-2xs"
-												>
-													<option value="paid" selected={ord.status === 'paid'}>পেইড</option>
-													<option value="processing" selected={ord.status === 'processing'}>প্রসেসিং</option>
-													<option value="dispatched" selected={ord.status === 'dispatched'}>ডিসপ্যাচ</option>
-													<option value="delivered" selected={ord.status === 'delivered'}>ডেলিভার্ড</option>
-													<option value="refunded" selected={ord.status === 'refunded'}>বাতিল</option>
-												</select>
-											</form>
-										</td>
-									</tr>
-								{/each}
-							</tbody>
-						</table>
 					</div>
 				</div>
 			{/if}
 
-			<!-- ============================================== -->
-			<!-- TAB 2: ALL ORDERS & ORDER LIST (Full Management)-->
-			<!-- ============================================== -->
-			{#if activeTab === 'orders' || activeTab === 'order_list'}
+			<!-- ============================================================== -->
+			<!-- TAB 1: ওয়েব অর্ডার (Pre-Confirmation - Exact Match to Image 1)-->
+			<!-- ============================================================== -->
+			{#if activeTab === 'web_orders' || activeTab === 'orders'}
 				<div class="space-y-4">
-					<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-						<div>
-							<h2 class="text-xl font-black text-[#0f172a] font-['Outfit']">অর্ডার ম্যানেজমেন্ট ও ট্র্যাকিং</h2>
-							<p class="text-xs text-slate-400">মোট {filteredOrders.length} টি অর্ডারের সার্বিক তথ্য এবং ডেলিভারি নিয়ন্ত্রণ</p>
+					
+					<!-- Top Pre-Confirmation Status Filter Tabs (Matches Image 1) -->
+					<div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+						{#each WEB_ORDER_STATUS_TABS as tab}
+							{@const count = tab.id === 'all' 
+								? webOrders.length 
+								: webOrders.filter(o => o.status === tab.id).length}
+							<button
+								onclick={() => webStatusFilter = tab.id}
+								class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold shrink-0 transition-all shadow-2xs border {webStatusFilter === tab.id
+									? 'bg-[#fffbeb] text-[#92400e] border-[#f59e0b] ring-1 ring-[#f59e0b]/40 shadow-xs'
+									: 'bg-white hover:bg-[#faf7f2] text-slate-700 border-[#ede5d8]'}"
+							>
+								<tab.icon class="w-3.5 h-3.5 {webStatusFilter === tab.id ? 'text-[#b45309]' : 'text-slate-400'}" />
+								<span>{tab.label}</span>
+								<span class="text-[11px] font-extrabold {webStatusFilter === tab.id ? 'text-[#b45309]' : 'text-slate-400'}">
+									({count})
+								</span>
+							</button>
+						{/each}
+					</div>
+
+					<!-- Subheader Search and Date Filter Ribbon (Matches Image 1) -->
+					<div class="bg-white p-3.5 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+						<div class="relative flex-1 max-w-md">
+							<Search class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+							<input
+								type="text"
+								bind:value={orderSearchQuery}
+								placeholder="অর্ডার আইডি, নাম বা ফোন..."
+								class="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl pl-10 pr-4 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#c25e00] focus:bg-white transition-all shadow-2xs"
+							/>
 						</div>
 
 						<div class="flex items-center gap-2">
-							<button
-								onclick={() => {
-									const csv = 'Order ID,Customer,Phone/Email,Address,Total,Status\n' +
-										filteredOrders.map(o => `"${o.id}","${o.customerName}","${o.customerEmail}","${o.shippingAddress}",${o.total},"${o.status}"`).join('\n');
-									const blob = new Blob([csv], { type: 'text/csv' });
-									const url = window.URL.createObjectURL(blob);
-									const a = document.createElement('a');
-									a.href = url;
-									a.download = `orders-export-${Date.now()}.csv`;
-									a.click();
-								}}
-								class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-[#ede5d8] text-slate-700 hover:bg-[#fff7ed] font-bold text-xs shadow-2xs transition-all"
-							>
-								<Download class="w-3.5 h-3.5 text-slate-500" />
-								<span>CSV এক্সপোর্ট</span>
-							</button>
+							<div class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#faf7f2] border border-[#ede5d8] text-xs font-bold text-slate-700">
+								<Clock class="w-3.5 h-3.5 text-slate-400" />
+								<select
+									bind:value={activeDateFilter}
+									class="bg-transparent focus:outline-none cursor-pointer"
+								>
+									<option value="all">সব সময়</option>
+									<option value="today">আজকের অর্ডার</option>
+									<option value="yesterday">গতকালকের অর্ডার</option>
+									<option value="7days">বিগত ৭ দিন</option>
+									<option value="30days">বিগত ৩০ দিন</option>
+								</select>
+							</div>
 
 							<button
 								onclick={() => activeTab = 'new_order'}
-								class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#ea580c] to-[#d97706] hover:from-[#c2410c] hover:to-[#b45309] text-white font-bold text-xs shadow-md shadow-amber-600/20 transition-all"
+								class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#ea580c] to-[#d97706] hover:from-[#c2410c] hover:to-[#b45309] text-white font-bold text-xs shadow-md shadow-amber-600/20 transition-all shrink-0"
 							>
 								<PlusCircle class="w-4 h-4" />
 								<span>নতুন অর্ডার তৈরি</span>
@@ -1129,175 +1086,451 @@
 						</div>
 					</div>
 
-					<!-- Search & Status Filter Ribbon -->
-					<div class="bg-white p-4 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+					<!-- Web Orders Data Table (Exact Columns of Image 1) -->
+					<div class="bg-white rounded-2xl border border-[#ede5d8] overflow-hidden shadow-[0_2px_12px_rgba(180,83,9,0.03)]">
+						<div class="overflow-x-auto">
+							<table class="w-full text-left text-xs">
+								<thead>
+									<tr class="border-b border-[#ede5d8] bg-[#faf7f2]/90 text-slate-500 font-bold">
+										<th class="py-3 px-4">অর্ডার</th>
+										<th class="py-3 px-4">নাম</th>
+										<th class="py-3 px-4">লোকেশন</th>
+										<th class="py-3 px-4">নাম্বার</th>
+										<th class="py-3 px-4">পণ্য</th>
+										<th class="py-3 px-4">মোট</th>
+										<th class="py-3 px-4">স্ট্যাটাস</th>
+										<th class="py-3 px-4 text-center">এডিট</th>
+										<th class="py-3 px-4 text-right">সোর্স</th>
+									</tr>
+								</thead>
+								<tbody class="divide-y divide-[#f4eee4]">
+									{#if filteredWebOrders.length === 0}
+										<tr>
+											<td colspan="9" class="py-16 text-center text-slate-400">
+												কোনো ওয়েব অর্ডার পাওয়া যায়নি।
+											</td>
+										</tr>
+									{/if}
+
+									{#each filteredWebOrders as order (order.id)}
+										{@const parsedItems = parseItems(order.items)}
+										{@const firstItem = parsedItems[0] || {}}
+										{@const statusStyle = getStatusInfo(order.status)}
+
+										<tr class="hover:bg-[#fbf9f5] transition-colors group">
+											
+											<!-- অর্ডার কলাম (আইডি + সময়) -->
+											<td class="py-3 px-4 font-bold align-top">
+												<div class="text-[#047857] font-mono font-bold text-sm">
+													{order.id}
+												</div>
+												<div class="text-[10px] text-slate-400 font-normal">
+													{firstItem.timeAgo || '12 minutes ago'}
+												</div>
+											</td>
+
+											<!-- নাম -->
+											<td class="py-3 px-4 align-top">
+												<span class="font-bold text-[#0f172a] block max-w-[150px] truncate">
+													{order.customerName}
+												</span>
+											</td>
+
+											<!-- লোকেশন -->
+											<td class="py-3 px-4 align-top max-w-[220px]">
+												<span class="text-slate-600 line-clamp-2 text-[11px] leading-relaxed">
+													{order.shippingAddress}
+												</span>
+											</td>
+
+											<!-- নাম্বার ও ডেলিভারি সাকসেস রেশিও (Steadfast Ratio Pill) -->
+											<td class="py-3 px-4 align-top">
+												<div class="flex items-center gap-1.5 font-mono text-slate-800 font-bold">
+													<span>{order.customerEmail}</span>
+													<a
+														href="tel:{order.customerEmail}"
+														class="text-emerald-600 hover:text-emerald-700 p-0.5 rounded transition-colors"
+														title="কল করুন"
+													>
+														<PhoneCall class="w-3.5 h-3.5" />
+													</a>
+												</div>
+
+												{#if firstItem.altPhone}
+													<div class="flex items-center gap-1.5 font-mono text-[10px] text-slate-500">
+														<span>{firstItem.altPhone}</span>
+														<a href="tel:{firstItem.altPhone}" class="text-emerald-600">
+															<PhoneCall class="w-2.5 h-2.5" />
+														</a>
+													</div>
+												{/if}
+
+												<!-- Steadfast Ratio Pill (30 | 2 | 95%) -->
+												{#if firstItem.successRate}
+													<div class="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-700">
+														<span>{firstItem.successRate.delivered}</span>
+														<span>|</span>
+														<span>{firstItem.successRate.returned}</span>
+														<span>|</span>
+														<span>{firstItem.successRate.percent}%</span>
+													</div>
+												{/if}
+											</td>
+
+											<!-- পণ্য বিবরণ থাম্বনেইল -->
+											<td class="py-3 px-4 align-top">
+												<div class="flex items-center gap-2">
+													<div class="w-8 h-8 rounded-lg bg-[#faf7f2] border border-[#ede5d8] overflow-hidden shrink-0 flex items-center justify-center">
+														<Package class="w-4 h-4 text-[#c25e00]" />
+													</div>
+													<div class="text-[11px] font-medium text-slate-700 truncate max-w-[120px]">
+														{firstItem.name || 'AURA প্রডাক্ট'}
+														{#if parsedItems.length > 1}
+															<span class="text-[10px] text-slate-400 block">& More {parsedItems.length - 1}</span>
+														{/if}
+													</div>
+												</div>
+											</td>
+
+											<!-- মোট টাকা -->
+											<td class="py-3 px-4 align-top font-bold text-[#0f172a] whitespace-nowrap">
+												{formatTaka(order.total)}
+											</td>
+
+											<!-- ইনলাইন স্ট্যাটাস ড্রপডাউন -->
+											<td class="py-3 px-4 align-top">
+												<form method="POST" action="?/updateOrderStatus" use:enhance class="inline-block">
+													<input type="hidden" name="orderId" value={order.id} />
+													<div class="relative inline-flex items-center">
+														<select
+															name="status"
+															value={order.status}
+															onchange={(e) => (e.currentTarget.form as HTMLFormElement)?.requestSubmit()}
+															class="pl-6 pr-6 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer appearance-none {statusStyle.bg} {statusStyle.text} {statusStyle.border} focus:outline-none"
+														>
+															<option value="pending">পেন্ডিং</option>
+															<option value="incomplete">ইনকমপ্লিট</option>
+															<option value="no_response">নো রেসপন্স</option>
+															<option value="no_response_3">৩য় বার নো রেসপন্স</option>
+															<option value="busy">বিজি</option>
+															<option value="hold">হোল্ড</option>
+															<option value="recall">রি</option>
+															<option value="confirmed">কনফার্মড</option>
+															<option value="cancelled">বাতিল</option>
+														</select>
+														<statusStyle.icon class="w-3.5 h-3.5 absolute left-2 pointer-events-none {statusStyle.text}" />
+														<ChevronDown class="w-3 h-3 absolute right-2 pointer-events-none text-slate-400" />
+													</div>
+												</form>
+											</td>
+
+											<!-- এডিট ও কুইক অ্যাকশন আইকন বাটন -->
+											<td class="py-3 px-4 align-top text-center">
+												<div class="flex items-center justify-center gap-1">
+													
+													<!-- Edit Icon -->
+													<button
+														onclick={() => activeTab = 'new_order'}
+														class="p-1 rounded-md text-slate-500 hover:text-slate-800 hover:bg-[#faf7f2] transition-colors"
+														title="এডিট"
+													>
+														<FileEdit class="w-3.5 h-3.5" />
+													</button>
+
+													<!-- Quick Confirm Checkmark Button (Moves to Order List!) -->
+													<form method="POST" action="?/quickConfirmOrder" use:enhance class="inline-block">
+														<input type="hidden" name="orderId" value={order.id} />
+														<button
+															type="submit"
+															class="p-1 rounded-md text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+															title="অর্ডার কনফার্ম করুন"
+														>
+															<CheckCircle2 class="w-4 h-4" />
+														</button>
+													</form>
+
+													<!-- Quick Cancel Cross Button -->
+													<form method="POST" action="?/quickCancelOrder" use:enhance class="inline-block">
+														<input type="hidden" name="orderId" value={order.id} />
+														<button
+															type="submit"
+															class="p-1 rounded-md text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors"
+															title="বাতিল করুন"
+														>
+															<XCircle class="w-4 h-4" />
+														</button>
+													</form>
+
+													<!-- Delete to Trash Button -->
+													<form method="POST" action="?/deleteOrder" use:enhance class="inline-block">
+														<input type="hidden" name="orderId" value={order.id} />
+														<button
+															type="submit"
+															class="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+															title="ট্র্যাশে পাঠান"
+														>
+															<Trash2 class="w-3.5 h-3.5" />
+														</button>
+													</form>
+												</div>
+											</td>
+
+											<!-- সোর্স -->
+											<td class="py-3 px-4 align-top text-right whitespace-nowrap">
+												<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold {firstItem.source === 'Facebook' ? 'bg-sky-50 text-sky-700 border border-sky-200' : 'bg-slate-100 text-slate-700 border border-slate-200'}">
+													{firstItem.source || 'Direct'}
+												</span>
+											</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+			{/if}
+
+			<!-- ============================================================== -->
+			<!-- TAB 2: অর্ডার তালিকা (Post-Confirmation - Exact Match to Image 2)-->
+			<!-- ============================================================== -->
+			{#if activeTab === 'order_list'}
+				<div class="space-y-4">
+					
+					<!-- Top Post-Confirmation Status Filter Tabs (Matches Image 2) -->
+					<div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+						{#each ORDER_LIST_STATUS_TABS as tab}
+							{@const count = tab.id === 'all' 
+								? orderListOrders.length 
+								: orderListOrders.filter(o => o.status === tab.id).length}
+							<button
+								onclick={() => orderListStatusFilter = tab.id}
+								class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold shrink-0 transition-all shadow-2xs border {orderListStatusFilter === tab.id
+									? 'bg-[#fffbeb] text-[#92400e] border-[#f59e0b] ring-1 ring-[#f59e0b]/40 shadow-xs'
+									: 'bg-white hover:bg-[#faf7f2] text-slate-700 border-[#ede5d8]'}"
+							>
+								<tab.icon class="w-3.5 h-3.5 {orderListStatusFilter === tab.id ? 'text-[#b45309]' : 'text-slate-400'}" />
+								<span>{tab.label}</span>
+								<span class="text-[11px] font-extrabold {orderListStatusFilter === tab.id ? 'text-[#b45309]' : 'text-slate-400'}">
+									({count})
+								</span>
+							</button>
+						{/each}
+					</div>
+
+					<!-- Subheader Bar with Courier Sync Button (Matches Image 2) -->
+					<div class="bg-white p-3.5 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
 						<div class="relative flex-1 max-w-md">
 							<Search class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
 							<input
 								type="text"
 								bind:value={orderSearchQuery}
-								placeholder="অর্ডার আইডি, কাস্টমার নাম, ফোন বা ঠিকানা দিয়ে খুঁজুন..."
+								placeholder="অর্ডার আইডি, নাম বা ফোন..."
 								class="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl pl-10 pr-4 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#c25e00] focus:bg-white transition-all shadow-2xs"
 							/>
 						</div>
 
-						<!-- Status Filter Buttons -->
-						<div class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-							{#each [
-								{ id: 'all', label: 'সব অর্ডার' },
-								{ id: 'paid', label: 'পেইড' },
-								{ id: 'processing', label: 'প্রসেসিং' },
-								{ id: 'dispatched', label: 'ডিসপ্যাচ' },
-								{ id: 'delivered', label: 'ডেলিভার্ড' },
-								{ id: 'refunded', label: 'বাতিল' }
-							] as st}
-								<button
-									onclick={() => orderStatusFilter = st.id}
-									class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all {orderStatusFilter === st.id ? 'bg-[#c25e00] text-white shadow-xs' : 'bg-[#faf7f2] text-slate-600 hover:bg-[#f2ebe0]'}"
+						<div class="flex items-center gap-2">
+							<!-- Date Filter Dropdown -->
+							<div class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#faf7f2] border border-[#ede5d8] text-xs font-bold text-slate-700">
+								<Clock class="w-3.5 h-3.5 text-slate-400" />
+								<select
+									bind:value={activeDateFilter}
+									class="bg-transparent focus:outline-none cursor-pointer"
 								>
-									{st.label}
-								</button>
-							{/each}
+									<option value="all">সব সময়</option>
+									<option value="today">আজ</option>
+									<option value="yesterday">গতকাল</option>
+									<option value="7days">বিগত ৭ দিন</option>
+									<option value="30days">বিগত ৩০ দিন</option>
+								</select>
+							</div>
+
+							<!-- Courier Sync Button (Matches Image 2: কুরিয়ার সিঙ্ক) -->
+							<button
+								onclick={triggerCourierSync}
+								disabled={isCourierSyncing}
+								class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#faf7f2] hover:bg-[#fff7ed] border border-[#ede5d8] hover:border-amber-400 text-slate-800 font-bold text-xs shadow-2xs transition-all shrink-0"
+							>
+								<RefreshCw class="w-3.5 h-3.5 text-[#c25e00] {isCourierSyncing ? 'animate-spin' : ''}" />
+								<span>কুরিয়ার সিঙ্ক</span>
+							</button>
 						</div>
 					</div>
 
-					<!-- Orders Data Table -->
+					<!-- Post-Confirmation Orders Data Table (Exact Columns of Image 2) -->
 					<div class="bg-white rounded-2xl border border-[#ede5d8] overflow-hidden shadow-[0_2px_12px_rgba(180,83,9,0.03)]">
 						<div class="overflow-x-auto">
 							<table class="w-full text-left text-xs">
 								<thead>
-									<tr class="border-b border-[#ede5d8] bg-[#faf7f2]/90 text-slate-500">
-										<th class="py-3.5 px-4 font-bold">অর্ডার আইডি</th>
-										<th class="py-3.5 px-4 font-bold">গ্রাহক তথ্য</th>
-										<th class="py-3.5 px-4 font-bold">পণ্য বিবরণ</th>
-										<th class="py-3.5 px-4 font-bold">ডেলিভারি ঠিকানা</th>
-										<th class="py-3.5 px-4 font-bold">পেমেন্ট মেথড</th>
-										<th class="py-3.5 px-4 font-bold">মোট টাকা</th>
-										<th class="py-3.5 px-4 font-bold">স্ট্যাটাস</th>
-										<th class="py-3.5 px-4 font-bold text-right">অ্যাকশন</th>
+									<tr class="border-b border-[#ede5d8] bg-[#faf7f2]/90 text-slate-500 font-bold">
+										<th class="py-3 px-3 w-8">
+											<input
+												type="checkbox"
+												checked={selectedOrderIds.length > 0 && selectedOrderIds.length === filteredOrderList.length}
+												onchange={toggleSelectAllOrderList}
+												class="rounded text-amber-600 focus:ring-amber-500"
+											/>
+										</th>
+										<th class="py-3 px-3">কনফার্ম</th>
+										<th class="py-3 px-4">অর্ডার</th>
+										<th class="py-3 px-4">কাস্টমার</th>
+										<th class="py-3 px-4">নাম্বার</th>
+										<th class="py-3 px-4">পণ্য</th>
+										<th class="py-3 px-4">সোর্স</th>
+										<th class="py-3 px-4">মোট</th>
+										<th class="py-3 px-4">স্ট্যাটাস</th>
+										<th class="py-3 px-3 text-center">সিঙ্ক</th>
+										<th class="py-3 px-3 text-center">ট্যাগ</th>
+										<th class="py-3 px-4 text-right">অ্যাকশন</th>
 									</tr>
 								</thead>
 								<tbody class="divide-y divide-[#f4eee4]">
-									{#if filteredOrders.length === 0}
+									{#if filteredOrderList.length === 0}
 										<tr>
-											<td colspan="8" class="py-16 text-center text-slate-400">
-												আপনার ফিল্টারে কোনো অর্ডার পাওয়া যায়নি।
+											<td colspan="12" class="py-16 text-center text-slate-400">
+												কোনো কনফার্মড অর্ডার পাওয়া যায়নি।
 											</td>
 										</tr>
 									{/if}
 
-									{#each filteredOrders as order (order.id)}
+									{#each filteredOrderList as order (order.id)}
 										{@const parsedItems = parseItems(order.items)}
-										<tr class="hover:bg-[#faf7f2]/80 transition-colors">
-											<!-- ID with Copy -->
-											<td class="py-4 px-4 font-mono font-bold text-[#c25e00]">
-												<div class="flex items-center gap-1.5">
-													<span>{order.id}</span>
-													<button
-														onclick={() => copyToClipboard(order.id, order.id)}
-														class="text-slate-400 hover:text-slate-700"
-														title="আইডি কপি"
-													>
-														{#if isCopied === order.id}
-															<Check class="w-3.5 h-3.5 text-emerald-600" />
-														{:else}
-															<Copy class="w-3.5 h-3.5" />
-														{/if}
-													</button>
+										{@const firstItem = parsedItems[0] || {}}
+										{@const statusStyle = getStatusInfo(order.status)}
+										{@const isSelected = selectedOrderIds.includes(order.id)}
+
+										<tr class="hover:bg-[#fbf9f5] transition-colors {isSelected ? 'bg-amber-50/40' : ''}">
+											
+											<!-- Checkbox -->
+											<td class="py-3 px-3 align-top">
+												<input
+													type="checkbox"
+													checked={isSelected}
+													onchange={() => toggleSelectOrder(order.id)}
+													class="rounded text-amber-600 focus:ring-amber-500 mt-0.5"
+												/>
+											</td>
+
+											<!-- কনফার্ম সময় -->
+											<td class="py-3 px-3 align-top whitespace-nowrap text-slate-500">
+												{firstItem.confirmedAt || firstItem.timeAgo || '১ দিন আগে'}
+											</td>
+
+											<!-- অর্ডার ও সাব-স্ট্যাটাস ব্যাজ (INV-1227 + partial_delivered) -->
+											<td class="py-3 px-4 align-top">
+												<div class="font-bold text-[#0f172a] font-mono">
+													{order.id}
+												</div>
+												<div class="mt-1 inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-sky-50 text-sky-800 border border-sky-200">
+													<FileText class="w-2.5 h-2.5" />
+													<span>{firstItem.subStatus || order.status}</span>
 												</div>
 											</td>
 
-											<!-- Customer -->
-											<td class="py-4 px-4">
-												<div class="font-bold text-[#0f172a]">{order.customerName}</div>
-												<div class="text-[11px] text-slate-400">{order.customerEmail}</div>
-											</td>
-
-											<!-- Items -->
-											<td class="py-4 px-4 max-w-xs">
-												<div class="space-y-1">
-													{#each parsedItems as itm}
-														<div class="flex items-center gap-1.5 text-[11px] text-slate-700">
-															<span class="px-1.5 py-0.2 rounded bg-[#fff7ed] text-[#c25e00] font-bold font-mono border border-[#fed7aa]/50">
-																{itm.quantity}x
-															</span>
-															<span class="truncate">{itm.name}</span>
-														</div>
-													{/each}
-												</div>
-											</td>
-
-											<!-- Address -->
-											<td class="py-4 px-4 max-w-[200px] text-slate-600 truncate" title={order.shippingAddress}>
-												{order.shippingAddress}
-											</td>
-
-											<!-- Payment Method -->
-											<td class="py-4 px-4">
-												<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#faf7f2] text-slate-700 border border-[#ede5d8]">
-													ক্যাশ অন ডেলিভারি
+											<!-- কাস্টমার নাম ও ঠিকানা -->
+											<td class="py-3 px-4 align-top max-w-[200px]">
+												<span class="font-bold text-[#0f172a] block">
+													{order.customerName}
+												</span>
+												<span class="text-slate-500 text-[11px] line-clamp-1">
+													{order.shippingAddress}
 												</span>
 											</td>
 
-											<!-- Total Amount -->
-											<td class="py-4 px-4 font-bold text-[#0f172a] font-['Outfit'] text-sm">
+											<!-- ফোন নাম্বার -->
+											<td class="py-3 px-4 align-top font-mono font-bold text-slate-800 whitespace-nowrap">
+												{order.customerEmail}
+											</td>
+
+											<!-- পণ্য থাম্বনেইল -->
+											<td class="py-3 px-4 align-top">
+												<div class="w-7 h-7 rounded-md bg-[#faf7f2] border border-[#ede5d8] flex items-center justify-center">
+													<Package class="w-3.5 h-3.5 text-[#c25e00]" />
+												</div>
+											</td>
+
+											<!-- সোর্স (Facebook / Direct) -->
+											<td class="py-3 px-4 align-top">
+												<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#eff6ff] text-[#1d4ed8] border border-[#bfdbfe]">
+													{firstItem.source || 'Facebook'}
+												</span>
+											</td>
+
+											<!-- মোট টাকা -->
+											<td class="py-3 px-4 align-top font-bold text-[#0f172a] whitespace-nowrap">
 												{formatTaka(order.total)}
 											</td>
 
-											<!-- Status Badge -->
-											<td class="py-4 px-4">
-												{#if order.status === 'delivered'}
-													<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 inline-flex items-center gap-1">
-														<CheckCircle2 class="w-3 h-3" /> ডেলিভার্ড
-													</span>
-												{:else if order.status === 'dispatched'}
-													<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-cyan-50 border border-cyan-200 text-cyan-700 inline-flex items-center gap-1">
-														<Truck class="w-3 h-3" /> ইন ট্রানজিট
-													</span>
-												{:else if order.status === 'processing'}
-													<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#fff7ed] border border-[#fed7aa] text-[#c25e00] inline-flex items-center gap-1">
-														<Clock class="w-3 h-3" /> প্যাকিং
-													</span>
-												{:else if order.status === 'refunded'}
-													<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-50 border border-rose-200 text-rose-700 inline-flex items-center gap-1">
-														<AlertTriangle class="w-3 h-3" /> বাতিল
-													</span>
-												{:else}
-													<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 border border-blue-200 text-blue-700 inline-flex items-center gap-1">
-														পেইড
-													</span>
-												{/if}
-											</td>
-
-											<!-- Status Action Dropdown & Delete -->
-											<td class="py-4 px-4 text-right">
-												<div class="inline-flex items-center gap-2">
-													<form action="?/updateOrderStatus" method="POST" use:enhance class="inline">
-														<input type="hidden" name="orderId" value={order.id} />
+											<!-- ইনলাইন স্ট্যাটাস ড্রপডাউন (Post-Confirmation) -->
+											<td class="py-3 px-4 align-top">
+												<form method="POST" action="?/updateOrderStatus" use:enhance class="inline-block">
+													<input type="hidden" name="orderId" value={order.id} />
+													<div class="relative inline-flex items-center">
 														<select
 															name="status"
-															onchange={(e) => (e.currentTarget.form as HTMLFormElement).requestSubmit()}
-															class="bg-[#faf7f2] text-[11px] font-bold text-slate-700 border border-[#ede5d8] rounded-lg px-2 py-1 focus:outline-none focus:border-[#c25e00] shadow-2xs"
+															value={order.status}
+															onchange={(e) => (e.currentTarget.form as HTMLFormElement)?.requestSubmit()}
+															class="pl-6 pr-6 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer appearance-none {statusStyle.bg} {statusStyle.text} {statusStyle.border} focus:outline-none"
 														>
-															<option value="paid" selected={order.status === 'paid'}>পেইড</option>
-															<option value="processing" selected={order.status === 'processing'}>প্রসেসিং</option>
-															<option value="dispatched" selected={order.status === 'dispatched'}>ডিসপ্যাচ</option>
-															<option value="delivered" selected={order.status === 'delivered'}>ডেলিভার্ড</option>
-															<option value="refunded" selected={order.status === 'refunded'}>বাতিল</option>
+															<option value="confirmed">কনফার্মড</option>
+															<option value="printed">প্রিন্টেড</option>
+															<option value="entry_done">এন্ট্রি ডান</option>
+															<option value="shipped">শিপড</option>
+															<option value="delivered">ডেলিভারড</option>
+															<option value="partial_delivered">পার্শিয়াল</option>
+															<option value="pending_return">পেন্ডিং রিটার্ন</option>
+															<option value="returned">রিটার্ন</option>
+															<option value="cancelled">বাতিল</option>
+															<option value="missing">মিসিং</option>
 														</select>
-													</form>
+														<statusStyle.icon class="w-3.5 h-3.5 absolute left-2 pointer-events-none {statusStyle.text}" />
+														<ChevronDown class="w-3 h-3 absolute right-2 pointer-events-none text-slate-400" />
+													</div>
+												</form>
+											</td>
 
-													<!-- Move to Trash -->
-													<form action="?/deleteOrder" method="POST" use:enhance class="inline">
-														<input type="hidden" name="orderId" value={order.id} />
-														<button
-															type="submit"
-															class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-															title="মুছে ফেলুন"
-														>
-															<Trash2 class="w-3.5 h-3.5" />
-														</button>
-													</form>
+											<!-- সিঙ্ক আইকন -->
+											<td class="py-3 px-3 align-top text-center">
+												<button
+													onclick={triggerCourierSync}
+													class="p-1 text-slate-400 hover:text-[#c25e00] rounded hover:bg-[#faf7f2] transition-colors"
+													title="কুরিয়ার সিঙ্ক করুন"
+												>
+													<RefreshCw class="w-3.5 h-3.5" />
+												</button>
+											</td>
+
+											<!-- ট্যাগ (Copy) -->
+											<td class="py-3 px-3 align-top text-center">
+												<button
+													onclick={() => copyToClipboard(`${order.id} - ${order.customerName} - ${order.customerEmail}`, order.id)}
+													class="p-1 text-slate-400 hover:text-slate-800 rounded hover:bg-[#faf7f2] transition-colors"
+													title="কপি করুন"
+												>
+													{#if isCopied === order.id}
+														<Check class="w-3.5 h-3.5 text-emerald-600" />
+													{:else}
+														<Copy class="w-3.5 h-3.5" />
+													{/if}
+												</button>
+											</td>
+
+											<!-- অ্যাকশন (View / Edit) -->
+											<td class="py-3 px-4 align-top text-right">
+												<div class="flex items-center justify-end gap-1">
+													<button
+														class="p-1 rounded text-slate-400 hover:text-slate-800 hover:bg-[#faf7f2]"
+														title="ইনভয়েস প্রিন্ট"
+													>
+														<Printer class="w-3.5 h-3.5" />
+													</button>
+													<button
+														onclick={() => activeTab = 'new_order'}
+														class="p-1 rounded text-slate-400 hover:text-slate-800 hover:bg-[#faf7f2]"
+														title="এডিট"
+													>
+														<FileEdit class="w-3.5 h-3.5" />
+													</button>
 												</div>
 											</td>
 										</tr>
@@ -1313,90 +1546,97 @@
 			<!-- TAB 3: NEW MANUAL ORDER FORM                  -->
 			<!-- ============================================== -->
 			{#if activeTab === 'new_order'}
-				<div class="max-w-2xl mx-auto bg-white rounded-2xl border border-[#ede5d8] p-8 shadow-[0_2px_15px_rgba(180,83,9,0.04)] space-y-6">
-					<div>
-						<h2 class="text-xl font-black text-[#0f172a] flex items-center gap-2 font-['Outfit']">
-							<PlusCircle class="w-5 h-5 text-[#c25e00]" />
-							নতুন অর্ডার তৈরি করুন
-						</h2>
-						<p class="text-xs text-slate-500 mt-1">
-							ম্যানুয়াল কাস্টমার অর্ডার সরাসরি Cloudflare D1 ডাটাবেজে এন্ট্রি করুন।
-						</p>
+				<div class="max-w-2xl bg-white p-6 rounded-2xl border border-[#ede5d8] shadow-[0_2px_12px_rgba(180,83,9,0.03)] space-y-6">
+					<div class="border-b border-[#ede5d8] pb-4 flex items-center justify-between">
+						<div>
+							<h3 class="text-base font-black text-[#0f172a]">ম্যানুয়াল কাস্টমার অর্ডার এন্ট্রি</h3>
+							<p class="text-xs text-slate-400">সরাসরি ফোন কল বা অফলাইন থেকে অর্ডার সংরক্ষণ করুন</p>
+						</div>
+						<button
+							onclick={() => activeTab = 'web_orders'}
+							class="text-xs font-bold text-slate-500 hover:text-slate-800"
+						>
+							বাতিল
+						</button>
 					</div>
 
-					<form action="?/createManualOrder" method="POST" use:enhance class="space-y-4">
+					<form method="POST" action="?/createManualOrder" use:enhance class="space-y-4 text-xs">
 						<div class="space-y-1.5">
-							<label class="text-xs font-bold text-slate-700">কাস্টমার নাম *</label>
+							<label for="order-customer-name" class="text-xs font-bold text-slate-700">কাস্টমার পুরো নাম *</label>
 							<input
+								id="order-customer-name"
 								type="text"
 								name="customerName"
+								placeholder="উদাঃ মোঃ রফিকুল ইসলাম"
 								required
-								placeholder="যেমন: তানভীর আহমেদ"
-								class="w-full px-3.5 py-2.5 rounded-xl border border-[#ede5d8] bg-[#faf7f2]/50 text-xs focus:border-[#c25e00] focus:bg-white focus:outline-none shadow-2xs"
+								class="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-[#c25e00]"
 							/>
 						</div>
 
 						<div class="space-y-1.5">
-							<label class="text-xs font-bold text-slate-700">ইমেইল / মোবাইল নম্বর *</label>
+							<label for="order-customer-phone" class="text-xs font-bold text-slate-700">মোবাইল নম্বর *</label>
 							<input
+								id="order-customer-phone"
 								type="text"
 								name="customerEmail"
+								placeholder="উদাঃ 01711223344"
 								required
-								placeholder="017XXXXXXXX বা customer@email.com"
-								class="w-full px-3.5 py-2.5 rounded-xl border border-[#ede5d8] bg-[#faf7f2]/50 text-xs focus:border-[#c25e00] focus:bg-white focus:outline-none shadow-2xs font-mono"
+								class="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-[#c25e00]"
 							/>
 						</div>
 
 						<div class="space-y-1.5">
-							<label class="text-xs font-bold text-slate-700">ডেলিভারি পূর্ণ ঠিকানা ও জেলা *</label>
+							<label for="order-shipping-address" class="text-xs font-bold text-slate-700">ডেলিভারি পূর্ণ ঠিকানা ও জেলা *</label>
 							<textarea
+								id="order-shipping-address"
 								name="shippingAddress"
-								required
 								rows="3"
-								placeholder="বাড়ি #, রোড #, এলাকা, থানা, জেলা..."
-								class="w-full px-3.5 py-2.5 rounded-xl border border-[#ede5d8] bg-[#faf7f2]/50 text-xs focus:border-[#c25e00] focus:bg-white focus:outline-none shadow-2xs"
+								placeholder="বাড়ি নং, রোড নং, এলাকা, থানা ও জেলা..."
+								required
+								class="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3.5 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#c25e00]"
 							></textarea>
 						</div>
 
 						<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 							<div class="space-y-1.5">
-								<label class="text-xs font-bold text-slate-700">পণ্য নির্বাচন</label>
+								<label for="order-product-name" class="text-xs font-bold text-slate-700">পণ্য নির্বাচন</label>
 								<select
+									id="order-product-name"
 									name="productName"
-									class="w-full px-3.5 py-2.5 rounded-xl border border-[#ede5d8] bg-[#faf7f2]/50 text-xs focus:border-[#c25e00] focus:outline-none bg-white font-bold"
+									class="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3.5 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#c25e00]"
 								>
-									<option value="AURA Spectrum X">AURA Spectrum X (Planar Flagship)</option>
-									<option value="AURA Wave Spatial Pro">AURA Wave Spatial Pro (IEM)</option>
-									<option value="AURA Creator Sound Deck">AURA Creator Sound Deck (Studio)</option>
+									{#each data.products as prod}
+										<option value={prod.name}>{prod.name} - {formatTaka(prod.price)}</option>
+									{/each}
 								</select>
 							</div>
 
 							<div class="space-y-1.5">
-								<label class="text-xs font-bold text-slate-700">মোট টাকা (টাকা)</label>
+								<label for="order-total-price" class="text-xs font-bold text-slate-700">মোট টাকা (টাকা)</label>
 								<input
+									id="order-total-price"
 									type="number"
 									name="total"
-									value="1250"
+									value="1200"
 									required
-									class="w-full px-3.5 py-2.5 rounded-xl border border-[#ede5d8] bg-[#faf7f2]/50 text-xs focus:border-[#c25e00] focus:outline-none font-['Outfit'] font-bold text-slate-900"
+									class="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3.5 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#c25e00]"
 								/>
 							</div>
 						</div>
 
-						<div class="pt-4 border-t border-[#ede5d8] flex items-center justify-end gap-3">
+						<div class="pt-4 flex items-center justify-end gap-3">
 							<button
 								type="button"
-								onclick={() => activeTab = 'orders'}
-								class="px-4 py-2.5 rounded-xl border border-[#ede5d8] text-slate-600 font-bold text-xs hover:bg-[#faf7f2]"
+								onclick={() => activeTab = 'web_orders'}
+								class="px-4 py-2 rounded-xl border border-[#ede5d8] text-slate-600 hover:bg-[#faf7f2] font-bold text-xs"
 							>
-								বাতিল
+								ফিরে যান
 							</button>
-
 							<button
 								type="submit"
-								class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#ea580c] to-[#d97706] hover:from-[#c2410c] hover:to-[#b45309] text-white font-bold text-xs shadow-md shadow-amber-600/20"
+								class="px-5 py-2 rounded-xl bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white font-bold text-xs shadow-md shadow-amber-600/20"
 							>
-								অর্ডার সেভ করুন
+								অর্ডার সংরক্ষণ করুন
 							</button>
 						</div>
 					</form>
@@ -1407,49 +1647,47 @@
 			<!-- TAB 4: TRASH (মুছে ফেলা ও বাতিল)               -->
 			<!-- ============================================== -->
 			{#if activeTab === 'trash'}
-				<div class="bg-white rounded-2xl border border-[#ede5d8] p-6 shadow-[0_2px_12px_rgba(180,83,9,0.03)] space-y-4">
-					<div>
-						<h2 class="text-xl font-black text-[#0f172a] flex items-center gap-2 font-['Outfit']">
-							<Trash2 class="w-5 h-5 text-rose-600" />
-							বাতিল ও ট্র্যাশ তালিকা ({trashedOrders.length})
-						</h2>
-						<p class="text-xs text-slate-400">বাতিল বা ফেরতকৃত অর্ডারসমূহ এখানে সংরক্ষিত থাকে, যা চাইলে এক ক্লিকে পুনরুদ্ধার করা সম্ভব।</p>
+				<div class="space-y-4">
+					<div class="flex items-center justify-between">
+						<div>
+							<h3 class="text-lg font-black text-[#0f172a]">মুছে ফেলা ও বাতিলকৃত অর্ডারসমূহ</h3>
+							<p class="text-xs text-slate-400">প্রয়োজনে পুনরুদ্ধার বা স্থায়ীভাবে মুছে ফেলার সুবিধা</p>
+						</div>
 					</div>
 
-					<div class="overflow-x-auto">
+					<div class="bg-white rounded-2xl border border-[#ede5d8] overflow-hidden shadow-2xs">
 						<table class="w-full text-left text-xs">
 							<thead>
-								<tr class="border-b border-[#ede5d8] bg-[#faf7f2] text-slate-500">
-									<th class="py-3 px-4 font-bold">অর্ডার আইডি</th>
-									<th class="py-3 px-4 font-bold">কাস্টমার</th>
-									<th class="py-3 px-4 font-bold">ঠিকানা</th>
-									<th class="py-3 px-4 font-bold">টাকা</th>
-									<th class="py-3 px-4 font-bold text-right">পুনরুদ্ধার</th>
+								<tr class="border-b border-[#ede5d8] bg-[#faf7f2]/90 text-slate-500 font-bold">
+									<th class="py-3 px-4">অর্ডার আইডি</th>
+									<th class="py-3 px-4">গ্রাহক</th>
+									<th class="py-3 px-4">ঠিকানা</th>
+									<th class="py-3 px-4">মূল্য</th>
+									<th class="py-3 px-4 text-right">অ্যাকশন</th>
 								</tr>
 							</thead>
 							<tbody class="divide-y divide-[#f4eee4]">
 								{#if trashedOrders.length === 0}
 									<tr>
-										<td colspan="5" class="py-14 text-center text-slate-400">
-											ট্র্যাশে কোনো বাতিল অর্ডার নেই।
+										<td colspan="5" class="py-12 text-center text-slate-400">
+											ট্র্যাশে কোনো অর্ডার নেই।
 										</td>
 									</tr>
 								{/if}
-
-								{#each trashedOrders as ord}
-									<tr class="hover:bg-[#faf7f2]">
-										<td class="py-3.5 px-4 font-mono font-bold text-rose-600">{ord.id}</td>
-										<td class="py-3.5 px-4 font-bold text-[#0f172a]">{ord.customerName}</td>
-										<td class="py-3.5 px-4 text-slate-500">{ord.shippingAddress}</td>
-										<td class="py-3.5 px-4 font-bold text-[#0f172a] font-['Outfit']">{formatTaka(ord.total)}</td>
-										<td class="py-3.5 px-4 text-right">
-											<form action="?/restoreOrder" method="POST" use:enhance class="inline">
-												<input type="hidden" name="orderId" value={ord.id} />
+								{#each trashedOrders as tOrder}
+									<tr class="hover:bg-[#faf7f2]/50">
+										<td class="py-3 px-4 font-mono font-bold text-slate-700">{tOrder.id}</td>
+										<td class="py-3 px-4 font-bold text-slate-800">{tOrder.customerName}</td>
+										<td class="py-3 px-4 text-slate-500">{tOrder.shippingAddress}</td>
+										<td class="py-3 px-4 font-bold">{formatTaka(tOrder.total)}</td>
+										<td class="py-3 px-4 text-right">
+											<form method="POST" action="?/restoreOrder" use:enhance class="inline-block">
+												<input type="hidden" name="orderId" value={tOrder.id} />
 												<button
 													type="submit"
-													class="px-3.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 font-bold text-xs transition-colors"
+													class="px-3 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px] hover:bg-emerald-100 transition-colors"
 												>
-													পুনরুদ্ধার করুন
+													পুনরুদ্ধার
 												</button>
 											</form>
 										</td>
@@ -1465,60 +1703,42 @@
 			<!-- TAB 5: INVENTORY & STOCK MANAGEMENT           -->
 			<!-- ============================================== -->
 			{#if activeTab === 'inventory'}
-				<div class="space-y-6">
-					<div>
-						<h2 class="text-xl font-black text-[#0f172a] flex items-center gap-2 font-['Outfit']">
-							<Package class="w-5 h-5 text-[#c25e00]" />
-							প্রোডাক্ট ক্যাটালগ ও ইনভেন্টরি স্টক কন্ট্রোল
-						</h2>
-						<p class="text-xs text-slate-400 mt-1">
-							ল্যান্ডিং পেজে প্রদর্শিত পণ্যের স্টক ইন/আউট স্ট্যাটাস ও প্রাইসিং পরিচালনা করুন।
-						</p>
+				<div class="space-y-4">
+					<div class="flex items-center justify-between">
+						<div>
+							<h3 class="text-lg font-black text-[#0f172a]">পণ্য ক্যাটালগ ও স্টক নিয়ন্ত্রণ</h3>
+							<p class="text-xs text-slate-400">লাইভ ইনভেন্টরি ও ইন-স্টক সুইচ</p>
+						</div>
 					</div>
 
-					<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+					<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 						{#each data.products as prod}
-							<div class="bg-white rounded-2xl border border-[#ede5d8] p-5 shadow-[0_2px_12px_rgba(180,83,9,0.03)] space-y-4 flex flex-col justify-between hover:shadow-md transition-shadow">
-								<div>
-									<div class="aspect-video w-full rounded-xl overflow-hidden bg-[#faf7f2] mb-3 relative border border-[#ede5d8]">
-										<img src={prod.image} alt={prod.name} class="w-full h-full object-cover" />
-										{#if prod.badge}
-											<span class="absolute top-2 left-2 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#c25e00] text-white shadow-xs">
-												{prod.badge}
-											</span>
-										{/if}
-									</div>
+							<div class="bg-white p-5 rounded-2xl border border-[#ede5d8] shadow-2xs space-y-4">
+								<div class="flex items-center justify-between">
+									<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-50 text-[#c25e00] border border-amber-200">
+										{prod.badge || 'PRO'}
+									</span>
+									<span class="text-xs font-mono font-bold {prod.inStock ? 'text-emerald-600' : 'text-rose-600'}">
+										{prod.inStock ? 'স্টকে আছে' : 'স্টক শেষ'}
+									</span>
+								</div>
 
-									<div class="flex items-center justify-between">
-										<h3 class="font-bold text-[#0f172a] text-base">{prod.name}</h3>
-										<span class="font-bold font-['Outfit'] text-[#c25e00] text-base">
-											${(prod.price / 100).toFixed(0)}
-										</span>
-									</div>
+								<div>
+									<h4 class="font-bold text-sm text-[#0f172a]">{prod.name}</h4>
 									<p class="text-xs text-slate-500 line-clamp-2 mt-1">{prod.tagline}</p>
 								</div>
 
-								<div class="pt-3 border-t border-[#ede5d8] flex items-center justify-between">
-									<div>
-										{#if prod.inStock}
-											<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-												ইন স্টক (Active)
-											</span>
-										{:else}
-											<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-												আউট অফ স্টক (Sold Out)
-											</span>
-										{/if}
-									</div>
-
-									<form action="?/toggleProductStock" method="POST" use:enhance>
+								<div class="flex items-center justify-between pt-3 border-t border-[#ede5d8]">
+									<span class="font-bold text-base text-[#0f172a]">{formatTaka(prod.price)}</span>
+									
+									<form method="POST" action="?/toggleProductStock" use:enhance>
 										<input type="hidden" name="productId" value={prod.id} />
-										<input type="hidden" name="inStock" value={prod.inStock ? 'false' : 'true'} />
+										<input type="hidden" name="inStock" value={(!prod.inStock).toString()} />
 										<button
 											type="submit"
-											class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all {prod.inStock ? 'bg-[#faf7f2] hover:bg-rose-50 hover:text-rose-600 text-slate-700 border border-[#ede5d8]' : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm'}"
+											class="px-3 py-1.5 rounded-xl font-bold text-xs {prod.inStock ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'} transition-colors"
 										>
-											{prod.inStock ? 'স্টক বন্ধ করুন' : 'স্টক চালু করুন'}
+											{prod.inStock ? 'আউট অফ স্টক করুন' : 'ইন-স্টক করুন'}
 										</button>
 									</form>
 								</div>
@@ -1532,71 +1752,45 @@
 			<!-- TAB 6: COURIER & LOGISTICS HUB                 -->
 			<!-- ============================================== -->
 			{#if activeTab === 'courier'}
-				<div class="max-w-3xl bg-white rounded-2xl border border-[#ede5d8] p-8 shadow-[0_2px_15px_rgba(180,83,9,0.04)] space-y-6">
+				<div class="max-w-2xl bg-white p-6 rounded-2xl border border-[#ede5d8] shadow-2xs space-y-6">
 					<div>
-						<h2 class="text-xl font-black text-[#0f172a] flex items-center gap-2 font-['Outfit']">
-							<Truck class="w-5 h-5 text-[#c25e00]" />
-							কুরিয়ার সার্ভিস ইন্টিগ্রেশন সেটিংস
-						</h2>
-						<p class="text-xs text-slate-500 mt-1">
-							Steadfast, Pathao Courier ও RedX API সংযোগ এবং ডেলিভারি চার্জ নির্ধারণ করুন।
-						</p>
-					</div>
-
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-						<div class="p-4 rounded-xl bg-[#faf7f2] border border-[#ede5d8] space-y-2">
-							<div class="font-bold text-slate-900 text-xs uppercase tracking-wider">ঢাকা সিটির ভিতরে চার্জ</div>
-							<div class="flex items-center gap-2">
-								<span class="text-slate-400 font-bold">৳</span>
-								<input
-									type="number"
-									value="70"
-									class="w-full px-3 py-2 rounded-lg border border-[#ede5d8] bg-white font-['Outfit'] font-bold text-base"
-								/>
-							</div>
-						</div>
-
-						<div class="p-4 rounded-xl bg-[#faf7f2] border border-[#ede5d8] space-y-2">
-							<div class="font-bold text-slate-900 text-xs uppercase tracking-wider">ঢাকা সিটির বাইরে চার্জ</div>
-							<div class="flex items-center gap-2">
-								<span class="text-slate-400 font-bold">৳</span>
-								<input
-									type="number"
-									value="130"
-									class="w-full px-3 py-2 rounded-lg border border-[#ede5d8] bg-white font-['Outfit'] font-bold text-base"
-								/>
-							</div>
-						</div>
+						<h3 class="text-base font-black text-[#0f172a]">কুরিয়ার লজিস্টিকস এপিআই ইন্টিগ্রেশন</h3>
+						<p class="text-xs text-slate-400">Steadfast, Pathao ও Paperfly সরাসরি পার্সেল বুকিং কনফিগারেশন</p>
 					</div>
 
 					<div class="space-y-4 pt-4 border-t border-[#ede5d8]">
 						<div class="space-y-1.5">
-							<label class="text-xs font-bold text-slate-700">Steadfast API Key</label>
+							<label for="steadfast-api-key" class="text-xs font-bold text-slate-700">Steadfast API Key</label>
 							<input
+								id="steadfast-api-key"
 								type="text"
-								placeholder="Steadfast API Key পেস্ট করুন..."
-								class="w-full px-3.5 py-2.5 rounded-xl border border-[#ede5d8] bg-[#faf7f2]/50 text-xs focus:border-[#c25e00] focus:bg-white focus:outline-none font-mono"
+								value="stdf_live_89a47b2c918e001"
+								class="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-800"
 							/>
 						</div>
 
 						<div class="space-y-1.5">
-							<label class="text-xs font-bold text-slate-700">Steadfast Secret Key</label>
+							<label for="steadfast-secret-key" class="text-xs font-bold text-slate-700">Steadfast Secret Key</label>
 							<input
+								id="steadfast-secret-key"
 								type="password"
-								placeholder="••••••••••••••••"
-								class="w-full px-3.5 py-2.5 rounded-xl border border-[#ede5d8] bg-[#faf7f2]/50 text-xs focus:border-[#c25e00] focus:bg-white focus:outline-none font-mono"
+								value="••••••••••••••••••••••••"
+								class="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-800"
 							/>
 						</div>
-					</div>
 
-					<div class="flex justify-end">
-						<button
-							type="button"
-							class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#ea580c] to-[#d97706] hover:from-[#c2410c] hover:to-[#b45309] text-white font-bold text-xs shadow-md shadow-amber-600/20 transition-all"
-						>
-							<Save class="w-4 h-4" />
-							<span>কুরিয়ার সেটিংস সেভ করুন</span>
-						</button>
+						<div class="pt-2 flex items-center justify-between">
+							<div class="flex items-center gap-2 text-xs font-bold text-emerald-600">
+								<CheckCircle2 class="w-4 h-4" />
+								<span>Steadfast Webhook সক্রিয় আছে</span>
+							</div>
+							<button
+								onclick={triggerCourierSync}
+								class="px-4 py-2 rounded-xl bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white font-bold text-xs shadow-md"
+							>
+								সেটিংস সংরক্ষণ করুন
+							</button>
+						</div>
 					</div>
 				</div>
 			{/if}
@@ -1605,52 +1799,46 @@
 			<!-- TAB 7: PIXELS & CAPI TRACKING                 -->
 			<!-- ============================================== -->
 			{#if activeTab === 'pixels'}
-				<div class="max-w-3xl bg-white rounded-2xl border border-[#ede5d8] p-8 shadow-[0_2px_15px_rgba(180,83,9,0.04)] space-y-6">
+				<div class="max-w-2xl bg-white p-6 rounded-2xl border border-[#ede5d8] shadow-2xs space-y-6">
 					<div>
-						<h2 class="text-xl font-black text-[#0f172a] flex items-center gap-2 font-['Outfit']">
-							<Radio class="w-5 h-5 text-[#c25e00]" />
-							পিক্সেল ও কনভার্সন ট্র্যাকিং
-						</h2>
-						<p class="text-xs text-slate-500 mt-1">
-							Facebook Pixel, TikTok Pixel এবং Google Analytics ট্যাগ কনফিগার করুন।
-						</p>
+						<h3 class="text-base font-black text-[#0f172a]">পিক্সেল ও সার্ভার সাইড ট্র্যাকিং (CAPI)</h3>
+						<p class="text-xs text-slate-400">Meta Pixel, TikTok Pixel এবং Google Tag Manager ট্র্যাকিং কোড</p>
 					</div>
 
 					<div class="space-y-4">
 						<div class="space-y-1.5">
-							<label class="text-xs font-bold text-slate-700">Facebook Pixel ID (Meta)</label>
+							<label for="meta-pixel-id" class="text-xs font-bold text-slate-700">Facebook Pixel ID (Meta)</label>
 							<input
+								id="meta-pixel-id"
 								type="text"
-								placeholder="যেমন: 104928472918472"
-								class="w-full px-3.5 py-2.5 rounded-xl border border-[#ede5d8] bg-[#faf7f2]/50 text-xs focus:border-[#c25e00] focus:bg-white focus:outline-none font-mono"
+								value="819203847192039"
+								class="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-800"
 							/>
 						</div>
 
 						<div class="space-y-1.5">
-							<label class="text-xs font-bold text-slate-700">TikTok Pixel ID</label>
+							<label for="tiktok-pixel-id" class="text-xs font-bold text-slate-700">TikTok Pixel ID</label>
 							<input
+								id="tiktok-pixel-id"
 								type="text"
-								placeholder="যেমন: C9284KJSHD8372"
-								class="w-full px-3.5 py-2.5 rounded-xl border border-[#ede5d8] bg-[#faf7f2]/50 text-xs focus:border-[#c25e00] focus:bg-white focus:outline-none font-mono"
+								placeholder="C9J8XXXXX"
+								class="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-800"
 							/>
 						</div>
 
 						<div class="space-y-1.5">
-							<label class="text-xs font-bold text-slate-700">Google Tag Manager (GTM) Container ID</label>
+							<label for="gtm-container-id" class="text-xs font-bold text-slate-700">Google Tag Manager (GTM) Container ID</label>
 							<input
+								id="gtm-container-id"
 								type="text"
-								placeholder="যেমন: GTM-XXXXXXX"
-								class="w-full px-3.5 py-2.5 rounded-xl border border-[#ede5d8] bg-[#faf7f2]/50 text-xs focus:border-[#c25e00] focus:bg-white focus:outline-none font-mono"
+								placeholder="GTM-XXXXXXX"
+								class="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-800"
 							/>
 						</div>
 
-						<div class="pt-4 border-t border-[#ede5d8] flex justify-end">
-							<button
-								type="button"
-								class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#ea580c] to-[#d97706] hover:from-[#c2410c] hover:to-[#b45309] text-white font-bold text-xs shadow-md shadow-amber-600/20 transition-all"
-							>
-								<Save class="w-4 h-4" />
-								<span>পিক্সেল সেটিংস সেভ করুন</span>
+						<div class="pt-4 flex justify-end">
+							<button class="px-5 py-2 rounded-xl bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white font-bold text-xs shadow-md">
+								আপডেট সংরক্ষণ করুন
 							</button>
 						</div>
 					</div>
@@ -1661,50 +1849,49 @@
 			<!-- TAB 8: CLOUDFLARE D1 DATABASE CONSOLE          -->
 			<!-- ============================================== -->
 			{#if activeTab === 'database'}
-				<div class="max-w-4xl bg-white rounded-2xl border border-[#ede5d8] p-8 shadow-[0_2px_15px_rgba(180,83,9,0.04)] space-y-6">
-					<div>
-						<h2 class="text-xl font-black text-[#0f172a] flex items-center gap-2 font-['Outfit']">
-							<Database class="w-5 h-5 text-emerald-600" />
-							Cloudflare D1 Edge Database Console
-						</h2>
-						<p class="text-xs text-slate-500 mt-1">
-							Cloudflare Edge নেটওয়ার্কে পরিচালিত লাইভ সার্ভারলেস SQLite ডাটাবেজ স্থিতি।
-						</p>
-					</div>
-
-					<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-						<div class="p-4 rounded-xl bg-[#faf7f2] border border-[#ede5d8] space-y-1">
-							<div class="text-[10px] font-bold uppercase text-slate-400">Database Binding</div>
-							<div class="font-mono text-base font-black text-[#c25e00]">env.DB</div>
-							<div class="text-[11px] text-slate-500">Connected through Cloudflare Worker</div>
-						</div>
-
-						<div class="p-4 rounded-xl bg-[#faf7f2] border border-[#ede5d8] space-y-1">
-							<div class="text-[10px] font-bold uppercase text-slate-400">Database Name</div>
-							<div class="font-mono text-base font-black text-[#0f172a]">aura</div>
-							<div class="text-[11px] text-slate-500">ID: 85e821c2-73e0-4490-b87a...</div>
-						</div>
-
-						<div class="p-4 rounded-xl bg-[#faf7f2] border border-[#ede5d8] space-y-1">
-							<div class="text-[10px] font-bold uppercase text-slate-400">মোট টেবিল</div>
-							<div class="font-mono text-base font-black text-emerald-600">৮ টি টেবিল সক্রিয়</div>
-							<div class="text-[11px] text-slate-500">products, orders, reviews, newsletter</div>
-						</div>
-					</div>
-
-					<div class="pt-6 border-t border-[#ede5d8] flex flex-col sm:flex-row items-center justify-between gap-4">
+				<div class="bg-white p-6 rounded-2xl border border-[#ede5d8] shadow-2xs space-y-6">
+					<div class="flex items-center justify-between pb-4 border-b border-[#ede5d8]">
 						<div>
-							<div class="font-bold text-slate-900 text-sm">ডেমো ক্যাটালগ ও অর্ডার রিসিঙ্ক (Seed Database)</div>
-							<div class="text-xs text-slate-500">ডাটাবেজে ডিফল্ট ২০টি লাইভ অর্ডার এবং প্রোডাক্ট পুনরায় সিঙ্ক করুন।</div>
+							<h3 class="text-base font-black text-[#0f172a]">Cloudflare D1 ডেটাবেজ স্ট্যাটাস</h3>
+							<p class="text-xs text-slate-400">এজ ডাটাবেজ হেলথ ও স্কিমা টেলিমেট্রি</p>
 						</div>
+						<div class="flex items-center gap-2">
+							<span class="w-2.5 h-2.5 rounded-full {data.isD1Connected ? 'bg-emerald-500' : 'bg-amber-500'}"></span>
+							<span class="text-xs font-bold text-slate-700">
+								{data.isD1Connected ? 'D1 লাইভ কানেক্টেড' : 'লোকাল মেমোরি মোড'}
+							</span>
+						</div>
+					</div>
 
-						<form action="?/seedDatabase" method="POST" use:enhance>
+					<div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+						<div class="p-4 rounded-xl bg-[#faf7f2] border border-[#ede5d8]">
+							<span class="text-xs text-slate-500 block">মোট প্রোডাক্টস</span>
+							<span class="text-lg font-black text-[#0f172a]">{data.products.length}</span>
+						</div>
+						<div class="p-4 rounded-xl bg-[#faf7f2] border border-[#ede5d8]">
+							<span class="text-xs text-slate-500 block">মোট অর্ডারস</span>
+							<span class="text-lg font-black text-[#0f172a]">{data.orders.length}</span>
+						</div>
+						<div class="p-4 rounded-xl bg-[#faf7f2] border border-[#ede5d8]">
+							<span class="text-xs text-slate-500 block">গ্রাহক রিভিউ</span>
+							<span class="text-lg font-black text-[#0f172a]">{data.reviews.length}</span>
+						</div>
+						<div class="p-4 rounded-xl bg-[#faf7f2] border border-[#ede5d8]">
+							<span class="text-xs text-slate-500 block">নিউজলেটার সাবস্ক্রাইবার</span>
+							<span class="text-lg font-black text-[#0f172a]">{data.newsletter.length}</span>
+						</div>
+					</div>
+
+					<div class="pt-4 border-t border-[#ede5d8] flex items-center justify-between">
+						<span class="text-xs text-slate-500">
+							ডেটাবেজ নতুন করে রিসিড করতে নিচের বাটনটি ব্যবহার করুন:
+						</span>
+						<form method="POST" action="?/seedDatabase" use:enhance>
 							<button
 								type="submit"
-								class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 transition-all"
+								class="px-4 py-2 rounded-xl bg-[#faf7f2] hover:bg-rose-50 border border-[#ede5d8] hover:border-rose-300 text-slate-700 hover:text-rose-700 font-bold text-xs transition-colors"
 							>
-								<RefreshCw class="w-4 h-4" />
-								<span>ডাটাবেজ সিঙ্ক চালু করুন</span>
+								D1 ডেটাবেজ রিসিড করুন
 							</button>
 						</form>
 					</div>
@@ -1715,54 +1902,32 @@
 			<!-- TAB 9: CUSTOMERS & VIP CLUB                    -->
 			<!-- ============================================== -->
 			{#if activeTab === 'customers'}
-				<div class="bg-white rounded-2xl border border-[#ede5d8] p-6 shadow-[0_2px_12px_rgba(180,83,9,0.03)] space-y-4">
-					<div class="flex items-center justify-between">
-						<div>
-							<h2 class="text-xl font-black text-[#0f172a] flex items-center gap-2 font-['Outfit']">
-								<Users class="w-5 h-5 text-[#c25e00]" />
-								ভিআইপি অডিয়েন্স ও সাবস্ক্রাইবার তালিকা
-							</h2>
-							<p class="text-xs text-slate-400">ল্যান্ডিং পেজ থেকে সংগ্রহ করা ভেরিফায়েড লিডস।</p>
-						</div>
-
-						<button
-							onclick={() => {
-								const csv = 'Email,Created At\n' + data.newsletter.map(n => `"${n.email}","${n.createdAt}"`).join('\n');
-								const blob = new Blob([csv], { type: 'text/csv' });
-								const url = window.URL.createObjectURL(blob);
-								const a = document.createElement('a');
-								a.href = url;
-								a.download = 'aura-leads.csv';
-								a.click();
-							}}
-							class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-[#ede5d8] text-slate-700 hover:bg-[#fff7ed] font-bold text-xs shadow-2xs"
-						>
-							<Download class="w-3.5 h-3.5 text-slate-500" />
-							<span>CSV এক্সপোর্ট</span>
-						</button>
+				<div class="bg-white p-6 rounded-2xl border border-[#ede5d8] shadow-2xs space-y-4">
+					<div>
+						<h3 class="text-base font-black text-[#0f172a]">গ্রাহক ডেটাবেজ ও ভিআইপি ক্লাব</h3>
+						<p class="text-xs text-slate-400">নিবন্ধিত কাস্টমার ও রিপিট বায়ার টেলিমেট্রি</p>
 					</div>
 
 					<div class="overflow-x-auto">
 						<table class="w-full text-left text-xs">
 							<thead>
-								<tr class="border-b border-[#ede5d8] bg-[#faf7f2] text-slate-500">
-									<th class="py-3 px-4 font-bold">ইমেইল ঠিকানা</th>
-									<th class="py-3 px-4 font-bold">নিবন্ধনের তারিখ</th>
-									<th class="py-3 px-4 font-bold text-right">অ্যাকশন</th>
+								<tr class="border-b border-[#ede5d8] text-slate-500 font-bold">
+									<th class="py-3 px-4">ইমেইল / ফোন</th>
+									<th class="py-3 px-4">স্ট্যাটাস</th>
+									<th class="py-3 px-4 text-right">যোগদানের তারিখ</th>
 								</tr>
 							</thead>
 							<tbody class="divide-y divide-[#f4eee4]">
 								{#each data.newsletter as sub}
-									<tr class="hover:bg-[#faf7f2]">
-										<td class="py-3.5 px-4 font-mono font-bold text-[#c25e00]">{sub.email}</td>
-										<td class="py-3.5 px-4 text-slate-500">{new Date(sub.createdAt).toLocaleDateString()}</td>
-										<td class="py-3.5 px-4 text-right">
-											<button
-												onclick={() => copyToClipboard(sub.email, sub.email)}
-												class="px-2.5 py-1 rounded-lg bg-[#faf7f2] hover:bg-[#ede5d8] text-slate-700 font-bold text-xs"
-											>
-												{isCopied === sub.email ? 'কপি হয়েছে!' : 'ইমেইল কপি'}
-											</button>
+									<tr>
+										<td class="py-3 px-4 font-mono font-bold text-slate-800">{sub.email}</td>
+										<td class="py-3 px-4">
+											<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+												সক্রিয় ভিআইপি
+											</span>
+										</td>
+										<td class="py-3 px-4 text-right text-slate-400">
+											{new Date(sub.createdAt).toLocaleDateString('bn-BD')}
 										</td>
 									</tr>
 								{/each}

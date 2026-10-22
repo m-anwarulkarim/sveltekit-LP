@@ -4,6 +4,10 @@
 	"main": ".svelte-kit/cloudflare/_worker.js",
 	"compatibility_date": "2026-10-22",
 	"compatibility_flags": ["nodejs_compat"],
+	"vars": {
+		"ORIGIN": "https://lp.haqplus.com",
+		"BETTER_AUTH_SECRET": "aura_acoustics_production_jwt_sec_99881122"
+	},
 	"assets": {
 		"binding": "ASSETS",
 		"directory": ".svelte-kit/cloudflare"

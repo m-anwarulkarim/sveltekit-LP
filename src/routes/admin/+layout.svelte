@@ -23,7 +23,10 @@
 		PhoneCall,
 		MessageCircle,
 		Mail,
-		CheckCircle2
+		CheckCircle2,
+		User,
+		LogOut,
+		Info
 	} from 'lucide-svelte';
 
 	let { data, children }: { data: any; children: Snippet } = $props();
@@ -91,6 +94,7 @@
 	let isCustomerActive = $derived(currentPath.startsWith('/admin/customers'));
 	let isDatabaseActive = $derived(currentPath.startsWith('/admin/database'));
 	let isIpBlockActive = $derived(currentPath.startsWith('/admin/ip-block'));
+	let isProfileActive = $derived(currentPath.startsWith('/admin/profile'));
 </script>
 
 <svelte:head>
@@ -510,30 +514,63 @@
 					{/if}
 				</a>
 
+				<!-- 9. Profile -->
+				<a
+					href="/admin/profile"
+					onclick={() => isMobileSidebarOpen = false}
+					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isProfileActive
+						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
+					title="Profile"
+				>
+					<div class="flex items-center gap-3.5">
+						<User class="w-5 h-5 shrink-0 {isProfileActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" />
+						{#if !isSidebarCollapsed}
+							<span>Profile</span>
+						{/if}
+					</div>
+				</a>
+
+				<!-- 10. Logout -->
+				<button
+					type="button"
+					onclick={() => alert('লগআউট করা হচ্ছে...')}
+					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] text-slate-800 hover:text-rose-600 hover:bg-rose-50/60 group cursor-pointer text-left"
+					title="Logout"
+				>
+					<div class="flex items-center gap-3.5">
+						<LogOut class="w-5 h-5 shrink-0 text-slate-800 group-hover:text-rose-600" />
+						{#if !isSidebarCollapsed}
+							<span>Logout</span>
+						{/if}
+					</div>
+				</button>
+
 			</nav>
 		</div>
 
-		<!-- Executive Superadmin Card -->
+		<!-- Admin Panel Info Card (Matching Screenshot) -->
 		<div class="p-3 border-t border-slate-100 bg-white">
 			{#if !isSidebarCollapsed}
-				<div class="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80">
-					<div class="flex items-center gap-3 min-w-0">
-						<div class="w-8 h-8 rounded-xl bg-gradient-to-br from-[#5845eb] to-[#7c3aed] flex items-center justify-center font-bold text-white text-xs shadow-sm shrink-0">
-							<ShieldCheck class="w-4 h-4" />
-						</div>
-						<div class="flex flex-col truncate">
-							<span class="text-xs font-bold text-slate-800 truncate">সুপার অ্যাডমিন</span>
-							<span class="text-[10px] text-slate-500 font-mono truncate">admin@haqplus.com</span>
-						</div>
+				<div class="p-3 bg-blue-50/40 rounded-2xl border border-blue-100/80 text-xs text-slate-600 space-y-1">
+					<div class="flex items-center gap-1.5 font-bold text-slate-800 text-[11px]">
+						<Info class="w-3.5 h-3.5 text-blue-600" />
+						<span>ADMIN PANEL</span>
 					</div>
-					<a
-						href="/"
-						target="_blank"
-						class="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-slate-200 shadow-2xs shrink-0"
-						title="স্টোর দেখুন"
-					>
-						<ExternalLink class="w-4 h-4" />
-					</a>
+					<div class="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
+						<span>Current version</span>
+						<span class="font-mono font-bold text-slate-700">v1.0.47</span>
+					</div>
+					<div class="flex items-center justify-between text-[11px] text-slate-500">
+						<span>Last update</span>
+						<span class="font-semibold text-slate-700">20 Aug 2026</span>
+					</div>
+					<div class="pt-1 flex justify-center">
+						<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
+							<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+							<span>Panel up to date</span>
+						</span>
+					</div>
 				</div>
 			{:else}
 				<div class="flex justify-center">
@@ -700,7 +737,7 @@
 
 				<!-- 5. Store / Profile Circle (COLOR LIGHT) -->
 				<a
-					href="/admin/settings"
+					href="/admin/profile"
 					class="w-9 h-9 rounded-full bg-slate-950 border border-slate-200 flex items-center justify-center text-white overflow-hidden shadow-2xs hover:ring-2 hover:ring-[#5845eb]/30 transition-all cursor-pointer"
 					title="প্রোফাইল সেটিংস"
 				>

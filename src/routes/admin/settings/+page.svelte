@@ -34,7 +34,7 @@
 		<div>
 			<h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
 				<Settings class="w-5 h-5 text-[#5845eb]" />
-				<span>লজিস্টিকস ও কুরিয়ার সেটিংস (Settings)</span>
+				<span>লজিস্টিকস ও কুরিয়ার সেটিংস</span>
 			</h2>
 			<p class="text-xs text-slate-500 mt-0.5">
 				Steadfast, Pathao ও ডেলিভারি ফি ম্যানেজমেন্ট

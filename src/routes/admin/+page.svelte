@@ -151,7 +151,7 @@
 		<!-- 6. Average Order Value -->
 		<div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs hover:shadow-md transition-all">
 			<div class="flex items-center justify-between mb-2">
-				<span class="text-xs font-bold text-slate-500">গড় অর্ডার (AOV)</span>
+				<span class="text-xs font-bold text-slate-500">গড় অর্ডার মূল্য</span>
 				<div class="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center text-[#5845eb]">
 					<Tag class="w-4 h-4" />
 				</div>

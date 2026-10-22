@@ -36,7 +36,7 @@
 		<div>
 			<h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
 				<Users class="w-5 h-5 text-[#5845eb]" />
-				<span>গ্রাহক ও ভিআইপি ক্লাব (Customer Database)</span>
+				<span>গ্রাহক ও ভিআইপি ক্লাব</span>
 			</h2>
 			<p class="text-xs text-slate-500 mt-0.5">
 				রিপিট বায়ার টেলিমেট্রি, মোট পারচেজ হিস্টোরি ও নিউজলেটার গ্রাহক তালিকা
@@ -58,7 +58,7 @@
 		<div class="p-4 border-b border-slate-100 flex items-center justify-between">
 			<h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
 				<Award class="w-4 h-4 text-amber-500" />
-				<span>শীর্ষ ক্রেতাদের তালিকা (Top Ordering Customers)</span>
+				<span>শীর্ষ ক্রেতাদের তালিকা</span>
 			</h3>
 		</div>
 

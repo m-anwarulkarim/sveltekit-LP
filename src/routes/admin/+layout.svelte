@@ -236,7 +236,7 @@
 					<!-- Orders Submenu (when expanded) -->
 					{#if !isSidebarCollapsed && isOrdersOpen}
 						<div class="pl-3 pr-1 py-1 space-y-1 border-l-2 border-slate-100 ml-6 my-1">
-							<!-- ১. ওয়েব অর্ডার (Web Orders) -->
+							<!-- 1. Web Orders -->
 							<a
 								href="/admin/orders?view=web"
 								onclick={() => isMobileSidebarOpen = false}
@@ -244,13 +244,13 @@
 									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80'
 									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
 							>
-								<span>ওয়েব অর্ডার (Web Orders)</span>
+								<span>Web Orders</span>
 								<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
 									{webOrders.length}
 								</span>
 							</a>
 
-							<!-- ২. অর্ডার তালিকা (Order List) -->
+							<!-- 2. Order List -->
 							<a
 								href="/admin/orders?view=list"
 								onclick={() => isMobileSidebarOpen = false}
@@ -258,13 +258,13 @@
 									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80'
 									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
 							>
-								<span>অর্ডার তালিকা (Order List)</span>
+								<span>Order List</span>
 								<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
 									{orderListOrders.length}
 								</span>
 							</a>
 
-							<!-- ৩. নতুন তৈরি (New Order) -->
+							<!-- 3. New Order -->
 							<a
 								href="/admin/orders?view=new"
 								onclick={() => isMobileSidebarOpen = false}
@@ -272,13 +272,13 @@
 									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80'
 									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
 							>
-								<span>নতুন তৈরি (New Order)</span>
+								<span>New Order</span>
 								<span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
 									Manual
 								</span>
 							</a>
 
-							<!-- ৪. প্রি-অর্ডার (Pre-Orders) -->
+							<!-- 4. Pre-Orders -->
 							<a
 								href="/admin/orders?view=pre"
 								onclick={() => isMobileSidebarOpen = false}
@@ -286,7 +286,7 @@
 									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80'
 									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
 							>
-								<span>প্রি-অর্ডার (Pre-Orders)</span>
+								<span>Pre-Orders</span>
 								{#if preOrders.length > 0}
 									<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
 										{preOrders.length}
@@ -294,7 +294,7 @@
 								{/if}
 							</a>
 
-							<!-- ৫. মুছে ফেলা (Trash) -->
+							<!-- 5. Trash -->
 							<a
 								href="/admin/orders?view=trash"
 								onclick={() => isMobileSidebarOpen = false}
@@ -302,7 +302,7 @@
 									? 'bg-rose-50 text-rose-700 font-bold border border-rose-200'
 									: 'text-slate-600 hover:text-rose-600 hover:bg-rose-50/60'}"
 							>
-								<span>মুছে ফেলা (Trash)</span>
+								<span>Trash</span>
 								{#if trashedOrders.length > 0}
 									<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">
 										{trashedOrders.length}
@@ -529,19 +529,19 @@
 				<div>
 					<h1 class="text-base md:text-xl font-bold text-slate-900 flex items-center gap-2">
 						{#if isDashboard}
-							<span>Dashboard (ওভারভিউ ও মেট্রিক্স)</span>
+							<span>Dashboard</span>
 						{:else if isOrdersActive}
-							<span>Orders (অর্ডার ব্যবস্থাপনা)</span>
+							<span>Orders</span>
 						{:else if isProductsActive}
-							<span>Products (পণ্য ক্যাটালগ ও ইনভেন্টরি)</span>
+							<span>Products</span>
 						{:else if isCustomizationActive}
-							<span>Customization (পিক্সেল ও ট্র্যাকিং)</span>
+							<span>Customization</span>
 						{:else if isSettingsActive}
-							<span>Settings (কুরিয়ার লজিস্টিকস ও সেটিংস)</span>
+							<span>Settings</span>
 						{:else if isCustomerActive}
-							<span>Customer (ভিআইপি ক্লায়েন্ট ডেটাবেজ)</span>
+							<span>Customers</span>
 						{:else if isDatabaseActive}
-							<span>Database (Cloudflare D1 কনসোল)</span>
+							<span>Database</span>
 						{:else}
 							<span>AURA Control Deck</span>
 						{/if}

@@ -206,7 +206,7 @@
 				? 'bg-[#5845eb] text-white shadow-md shadow-indigo-600/20'
 				: 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}"
 		>
-			<span>ওয়েব অর্ডার (Web Orders)</span>
+			<span>Web Orders</span>
 			<span class="px-2 py-0.5 rounded-full text-[10px] {currentView === 'web' ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
 				{webOrders.length}
 			</span>
@@ -218,7 +218,7 @@
 				? 'bg-[#5845eb] text-white shadow-md shadow-indigo-600/20'
 				: 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}"
 		>
-			<span>অর্ডার তালিকা (Order List)</span>
+			<span>Order List</span>
 			<span class="px-2 py-0.5 rounded-full text-[10px] {currentView === 'list' ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
 				{orderListOrders.length}
 			</span>
@@ -231,7 +231,7 @@
 				: 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}"
 		>
 			<PlusCircle class="w-3.5 h-3.5" />
-			<span>নতুন অর্ডার তৈরি</span>
+			<span>New Order</span>
 		</a>
 
 		<a
@@ -240,7 +240,7 @@
 				? 'bg-[#5845eb] text-white shadow-md shadow-indigo-600/20'
 				: 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}"
 		>
-			<span>প্রি-অর্ডার</span>
+			<span>Pre-Orders</span>
 			{#if preOrders.length > 0}
 				<span class="px-2 py-0.5 rounded-full text-[10px] {currentView === 'pre' ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
 					{preOrders.length}
@@ -255,7 +255,7 @@
 				: 'bg-white text-slate-700 hover:text-rose-600 hover:bg-rose-50 border border-slate-200'}"
 		>
 			<Trash2 class="w-3.5 h-3.5" />
-			<span>মুছে ফেলা (Trash)</span>
+			<span>Trash</span>
 			{#if trashedOrders.length > 0}
 				<span class="px-2 py-0.5 rounded-full text-[10px] {currentView === 'trash' ? 'bg-white/25 text-white' : 'bg-rose-100 text-rose-700'}">
 					{trashedOrders.length}

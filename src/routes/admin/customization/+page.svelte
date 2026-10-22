@@ -19,7 +19,7 @@
 		<div>
 			<h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
 				<Sliders class="w-5 h-5 text-[#5845eb]" />
-				<span>পিক্সেল ও কনভার্সন ট্র্যাকিং (Customization)</span>
+				<span>পিক্সেল ও কনভার্সন ট্র্যাকিং</span>
 			</h2>
 			<p class="text-xs text-slate-500 mt-0.5">
 				Meta Pixel, Facebook Conversion API (CAPI), TikTok Pixel এবং Google Tag Manager

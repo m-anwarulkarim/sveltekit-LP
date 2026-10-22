@@ -19,7 +19,8 @@
 		CheckCircle2,
 		User,
 		LogOut,
-		Info
+		Info,
+		PanelLeftOpen
 	} from 'lucide-svelte';
 
 	let { data, children }: { data: any; children: Snippet } = $props();
@@ -80,8 +81,6 @@
 	let currentPath = $derived(page.url.pathname);
 	let isDashboard = $derived(currentPath === '/admin');
 	let isOrdersActive = $derived(currentPath.startsWith('/admin/orders'));
-	let isProductsActive = $derived(currentPath.startsWith('/admin/products'));
-	let isCustomizationActive = $derived(currentPath.startsWith('/admin/customization'));
 	let isSettingsActive = $derived(currentPath.startsWith('/admin/settings'));
 	let isCustomerActive = $derived(currentPath.startsWith('/admin/customers'));
 	let isDatabaseActive = $derived(currentPath.startsWith('/admin/database'));
@@ -339,57 +338,7 @@
 					{/if}
 				</div>
 
-				<!-- 3. Products (Active pill in user screenshot!) -->
-				<a
-					href="/admin/products"
-					onclick={() => isMobileSidebarOpen = false}
-					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isProductsActive
-						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
-						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
-					title="Products (পণ্য ক্যাটালগ)"
-				>
-					<div class="flex items-center gap-3.5">
-						<svg class="w-5 h-5 shrink-0 {isProductsActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="currentColor">
-							<path d="M16 2.5l4 3.5-1.5 3.5-2.5-1V20c0 1.1-.9 2-2 2H10c-1.1 0-2-.9-2-2V8.5L5.5 9.5 4 6 8 2.5c.5 1.5 2 2.5 4 2.5s3.5-1 4-2.5z" />
-							<rect x="10" y="12.5" width="4" height="1.8" rx="0.5" fill="white" />
-							<rect x="10" y="15.8" width="4" height="1.8" rx="0.5" fill="white" />
-						</svg>
-						{#if !isSidebarCollapsed}
-							<span>Products</span>
-						{/if}
-					</div>
-					{#if !isSidebarCollapsed}
-						<span class="text-xs font-mono {isProductsActive ? 'text-white/80' : 'text-slate-400'}">
-							{(data.products || []).length} SKUs
-						</span>
-					{/if}
-				</a>
-
-				<!-- 4. Customization (Pixels & CAPI Tracking) -->
-				<a
-					href="/admin/customization"
-					onclick={() => isMobileSidebarOpen = false}
-					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isCustomizationActive
-						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
-						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
-					title="Customization (পিক্সেল ও ট্র্যাকিং)"
-				>
-					<div class="flex items-center gap-3.5">
-						<svg class="w-5 h-5 shrink-0 {isCustomizationActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="currentColor">
-							<rect x="3" y="6" width="18" height="2" rx="1" />
-							<circle cx="9" cy="7" r="2.5" />
-							<rect x="3" y="11" width="18" height="2" rx="1" />
-							<circle cx="16" cy="12" r="2.5" />
-							<rect x="3" y="16" width="18" height="2" rx="1" />
-							<circle cx="7" cy="17" r="2.5" />
-						</svg>
-						{#if !isSidebarCollapsed}
-							<span>Customization</span>
-						{/if}
-					</div>
-				</a>
-
-				<!-- 5. Settings -->
+				<!-- 3. Settings -->
 				<a
 					href="/admin/settings"
 					onclick={() => isMobileSidebarOpen = false}
@@ -633,10 +582,6 @@
 							<span>Dashboard</span>
 						{:else if isOrdersActive}
 							<span>Orders</span>
-						{:else if isProductsActive}
-							<span>Products</span>
-						{:else if isCustomizationActive}
-							<span>Customization</span>
 						{:else if isSettingsActive}
 							<span>Settings</span>
 						{:else if isIpBlockActive}

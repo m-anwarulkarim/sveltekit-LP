@@ -3,11 +3,7 @@
 	import { Button, Card, Badge, Input, Textarea, Switch } from '#lib/components/ui';
 	import {
 		Truck,
-		ShieldCheck,
-		MessageSquare,
 		Package,
-		CreditCard,
-		Globe,
 		Search,
 		ArrowRight,
 		ArrowLeft,
@@ -31,7 +27,7 @@
 		ShieldAlert
 	} from 'lucide-svelte';
 
-	// Active tab: 'all' or specific module like 'facebook-pixel', 'delivery-charge', 'courier', 'fraud-check', 'payment-methods', 'order-setting', etc.
+	// Active tab: 'all' or specific module like 'facebook-pixel', 'delivery-charge', 'courier', 'order-setting', etc.
 	let activeTab = $state('all');
 	let searchQuery = $state('');
 
@@ -58,16 +54,9 @@
 	let isCourierSyncing = $state(false);
 	let courierStatusMessage = $state<string | null>(null);
 
-	// 4. Fraud Check
-	let minDeliveryRatio = $state(85);
-	let autoBlockFraud = $state(true);
-
-	// 5. TikTok & GTM
+	// 4. TikTok & GTM
 	let tiktokPixelId = $state('C9J829XLS8');
 	let gtmContainerId = $state('GTM-W8L9P2');
-
-	// 6. Payment Methods
-	let enableCOD = $state(true);
 
 	// 7. Order Settings (Exact Match with screencapture-admin-saleecom-settings-order-setting-2026-10-22-22_39_43.pdf)
 	// General Options
@@ -117,12 +106,6 @@
 	// Address Settings
 	let requireFullAddress = $state(true);
 	let showDistrictDropdown = $state(true);
-	let enableBkash = $state(true);
-	let enableNagad = $state(true);
-
-	// 7. Advance Payment
-	let advancePaymentAmount = $state(200);
-	let requireAdvanceForHighRisk = $state(true);
 
 	function triggerSave(msg = 'Settings saved successfully!') {
 		isSaved = true;
@@ -153,26 +136,6 @@
 			desc: 'ঢাকার ভেতরে ও বাইরে ডেলিভারি চার্জ নির্ধারণ'
 		},
 		{
-			id: 'advance-payment',
-			title: 'Advance Payment',
-			cardBg: 'bg-[#edfbf4]',
-			iconBg: 'bg-[#10b981]',
-			ringBorder: 'border-[#10b981]/40',
-			accentColor: 'text-[#10b981]',
-			iconType: 'truck',
-			desc: 'হাই-রিস্ক অর্ডারের জন্য অগ্রিম পেমেন্ট নিয়ম'
-		},
-		{
-			id: 'sms',
-			title: 'SMS',
-			cardBg: 'bg-[#fef5ee]',
-			iconBg: 'bg-[#f97316]',
-			ringBorder: 'border-[#f97316]/40',
-			accentColor: 'text-[#f97316]',
-			iconType: 'sms',
-			desc: 'কাস্টমার অর্ডার কনফার্মেশন ও ট্র্যাকিং এসএমএস'
-		},
-		{
 			id: 'courier',
 			title: 'Courier',
 			cardBg: 'bg-[#f8f0fe]',
@@ -181,37 +144,6 @@
 			accentColor: 'text-[#8b5cf6]',
 			iconType: 'courier',
 			desc: 'Steadfast ও Pathao কুরিয়ার এপিআই কনফিগারেশন'
-		},
-		{
-			id: 'fraud-check',
-			title: 'Fraud Check API',
-			titleColor: 'text-[#4f46e5]',
-			cardBg: 'bg-[#f0f3ff]',
-			iconBg: 'bg-[#4f46e5]',
-			ringBorder: 'border-[#4f46e5]/40',
-			accentColor: 'text-[#4f46e5]',
-			iconType: 'fraud',
-			desc: 'রিটার্ন রেশিও ভেরিফিকেশন ও ফ্রড ডিটেকশন'
-		},
-		{
-			id: 'payment-methods',
-			title: 'Payment Methods',
-			cardBg: 'bg-[#eefaf3]',
-			iconBg: 'bg-[#10b981]',
-			ringBorder: 'border-[#10b981]/40',
-			accentColor: 'text-[#10b981]',
-			iconType: 'payment',
-			desc: 'ক্যাশ অন ডেলিভারি, বিকাশ ও নগদ গেটওয়ে'
-		},
-		{
-			id: 'social-login',
-			title: 'Social Login',
-			cardBg: 'bg-[#feedeb]',
-			iconBg: 'bg-[#ea4335]',
-			ringBorder: 'border-[#ea4335]/40',
-			accentColor: 'text-[#ea4335]',
-			iconType: 'google',
-			desc: 'Google One-Tap দ্রুত সাইন-ইন'
 		},
 		{
 			id: 'facebook-pixel',
@@ -260,38 +192,8 @@
 			iconBg: 'bg-[#f97316]',
 			ringBorder: 'border-[#f97316]/40',
 			accentColor: 'text-[#f97316]',
-			iconType: 'domain',
+			iconType: 'tag',
 			desc: 'ডিসকাউন্ট কুপন ও বান্ডেল অফার'
-		},
-		{
-			id: 'chat-manage',
-			title: 'Chat Manage',
-			cardBg: 'bg-[#eef5fc]',
-			iconBg: 'bg-[#1d6ee5]',
-			ringBorder: 'border-[#1d6ee5]/40',
-			accentColor: 'text-[#1d6ee5]',
-			iconType: 'chat',
-			desc: 'WhatsApp ও Messenger লাইভ চ্যাট উইজেট'
-		},
-		{
-			id: 'currency-country',
-			title: 'Shop Currency & Country',
-			cardBg: 'bg-[#fef5ed]',
-			iconBg: 'bg-[#f97316]',
-			ringBorder: 'border-[#f97316]/40',
-			accentColor: 'text-[#f97316]',
-			iconType: 'currency',
-			desc: 'মুদ্রা (BDT ৳) এবং দেশ (Bangladesh)'
-		},
-		{
-			id: 'domain-manage',
-			title: 'Domain Mange',
-			cardBg: 'bg-[#fef6ee]',
-			iconBg: 'bg-[#f97316]',
-			ringBorder: 'border-[#f97316]/40',
-			accentColor: 'text-[#f97316]',
-			iconType: 'domain',
-			desc: 'কাস্টম ডোমেইন ম্যাপিং (lp.haqplus.com)'
 		},
 		{
 			id: 'order-setting',
@@ -375,9 +277,7 @@
 						<!-- Concentric Dashed Ring + Solid Icon Circle -->
 						<div class="w-13 h-13 rounded-full border border-dashed {card.ringBorder} p-[3px] flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105">
 							<div class="w-10 h-10 rounded-full {card.iconBg} flex items-center justify-center text-white shadow-2xs">
-								{#if card.iconType === 'google'}
-									<span class="font-black text-sm tracking-tighter">G</span>
-								{:else if card.iconType === 'facebook'}
+								{#if card.iconType === 'facebook'}
 									<svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
 										<path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
 									</svg>
@@ -387,20 +287,8 @@
 									</svg>
 								{:else if card.iconType === 'truck'}
 									<Truck class="w-4.5 h-4.5" />
-								{:else if card.iconType === 'sms'}
-									<MessageSquare class="w-4.5 h-4.5" />
 								{:else if card.iconType === 'courier'}
 									<Package class="w-4.5 h-4.5" />
-								{:else if card.iconType === 'fraud'}
-									<ShieldCheck class="w-4.5 h-4.5" />
-								{:else if card.iconType === 'payment'}
-									<CreditCard class="w-4.5 h-4.5" />
-								{:else if card.iconType === 'chat'}
-									<MessageSquare class="w-4.5 h-4.5" />
-								{:else if card.iconType === 'currency'}
-									<span class="font-bold text-sm">$</span>
-								{:else if card.iconType === 'domain'}
-									<Globe class="w-4.5 h-4.5" />
 								{:else if card.iconType === 'order'}
 									<FileText class="w-4.5 h-4.5" />
 								{:else if card.iconType === 'product'}
@@ -684,53 +572,7 @@
 		</div>
 
 	<!-- ======================================================== -->
-	<!-- VIEW 5: FRAUD CHECK API                                  -->
-	<!-- ======================================================== -->
-	{:else if activeTab === 'fraud-check'}
-		<div class="space-y-6 max-w-2xl">
-			<Button
-				variant="outline"
-				size="sm"
-				onclick={() => (activeTab = 'all')}
-				class="gap-2"
-			>
-				<ArrowLeft class="w-4 h-4" />
-				<span>Back to Settings</span>
-			</Button>
-
-			<Card class="p-6 space-y-5">
-				<h3 class="text-base font-bold text-slate-900">Fraud Check API & Return Ratio Threshold</h3>
-				<p class="text-xs text-slate-500">Steadfast ডেলিভারি হিস্টোরি দেখে সন্দেহভাজন ফেক কাস্টমার চিহ্নিতকরণ</p>
-
-				<div class="space-y-4">
-					<div class="space-y-1.5">
-						<label for="fraud-ratio" class="text-xs font-bold text-slate-700">ন্যূনতম গ্রহণযোগ্য ডেলিভারি রেশিও (%)</label>
-						<Input
-							id="fraud-ratio"
-							type="number"
-							bind:value={minDeliveryRatio}
-							class="font-mono"
-						/>
-						<span class="text-[11px] text-slate-400">এর নিচের রেশিওধারীদের জন্য ক্যাশ অন ডেলিভারি ব্লক অথবা অগ্রিম চাওয়া হবে</span>
-					</div>
-
-					<div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
-						<span class="text-xs text-slate-700 font-bold">Auto-flag Fake Orders with Return Rate &gt; 50%</span>
-						<Switch bind:checked={autoBlockFraud} />
-					</div>
-				</div>
-
-				<Button
-					type="button"
-					onclick={() => triggerSave('Fraud Check Settings Saved!')}
-				>
-					Save Fraud Rules
-				</Button>
-			</Card>
-		</div>
-
-	<!-- ======================================================== -->
-	<!-- VIEW 6: ORDER SETTING (Exact Match with PDF Reference)   -->
+	<!-- VIEW 5: ORDER SETTING (Exact Match with PDF Reference)   -->
 	<!-- ======================================================== -->
 	{:else if activeTab === 'order-setting'}
 		<div class="space-y-6">

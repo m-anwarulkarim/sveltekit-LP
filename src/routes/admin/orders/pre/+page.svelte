@@ -1,18 +1,14 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Card, Badge, Input, Dialog } from '#lib/components/ui';
+	import { Button, Card, Badge, Input } from '#lib/components/ui';
 	import {
 		Search,
 		Sparkles,
 		PhoneCall,
 		CheckCircle2,
-		XCircle,
 		Clock,
-		AlertCircle,
 		DollarSign,
-		ShieldCheck,
 		ArrowRight,
-		FileEdit,
 		Trash2
 	} from 'lucide-svelte';
 
@@ -20,8 +16,6 @@
 
 	let searchQuery = $state('');
 	let statusFilter = $state('all');
-	let activeOrderForDetails = $state<any | null>(null);
-	let isDetailsOpen = $state(false);
 
 	// Pre-orders are high value or advance booking orders (> 2500 BDT or marked pre_order)
 	let preOrders = $derived(

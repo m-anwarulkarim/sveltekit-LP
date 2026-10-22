@@ -1,22 +1,17 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Card, Badge, Input, Dialog } from '#lib/components/ui';
+	import { Button, Card, Badge, Input } from '#lib/components/ui';
 	import {
 		Search,
 		Trash2,
 		RotateCcw,
 		AlertTriangle,
-		CheckCircle2,
-		XCircle,
-		ShieldAlert,
-		Calendar,
 		ArrowRight
 	} from 'lucide-svelte';
 
 	let { data }: { data: any } = $props();
 
 	let searchQuery = $state('');
-	let isEmptyTrashConfirmOpen = $state(false);
 
 	let trashedOrders = $derived(
 		(data.orders || []).filter((o: any) => o.status === 'cancelled')

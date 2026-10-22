@@ -15,8 +15,7 @@
 		PauseCircle,
 		RotateCcw,
 		Trash2,
-		FileEdit,
-		ChevronDown
+		FileEdit
 	} from 'lucide-svelte';
 
 	let { data }: { data: any } = $props();

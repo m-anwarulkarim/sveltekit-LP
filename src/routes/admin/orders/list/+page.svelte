@@ -14,9 +14,7 @@
 		AlertCircle,
 		RotateCcw,
 		HelpCircle,
-		Trash2,
-		Package,
-		RefreshCw
+		Trash2
 	} from 'lucide-svelte';
 
 	let { data }: { data: any } = $props();

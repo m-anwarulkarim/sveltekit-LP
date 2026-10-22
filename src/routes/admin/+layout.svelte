@@ -22,7 +22,6 @@
 		Info,
 		PanelLeftOpen,
 		LayoutGrid,
-		ShoppingBag,
 		ReceiptText
 	} from 'lucide-svelte';
 
@@ -37,7 +36,6 @@
 
 	// Top Navbar Interactive Modals & Dropdowns State
 	let isTutorialModalOpen = $state(false);
-	let isNotificationOpen = $state(false);
 	let isPackageModalOpen = $state(false);
 
 	function handleClickOutside(event: MouseEvent) {
@@ -91,6 +89,7 @@
 	let isIpBlockActive = $derived(currentPath.startsWith('/admin/ip-block'));
 	let isProfileActive = $derived(currentPath.startsWith('/admin/profile'));
 	let isSupportActive = $derived(currentPath.startsWith('/admin/support'));
+	let isNotificationsActive = $derived(currentPath.startsWith('/admin/notifications'));
 </script>
 
 <svelte:head>
@@ -603,6 +602,8 @@
 							<span>Profile</span>
 						{:else if isSupportActive}
 							<span>Support</span>
+						{:else if isNotificationsActive}
+							<span>Notifications</span>
 						{:else}
 							<span>AURA Control</span>
 						{/if}
@@ -678,39 +679,14 @@
 
 				<!-- 5. Notification Bell (Desktop only) -->
 				<div class="hidden md:block relative">
-					<button
-						type="button"
-						onclick={() => (isNotificationOpen = !isNotificationOpen)}
-						class="w-9 h-9 rounded-full border border-slate-200/90 bg-white flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors shadow-2xs relative cursor-pointer"
-						title="নোটিফিকেশন"
+					<a
+						href="/admin/notifications"
+						class="w-9 h-9 rounded-full border border-slate-200/90 bg-white flex items-center justify-center {isNotificationsActive ? 'text-[#5845eb] border-[#5845eb]' : 'text-slate-600 hover:text-slate-900'} hover:bg-slate-50 transition-colors shadow-2xs relative"
+						title="নোটিফিকেশন সেন্টার"
 					>
 						<Bell class="w-4 h-4" />
 						<span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white"></span>
-					</button>
-
-					<!-- Notifications Popover -->
-					{#if isNotificationOpen}
-						<div class="absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-slate-200 shadow-xl p-3 z-50 text-xs animate-in fade-in">
-							<div class="font-bold text-slate-800 pb-2 border-b border-slate-100 flex items-center justify-between">
-								<span>নতুন নোটিফিকেশন</span>
-								<span class="text-[10px] bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded-full font-bold">৩টি নতুন</span>
-							</div>
-							<div class="divide-y divide-slate-100 mt-1 max-h-60 overflow-y-auto">
-								<div class="py-2">
-									<p class="font-bold text-slate-800">নতুন ওয়েবসাইট অর্ডার #AUR-9842</p>
-									<p class="text-[10px] text-slate-400">১০ মিনিট আগে • কাস্টমার: সাইদুর রহমান</p>
-								</div>
-								<div class="py-2">
-									<p class="font-bold text-slate-800">Steadfast কুরিয়ার ডেলিভারি কনফার্মড</p>
-									<p class="text-[10px] text-slate-400">২৫ মিনিট আগে • ট্র্যাকিং: CID-884920</p>
-								</div>
-								<div class="py-2">
-									<p class="font-bold text-slate-800">স্টক সতর্কতা: AURA Spectrum X</p>
-									<p class="text-[10px] text-slate-400">১ ঘণ্টা আগে • অবশিষ্ট: ৪ টি</p>
-								</div>
-							</div>
-						</div>
-					{/if}
+					</a>
 				</div>
 
 				<!-- 6. Store / Profile Circle (COLOR LIGHT) -->
@@ -792,7 +768,7 @@
 	<!-- 3. MOBILE BOTTOM NAVIGATION BAR (Exact Match)  -->
 	<!-- ============================================== -->
 	<div class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-2 py-1.5">
-		<div class="grid grid-cols-5 items-center">
+		<div class="grid grid-cols-4 items-center">
 			
 			<!-- 1. Dashboard -->
 			<a
@@ -803,16 +779,7 @@
 				<span class="text-[11px] {isDashboard ? 'font-bold' : 'font-medium'} leading-none">Dashboard</span>
 			</a>
 
-			<!-- 2. Product -->
-			<a
-				href="/admin/orders"
-				class="flex flex-col items-center justify-center gap-1 py-1 transition-colors {currentPath === '/admin/orders' ? 'text-[#5845eb]' : 'text-slate-600 hover:text-slate-900'}"
-			>
-				<ShoppingBag class="w-5 h-5 {currentPath === '/admin/orders' ? 'stroke-[2.5]' : 'stroke-2'}" />
-				<span class="text-[11px] {currentPath === '/admin/orders' ? 'font-bold' : 'font-medium'} leading-none">Product</span>
-			</a>
-
-			<!-- 3. Order List -->
+			<!-- 2. Order List -->
 			<a
 				href="/admin/orders/list"
 				class="flex flex-col items-center justify-center gap-1 py-1 transition-colors {currentPath === '/admin/orders/list' ? 'text-[#5845eb]' : 'text-slate-600 hover:text-slate-900'}"
@@ -821,22 +788,21 @@
 				<span class="text-[11px] {currentPath === '/admin/orders/list' ? 'font-bold' : 'font-medium'} leading-none">Order List</span>
 			</a>
 
-			<!-- 4. Notification -->
-			<button
-				type="button"
-				onclick={() => (isNotificationOpen = !isNotificationOpen)}
-				class="flex flex-col items-center justify-center gap-1 py-1 transition-colors text-slate-600 hover:text-slate-900 relative cursor-pointer"
+			<!-- 3. Notification -->
+			<a
+				href="/admin/notifications"
+				class="flex flex-col items-center justify-center gap-1 py-1 transition-colors {isNotificationsActive ? 'text-[#5845eb]' : 'text-slate-600 hover:text-slate-900'} relative"
 			>
 				<div class="relative">
-					<Bell class="w-5 h-5 stroke-2" />
+					<Bell class="w-5 h-5 {isNotificationsActive ? 'stroke-[2.5]' : 'stroke-2'}" />
 					<span class="absolute -top-1 -right-1.5 min-w-[15px] h-[15px] px-0.5 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center leading-none">
 						4
 					</span>
 				</div>
-				<span class="text-[11px] font-medium leading-none">Notification</span>
-			</button>
+				<span class="text-[11px] {isNotificationsActive ? 'font-bold' : 'font-medium'} leading-none">Notification</span>
+			</a>
 
-			<!-- 5. Menu -->
+			<!-- 4. Menu -->
 			<button
 				type="button"
 				onclick={() => (isMobileSidebarOpen = !isMobileSidebarOpen)}

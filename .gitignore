@@ -24,5 +24,6 @@ vite.config.ts.timestamp-*
 
 # Tests & temporary screenshots
 *.png
+*.pdf
 test_site.py
 

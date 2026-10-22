@@ -22,7 +22,9 @@
 		Info,
 		PanelLeftOpen,
 		LayoutGrid,
-		ReceiptText
+		ReceiptText,
+		BadgeCheck,
+		Target
 	} from 'lucide-svelte';
 
 	let { data, children }: { data: any; children: Snippet } = $props();
@@ -90,6 +92,15 @@
 	let isProfileActive = $derived(currentPath.startsWith('/admin/profile'));
 	let isSupportActive = $derived(currentPath.startsWith('/admin/support'));
 	let isNotificationsActive = $derived(currentPath.startsWith('/admin/notifications'));
+	let isLandingPagesActive = $derived(currentPath.startsWith('/admin/landing-pages'));
+	let isTutorialsActive = $derived(currentPath.startsWith('/admin/tutorials'));
+	let isNewReleaseActive = $derived(currentPath.startsWith('/admin/new-release'));
+	let isAdminControlActive = $derived(currentPath.startsWith('/admin/admin-control'));
+	let isReportsActive = $derived(currentPath.startsWith('/admin/reports'));
+	let isDailySummaryActive = $derived(currentPath === '/admin/reports/daily-business-summary' || currentPath === '/admin/reports');
+	let isAssetValuationActive = $derived(currentPath === '/admin/reports/asset-valuation');
+	let isDailyTargetActive = $derived(currentPath.startsWith('/admin/daily-target'));
+	let isReportsOpen = $state(true);
 </script>
 
 <svelte:head>
@@ -108,10 +119,10 @@
 	<!-- 1. HIGH-END EXECUTIVE WHITE SAAS SIDEBAR       -->
 	<!-- ============================================== -->
 	<aside
-		class="bg-white text-slate-700 border-r border-slate-200/90 flex flex-col justify-between transition-all duration-300 z-50 fixed md:sticky top-0 h-screen shrink-0 shadow-sm {isSidebarCollapsed ? 'w-20' : 'w-72'} {isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}"
+		class="admin-sidebar bg-white text-slate-700 border-r border-slate-200/90 flex flex-col justify-between transition-all duration-300 z-50 fixed md:sticky top-0 h-screen shrink-0 shadow-sm {isSidebarCollapsed ? 'w-20' : 'w-72'} {isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}"
 	>
-		<div class="flex-1 flex flex-col min-h-0 overflow-y-auto no-scrollbar">
-			
+		<!-- Fixed Top Header Section of Sidebar (Always Sticky, Never Scrolls) -->
+		<div class="shrink-0 bg-white z-20">
 			<!-- Header (AURA Store Brand + <> Toggle Button) -->
 			<div class="h-16 md:h-20 flex items-center {isSidebarCollapsed ? 'justify-center flex-col gap-2.5 py-3' : 'justify-between px-5'} border-b border-slate-100">
 				{#if !isSidebarCollapsed}
@@ -181,7 +192,7 @@
 
 			<!-- Quick Global Search (Visible when expanded) -->
 			{#if !isSidebarCollapsed}
-				<div class="p-3 pb-1">
+				<div class="p-3 pb-2 border-b border-slate-100/60 bg-white">
 					<div class="relative">
 						<Search class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
 						<input
@@ -193,8 +204,10 @@
 					</div>
 				</div>
 			{/if}
+		</div>
 
-			<!-- Navigation Links Menu (Modular SvelteKit Sub-Routes) -->
+		<!-- Scrollable Navigation Links Menu (Middle section only) -->
+		<div class="flex-1 flex flex-col min-h-0 overflow-y-auto no-scrollbar">
 			<nav class="p-3 space-y-1.5 font-['Plus_Jakarta_Sans',sans-serif]">
 				
 				<!-- 1. Dashboard (Overview & Analytics) -->
@@ -437,15 +450,17 @@
 					{/if}
 				</a>
 
-				<!-- 8. Landing page (Live Store link) -->
+				<!-- 6. Landing page -->
 				<a
-					href="/"
-					target="_blank"
-					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] text-slate-800 hover:text-black hover:bg-slate-100/70 group"
-					title="Landing page (লাইভ স্টোর দেখুন)"
+					href="/admin/landing-pages"
+					onclick={() => isMobileSidebarOpen = false}
+					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isLandingPagesActive
+						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
+					title="Landing page (ল্যান্ডিং পেজসমূহ)"
 				>
 					<div class="flex items-center gap-3.5">
-						<svg class="w-5 h-5 text-slate-800 group-hover:text-black shrink-0" viewBox="0 0 24 24" fill="currentColor">
+						<svg class="w-5 h-5 {isLandingPagesActive ? 'text-white' : 'text-slate-800 group-hover:text-black'} shrink-0" viewBox="0 0 24 24" fill="currentColor">
 							<rect x="4" y="4" width="16" height="12" rx="2" />
 							<path d="M2 19h20c0 .6-.4 1-1 1H3c-.6 0-1-.4-1-1z" />
 							<rect x="10" y="13" width="4" height="1.5" rx="0.5" fill="white" />
@@ -455,11 +470,125 @@
 						{/if}
 					</div>
 					{#if !isSidebarCollapsed}
-						<ExternalLink class="w-4 h-4 text-slate-400 group-hover:text-slate-700" />
+						<span class="text-xs font-bold px-2 py-0.5 rounded-full {isLandingPagesActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
+							3
+						</span>
 					{/if}
 				</a>
 
-				<!-- 9. Support -->
+				<!-- Daily Target -->
+				<a
+					href="/admin/daily-target"
+					onclick={() => isMobileSidebarOpen = false}
+					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isDailyTargetActive
+						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
+					title="Daily Target (দৈনিক বিক্রয় লক্ষ্যমাত্রা)"
+				>
+					<div class="flex items-center gap-3.5">
+						<Target class="w-5 h-5 shrink-0 {isDailyTargetActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" />
+						{#if !isSidebarCollapsed}
+							<span>Daily Target</span>
+						{/if}
+					</div>
+				</a>
+
+				<!-- Reports (Dropdown Menu) -->
+				<div class="space-y-1 relative">
+					<a
+						href="/admin/reports/daily-business-summary"
+						onclick={() => {
+							if (isSidebarCollapsed) isSidebarCollapsed = false;
+							isReportsOpen = true;
+						}}
+						class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isReportsActive
+							? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+							: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'} cursor-pointer"
+						title="Reports (বিজনেস ও অ্যাসেট রিপোর্ট)"
+					>
+						<div class="flex items-center gap-3.5">
+							<svg class="w-5 h-5 shrink-0 {isReportsActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+								<polyline points="14 2 14 8 20 8" />
+								<line x1="16" y1="13" x2="8" y2="13" />
+								<line x1="16" y1="17" x2="8" y2="17" />
+								<line x1="10" y1="9" x2="8" y2="9" />
+							</svg>
+							{#if !isSidebarCollapsed}
+								<span>Reports</span>
+							{/if}
+						</div>
+						{#if !isSidebarCollapsed}
+							<button
+								type="button"
+								onclick={(e: MouseEvent) => {
+									e.preventDefault();
+									e.stopPropagation();
+									isReportsOpen = !isReportsOpen;
+								}}
+								class="p-0.5 rounded-lg hover:bg-black/10 transition-colors cursor-pointer"
+								aria-label="Toggle reports dropdown"
+							>
+								<ChevronDown class="w-4 h-4 transition-transform duration-200 {isReportsOpen ? 'rotate-180' : ''}" />
+							</button>
+						{/if}
+					</a>
+
+					<!-- Reports Submenu -->
+					{#if !isSidebarCollapsed && isReportsOpen}
+						<div class="pl-3 pr-1 py-1 space-y-1 border-l-2 border-slate-100 ml-6 my-1 animate-in fade-in duration-150 text-xs">
+							<!-- 1. Daily Business Summary -->
+							<a
+								href="/admin/reports/daily-business-summary"
+								onclick={() => isMobileSidebarOpen = false}
+								class="w-full flex items-center gap-2 px-3 py-2 rounded-xl font-medium transition-all {isDailySummaryActive
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span class="w-1.5 h-1.5 rounded-full {isDailySummaryActive ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span>Daily Business Summary</span>
+							</a>
+
+							<!-- 2. Asset Valuation -->
+							<a
+								href="/admin/reports/asset-valuation"
+								onclick={() => isMobileSidebarOpen = false}
+								class="w-full flex items-center gap-2 px-3 py-2 rounded-xl font-medium transition-all {isAssetValuationActive
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span class="w-1.5 h-1.5 rounded-full {isAssetValuationActive ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span>Asset Valuation</span>
+							</a>
+						</div>
+					{/if}
+				</div>
+
+				<!-- Admin Control -->
+				<a
+					href="/admin/admin-control"
+					onclick={() => isMobileSidebarOpen = false}
+					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isAdminControlActive
+						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
+					title="Admin Control (ভেন্ডর অ্যাডমিন নিয়ন্ত্রণ)"
+				>
+					<div class="flex items-center gap-3.5">
+						<svg class="w-5 h-5 shrink-0 {isAdminControlActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<rect x="2" y="5" width="20" height="14" rx="2" />
+							<line x1="2" y1="10" x2="22" y2="10" />
+							<line x1="6" y1="15" x2="6.01" y2="15" stroke-width="3" />
+							<line x1="10" y1="15" x2="10.01" y2="15" stroke-width="3" />
+							<line x1="14" y1="15" x2="14.01" y2="15" stroke-width="3" />
+							<line x1="18" y1="15" x2="18.01" y2="15" stroke-width="3" />
+						</svg>
+						{#if !isSidebarCollapsed}
+							<span>Admin Control</span>
+						{/if}
+					</div>
+				</a>
+
+				<!-- Support -->
 				<a
 					href="/admin/support"
 					onclick={() => isMobileSidebarOpen = false}
@@ -477,6 +606,43 @@
 					{#if !isSidebarCollapsed}
 						<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="অনলাইন"></span>
 					{/if}
+				</a>
+
+				<!-- Tutorials -->
+				<a
+					href="/admin/tutorials"
+					onclick={() => isMobileSidebarOpen = false}
+					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isTutorialsActive
+						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
+					title="Tutorials (টিউটোরিয়াল ভিডিও)"
+				>
+					<div class="flex items-center gap-3.5">
+						<svg class="w-5 h-5 shrink-0 {isTutorialsActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<circle cx="12" cy="12" r="10" />
+							<polygon points="10 8 16 12 10 16 10 8" fill="currentColor" />
+						</svg>
+						{#if !isSidebarCollapsed}
+							<span>Tutorials</span>
+						{/if}
+					</div>
+				</a>
+
+				<!-- New Release -->
+				<a
+					href="/admin/new-release"
+					onclick={() => isMobileSidebarOpen = false}
+					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isNewReleaseActive
+						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
+					title="New Release (নতুন ভার্সন আপডেট)"
+				>
+					<div class="flex items-center gap-3.5">
+						<BadgeCheck class="w-5 h-5 shrink-0 {isNewReleaseActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" />
+						{#if !isSidebarCollapsed}
+							<span>New Release</span>
+						{/if}
+					</div>
 				</a>
 
 				<!-- 10. Profile -->
@@ -567,7 +733,10 @@
 	<div class="flex-1 flex flex-col min-w-0 min-h-screen">
 
 		<!-- TOP COMMAND BAR (Exact Match with User's Mobile & Desktop Reference) -->
-		<header class="h-16 md:h-20 bg-white border-b border-slate-200/80 px-4 md:px-8 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
+		<header
+			class="h-16 md:h-20 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 md:px-8 flex items-center justify-between sticky top-0 z-40 shadow-xs transition-shadow"
+			style="position: sticky; top: 0; z-index: 40;"
+		>
 			<div class="flex items-center gap-3 md:gap-4 min-w-0">
 				
 				<!-- Mobile Store Brand Logo (Exact match with user reference screenshot) -->
@@ -604,6 +773,22 @@
 							<span>Support</span>
 						{:else if isNotificationsActive}
 							<span>Notifications</span>
+						{:else if isLandingPagesActive}
+							<span>Landing page</span>
+						{:else if isDailyTargetActive}
+							<span>Daily Target</span>
+						{:else if isDailySummaryActive}
+							<span>Daily Business Summary Report</span>
+						{:else if isAssetValuationActive}
+							<span>Asset Valuation</span>
+						{:else if isReportsActive}
+							<span>Reports</span>
+						{:else if isTutorialsActive}
+							<span>Tutorials</span>
+						{:else if isNewReleaseActive}
+							<span>New Release</span>
+						{:else if isAdminControlActive}
+							<span>Vendor Admins</span>
 						{:else}
 							<span>AURA Control</span>
 						{/if}

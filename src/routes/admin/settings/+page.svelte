@@ -81,168 +81,187 @@
 		}, 1200);
 	}
 
-	// 18 All-Settings Cards (Exact Match with Screenshot 1)
+	// 18 All-	// 18 All-Settings Cards (Exact Match with Reference Image)
 	const ALL_SETTINGS_CARDS = [
 		{
 			id: 'delivery-charge',
 			title: 'Delivery Charge',
-			icon: Truck,
-			color: 'text-blue-600',
-			bgColor: 'bg-blue-50',
-			ringColor: 'ring-blue-100',
+			cardBg: 'bg-[#f0f7ff]',
+			iconBg: 'bg-[#1d6ee5]',
+			ringBorder: 'border-[#1d6ee5]/40',
+			accentColor: 'text-[#1d6ee5]',
+			iconType: 'truck',
 			desc: 'ঢাকার ভেতরে ও বাইরে ডেলিভারি চার্জ নির্ধারণ'
 		},
 		{
 			id: 'advance-payment',
 			title: 'Advance Payment',
-			icon: Truck,
-			color: 'text-emerald-600',
-			bgColor: 'bg-emerald-50',
-			ringColor: 'ring-emerald-200 border-dashed border-2 border-emerald-400',
+			cardBg: 'bg-[#edfbf4]',
+			iconBg: 'bg-[#10b981]',
+			ringBorder: 'border-[#10b981]/40',
+			accentColor: 'text-[#10b981]',
+			iconType: 'truck',
 			desc: 'হাই-রিস্ক অর্ডারের জন্য অগ্রিম পেমেন্ট নিয়ম'
 		},
 		{
 			id: 'sms',
 			title: 'SMS',
-			icon: MessageSquare,
-			color: 'text-orange-600',
-			bgColor: 'bg-orange-50',
-			ringColor: 'ring-orange-100',
+			cardBg: 'bg-[#fef5ee]',
+			iconBg: 'bg-[#f97316]',
+			ringBorder: 'border-[#f97316]/40',
+			accentColor: 'text-[#f97316]',
+			iconType: 'sms',
 			desc: 'কাস্টমার অর্ডার কনফার্মেশন ও ট্র্যাকিং এসএমএস'
 		},
 		{
 			id: 'courier',
 			title: 'Courier',
-			icon: Package,
-			color: 'text-purple-600',
-			bgColor: 'bg-purple-50',
-			ringColor: 'ring-purple-100',
+			cardBg: 'bg-[#f8f0fe]',
+			iconBg: 'bg-[#8b5cf6]',
+			ringBorder: 'border-[#8b5cf6]/40',
+			accentColor: 'text-[#8b5cf6]',
+			iconType: 'courier',
 			desc: 'Steadfast ও Pathao কুরিয়ার এপিআই কনফিগারেশন'
 		},
 		{
 			id: 'fraud-check',
 			title: 'Fraud Check API',
-			icon: ShieldCheck,
-			color: 'text-blue-600',
-			bgColor: 'bg-blue-50',
-			ringColor: 'ring-blue-100',
+			titleColor: 'text-[#4f46e5]',
+			cardBg: 'bg-[#f0f3ff]',
+			iconBg: 'bg-[#4f46e5]',
+			ringBorder: 'border-[#4f46e5]/40',
+			accentColor: 'text-[#4f46e5]',
+			iconType: 'fraud',
 			desc: 'রিটার্ন রেশিও ভেরিফিকেশন ও ফ্রড ডিটেকশন'
 		},
 		{
 			id: 'payment-methods',
 			title: 'Payment Methods',
-			icon: CreditCard,
-			color: 'text-emerald-600',
-			bgColor: 'bg-emerald-50',
-			ringColor: 'ring-emerald-100',
+			cardBg: 'bg-[#eefaf3]',
+			iconBg: 'bg-[#10b981]',
+			ringBorder: 'border-[#10b981]/40',
+			accentColor: 'text-[#10b981]',
+			iconType: 'payment',
 			desc: 'ক্যাশ অন ডেলিভারি, বিকাশ ও নগদ গেটওয়ে'
 		},
 		{
 			id: 'social-login',
 			title: 'Social Login',
-			icon: Globe,
-			color: 'text-rose-600',
-			bgColor: 'bg-rose-50',
-			ringColor: 'ring-rose-100',
+			cardBg: 'bg-[#feedeb]',
+			iconBg: 'bg-[#ea4335]',
+			ringBorder: 'border-[#ea4335]/40',
+			accentColor: 'text-[#ea4335]',
+			iconType: 'google',
 			desc: 'Google One-Tap দ্রুত সাইন-ইন'
 		},
 		{
 			id: 'facebook-pixel',
 			title: 'Facebook Pixel',
-			icon: Globe,
-			color: 'text-blue-600',
-			bgColor: 'bg-blue-50',
-			ringColor: 'ring-blue-100',
+			cardBg: 'bg-[#eef5fc]',
+			iconBg: 'bg-[#1877f2]',
+			ringBorder: 'border-[#1877f2]/40',
+			accentColor: 'text-[#1877f2]',
+			iconType: 'facebook',
 			desc: 'Meta Pixel এবং Conversions API (CAPI)'
 		},
 		{
 			id: 'tiktok-pixel',
 			title: 'TikTok Pixel',
-			icon: Sliders,
-			color: 'text-slate-900',
-			bgColor: 'bg-slate-100',
-			ringColor: 'ring-slate-200',
+			cardBg: 'bg-[#f4f7f6]',
+			iconBg: 'bg-black',
+			ringBorder: 'border-black/30',
+			accentColor: 'text-slate-800',
+			iconType: 'tiktok',
 			desc: 'TikTok ইভেন্ট ও কনভার্সন ট্র্যাকার'
 		},
 		{
 			id: 'gtm',
 			title: 'Tag Manager, Analytics and Data Layer',
-			icon: Tag,
-			color: 'text-blue-600',
-			bgColor: 'bg-blue-50',
-			ringColor: 'ring-blue-100',
+			cardBg: 'bg-[#eef5fc]',
+			iconBg: 'bg-[#1d6ee5]',
+			ringBorder: 'border-[#1d6ee5]/40',
+			accentColor: 'text-[#1d6ee5]',
+			iconType: 'tag',
 			desc: 'Google Tag Manager ও ডেটালেয়ার ইভেন্টস'
 		},
 		{
 			id: 'facebook-catalog',
 			title: 'Facebook Catalog',
-			icon: Globe,
-			color: 'text-blue-600',
-			bgColor: 'bg-blue-50',
-			ringColor: 'ring-blue-100',
+			cardBg: 'bg-[#eef5fc]',
+			iconBg: 'bg-[#1877f2]',
+			ringBorder: 'border-[#1877f2]/40',
+			accentColor: 'text-[#1877f2]',
+			iconType: 'facebook',
 			desc: 'মেটা ক্যাটালগ ও ডায়নামিক অ্যাড ফিড'
 		},
 		{
 			id: 'manage-offer',
 			title: 'Manage Offer',
-			icon: Tag,
-			color: 'text-amber-600',
-			bgColor: 'bg-amber-50',
-			ringColor: 'ring-amber-100',
+			cardBg: 'bg-[#fef8ee]',
+			iconBg: 'bg-[#f97316]',
+			ringBorder: 'border-[#f97316]/40',
+			accentColor: 'text-[#f97316]',
+			iconType: 'domain',
 			desc: 'ডিসকাউন্ট কুপন ও বান্ডেল অফার'
 		},
 		{
 			id: 'chat-manage',
 			title: 'Chat Manage',
-			icon: MessageSquare,
-			color: 'text-sky-600',
-			bgColor: 'bg-sky-50',
-			ringColor: 'ring-sky-100',
+			cardBg: 'bg-[#eef5fc]',
+			iconBg: 'bg-[#1d6ee5]',
+			ringBorder: 'border-[#1d6ee5]/40',
+			accentColor: 'text-[#1d6ee5]',
+			iconType: 'chat',
 			desc: 'WhatsApp ও Messenger লাইভ চ্যাট উইজেট'
 		},
 		{
 			id: 'currency-country',
 			title: 'Shop Currency & Country',
-			icon: Globe,
-			color: 'text-orange-600',
-			bgColor: 'bg-orange-50',
-			ringColor: 'ring-orange-100',
+			cardBg: 'bg-[#fef5ed]',
+			iconBg: 'bg-[#f97316]',
+			ringBorder: 'border-[#f97316]/40',
+			accentColor: 'text-[#f97316]',
+			iconType: 'currency',
 			desc: 'মুদ্রা (BDT ৳) এবং দেশ (Bangladesh)'
 		},
 		{
 			id: 'domain-manage',
-			title: 'Domain Manage',
-			icon: Globe,
-			color: 'text-amber-600',
-			bgColor: 'bg-amber-50',
-			ringColor: 'ring-amber-100',
+			title: 'Domain Mange',
+			cardBg: 'bg-[#fef6ee]',
+			iconBg: 'bg-[#f97316]',
+			ringBorder: 'border-[#f97316]/40',
+			accentColor: 'text-[#f97316]',
+			iconType: 'domain',
 			desc: 'কাস্টম ডোমেইন ম্যাপিং (lp.haqplus.com)'
 		},
 		{
 			id: 'order-setting',
 			title: 'Order Setting',
-			icon: FileText,
-			color: 'text-emerald-600',
-			bgColor: 'bg-emerald-50',
-			ringColor: 'ring-emerald-100',
+			cardBg: 'bg-[#edf9f3]',
+			iconBg: 'bg-[#10b981]',
+			ringBorder: 'border-[#10b981]/40',
+			accentColor: 'text-[#10b981]',
+			iconType: 'order',
 			desc: 'অটো কনফার্মেশন ও অর্ডার প্রিফিক্স'
 		},
 		{
 			id: 'product-setting',
 			title: 'Product Setting',
-			icon: Settings,
-			color: 'text-emerald-600',
-			bgColor: 'bg-emerald-50',
-			ringColor: 'ring-emerald-100',
+			cardBg: 'bg-[#edf8f1]',
+			iconBg: 'bg-[#10b981]',
+			ringBorder: 'border-[#10b981]/40',
+			accentColor: 'text-[#10b981]',
+			iconType: 'product',
 			desc: 'ইনভেন্টরি অ্যালার্ট ও স্টক ম্যানেজমেন্ট'
 		},
 		{
 			id: 'google-search-console',
 			title: 'Google Search Console',
-			icon: Globe,
-			color: 'text-blue-600',
-			bgColor: 'bg-blue-50',
-			ringColor: 'ring-blue-100',
+			cardBg: 'bg-[#eef5fc]',
+			iconBg: 'bg-[#1d6ee5]',
+			ringBorder: 'border-[#1d6ee5]/40',
+			accentColor: 'text-[#1d6ee5]',
+			iconType: 'console',
 			desc: 'গুগল সার্চ কনসোল সাইট ভেরিফিকেশন'
 		}
 	];
@@ -266,7 +285,7 @@
 	{/if}
 
 	<!-- ======================================================== -->
-	<!-- VIEW 1: ALL SETTINGS (Exact Replica of Screenshot 1)     -->
+	<!-- VIEW 1: ALL SETTINGS (Exact Replica of Reference Image)   -->
 	<!-- ======================================================== -->
 	{#if activeTab === 'all'}
 		
@@ -283,29 +302,69 @@
 			</Button>
 		</div>
 
-		<!-- 3-Column Settings Cards Grid -->
+		<!-- 3-Column Settings Cards Grid (Borderless Pastel Cards) -->
 		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 			{#each filteredCards as card}
-				<Card class="p-5 hover:shadow-md transition-all flex items-center justify-between group">
+				<div
+					role="button"
+					tabindex="0"
+					onclick={() => (activeTab = card.id)}
+					onkeydown={(e: KeyboardEvent) => e.key === 'Enter' && (activeTab = card.id)}
+					class="rounded-[20px] {card.cardBg} p-5 flex items-center justify-between border-0 shadow-none hover:shadow-md transition-all duration-200 cursor-pointer group text-left"
+				>
 					<div class="flex items-center gap-4 min-w-0">
-						<!-- Circle Icon Badge -->
-						<div class="w-12 h-12 rounded-full {card.bgColor} {card.ringColor} flex items-center justify-center shrink-0 transition-transform group-hover:scale-105">
-							<card.icon class="w-5 h-5 {card.color}" />
+						<!-- Concentric Dashed Ring + Solid Icon Circle -->
+						<div class="w-13 h-13 rounded-full border border-dashed {card.ringBorder} p-[3px] flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105">
+							<div class="w-10 h-10 rounded-full {card.iconBg} flex items-center justify-center text-white shadow-2xs">
+								{#if card.iconType === 'google'}
+									<span class="font-black text-sm tracking-tighter">G</span>
+								{:else if card.iconType === 'facebook'}
+									<svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+										<path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+									</svg>
+								{:else if card.iconType === 'tiktok'}
+									<svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+										<path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.17 1.17 2.12 2.34 2.34.8.18 1.66.07 2.37-.34.79-.44 1.34-1.23 1.47-2.12.07-.48.06-.97.06-1.46V.02z" />
+									</svg>
+								{:else if card.iconType === 'truck'}
+									<Truck class="w-4.5 h-4.5" />
+								{:else if card.iconType === 'sms'}
+									<MessageSquare class="w-4.5 h-4.5" />
+								{:else if card.iconType === 'courier'}
+									<Package class="w-4.5 h-4.5" />
+								{:else if card.iconType === 'fraud'}
+									<ShieldCheck class="w-4.5 h-4.5" />
+								{:else if card.iconType === 'payment'}
+									<CreditCard class="w-4.5 h-4.5" />
+								{:else if card.iconType === 'chat'}
+									<MessageSquare class="w-4.5 h-4.5" />
+								{:else if card.iconType === 'currency'}
+									<span class="font-bold text-sm">$</span>
+								{:else if card.iconType === 'domain'}
+									<Globe class="w-4.5 h-4.5" />
+								{:else if card.iconType === 'order'}
+									<FileText class="w-4.5 h-4.5" />
+								{:else if card.iconType === 'product'}
+									<Settings class="w-4.5 h-4.5" />
+								{:else if card.iconType === 'console'}
+									<Search class="w-4.5 h-4.5" />
+								{:else}
+									<Tag class="w-4.5 h-4.5" />
+								{/if}
+							</div>
 						</div>
 
 						<div class="truncate">
-							<h3 class="font-bold text-slate-900 text-sm truncate">{card.title}</h3>
-							<button
-								type="button"
-								onclick={() => (activeTab = card.id)}
-								class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-[#5845eb] transition-colors mt-0.5 cursor-pointer"
-							>
+							<h3 class="font-bold {card.titleColor || 'text-slate-900'} text-[14.5px] tracking-tight truncate leading-tight">
+								{card.title}
+							</h3>
+							<span class="inline-flex items-center gap-1 text-xs font-semibold {card.accentColor} mt-1">
 								<span>Manage</span>
-								<ArrowRight class="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
-							</button>
+								<ArrowRight class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1" />
+							</span>
 						</div>
 					</div>
-				</Card>
+				</div>
 			{/each}
 		</div>
 

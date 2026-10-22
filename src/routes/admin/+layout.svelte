@@ -19,7 +19,14 @@
 	// Sidebar responsive collapse states
 	let isSidebarCollapsed = $state(false);
 	let isMobileSidebarOpen = $state(false);
-	let isOrdersOpen = $state(true);
+	let isOrdersOpen = $state(false);
+	let ordersDropdownRef = $state<HTMLDivElement | null>(null);
+
+	function handleClickOutside(event: MouseEvent) {
+		if (ordersDropdownRef && !ordersDropdownRef.contains(event.target as Node)) {
+			isOrdersOpen = false;
+		}
+	}
 
 	// Quick search input
 	let orderSearchQuery = $state('');
@@ -73,6 +80,8 @@
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
 	<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </svelte:head>
+
+<svelte:window onclick={handleClickOutside} />
 
 <!-- Fullscreen Warm Ivory Executive Frame with Pure White SaaS Sidebar -->
 <div class="admin-theme min-h-screen bg-[#faf7f2] text-slate-800 flex flex-col md:flex-row font-['Hind_Siliguri',sans-serif] selection:bg-[#5845eb]/20 selection:text-[#5845eb] antialiased">
@@ -193,55 +202,45 @@
 				</a>
 
 				<!-- 2. Orders (Shopping bag icon with dropdown chevron) -->
-				<div class="space-y-1">
-					<div class="flex items-center">
-						<a
-							href="/admin/orders"
-							onclick={() => isMobileSidebarOpen = false}
-							class="flex-1 flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isOrdersActive
-								? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
-								: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
-							title="Orders (অর্ডার ব্যবস্থাপনা)"
-						>
-							<div class="flex items-center gap-3.5">
-								<svg class="w-5 h-5 shrink-0 {isOrdersActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="currentColor">
-									<path fill-rule="evenodd" clip-rule="evenodd" d="M6 5C4.89543 5 4 5.89543 4 7L3.1 17C2.98 18.3 3.99 19.5 5.3 19.5H18.7C20.01 19.5 21.02 18.3 20.9 17L20 7C20 5.89543 19.1046 5 18 5H6ZM8 8C8 7.44772 8.44772 7 9 7H15C15.5523 7 16 7.44772 16 8C16 10.2091 14.2091 12 12 12C9.79086 12 8 10.2091 8 8Z" />
-								</svg>
-								{#if !isSidebarCollapsed}
-									<span>Orders</span>
-								{/if}
-							</div>
+				<div bind:this={ordersDropdownRef} class="space-y-1 relative">
+					<button
+						type="button"
+						onclick={() => {
+							if (isSidebarCollapsed) isSidebarCollapsed = false;
+							isOrdersOpen = !isOrdersOpen;
+						}}
+						class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isOrdersActive
+							? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+							: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'} cursor-pointer"
+						title="Orders"
+					>
+						<div class="flex items-center gap-3.5">
+							<svg class="w-5 h-5 shrink-0 {isOrdersActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="currentColor">
+								<path fill-rule="evenodd" clip-rule="evenodd" d="M6 5C4.89543 5 4 5.89543 4 7L3.1 17C2.98 18.3 3.99 19.5 5.3 19.5H18.7C20.01 19.5 21.02 18.3 20.9 17L20 7C20 5.89543 19.1046 5 18 5H6ZM8 8C8 7.44772 8.44772 7 9 7H15C15.5523 7 16 7.44772 16 8C16 10.2091 14.2091 12 12 12C9.79086 12 8 10.2091 8 8Z" />
+							</svg>
 							{#if !isSidebarCollapsed}
-								<div class="flex items-center gap-2">
-									<span class="text-xs font-bold px-2 py-0.5 rounded-full {isOrdersActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
-										{webOrders.length + orderListOrders.length}
-									</span>
-									<button
-										type="button"
-										onclick={(e) => {
-											e.preventDefault();
-											e.stopPropagation();
-											isOrdersOpen = !isOrdersOpen;
-										}}
-										class="p-1 hover:bg-black/10 rounded-md transition-colors"
-										title="টগল করুন"
-									>
-										<ChevronDown class="w-4 h-4 transition-transform duration-200 {isOrdersOpen ? 'rotate-180' : ''}" />
-									</button>
-								</div>
+								<span>Orders</span>
 							{/if}
-						</a>
-					</div>
+						</div>
+						{#if !isSidebarCollapsed}
+							<div class="flex items-center gap-2">
+								<span class="text-xs font-bold px-2 py-0.5 rounded-full {isOrdersActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
+									{webOrders.length + orderListOrders.length}
+								</span>
+								<ChevronDown class="w-4 h-4 transition-transform duration-200 {isOrdersOpen ? 'rotate-180' : ''}" />
+							</div>
+						{/if}
+					</button>
 
 					<!-- Orders Submenu (when expanded) -->
 					{#if !isSidebarCollapsed && isOrdersOpen}
-						<div class="pl-3 pr-1 py-1 space-y-1 border-l-2 border-slate-100 ml-6 my-1">
+						<div class="pl-3 pr-1 py-1 space-y-1 border-l-2 border-slate-100 ml-6 my-1 animate-in fade-in duration-150">
 							<!-- 1. Web Orders -->
 							<a
-								href="/admin/orders?view=web"
+								href="/admin/orders"
 								onclick={() => isMobileSidebarOpen = false}
-								class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {isOrdersActive && (!page.url.searchParams.get('view') || page.url.searchParams.get('view') === 'web')
-									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80'
+								class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {currentPath === '/admin/orders'
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
 									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
 							>
 								<span>Web Orders</span>
@@ -252,10 +251,10 @@
 
 							<!-- 2. Order List -->
 							<a
-								href="/admin/orders?view=list"
+								href="/admin/orders/list"
 								onclick={() => isMobileSidebarOpen = false}
-								class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {page.url.searchParams.get('view') === 'list'
-									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80'
+								class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {currentPath === '/admin/orders/list'
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
 									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
 							>
 								<span>Order List</span>
@@ -266,10 +265,10 @@
 
 							<!-- 3. New Order -->
 							<a
-								href="/admin/orders?view=new"
+								href="/admin/orders/new"
 								onclick={() => isMobileSidebarOpen = false}
-								class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {page.url.searchParams.get('view') === 'new'
-									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80'
+								class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {currentPath === '/admin/orders/new'
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
 									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
 							>
 								<span>New Order</span>
@@ -280,10 +279,10 @@
 
 							<!-- 4. Pre-Orders -->
 							<a
-								href="/admin/orders?view=pre"
+								href="/admin/orders/pre"
 								onclick={() => isMobileSidebarOpen = false}
-								class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {page.url.searchParams.get('view') === 'pre'
-									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80'
+								class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {currentPath === '/admin/orders/pre'
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
 									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
 							>
 								<span>Pre-Orders</span>
@@ -296,10 +295,10 @@
 
 							<!-- 5. Trash -->
 							<a
-								href="/admin/orders?view=trash"
+								href="/admin/orders/trash"
 								onclick={() => isMobileSidebarOpen = false}
-								class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {page.url.searchParams.get('view') === 'trash'
-									? 'bg-rose-50 text-rose-700 font-bold border border-rose-200'
+								class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {currentPath === '/admin/orders/trash'
+									? 'bg-rose-50 text-rose-700 font-bold border border-rose-200 shadow-2xs'
 									: 'text-slate-600 hover:text-rose-600 hover:bg-rose-50/60'}"
 							>
 								<span>Trash</span>

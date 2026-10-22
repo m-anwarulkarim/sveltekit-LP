@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import type { Snippet } from 'svelte';
+	import { Dialog, Button } from '#lib/components/ui';
 	import {
 		Flame,
 		Search,
@@ -11,7 +12,18 @@
 		Menu,
 		X,
 		RefreshCw,
-		PlusCircle
+		PlusCircle,
+		Play,
+		Headphones,
+		Globe,
+		Languages,
+		Bell,
+		Crown,
+		HelpCircle,
+		PhoneCall,
+		MessageCircle,
+		Mail,
+		CheckCircle2
 	} from 'lucide-svelte';
 
 	let { data, children }: { data: any; children: Snippet } = $props();
@@ -21,6 +33,12 @@
 	let isMobileSidebarOpen = $state(false);
 	let isOrdersOpen = $state(false);
 	let ordersDropdownRef = $state<HTMLDivElement | null>(null);
+
+	// Top Navbar Interactive Modals & Dropdowns State
+	let isTutorialModalOpen = $state(false);
+	let isSupportModalOpen = $state(false);
+	let isNotificationOpen = $state(false);
+	let isPackageModalOpen = $state(false);
 
 	function handleClickOutside(event: MouseEvent) {
 		if (ordersDropdownRef && !ordersDropdownRef.contains(event.target as Node)) {
@@ -519,20 +537,21 @@
 	<!-- ============================================== -->
 	<div class="flex-1 flex flex-col min-w-0 min-h-screen">
 
-		<!-- TOP COMMAND BAR -->
-		<header class="h-16 md:h-20 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 md:px-8 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
-			<div class="flex items-center gap-3 md:gap-4">
+		<!-- TOP COMMAND BAR (Exact Match with User's Navbar Reference) -->
+		<header class="h-16 md:h-20 bg-white border-b border-slate-200/80 px-4 md:px-8 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
+			<div class="flex items-center gap-3 md:gap-4 min-w-0">
 				<!-- Mobile Hamburger Toggle -->
 				<button
 					onclick={() => isMobileSidebarOpen = true}
-					class="md:hidden p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+					class="md:hidden p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors shrink-0"
 					aria-label="Open sidebar"
 				>
 					<Menu class="w-5 h-5" />
 				</button>
 
-				<div>
-					<h1 class="text-base md:text-xl font-bold text-slate-900 flex items-center gap-2">
+				<!-- Page Title -->
+				<div class="flex items-center gap-3 md:gap-4 shrink-0">
+					<h1 class="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
 						{#if isDashboard}
 							<span>Dashboard</span>
 						{:else if isOrdersActive}
@@ -548,43 +567,139 @@
 						{:else if isDatabaseActive}
 							<span>Database</span>
 						{:else}
-							<span>AURA Control Deck</span>
+							<span>AURA Control</span>
 						{/if}
 					</h1>
-					<p class="text-[11px] text-slate-500 hidden sm:block">
-						Enterprise Autonomous E-Commerce Engine • Cloudflare Edge Network
-					</p>
+
+					<!-- Tutorial & Support Action Buttons (Exact Replica) -->
+					<div class="hidden sm:flex items-center gap-2.5">
+						<!-- Tutorial Button -->
+						<button
+							type="button"
+							onclick={() => (isTutorialModalOpen = true)}
+							class="rounded-xl border border-red-300 bg-white hover:bg-red-50/50 px-3.5 py-1.5 flex items-center gap-1.5 text-xs font-bold text-red-600 shadow-[0_0_10px_rgba(239,68,68,0.12)] transition-all cursor-pointer hover:border-red-400"
+							title="ভিডিও টিউটোরিয়াল দেখুন"
+						>
+							<Play class="w-3.5 h-3.5 fill-red-600 text-red-600" />
+							<span>Tutorial</span>
+						</button>
+
+						<!-- Support Button -->
+						<button
+							type="button"
+							onclick={() => (isSupportModalOpen = true)}
+							class="rounded-xl bg-[#5845eb] hover:bg-[#4936d6] px-3.5 py-1.5 flex items-center gap-1.5 text-xs font-bold text-white shadow-sm shadow-indigo-500/20 transition-all cursor-pointer"
+							title="সাপোর্ট হেল্পলাইন"
+						>
+							<Headphones class="w-3.5 h-3.5 text-white" />
+							<span>Support</span>
+						</button>
+					</div>
 				</div>
 			</div>
 
-			<!-- Top Actions (Steadfast Courier Sync + New Order) -->
-			<div class="flex items-center gap-2 md:gap-3">
-				
-				<!-- D1 Status Dot -->
-				<div class="hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
-					<span class="w-2 h-2 rounded-full {data.isD1Connected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}"></span>
-					<span>{data.isD1Connected ? 'Cloudflare D1 Live' : 'D1 Local Mirror'}</span>
-				</div>
+			<!-- Right Navbar Actions (Exact Replica) -->
+			<div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
 
-				<!-- Steadfast Courier Sync Button -->
-				<button
-					onclick={triggerCourierSync}
-					disabled={isCourierSyncing}
-					class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-50 text-xs font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-50"
-					title="Steadfast কুরিয়ার ট্র্যাকিং সিঙ্ক করুন"
+				<!-- 1. Globe Button (Live Store) -->
+				<a
+					href="/"
+					target="_blank"
+					class="w-9 h-9 rounded-full border border-slate-200/90 bg-white flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors shadow-2xs"
+					title="লাইভ ওয়েবসাইট দেখুন"
 				>
-					<RefreshCw class="w-3.5 h-3.5 {isCourierSyncing ? 'animate-spin text-[#5845eb]' : 'text-slate-500'}" />
-					<span class="hidden md:inline">কুরিয়ার সিঙ্ক</span>
+					<Globe class="w-4 h-4" />
+				</a>
+
+				<!-- 2. Language Switcher (文A) -->
+				<button
+					type="button"
+					onclick={() => alert('ভাষা: বাংলা এবং English উভয়ই সক্রিয়')}
+					class="w-9 h-9 rounded-full border border-slate-200/90 bg-white flex items-center justify-center text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+					title="ভাষা পরিবর্তন (Bangla / English)"
+				>
+					<Languages class="w-4 h-4" />
 				</button>
 
-				<!-- Create Order Action Button -->
-				<a
-					href="/admin/orders?view=new"
-					class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#5845eb] hover:bg-[#4734d6] text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/20"
+				<!-- 3. Search Icon Button -->
+				<button
+					type="button"
+					onclick={() => {
+						const input = document.querySelector('input[type="text"]') as HTMLInputElement;
+						if (input) input.focus();
+					}}
+					class="w-9 h-9 rounded-full border border-slate-200/90 bg-white flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+					title="সার্চ করুন"
 				>
-					<PlusCircle class="w-3.5 h-3.5" />
-					<span>নতুন অর্ডার</span>
+					<Search class="w-4 h-4" />
+				</button>
+
+				<!-- 4. Notification Bell with Red Indicator Dot -->
+				<div class="relative">
+					<button
+						type="button"
+						onclick={() => (isNotificationOpen = !isNotificationOpen)}
+						class="w-9 h-9 rounded-full border border-slate-200/90 bg-white flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors shadow-2xs relative cursor-pointer"
+						title="নোটিফিকেশন"
+					>
+						<Bell class="w-4 h-4" />
+						<span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white"></span>
+					</button>
+
+					<!-- Notifications Popover -->
+					{#if isNotificationOpen}
+						<div class="absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-slate-200 shadow-xl p-3 z-50 text-xs animate-in fade-in">
+							<div class="font-bold text-slate-800 pb-2 border-b border-slate-100 flex items-center justify-between">
+								<span>নতুন নোটিফিকেশন</span>
+								<span class="text-[10px] bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded-full font-bold">৩টি নতুন</span>
+							</div>
+							<div class="divide-y divide-slate-100 mt-1 max-h-60 overflow-y-auto">
+								<div class="py-2">
+									<p class="font-bold text-slate-800">নতুন ওয়েবসাইট অর্ডার #AUR-9842</p>
+									<p class="text-[10px] text-slate-400">১০ মিনিট আগে • কাস্টমার: সাইদুর রহমান</p>
+								</div>
+								<div class="py-2">
+									<p class="font-bold text-slate-800">Steadfast কুরিয়ার ডেলিভারি কনফার্মড</p>
+									<p class="text-[10px] text-slate-400">২৫ মিনিট আগে • ট্র্যাকিং: CID-884920</p>
+								</div>
+								<div class="py-2">
+									<p class="font-bold text-slate-800">স্টক সতর্কতা: AURA Spectrum X</p>
+									<p class="text-[10px] text-slate-400">১ ঘণ্টা আগে • অবশিষ্ট: ৪ টি</p>
+								</div>
+							</div>
+						</div>
+					{/if}
+				</div>
+
+				<!-- 5. Store / Profile Circle (COLOR LIGHT) -->
+				<a
+					href="/admin/settings"
+					class="w-9 h-9 rounded-full bg-slate-950 border border-slate-200 flex items-center justify-center text-white overflow-hidden shadow-2xs hover:ring-2 hover:ring-[#5845eb]/30 transition-all cursor-pointer"
+					title="প্রোফাইল সেটিংস"
+				>
+					<div class="text-[7.5px] font-black uppercase tracking-tighter text-center leading-[1.05] bg-gradient-to-tr from-pink-400 to-indigo-400 bg-clip-text text-transparent">
+						COLOR<br/>LIGHT
+					</div>
 				</a>
+
+				<!-- 6. Golden "Premium Package" Pill (Exact Match) -->
+				<button
+					type="button"
+					onclick={() => (isPackageModalOpen = true)}
+					class="rounded-2xl bg-gradient-to-r from-[#eab308] via-[#facc15] to-[#f59e0b] p-1 pr-3 flex items-center gap-2 shadow-sm border border-amber-300 hover:brightness-105 active:scale-95 transition-all cursor-pointer"
+					title="প্রিমিয়াম প্যাকেজ মেয়াদ"
+				>
+					<!-- Inner Golden Tile with Crown -->
+					<div class="w-7 h-7 rounded-xl bg-amber-400/90 border border-amber-200/80 flex items-center justify-center shadow-inner">
+						<Crown class="w-4 h-4 fill-amber-950 text-amber-950" />
+					</div>
+					<!-- Two-line text -->
+					<div class="flex flex-col text-left">
+						<span class="text-[10px] text-amber-950 font-bold leading-none tracking-tight">Premium Package</span>
+						<span class="text-[11px] font-black text-rose-600 leading-tight">5 days left</span>
+					</div>
+				</button>
+
 			</div>
 		</header>
 
@@ -607,6 +722,157 @@
 		</main>
 
 	</div>
+
+	<!-- ============================================== -->
+	<!-- 3. TOP NAVBAR INTERACTIVE MODALS               -->
+	<!-- ============================================== -->
+	
+	<!-- 1. Tutorial Modal -->
+	<Dialog bind:open={isTutorialModalOpen} title="AURA E-Commerce ভিডিও টিউটোরিয়াল">
+		<div class="space-y-4 py-2">
+			<div class="p-4 rounded-2xl bg-red-50 border border-red-200/80 flex items-center gap-3">
+				<div class="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+					<Play class="w-5 h-5 fill-current" />
+				</div>
+				<div>
+					<h4 class="font-bold text-slate-900 text-sm">সহজ গাইডলাইন ও ভিডিও নির্দেশনা</h4>
+					<p class="text-xs text-slate-500">আপনার অনলাইন শপের যাবতীয় ফিচার ব্যবহারের সম্পূর্ণ গাইড</p>
+				</div>
+			</div>
+
+			<div class="space-y-2.5 text-xs text-slate-700">
+				<div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+					<div class="flex items-center gap-2.5">
+						<span class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs">১</span>
+						<span class="font-semibold text-slate-800">অর্ডার কনফার্ম ও কুরিয়ার বুকিং প্রক্রিয়া</span>
+					</div>
+					<span class="text-[11px] font-bold text-indigo-600">৩ মিনিট</span>
+				</div>
+				<div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+					<div class="flex items-center gap-2.5">
+						<span class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs">২</span>
+						<span class="font-semibold text-slate-800">Facebook Pixel ও CAPI টোকেন সেটআপ</span>
+					</div>
+					<span class="text-[11px] font-bold text-indigo-600">৫ মিনিট</span>
+				</div>
+				<div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+					<div class="flex items-center gap-2.5">
+						<span class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs">৩</span>
+						<span class="font-semibold text-slate-800">ল্যান্ডিং পেজ টেক্সট, প্রোডাক্ট ও ছবি কাস্টমাইজেশন</span>
+					</div>
+					<span class="text-[11px] font-bold text-indigo-600">৪ মিনিট</span>
+				</div>
+			</div>
+
+			<div class="flex justify-end pt-2">
+				<Button type="button" variant="outline" onclick={() => (isTutorialModalOpen = false)}>
+					বন্ধ করুন
+				</Button>
+			</div>
+		</div>
+	</Dialog>
+
+	<!-- 2. Support Modal -->
+	<Dialog bind:open={isSupportModalOpen} title="২৪/৭ কাস্টমার সাপোর্ট ও হেল্পলাইন">
+		<div class="space-y-4 py-2">
+			<div class="p-4 rounded-2xl bg-indigo-50 border border-indigo-200/80 flex items-center gap-3">
+				<div class="w-10 h-10 rounded-xl bg-[#5845eb] text-white flex items-center justify-center shrink-0 shadow-sm">
+					<Headphones class="w-5 h-5" />
+				</div>
+				<div>
+					<h4 class="font-bold text-slate-900 text-sm">আমরা আপনার সেবায় নিয়োজিত</h4>
+					<p class="text-xs text-slate-500">যেকোনো টেকনিক্যাল সমস্যা বা সহায়তায় দ্রুত সমাধান পান</p>
+				</div>
+			</div>
+
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+				<a
+					href="https://wa.me/8801700000000"
+					target="_blank"
+					class="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100/70 transition-all flex items-center gap-3 group"
+				>
+					<div class="w-9 h-9 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+						<MessageCircle class="w-5 h-5" />
+					</div>
+					<div>
+						<div class="font-bold text-slate-900">WhatsApp চ্যাট</div>
+						<div class="text-[11px] text-emerald-700 font-semibold">+880 1700-000000</div>
+					</div>
+				</a>
+
+				<a
+					href="tel:09612000000"
+					class="p-3.5 rounded-xl border border-indigo-200 bg-indigo-50/60 hover:bg-indigo-100/70 transition-all flex items-center gap-3 group"
+				>
+					<div class="w-9 h-9 rounded-lg bg-[#5845eb] text-white flex items-center justify-center shrink-0">
+						<PhoneCall class="w-5 h-5" />
+					</div>
+					<div>
+						<div class="font-bold text-slate-900">হটলাইন সাপোর্ট</div>
+						<div class="text-[11px] text-indigo-700 font-semibold">09612-000000</div>
+					</div>
+				</a>
+			</div>
+
+			<div class="flex justify-end pt-2">
+				<Button type="button" variant="outline" onclick={() => (isSupportModalOpen = false)}>
+					বন্ধ করুন
+				</Button>
+			</div>
+		</div>
+	</Dialog>
+
+	<!-- 3. Premium Package Modal -->
+	<Dialog bind:open={isPackageModalOpen} title="AURA প্রিমিয়াম প্যাকেজ বিবরণ">
+		<div class="space-y-4 py-2">
+			<div class="p-5 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-400 text-amber-950 shadow-md flex items-center justify-between">
+				<div class="flex items-center gap-3.5">
+					<div class="w-12 h-12 rounded-xl bg-amber-600/30 border border-amber-300 flex items-center justify-center shadow-inner">
+						<Crown class="w-6 h-6 fill-current text-amber-950" />
+					</div>
+					<div>
+						<h3 class="font-black text-lg leading-tight">Enterprise Pro Package</h3>
+						<p class="text-xs font-semibold text-amber-900">আনলিমিটেড অর্ডার, লাইভ এপিআই ও ক্লাউডফ্লেয়ার এজ হোস্টিং</p>
+					</div>
+				</div>
+				<div class="text-right">
+					<div class="text-[10px] font-bold uppercase tracking-wider text-amber-900">মেয়াদ বাকি</div>
+					<div class="text-xl font-black text-rose-700">৫ দিন</div>
+				</div>
+			</div>
+
+			<div class="space-y-2 text-xs text-slate-700 bg-slate-50 p-4 rounded-xl border border-slate-200/80">
+				<div class="flex items-center gap-2">
+					<CheckCircle2 class="w-4 h-4 text-emerald-600" />
+					<span>Steadfast ও Pathao কুরিয়ার অটো বুকিং এপিআই সক্রিয়</span>
+				</div>
+				<div class="flex items-center gap-2">
+					<CheckCircle2 class="w-4 h-4 text-emerald-600" />
+					<span>Meta Facebook Pixel ও Conversions API (CAPI) ট্র্যাকিং</span>
+				</div>
+				<div class="flex items-center gap-2">
+					<CheckCircle2 class="w-4 h-4 text-emerald-600" />
+					<span>২৪/৭ প্রায়োরিটি ডেডিকেটেড ম্যানেজার সাপোর্ট</span>
+				</div>
+			</div>
+
+			<div class="flex items-center justify-end gap-2 pt-2">
+				<Button type="button" variant="outline" onclick={() => (isPackageModalOpen = false)}>
+					পরে রিনিউ করব
+				</Button>
+				<Button
+					type="button"
+					onclick={() => {
+						alert('রিনিউয়াল রিকোয়েস্ট পাঠানো হয়েছে। আমাদের টিম খুব দ্রুত আপনার সাথে যোগাযোগ করবে।');
+						isPackageModalOpen = false;
+					}}
+					class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold"
+				>
+					এখনই রিনিউ করুন (৳১,৪৯০ / মাস)
+				</Button>
+			</div>
+		</div>
+	</Dialog>
 
 </div>
 

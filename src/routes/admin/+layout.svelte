@@ -75,7 +75,7 @@
 </svelte:head>
 
 <!-- Fullscreen Warm Ivory Executive Frame with Pure White SaaS Sidebar -->
-<div class="min-h-screen bg-[#faf7f2] text-slate-800 flex flex-col md:flex-row font-['Hind_Siliguri',sans-serif] selection:bg-[#5845eb]/20 selection:text-[#5845eb] antialiased">
+<div class="admin-theme min-h-screen bg-[#faf7f2] text-slate-800 flex flex-col md:flex-row font-['Hind_Siliguri',sans-serif] selection:bg-[#5845eb]/20 selection:text-[#5845eb] antialiased">
 
 	<!-- ============================================== -->
 	<!-- 1. HIGH-END EXECUTIVE WHITE SAAS SIDEBAR       -->
@@ -83,7 +83,7 @@
 	<aside
 		class="bg-white text-slate-700 border-r border-slate-200/90 flex flex-col justify-between transition-all duration-300 z-50 fixed md:sticky top-0 h-screen shrink-0 shadow-sm {isSidebarCollapsed ? 'w-20' : 'w-72'} {isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}"
 	>
-		<div class="flex-1 flex flex-col min-h-0 overflow-y-auto scrollbar-thin">
+		<div class="flex-1 flex flex-col min-h-0 overflow-y-auto no-scrollbar">
 			
 			<!-- Header (AURA Store Brand + <> Toggle Button) -->
 			<div class="h-16 md:h-20 flex items-center {isSidebarCollapsed ? 'justify-center flex-col gap-2.5 py-3' : 'justify-between px-5'} border-b border-slate-100">
@@ -363,28 +363,23 @@
 					</div>
 				</a>
 
-				<!-- 5. Settings (Courier Logistics Settings) -->
+				<!-- 5. Settings -->
 				<a
 					href="/admin/settings"
 					onclick={() => isMobileSidebarOpen = false}
 					class="w-full flex items-center {isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isSettingsActive
 						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
 						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
-					title="Settings (কুরিয়ার সেটিংস)"
+					title="Settings"
 				>
 					<div class="flex items-center gap-3.5">
 						<svg class="w-5 h-5 shrink-0 {isSettingsActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="currentColor">
-							<path fill-rule="evenodd" clip-rule="evenodd" d="M11.078 2.053a1.5 1.5 0 0 1 1.844 0l.478.36a1.5 1.5 0 0 0 1.52.19l.564-.23a1.5 1.5 0 0 1 1.77.534l.354.482a1.5 1.5 0 0 0 1.344.697l.608-.04a1.5 1.5 0 0 1 1.524 1.077l.18.577a1.5 1.5 0 0 0 1.02 1.02l.577.18a1.5 1.5 0 0 1 1.077 1.524l-.04.608a1.5 1.5 0 0 0 .697 1.344l.482.354a1.5 1.5 0 0 1 .534 1.77l-.23.564a1.5 1.5 0 0 0 .19 1.52l.36.478a1.5 1.5 0 0 1 0 1.844l-.36.478a1.5 1.5 0 0 0-.19 1.52l.23.564a1.5 1.5 0 0 1-.534 1.77l-.482.354a1.5 1.5 0 0 0-.697 1.344l.04.608a1.5 1.5 0 0 1-1.077 1.524l-.577.18a1.5 1.5 0 0 0-1.02 1.02l-.18.577a1.5 1.5 0 0 1-1.524 1.077l-.608-.04a1.5 1.5 0 0 0-1.344.697l-.354.482a1.5 1.5 0 0 1-1.77.534l-.564-.23a1.5 1.5 0 0 0-1.52.19l-.478.36a1.5 1.5 0 0 1-1.844 0l-.478-.36a1.5 1.5 0 0 0-1.52-.19l-.564.23a1.5 1.5 0 0 1-1.77-.534l-.354-.482a1.5 1.5 0 0 0-1.344-.697l-.608.04a1.5 1.5 0 0 1-1.524-1.077l-.18-.577a1.5 1.5 0 0 0-1.02-1.02l-.577-.18a1.5 1.5 0 0 1-1.077-1.524l.04-.608a1.5 1.5 0 0 0-.697-1.344l-.482-.354a1.5 1.5 0 0 1-.534-1.77l.23-.564a1.5 1.5 0 0 0-.19-1.52l-.36-.478a1.5 1.5 0 0 1 0-1.844l.36-.478a1.5 1.5 0 0 0 .19-1.52l-.23-.564a1.5 1.5 0 0 1 .534-1.77l.482-.354a1.5 1.5 0 0 0 .697-1.344l-.04-.608a1.5 1.5 0 0 1 1.077-1.524l.577-.18a1.5 1.5 0 0 0 1.02-1.02l.18-.577a1.5 1.5 0 0 1 1.524-1.077l.608.04a1.5 1.5 0 0 0 1.344-.697l.354-.482a1.5 1.5 0 0 1 1.77-.534l.564.23a1.5 1.5 0 0 0 1.52-.19l.478-.36ZM12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" />
+							<path fill-rule="evenodd" clip-rule="evenodd" d="M12 2.5a2.25 2.25 0 0 0-2.228 1.93l-.11.758a1.25 1.25 0 0 1-1.385.992l-.75-.12a2.25 2.25 0 0 0-2.476 1.155l-.65 1.126a2.25 2.25 0 0 0 .428 2.7l.557.53a1.25 1.25 0 0 1 0 1.706l-.557.53a2.25 2.25 0 0 0-.428 2.7l.65 1.126a2.25 2.25 0 0 0 2.476 1.155l.75-.12a1.25 1.25 0 0 1 1.385.992l.11.758a2.25 2.25 0 0 0 2.228 1.93h1.3a2.25 2.25 0 0 0 2.228-1.93l.11-.758a1.25 1.25 0 0 1 1.385-.992l.75.12a2.25 2.25 0 0 0 2.476-1.155l.65-1.126a2.25 2.25 0 0 0-.428-2.7l-.557-.53a1.25 1.25 0 0 1 0-1.706l.557-.53a2.25 2.25 0 0 0 .428-2.7l-.65-1.126a2.25 2.25 0 0 0-2.476-1.155l-.75.12a1.25 1.25 0 0 1-1.385-.992l-.11-.758A2.25 2.25 0 0 0 13.3 2.5h-1.3ZM12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" />
 						</svg>
 						{#if !isSidebarCollapsed}
 							<span>Settings</span>
 						{/if}
 					</div>
-					{#if !isSidebarCollapsed}
-						<span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md {isSettingsActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'}">
-							Steadfast
-						</span>
-					{/if}
 				</a>
 
 				<!-- 6. Customer (VIP Database) -->
@@ -604,3 +599,20 @@
 	</div>
 
 </div>
+
+<style>
+	:global(.admin-theme) {
+		color-scheme: light !important;
+	}
+	.no-scrollbar {
+		-ms-overflow-style: none !important;
+		scrollbar-width: none !important;
+	}
+	.no-scrollbar::-webkit-scrollbar {
+		display: none !important;
+		width: 0 !important;
+		height: 0 !important;
+		background: transparent !important;
+	}
+</style>
+

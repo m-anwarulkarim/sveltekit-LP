@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { Button, Card, Badge, Input, Textarea, Switch } from '#lib/components/ui';
 	import {
 		Truck,
 		ShieldCheck,
@@ -270,28 +271,22 @@
 	{#if activeTab === 'all'}
 		
 		<!-- Top Search Bar -->
-		<div class="flex items-center max-w-md">
-			<div class="relative flex-1">
-				<input
-					type="text"
-					bind:value={searchQuery}
-					placeholder="Search settings..."
-					class="w-full bg-white border border-slate-200 rounded-l-2xl px-4 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#5845eb] shadow-2xs"
-				/>
-			</div>
-			<button
-				type="button"
-				class="w-11 h-[38px] bg-[#5845eb] hover:bg-[#4734d6] text-white rounded-r-2xl flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
-				title="Search"
-			>
+		<div class="flex items-center max-w-md gap-2">
+			<Input
+				type="text"
+				bind:value={searchQuery}
+				placeholder="Search settings..."
+				class="h-10"
+			/>
+			<Button type="button" size="icon" class="h-10 w-10 shrink-0">
 				<Search class="w-4 h-4" />
-			</button>
+			</Button>
 		</div>
 
 		<!-- 3-Column Settings Cards Grid -->
 		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 			{#each filteredCards as card}
-				<div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all flex items-center justify-between group">
+				<Card class="p-5 hover:shadow-md transition-all flex items-center justify-between group">
 					<div class="flex items-center gap-4 min-w-0">
 						<!-- Circle Icon Badge -->
 						<div class="w-12 h-12 rounded-full {card.bgColor} {card.ringColor} flex items-center justify-center shrink-0 transition-transform group-hover:scale-105">
@@ -310,7 +305,7 @@
 							</button>
 						</div>
 					</div>
-				</div>
+				</Card>
 			{/each}
 		</div>
 
@@ -321,14 +316,15 @@
 		<div class="space-y-6 max-w-4xl">
 			
 			<!-- Back Button -->
-			<button
-				type="button"
+			<Button
+				variant="outline"
+				size="sm"
 				onclick={() => (activeTab = 'all')}
-				class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 text-xs font-bold transition-all shadow-2xs cursor-pointer"
+				class="gap-2"
 			>
 				<ArrowLeft class="w-4 h-4" />
 				<span>Back to Settings</span>
-			</button>
+			</Button>
 
 			<!-- Title Header -->
 			<div>
@@ -338,8 +334,8 @@
 				</p>
 			</div>
 
-			<!-- Meta Pixel & CAPI Settings Main Box -->
-			<div class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-2xs space-y-6">
+			<!-- Meta Pixel & CAPI Settings Main Card -->
+			<Card class="p-6 sm:p-8 space-y-6">
 				
 				<div class="flex items-start gap-4 pb-4 border-b border-slate-100">
 					<!-- Blue Facebook Icon -->
@@ -362,12 +358,12 @@
 						<label for="fb-pixel-id" class="text-xs font-bold text-slate-700 block">
 							Facebook Pixel ID
 						</label>
-						<input
+						<Input
 							id="fb-pixel-id"
 							type="text"
 							bind:value={fbPixelId}
 							placeholder="806385144697838"
-							class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-mono text-slate-800 focus:outline-none focus:border-[#1877f2] focus:bg-white transition-all"
+							class="font-mono text-xs"
 						/>
 						<span class="text-[11px] text-slate-400 block">Find this in Meta Events Manager.</span>
 					</div>
@@ -377,60 +373,52 @@
 						<label for="capi-token" class="text-xs font-bold text-slate-700 block">
 							CAPI Access Token
 						</label>
-						<textarea
+						<Textarea
 							id="capi-token"
-							rows="3"
+							rows={3}
 							bind:value={fbCapiToken}
 							placeholder="EAAQZCaLfr2KUBSw5YGLAS5uUNlyLllbFYr..."
-							class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-mono text-slate-800 focus:outline-none focus:border-[#1877f2] focus:bg-white transition-all leading-relaxed"
-						></textarea>
+							class="font-mono text-xs leading-relaxed"
+						/>
 						<span class="text-[11px] text-slate-400 block">Required for Server-Side (CAPI) tracking.</span>
 					</div>
 
-					<!-- Test Events (Optional) Box -->
+					<!-- Test Events (Optional) Box with shadcn Switch -->
 					<div class="bg-slate-50/70 border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3">
 						<h4 class="text-xs font-bold text-slate-800">Test Events (Optional)</h4>
 
-						<div class="space-y-2">
-							<label class="flex items-center gap-2.5 text-xs text-slate-700 font-medium cursor-pointer">
-								<input
-									type="checkbox"
-									bind:checked={fbTestMode}
-									class="w-4 h-4 rounded text-[#1877f2] focus:ring-[#1877f2]"
-								/>
-								<span>Enable Test Mode</span>
-							</label>
+						<div class="space-y-3">
+							<div class="flex items-center justify-between">
+								<span class="text-xs text-slate-700 font-medium">Enable Test Mode</span>
+								<Switch bind:checked={fbTestMode} />
+							</div>
 
-							<label class="flex items-center gap-2.5 text-xs text-slate-700 font-medium cursor-pointer">
-								<input
-									type="checkbox"
-									bind:checked={fbTriggerPurchase}
-									class="w-4 h-4 rounded text-[#1877f2] focus:ring-[#1877f2]"
-								/>
-								<span>Trigger Purchase on Order Confirm</span>
-							</label>
+							<div class="flex items-center justify-between">
+								<span class="text-xs text-slate-700 font-medium">Trigger Purchase on Order Confirm</span>
+								<Switch bind:checked={fbTriggerPurchase} />
+							</div>
 						</div>
 
 						<p class="text-[11px] text-slate-400 pt-1 border-t border-slate-200/60">
-							Use this to verify your setup in Events Manager > Test Events.
+							Use this to verify your setup in Events Manager &gt; Test Events.
 						</p>
 					</div>
 
 					<!-- Save Button -->
 					<div class="pt-2">
-						<button
+						<Button
 							type="button"
 							onclick={() => triggerSave('Facebook Pixel & CAPI Settings Saved!')}
-							class="w-full py-3 rounded-xl bg-[#1877f2] hover:bg-[#166fe5] text-white font-bold text-xs shadow-md shadow-blue-500/20 cursor-pointer transition-all"
+							class="w-full bg-[#1877f2] hover:bg-[#166fe5] shadow-blue-500/20"
 						>
 							Save Facebook Tracking Settings
-						</button>
+						</Button>
 					</div>
 				</div>
-			</div>
+			</Card>
 
 			<!-- Step-by-Step Setup Guide Accordion -->
-			<div class="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+			<Card class="overflow-hidden">
 				<button
 					type="button"
 					onclick={() => (isGuideOpen = !isGuideOpen)}
@@ -447,7 +435,7 @@
 					<div class="p-5 pt-0 text-xs text-slate-600 space-y-3 border-t border-slate-100">
 						<div class="space-y-1">
 							<span class="font-bold text-slate-900 block">1. Create or Find Pixel ID</span>
-							<p class="text-slate-500">Go to Meta Events Manager > Data Sources > Pixel Settings and copy the Pixel ID.</p>
+							<p class="text-slate-500">Go to Meta Events Manager &gt; Data Sources &gt; Pixel Settings and copy the Pixel ID.</p>
 						</div>
 						<div class="space-y-1">
 							<span class="font-bold text-slate-900 block">2. Generate Conversions API Token</span>
@@ -459,7 +447,7 @@
 						</div>
 					</div>
 				{/if}
-			</div>
+			</Card>
 
 		</div>
 
@@ -468,46 +456,46 @@
 	<!-- ======================================================== -->
 	{:else if activeTab === 'delivery-charge'}
 		<div class="space-y-6 max-w-2xl">
-			<button
-				type="button"
+			<Button
+				variant="outline"
+				size="sm"
 				onclick={() => (activeTab = 'all')}
-				class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 text-xs font-bold shadow-2xs cursor-pointer"
+				class="gap-2"
 			>
 				<ArrowLeft class="w-4 h-4" />
 				<span>Back to Settings</span>
-			</button>
+			</Button>
 
-			<div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-5">
+			<Card class="p-6 space-y-5">
 				<h3 class="text-base font-bold text-slate-900">ডেলিভারি চার্জ নির্ধারণ</h3>
 				<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 					<div class="space-y-1.5">
 						<label for="dhaka" class="text-xs font-bold text-slate-700">ঢাকার ভেতরে চার্জ (৳)</label>
-						<input
+						<Input
 							id="dhaka"
 							type="number"
 							bind:value={deliveryDhaka}
-							class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-800 focus:outline-none focus:border-[#5845eb] focus:bg-white"
+							class="font-mono"
 						/>
 					</div>
 					<div class="space-y-1.5">
 						<label for="outside-dhaka" class="text-xs font-bold text-slate-700">ঢাকার বাইরে চার্জ (৳)</label>
-						<input
+						<Input
 							id="outside-dhaka"
 							type="number"
 							bind:value={deliveryOutsideDhaka}
-							class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-800 focus:outline-none focus:border-[#5845eb] focus:bg-white"
+							class="font-mono"
 						/>
 					</div>
 				</div>
 
-				<button
+				<Button
 					type="button"
 					onclick={() => triggerSave('Delivery Charge Settings Saved!')}
-					class="px-5 py-2.5 rounded-xl bg-[#5845eb] hover:bg-[#4734d6] text-white font-bold text-xs shadow-md shadow-indigo-600/20 cursor-pointer"
 				>
 					Save Delivery Charges
-				</button>
-			</div>
+				</Button>
+			</Card>
 		</div>
 
 	<!-- ======================================================== -->
@@ -515,27 +503,29 @@
 	<!-- ======================================================== -->
 	{:else if activeTab === 'courier'}
 		<div class="space-y-6 max-w-2xl">
-			<button
-				type="button"
+			<Button
+				variant="outline"
+				size="sm"
 				onclick={() => (activeTab = 'all')}
-				class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 text-xs font-bold shadow-2xs cursor-pointer"
+				class="gap-2"
 			>
 				<ArrowLeft class="w-4 h-4" />
 				<span>Back to Settings</span>
-			</button>
+			</Button>
 
-			<div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-5">
+			<Card class="p-6 space-y-5">
 				<div class="flex items-center justify-between pb-3 border-b border-slate-100">
 					<h3 class="text-base font-bold text-slate-900">Steadfast ও Pathao Courier API</h3>
-					<button
-						type="button"
+					<Button
+						variant="secondary"
+						size="sm"
 						onclick={testCourierApi}
-						disabled={isCourierSyncing}
-						class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold cursor-pointer"
+						loading={isCourierSyncing}
+						class="gap-1.5"
 					>
-						<RefreshCw class="w-3.5 h-3.5 {isCourierSyncing ? 'animate-spin text-[#5845eb]' : ''}" />
+						<RefreshCw class="w-3.5 h-3.5 {isCourierSyncing ? 'animate-spin' : ''}" />
 						<span>Test Connection</span>
-					</button>
+					</Button>
 				</div>
 
 				{#if courierStatusMessage}
@@ -546,34 +536,33 @@
 				{/if}
 
 				<div class="space-y-3">
-					<div class="space-y-1">
+					<div class="space-y-1.5">
 						<label for="st-key" class="text-xs font-bold text-slate-700">Steadfast API Key</label>
-						<input
+						<Input
 							id="st-key"
 							type="text"
 							bind:value={steadfastApiKey}
-							class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-mono text-slate-800"
+							class="font-mono text-xs"
 						/>
 					</div>
-					<div class="space-y-1">
+					<div class="space-y-1.5">
 						<label for="st-sec" class="text-xs font-bold text-slate-700">Steadfast Secret Key</label>
-						<input
+						<Input
 							id="st-sec"
 							type="password"
 							bind:value={steadfastSecretKey}
-							class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-mono text-slate-800"
+							class="font-mono text-xs"
 						/>
 					</div>
 				</div>
 
-				<button
+				<Button
 					type="button"
 					onclick={() => triggerSave('Courier API Credentials Saved!')}
-					class="px-5 py-2.5 rounded-xl bg-[#5845eb] hover:bg-[#4734d6] text-white font-bold text-xs shadow-md shadow-indigo-600/20 cursor-pointer"
 				>
 					Save Courier Settings
-				</button>
-			</div>
+				</Button>
+			</Card>
 		</div>
 
 	<!-- ======================================================== -->
@@ -581,45 +570,45 @@
 	<!-- ======================================================== -->
 	{:else if activeTab === 'fraud-check'}
 		<div class="space-y-6 max-w-2xl">
-			<button
-				type="button"
+			<Button
+				variant="outline"
+				size="sm"
 				onclick={() => (activeTab = 'all')}
-				class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 text-xs font-bold shadow-2xs cursor-pointer"
+				class="gap-2"
 			>
 				<ArrowLeft class="w-4 h-4" />
 				<span>Back to Settings</span>
-			</button>
+			</Button>
 
-			<div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-5">
+			<Card class="p-6 space-y-5">
 				<h3 class="text-base font-bold text-slate-900">Fraud Check API & Return Ratio Threshold</h3>
 				<p class="text-xs text-slate-500">Steadfast ডেলিভারি হিস্টোরি দেখে সন্দেহভাজন ফেক কাস্টমার চিহ্নিতকরণ</p>
 
 				<div class="space-y-4">
 					<div class="space-y-1.5">
 						<label for="fraud-ratio" class="text-xs font-bold text-slate-700">ন্যূনতম গ্রহণযোগ্য ডেলিভারি রেশিও (%)</label>
-						<input
+						<Input
 							id="fraud-ratio"
 							type="number"
 							bind:value={minDeliveryRatio}
-							class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-800"
+							class="font-mono"
 						/>
 						<span class="text-[11px] text-slate-400">এর নিচের রেশিওধারীদের জন্য ক্যাশ অন ডেলিভারি ব্লক অথবা অগ্রিম চাওয়া হবে</span>
 					</div>
 
-					<label class="flex items-center gap-2.5 text-xs text-slate-700 font-bold cursor-pointer">
-						<input type="checkbox" bind:checked={autoBlockFraud} class="w-4 h-4 rounded text-[#5845eb]" />
-						<span>Auto-flag Fake Orders with Return Rate &gt; 50%</span>
-					</label>
+					<div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+						<span class="text-xs text-slate-700 font-bold">Auto-flag Fake Orders with Return Rate &gt; 50%</span>
+						<Switch bind:checked={autoBlockFraud} />
+					</div>
 				</div>
 
-				<button
+				<Button
 					type="button"
 					onclick={() => triggerSave('Fraud Check Settings Saved!')}
-					class="px-5 py-2.5 rounded-xl bg-[#5845eb] hover:bg-[#4734d6] text-white font-bold text-xs shadow-md shadow-indigo-600/20 cursor-pointer"
 				>
 					Save Fraud Rules
-				</button>
-			</div>
+				</Button>
+			</Card>
 		</div>
 
 	<!-- ======================================================== -->
@@ -627,16 +616,17 @@
 	<!-- ======================================================== -->
 	{:else}
 		<div class="space-y-6 max-w-2xl">
-			<button
-				type="button"
+			<Button
+				variant="outline"
+				size="sm"
 				onclick={() => (activeTab = 'all')}
-				class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 text-xs font-bold shadow-2xs cursor-pointer"
+				class="gap-2"
 			>
 				<ArrowLeft class="w-4 h-4" />
 				<span>Back to Settings</span>
-			</button>
+			</Button>
 
-			<div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+			<Card class="p-6 space-y-4">
 				<h3 class="text-base font-bold text-slate-900 capitalize">{activeTab.replace('-', ' ')} Settings</h3>
 				<p class="text-xs text-slate-500">Configure parameters for {activeTab}.</p>
 				
@@ -644,15 +634,15 @@
 					This module is active and connected with your AURA Enterprise Engine on Cloudflare edge.
 				</div>
 
-				<button
+				<Button
 					type="button"
 					onclick={() => triggerSave(`${activeTab} saved!`)}
-					class="px-5 py-2.5 rounded-xl bg-[#5845eb] hover:bg-[#4734d6] text-white font-bold text-xs shadow-md shadow-indigo-600/20 cursor-pointer"
 				>
 					Save Changes
-				</button>
-			</div>
+				</Button>
+			</Card>
 		</div>
 	{/if}
 
 </div>
+

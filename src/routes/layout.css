@@ -1,0 +1,67 @@
+@import 'tailwindcss';
+
+@theme {
+	--font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+	--font-display: 'Outfit', system-ui, -apple-system, sans-serif;
+	--color-accent-purple: #8b5cf6;
+	--color-accent-cyan: #06b6d4;
+	--color-accent-amber: #f59e0b;
+	--color-surface-dark: #090a0f;
+	--color-surface-card: rgba(18, 20, 29, 0.75);
+	--color-surface-border: rgba(255, 255, 255, 0.08);
+}
+
+:root {
+	font-family: var(--font-sans);
+	color-scheme: dark;
+}
+
+h1, h2, h3, h4, .font-heading {
+	font-family: var(--font-display);
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+	background: rgba(16, 18, 28, 0.7);
+	backdrop-filter: blur(16px);
+	-webkit-backdrop-filter: blur(16px);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-card {
+	background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+	border-color: rgba(139, 92, 246, 0.3);
+	transform: translateY(-2px);
+	box-shadow: 0 12px 30px -10px rgba(139, 92, 246, 0.2);
+}
+
+/* Ambient glow backgrounds */
+.glow-purple {
+	background: radial-gradient(circle at center, rgba(139, 92, 246, 0.25) 0%, transparent 70%);
+}
+
+.glow-cyan {
+	background: radial-gradient(circle at center, rgba(6, 182, 212, 0.2) 0%, transparent 70%);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+	width: 8px;
+}
+::-webkit-scrollbar-track {
+	background: #090a0f;
+}
+::-webkit-scrollbar-thumb {
+	background: #1e2235;
+	border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+	background: #2e3550;
+}

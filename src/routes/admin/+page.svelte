@@ -48,7 +48,11 @@
 		HelpCircle,
 		Bell,
 		Mail,
-		ChevronDown
+		ChevronDown,
+		Calendar,
+		ShoppingBag,
+		Coins,
+		Receipt
 	} from 'lucide-svelte';
 	import type { PageData } from './$types';
 
@@ -81,9 +85,6 @@
 
 	// Interactive chart hover state
 	let activeChartPoint = $state<{ date: string; sales: number; orders: number; aov: number } | null>(null);
-
-	// Selected order for quick modal / drawer
-	let selectedOrderModal = $state<any | null>(null);
 
 	// Sample 7-day trend data for the smooth area chart
 	const trendData = [
@@ -140,23 +141,23 @@
 	<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </svelte:head>
 
-<!-- Fullscreen Luxury Executive Dashboard -->
-<div class="min-h-screen bg-[#f8fafc] text-slate-800 flex font-['Hind_Siliguri',sans-serif] selection:bg-blue-600/15 selection:text-blue-700 antialiased">
+<!-- Fullscreen Warm Ivory / Terracotta Amber Executive Dashboard (NO EMOJIS - PURE VECTOR ICONS) -->
+<div class="min-h-screen bg-[#faf7f2] text-slate-800 flex font-['Hind_Siliguri',sans-serif] selection:bg-[#d97706]/20 selection:text-[#9a3412] antialiased">
 
 	<!-- ============================================== -->
 	<!-- 1. HIGH-END EXECUTIVE MIDNIGHT SIDEBAR        -->
 	<!-- ============================================== -->
 	<aside
-		class="bg-[#0b0f19] text-slate-300 border-r border-slate-800/80 flex flex-col justify-between transition-all duration-300 z-50 fixed md:sticky top-0 h-screen shrink-0 shadow-2xl {isSidebarCollapsed ? 'w-20' : 'w-72'} {isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}"
+		class="bg-[#0c101a] text-slate-300 border-r border-slate-800/80 flex flex-col justify-between transition-all duration-300 z-50 fixed md:sticky top-0 h-screen shrink-0 shadow-2xl {isSidebarCollapsed ? 'w-20' : 'w-72'} {isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}"
 	>
 		<div class="flex-1 flex flex-col min-h-0 overflow-y-auto">
 			
 			<!-- Workspace / Store Brand Header -->
 			<div class="h-20 flex items-center justify-between px-5 border-b border-slate-800/60 bg-[#0e1424]/40">
 				<a href="/admin" class="flex items-center gap-3 group">
-					<div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-cyan-400 p-[1.5px] shadow-lg shadow-blue-500/25 transition-transform group-hover:scale-105">
-						<div class="w-full h-full bg-[#0b0f19] rounded-[10px] flex items-center justify-center">
-							<Flame class="w-5 h-5 text-cyan-400 fill-cyan-400/20" />
+					<div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#ea580c] via-[#d97706] to-[#f59e0b] p-[1.5px] shadow-lg shadow-amber-600/25 transition-transform group-hover:scale-105">
+						<div class="w-full h-full bg-[#0c101a] rounded-[10px] flex items-center justify-center">
+							<Flame class="w-5 h-5 text-[#f59e0b] fill-[#f59e0b]/20" />
 						</div>
 					</div>
 					
@@ -164,7 +165,7 @@
 						<div class="flex flex-col">
 							<div class="flex items-center gap-1.5">
 								<span class="font-['Outfit'] font-black text-lg text-white tracking-wide">AURA</span>
-								<span class="px-1.5 py-0.2 rounded text-[8px] font-black uppercase tracking-widest bg-blue-500/20 text-blue-400 border border-blue-500/30">
+								<span class="px-1.5 py-0.2 rounded text-[8px] font-black uppercase tracking-widest bg-[#d97706]/20 text-[#fbbf24] border border-[#d97706]/30">
 									PRO
 								</span>
 							</div>
@@ -217,18 +218,18 @@
 						<button
 							onclick={() => { activeTab = 'overview'; isMobileSidebarOpen = false; }}
 							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'overview'
-								? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-bold'
+								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30 font-bold'
 								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
 							title="ওভারভিউ ড্যাশবোর্ড"
 						>
 							<div class="flex items-center gap-3">
-								<LayoutGrid class="w-4 h-4 {activeTab === 'overview' ? 'text-white' : 'text-slate-400 group-hover:text-blue-400'}" />
+								<LayoutGrid class="w-4 h-4 {activeTab === 'overview' ? 'text-white' : 'text-slate-400 group-hover:text-amber-400'}" />
 								{#if !isSidebarCollapsed}
 									<span>ওভারভিউ ড্যাশবোর্ড</span>
 								{/if}
 							</div>
 							{#if !isSidebarCollapsed && activeTab === 'overview'}
-								<span class="w-1.5 h-1.5 rounded-full bg-cyan-300 animate-pulse"></span>
+								<span class="w-1.5 h-1.5 rounded-full bg-amber-200 animate-pulse"></span>
 							{/if}
 						</button>
 
@@ -236,12 +237,12 @@
 						<button
 							onclick={() => { activeTab = 'orders'; isMobileSidebarOpen = false; }}
 							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'orders' || activeTab === 'order_list'
-								? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
 								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
 							title="অর্ডারসমূহ"
 						>
 							<div class="flex items-center gap-3">
-								<ShoppingCart class="w-4 h-4 {activeTab === 'orders' || activeTab === 'order_list' ? 'text-white' : 'text-slate-400 group-hover:text-blue-400'}" />
+								<ShoppingCart class="w-4 h-4 {activeTab === 'orders' || activeTab === 'order_list' ? 'text-white' : 'text-slate-400 group-hover:text-amber-400'}" />
 								{#if !isSidebarCollapsed}
 									<span>সব অর্ডারসমূহ</span>
 								{/if}
@@ -257,18 +258,18 @@
 						<button
 							onclick={() => { activeTab = 'new_order'; isMobileSidebarOpen = false; }}
 							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'new_order'
-								? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
 								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
 							title="নতুন অর্ডার তৈরি"
 						>
 							<div class="flex items-center gap-3">
-								<PlusCircle class="w-4 h-4 {activeTab === 'new_order' ? 'text-white' : 'text-emerald-400 group-hover:scale-110 transition-transform'}" />
+								<PlusCircle class="w-4 h-4 {activeTab === 'new_order' ? 'text-white' : 'text-amber-400 group-hover:scale-110 transition-transform'}" />
 								{#if !isSidebarCollapsed}
 									<span>নতুন অর্ডার এন্ট্রি</span>
 								{/if}
 							</div>
 							{#if !isSidebarCollapsed}
-								<span class="text-[9px] font-bold uppercase text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.2 rounded">
+								<span class="text-[9px] font-bold uppercase text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.2 rounded">
 									নতুন
 								</span>
 							{/if}
@@ -310,7 +311,7 @@
 						<button
 							onclick={() => { activeTab = 'inventory'; isMobileSidebarOpen = false; }}
 							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'inventory'
-								? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
 								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
 							title="পণ্য ও ইনভেন্টরি"
 						>
@@ -331,18 +332,18 @@
 						<button
 							onclick={() => { activeTab = 'courier'; isMobileSidebarOpen = false; }}
 							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'courier'
-								? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
 								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
 							title="কুরিয়ার হাব"
 						>
 							<div class="flex items-center gap-3">
-								<Truck class="w-4 h-4 {activeTab === 'courier' ? 'text-white' : 'text-slate-400 group-hover:text-cyan-400'}" />
+								<Truck class="w-4 h-4 {activeTab === 'courier' ? 'text-white' : 'text-slate-400 group-hover:text-amber-400'}" />
 								{#if !isSidebarCollapsed}
 									<span>কুরিয়ার ও লজিস্টিকস</span>
 								{/if}
 							</div>
 							{#if !isSidebarCollapsed}
-								<span class="text-[9px] font-bold text-cyan-400 bg-cyan-500/10 px-1.5 py-0.2 rounded border border-cyan-500/20">
+								<span class="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20">
 									Steadfast
 								</span>
 							{/if}
@@ -363,12 +364,12 @@
 						<button
 							onclick={() => { activeTab = 'pixels'; isMobileSidebarOpen = false; }}
 							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'pixels'
-								? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
 								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
 							title="পিক্সেল ও ট্র্যাকিং"
 						>
 							<div class="flex items-center gap-3">
-								<Radio class="w-4 h-4 {activeTab === 'pixels' ? 'text-white' : 'text-slate-400 group-hover:text-purple-400'}" />
+								<Radio class="w-4 h-4 {activeTab === 'pixels' ? 'text-white' : 'text-slate-400 group-hover:text-amber-400'}" />
 								{#if !isSidebarCollapsed}
 									<span>পিক্সেল ও কনভার্সন</span>
 								{/if}
@@ -379,12 +380,12 @@
 						<button
 							onclick={() => { activeTab = 'customers'; isMobileSidebarOpen = false; }}
 							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'customers'
-								? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
 								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
 							title="গ্রাহক ও ভিআইপি ক্লাব"
 						>
 							<div class="flex items-center gap-3">
-								<Users class="w-4 h-4 {activeTab === 'customers' ? 'text-white' : 'text-slate-400 group-hover:text-indigo-400'}" />
+								<Users class="w-4 h-4 {activeTab === 'customers' ? 'text-white' : 'text-slate-400 group-hover:text-amber-400'}" />
 								{#if !isSidebarCollapsed}
 									<span>গ্রাহক ও ভিআইপি ক্লাব</span>
 								{/if}
@@ -398,12 +399,12 @@
 						<button
 							onclick={() => { activeTab = 'database'; isMobileSidebarOpen = false; }}
 							class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group {activeTab === 'database'
-								? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+								? 'bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white shadow-lg shadow-amber-600/30'
 								: 'text-slate-400 hover:text-white hover:bg-slate-800/60'}"
 							title="Cloudflare D1 ইঞ্জিন"
 						>
 							<div class="flex items-center gap-3">
-								<Database class="w-4 h-4 {activeTab === 'database' ? 'text-white' : 'text-emerald-400'}" />
+								<Database class="w-4 h-4 {activeTab === 'database' ? 'text-white' : 'text-amber-400'}" />
 								{#if !isSidebarCollapsed}
 									<span>Cloudflare D1 ইঞ্জিন</span>
 								{/if}
@@ -430,13 +431,13 @@
 						</span>
 						<span class="font-bold text-slate-200">Cloudflare D1</span>
 					</div>
-					<span class="text-[10px] font-mono text-emerald-400 font-bold">12ms • Edge Live</span>
+					<span class="text-[10px] font-mono text-amber-400 font-bold">12ms • Edge Live</span>
 				</div>
 
 				<!-- Superadmin Profile Box -->
 				<div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/50 border border-slate-800/60">
 					<div class="flex items-center gap-2.5">
-						<div class="w-8 h-8 rounded-full bg-gradient-to-tr from-violet-600 to-blue-500 flex items-center justify-center text-white font-bold text-xs ring-2 ring-emerald-500/40">
+						<div class="w-8 h-8 rounded-full bg-gradient-to-tr from-[#ea580c] to-[#d97706] flex items-center justify-center text-white font-bold text-xs ring-2 ring-amber-500/40">
 							AK
 						</div>
 						<div class="flex flex-col">
@@ -448,7 +449,7 @@
 					<a
 						href="/"
 						target="_blank"
-						class="p-1.5 text-slate-400 hover:text-cyan-400 hover:bg-slate-800 rounded-lg transition-colors"
+						class="p-1.5 text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded-lg transition-colors"
 						title="স্টোর দেখুন"
 					>
 						<ExternalLink class="w-4 h-4" />
@@ -483,13 +484,13 @@
 	<!-- ============================================== -->
 	<div class="flex-1 flex flex-col min-w-0 min-h-screen">
 		
-		<!-- TOP WORKSPACE HEADER (Shopify Polaris style) -->
-		<header class="h-16 bg-white border-b border-slate-200/80 px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+		<!-- TOP WORKSPACE HEADER (Warm Ivory / Polaris style) -->
+		<header class="h-16 bg-white/95 backdrop-blur-md border-b border-[#ede5d8] px-6 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
 			<div class="flex items-center gap-4">
 				<!-- Mobile Sidebar Toggle -->
 				<button
 					onclick={() => isMobileSidebarOpen = !isMobileSidebarOpen}
-					class="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100"
+					class="md:hidden p-2 rounded-lg text-slate-600 hover:bg-[#faf7f2]"
 					aria-label="Open sidebar"
 				>
 					<PanelLeftOpen class="w-5 h-5" />
@@ -520,16 +521,16 @@
 				<a
 					href="/"
 					target="_blank"
-					class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 hover:text-blue-600 hover:border-blue-300 text-xs font-bold transition-all bg-slate-50/50 shadow-2xs"
+					class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#ede5d8] text-slate-700 hover:text-[#c25e00] hover:border-[#fed7aa] text-xs font-bold transition-all bg-[#faf7f2] shadow-2xs"
 				>
 					<span>লাইভ স্টোর</span>
 					<ExternalLink class="w-3.5 h-3.5" />
 				</a>
 
-				<!-- Create Order Action Button -->
+				<!-- Create Order Action Button (Warm Amber Gradient) -->
 				<button
 					onclick={() => activeTab = 'new_order'}
-					class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all hover:scale-102"
+					class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#ea580c] to-[#d97706] hover:from-[#c2410c] hover:to-[#b45309] text-white font-bold text-xs shadow-md shadow-amber-600/20 transition-all hover:scale-102"
 				>
 					<PlusCircle class="w-4 h-4" />
 					<span class="hidden sm:inline">নতুন অর্ডার</span>
@@ -538,7 +539,7 @@
 				<!-- Refresh Data Button -->
 				<button
 					onclick={() => window.location.reload()}
-					class="p-2 rounded-xl border border-slate-200 text-slate-600 hover:text-blue-600 hover:bg-slate-50 text-xs transition-colors"
+					class="p-2 rounded-xl border border-[#ede5d8] text-slate-600 hover:text-[#c25e00] hover:bg-[#fff7ed] text-xs transition-colors"
 					title="রিলোড করুন"
 				>
 					<RefreshCw class="w-4 h-4" />
@@ -550,17 +551,17 @@
 		<main class="p-6 md:p-8 space-y-8 flex-1">
 			
 			<!-- ============================================== -->
-			<!-- TAB 1: EXECUTIVE OVERVIEW (Trezo Style Polish) -->
+			<!-- TAB 1: EXECUTIVE OVERVIEW                      -->
 			<!-- ============================================== -->
 			{#if activeTab === 'overview'}
 				<!-- Header with date filter tabs -->
 				<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 					<div>
 						<div class="flex items-center gap-2">
-							<h1 class="text-2xl font-black text-slate-900 tracking-tight font-['Outfit']">
+							<h1 class="text-2xl font-black text-[#0f172a] tracking-tight font-['Outfit']">
 								অ্যাডমিন ওভারভিউ
 							</h1>
-							<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+							<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#fff7ed] text-[#c25e00] border border-[#fed7aa]">
 								রিয়েল-টাইম
 							</span>
 						</div>
@@ -570,7 +571,7 @@
 					</div>
 
 					<!-- Date Filter Pills -->
-					<div class="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200/90 shadow-2xs">
+					<div class="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-[#ede5d8] shadow-2xs">
 						{#each [
 							{ id: 'today', label: 'আজ' },
 							{ id: 'yesterday', label: 'গতকাল' },
@@ -580,7 +581,7 @@
 						] as f}
 							<button
 								onclick={() => activeDateFilter = f.id as any}
-								class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all {activeDateFilter === f.id ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+								class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all {activeDateFilter === f.id ? 'bg-[#c25e00] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-[#faf7f2]'}"
 							>
 								{f.label}
 							</button>
@@ -588,11 +589,11 @@
 					</div>
 				</div>
 
-				<!-- 6 Performance Summary Cards (Elevated Luxury Cards with Sparklines) -->
+				<!-- 6 Performance Summary Cards (NO EMOJIS - Standard SVG Icons & Warm Palette) -->
 				<div>
 					<div class="flex items-center justify-between mb-3.5">
 						<div class="flex items-center gap-2 text-xs font-black text-slate-700 uppercase tracking-wider">
-							<Activity class="w-4 h-4 text-blue-600" />
+							<Activity class="w-4 h-4 text-[#c25e00]" />
 							রিয়েল-টাইম পারফরম্যান্স সামারি
 						</div>
 						<span class="text-xs text-slate-400">আপডেট: এইমাত্র</span>
@@ -601,37 +602,37 @@
 					<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
 						
 						<!-- Card 1: মোট সেলস (Revenue) -->
-						<div class="bg-white rounded-2xl p-4.5 border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-md hover:border-blue-200 transition-all group flex flex-col justify-between">
+						<div class="bg-white rounded-2xl p-4.5 border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-md hover:border-[#fde68a] transition-all group flex flex-col justify-between">
 							<div>
 								<div class="flex items-center justify-between text-slate-500 text-xs font-bold mb-2">
 									<span class="truncate">মোট সেলস (Revenue)</span>
-									<span class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm shadow-2xs">
-										💵
+									<span class="w-7 h-7 rounded-lg bg-[#fff7ed] text-[#c25e00] flex items-center justify-center text-sm shadow-2xs border border-[#fed7aa]/50">
+										<DollarSign class="w-4 h-4" />
 									</span>
 								</div>
-								<div class="text-2xl font-black text-slate-900 font-['Outfit'] tracking-tight">
+								<div class="text-2xl font-black text-[#0f172a] font-['Outfit'] tracking-tight">
 									{formatTaka(data.stats.totalRevenue)}
 								</div>
-								<div class="flex items-center gap-1 mt-1 text-[10px] font-bold text-emerald-600">
+								<div class="flex items-center gap-1 mt-1 text-[10px] font-bold text-[#c25e00]">
 									<TrendingUp class="w-3 h-3" />
 									<span>+২৪.৮% বৃদ্ধি</span>
 								</div>
 							</div>
-							<div class="text-[11px] text-slate-400 mt-3 pt-2.5 border-t border-slate-100 font-medium">
+							<div class="text-[11px] text-slate-400 mt-3 pt-2.5 border-t border-[#f4eee4] font-medium">
 								কনফার্মড: <strong class="text-slate-700">{formatTaka(data.stats.confirmedRevenue)}</strong>
 							</div>
 						</div>
 
 						<!-- Card 2: মোট অর্ডার (Total Orders) -->
-						<div class="bg-white rounded-2xl p-4.5 border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-md hover:border-blue-200 transition-all group flex flex-col justify-between">
+						<div class="bg-white rounded-2xl p-4.5 border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-md hover:border-[#fde68a] transition-all group flex flex-col justify-between">
 							<div>
 								<div class="flex items-center justify-between text-slate-500 text-xs font-bold mb-2">
 									<span class="truncate">মোট অর্ডার (Orders)</span>
-									<span class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm shadow-2xs">
-										🛍️
+									<span class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm shadow-2xs border border-blue-200/50">
+										<ShoppingBag class="w-4 h-4" />
 									</span>
 								</div>
-								<div class="text-2xl font-black text-slate-900 font-['Outfit'] tracking-tight">
+								<div class="text-2xl font-black text-[#0f172a] font-['Outfit'] tracking-tight">
 									{data.stats.totalOrders} <span class="text-sm font-bold text-slate-500">টি</span>
 								</div>
 								<div class="flex items-center gap-1 mt-1 text-[10px] font-bold text-blue-600">
@@ -639,93 +640,93 @@
 									<span>+১২.৩% বৃদ্ধি</span>
 								</div>
 							</div>
-							<div class="text-[11px] text-slate-400 mt-3 pt-2.5 border-t border-slate-100 font-medium">
+							<div class="text-[11px] text-slate-400 mt-3 pt-2.5 border-t border-[#f4eee4] font-medium">
 								আজকে <strong class="text-slate-700">{data.stats.todayOrdersCount} টি</strong> • পেন্ডিং <strong class="text-blue-600">{data.stats.pendingOrdersCount} টি</strong>
 							</div>
 						</div>
 
 						<!-- Card 3: কনফার্মড রেট (Confirmed Rate) -->
-						<div class="bg-white rounded-2xl p-4.5 border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-md hover:border-purple-200 transition-all group flex flex-col justify-between">
+						<div class="bg-white rounded-2xl p-4.5 border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-md hover:border-[#fde68a] transition-all group flex flex-col justify-between">
 							<div>
 								<div class="flex items-center justify-between text-slate-500 text-xs font-bold mb-2">
 									<span class="truncate">কনফার্মড রেট (Rate)</span>
-									<span class="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center text-sm shadow-2xs">
-										✔️
+									<span class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm shadow-2xs border border-emerald-200/50">
+										<CheckCircle2 class="w-4 h-4" />
 									</span>
 								</div>
-								<div class="text-2xl font-black text-slate-900 font-['Outfit'] tracking-tight">
+								<div class="text-2xl font-black text-[#0f172a] font-['Outfit'] tracking-tight">
 									{data.stats.confirmedRate}<span class="text-base font-bold text-slate-500">%</span>
 								</div>
-								<div class="flex items-center gap-1 mt-1 text-[10px] font-bold text-purple-600">
+								<div class="flex items-center gap-1 mt-1 text-[10px] font-bold text-emerald-600">
 									<CheckCheck class="w-3 h-3" />
 									<span>লক্ষ্যমাত্রা ৭৫%</span>
 								</div>
 							</div>
-							<div class="text-[11px] text-slate-400 mt-3 pt-2.5 border-t border-slate-100 font-medium">
+							<div class="text-[11px] text-slate-400 mt-3 pt-2.5 border-t border-[#f4eee4] font-medium">
 								<strong class="text-slate-700">{data.stats.confirmedCount} টি</strong> অর্ডার নিশ্চিত
 							</div>
 						</div>
 
 						<!-- Card 4: ডেলিভারি সফল (Delivered) -->
-						<div class="bg-white rounded-2xl p-4.5 border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-md hover:border-cyan-200 transition-all group flex flex-col justify-between">
+						<div class="bg-white rounded-2xl p-4.5 border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-md hover:border-[#fde68a] transition-all group flex flex-col justify-between">
 							<div>
 								<div class="flex items-center justify-between text-slate-500 text-xs font-bold mb-2">
 									<span class="truncate">ডেলিভারি সম্পন্ন</span>
-									<span class="w-7 h-7 rounded-lg bg-cyan-50 text-cyan-600 flex items-center justify-center text-sm shadow-2xs">
-										🚚
+									<span class="w-7 h-7 rounded-lg bg-cyan-50 text-cyan-700 flex items-center justify-center text-sm shadow-2xs border border-cyan-200/50">
+										<Truck class="w-4 h-4" />
 									</span>
 								</div>
-								<div class="text-2xl font-black text-slate-900 font-['Outfit'] tracking-tight">
+								<div class="text-2xl font-black text-[#0f172a] font-['Outfit'] tracking-tight">
 									{data.stats.deliveredRate}<span class="text-base font-bold text-slate-500">%</span>
 								</div>
 								<div class="flex items-center gap-1 mt-1 text-[10px] font-bold text-cyan-600">
 									<span>{data.stats.deliveredCount} টি সফল ডেলিভারি</span>
 								</div>
 							</div>
-							<div class="text-[11px] text-slate-400 mt-3 pt-2.5 border-t border-slate-100 font-medium">
+							<div class="text-[11px] text-slate-400 mt-3 pt-2.5 border-t border-[#f4eee4] font-medium">
 								গৃহীত: <strong class="text-slate-700">{formatTaka(data.stats.deliveredRevenue)}</strong>
 							</div>
 						</div>
 
 						<!-- Card 5: ক্যানসেলড ও রিটার্ন -->
-						<div class="bg-white rounded-2xl p-4.5 border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-md hover:border-rose-200 transition-all group flex flex-col justify-between">
+						<div class="bg-white rounded-2xl p-4.5 border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-md hover:border-[#fde68a] transition-all group flex flex-col justify-between">
 							<div>
 								<div class="flex items-center justify-between text-slate-500 text-xs font-bold mb-2">
 									<span class="truncate">ক্যানসেলড ও রিটার্ন</span>
-									<span class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center text-sm shadow-2xs">
-										⚠️
+									<span class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center text-sm shadow-2xs border border-rose-200/50">
+										<AlertTriangle class="w-4 h-4" />
 									</span>
 								</div>
-								<div class="text-2xl font-black text-slate-900 font-['Outfit'] tracking-tight">
+								<div class="text-2xl font-black text-[#0f172a] font-['Outfit'] tracking-tight">
 									{data.stats.cancelledRate}<span class="text-base font-bold text-slate-500">%</span>
 								</div>
 								<div class="flex items-center gap-1 mt-1 text-[10px] font-bold text-rose-600">
 									<span>বাতিল ০ • রিটার্ন {data.stats.cancelledCount}</span>
 								</div>
 							</div>
-							<div class="text-[11px] text-slate-400 mt-3 pt-2.5 border-t border-slate-100 font-medium">
+							<div class="text-[11px] text-slate-400 mt-3 pt-2.5 border-t border-[#f4eee4] font-medium">
 								ক্ষতি প্রতিরোধ ব্যবস্থা সক্রিয়
 							</div>
 						</div>
 
 						<!-- Card 6: গড় অর্ডার মূল্য (AOV) -->
-						<div class="bg-white rounded-2xl p-4.5 border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-md hover:border-amber-200 transition-all group flex flex-col justify-between">
+						<div class="bg-white rounded-2xl p-4.5 border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-md hover:border-[#fde68a] transition-all group flex flex-col justify-between">
 							<div>
 								<div class="flex items-center justify-between text-slate-500 text-xs font-bold mb-2">
 									<span class="truncate">গড় মূল্য (AOV)</span>
-									<span class="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-sm shadow-2xs">
-										🛒
+									<span class="w-7 h-7 rounded-lg bg-[#fff7ed] text-[#b45309] flex items-center justify-center text-sm shadow-2xs border border-[#fed7aa]/50">
+										<Tag class="w-4 h-4" />
 									</span>
 								</div>
-								<div class="text-2xl font-black text-slate-900 font-['Outfit'] tracking-tight">
+								<div class="text-2xl font-black text-[#0f172a] font-['Outfit'] tracking-tight">
 									{formatTaka(data.stats.aov)}
 								</div>
-								<div class="flex items-center gap-1 mt-1 text-[10px] font-bold text-amber-600">
+								<div class="flex items-center gap-1 mt-1 text-[10px] font-bold text-[#b45309]">
 									<TrendingUp class="w-3 h-3" />
 									<span>প্রতি অর্ডারে সর্বোচ্চ মান</span>
 								</div>
 							</div>
-							<div class="text-[11px] text-slate-400 mt-3 pt-2.5 border-t border-slate-100 font-medium">
+							<div class="text-[11px] text-slate-400 mt-3 pt-2.5 border-t border-[#f4eee4] font-medium">
 								সর্বোচ্চ একক টিকিট: <strong class="text-slate-700">৳১,৫০০</strong>
 							</div>
 						</div>
@@ -737,12 +738,12 @@
 				<!-- ============================================== -->
 				<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 					
-					<!-- Left: Sales & Orders Revenue Trend Chart -->
-					<div class="lg:col-span-8 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] space-y-4">
+					<!-- Left: Sales & Orders Revenue Trend Chart (Warm Amber / Ochre Theme) -->
+					<div class="lg:col-span-8 bg-white rounded-2xl p-6 border border-[#ede5d8] shadow-[0_2px_12px_rgba(180,83,9,0.03)] space-y-4">
 						<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
 							<div>
-								<h3 class="text-base font-black text-slate-900 flex items-center gap-2">
-									<TrendingUp class="w-4 h-4 text-blue-600" />
+								<h3 class="text-base font-black text-[#0f172a] flex items-center gap-2">
+									<TrendingUp class="w-4 h-4 text-[#c25e00]" />
 									সেলস ও অর্ডার ট্রেন্ড (Sales & Orders Revenue)
 								</h3>
 								<p class="text-xs text-slate-400">প্রতিদিনের অর্জিত রেভিনিউ (টাকা) এবং মোট অর্ডার সংখ্যা</p>
@@ -751,11 +752,11 @@
 							<!-- Legends -->
 							<div class="flex items-center gap-4 text-xs font-bold">
 								<div class="flex items-center gap-1.5">
-									<span class="w-3 h-3 rounded-md bg-blue-600 shadow-xs"></span>
+									<span class="w-3 h-3 rounded-md bg-[#c25e00] shadow-xs"></span>
 									<span class="text-slate-700">রেভিনিউ (৳)</span>
 								</div>
 								<div class="flex items-center gap-1.5">
-									<span class="w-3 h-3 rounded-md bg-emerald-500 shadow-xs"></span>
+									<span class="w-3 h-3 rounded-md bg-blue-600 shadow-xs"></span>
 									<span class="text-slate-700">অর্ডার সংখ্যা (টি)</span>
 								</div>
 							</div>
@@ -765,15 +766,15 @@
 						<div class="relative pt-2">
 							<svg viewBox="0 0 640 220" class="w-full h-60 overflow-visible">
 								<defs>
-									<!-- Blue Gradient for Sales Area -->
-									<linearGradient id="salesGradUltra" x1="0" y1="0" x2="0" y2="1">
-										<stop offset="0%" stop-color="#2563eb" stop-opacity="0.25" />
-										<stop offset="100%" stop-color="#2563eb" stop-opacity="0.0" />
+									<!-- Amber Gradient for Sales Area -->
+									<linearGradient id="salesGradWarm" x1="0" y1="0" x2="0" y2="1">
+										<stop offset="0%" stop-color="#ea580c" stop-opacity="0.25" />
+										<stop offset="100%" stop-color="#ea580c" stop-opacity="0.0" />
 									</linearGradient>
-									<!-- Green Gradient for Orders Area -->
-									<linearGradient id="ordersGradUltra" x1="0" y1="0" x2="0" y2="1">
-										<stop offset="0%" stop-color="#10b981" stop-opacity="0.18" />
-										<stop offset="100%" stop-color="#10b981" stop-opacity="0.0" />
+									<!-- Blue Gradient for Orders Area -->
+									<linearGradient id="ordersGradWarm" x1="0" y1="0" x2="0" y2="1">
+										<stop offset="0%" stop-color="#2563eb" stop-opacity="0.18" />
+										<stop offset="100%" stop-color="#2563eb" stop-opacity="0.0" />
 									</linearGradient>
 								</defs>
 
@@ -784,22 +785,22 @@
 									{ label: '৳৩,০০০', rLabel: '৪টি', y: 130 },
 									{ label: '৳১,৫০০', rLabel: '২টি', y: 175 }
 								] as grid}
-									<line x1="45" y1={grid.y} x2="595" y2={grid.y} stroke="#f1f5f9" stroke-dasharray="4 4" stroke-width="1.5" />
+									<line x1="45" y1={grid.y} x2="595" y2={grid.y} stroke="#f5eee3" stroke-dasharray="4 4" stroke-width="1.5" />
 									<text x="38" y={grid.y + 4} text-anchor="end" fill="#94a3b8" font-size="10" font-family="'Plus Jakarta Sans', sans-serif" font-weight="600">{grid.label}</text>
 									<text x="602" y={grid.y + 4} text-anchor="start" fill="#94a3b8" font-size="10" font-family="'Plus Jakarta Sans', sans-serif" font-weight="600">{grid.rLabel}</text>
 								{/each}
 
-								<!-- Area: Sales (Revenue) -->
+								<!-- Area: Sales (Revenue) in warm ochre/terracotta -->
 								<path
 									d="M 50 190 L 50 75 C 95 120, 140 165, 140 165 C 185 145, 230 125, 230 125 C 275 150, 320 175, 320 175 C 365 135, 410 95, 410 95 C 455 70, 500 45, 500 45 C 545 75, 590 110, 590 110 L 590 190 Z"
-									fill="url(#salesGradUltra)"
+									fill="url(#salesGradWarm)"
 								/>
 
 								<!-- Line: Sales (Revenue) -->
 								<path
 									d="M 50 75 C 95 120, 140 165, 140 165 C 185 145, 230 125, 230 125 C 275 150, 320 175, 320 175 C 365 135, 410 95, 410 95 C 455 70, 500 45, 500 45 C 545 75, 590 110, 590 110"
 									fill="none"
-									stroke="#2563eb"
+									stroke="#c25e00"
 									stroke-width="3"
 									stroke-linecap="round"
 								/>
@@ -808,7 +809,7 @@
 								<path
 									d="M 50 70 C 95 100, 140 135, 140 135 C 185 120, 230 105, 230 105 C 275 130, 320 150, 320 150 C 365 120, 410 85, 410 85 C 455 70, 500 55, 500 55 C 545 80, 590 105, 590 105"
 									fill="none"
-									stroke="#10b981"
+									stroke="#2563eb"
 									stroke-width="2.5"
 									stroke-linecap="round"
 								/>
@@ -824,7 +825,7 @@
 										cy={pt.ySales}
 										r="5"
 										fill="#ffffff"
-										stroke="#2563eb"
+										stroke="#c25e00"
 										stroke-width="3"
 										class="cursor-pointer transition-transform hover:scale-175 shadow-lg"
 										onmouseenter={() => activeChartPoint = pt}
@@ -837,23 +838,24 @@
 										cy={pt.yOrders}
 										r="4"
 										fill="#ffffff"
-										stroke="#10b981"
+										stroke="#2563eb"
 										stroke-width="2.5"
 										class="cursor-pointer"
 									/>
 								{/each}
 							</svg>
 
-							<!-- Hover Glass Tooltip -->
+							<!-- Hover Glass Tooltip (NO EMOJI - Pure Lucide Calendar Icon) -->
 							{#if activeChartPoint}
-								<div class="absolute top-2 left-1/2 -translate-x-1/2 bg-slate-900/95 text-white text-xs px-4 py-2 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-4 pointer-events-none backdrop-blur-md">
-									<div class="flex items-center gap-1.5 font-bold text-cyan-400">
-										<span>📅 {activeChartPoint.date}</span>
+								<div class="absolute top-2 left-1/2 -translate-x-1/2 bg-[#0c101a] text-white text-xs px-4 py-2 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-4 pointer-events-none backdrop-blur-md">
+									<div class="flex items-center gap-1.5 font-bold text-[#fbbf24]">
+										<Calendar class="w-3.5 h-3.5 text-[#fbbf24]" />
+										<span>{activeChartPoint.date}</span>
 									</div>
 									<div class="text-slate-200">
 										মোট সেলস: <strong class="text-white">{formatTaka(activeChartPoint.sales)}</strong>
 									</div>
-									<div class="text-emerald-400">
+									<div class="text-blue-400">
 										অর্ডার: <strong>{activeChartPoint.orders} টি</strong>
 									</div>
 								</div>
@@ -862,10 +864,10 @@
 					</div>
 
 					<!-- Right: Order Status & Fulfillment Ratio Donut -->
-					<div class="lg:col-span-4 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] flex flex-col justify-between space-y-4">
+					<div class="lg:col-span-4 bg-white rounded-2xl p-6 border border-[#ede5d8] shadow-[0_2px_12px_rgba(180,83,9,0.03)] flex flex-col justify-between space-y-4">
 						<div>
-							<h3 class="text-base font-black text-slate-900 flex items-center gap-2">
-								<CheckCircle2 class="w-4 h-4 text-indigo-600" />
+							<h3 class="text-base font-black text-[#0f172a] flex items-center gap-2">
+								<CheckCircle2 class="w-4 h-4 text-[#c25e00]" />
 								অর্ডার স্ট্যাটাস রেশিও (Status Ratio)
 							</h3>
 							<p class="text-xs text-slate-400">স্ট্যাটাস অনুযায়ী অর্ডারের শতকরা ভাগ ও ডিস্ট্রিবিউশন</p>
@@ -877,25 +879,25 @@
 								<!-- Track -->
 								<circle cx="80" cy="80" r="60" fill="transparent" stroke="#f8fafc" stroke-width="16" />
 
-								<!-- 1. Delivered: 40% (Blue #3b82f6) -->
+								<!-- 1. Delivered: 40% (Warm Amber/Ochre #c25e00) -->
 								<circle
 									cx="80"
 									cy="80"
 									r="60"
 									fill="transparent"
-									stroke="#3b82f6"
+									stroke="#c25e00"
 									stroke-width="16"
 									stroke-dasharray="150.8 377"
 									stroke-dashoffset="0"
 								/>
 
-								<!-- 2. Processing: 25% (Orange #f97316) -->
+								<!-- 2. Processing: 25% (Blue #2563eb) -->
 								<circle
 									cx="80"
 									cy="80"
 									r="60"
 									fill="transparent"
-									stroke="#f97316"
+									stroke="#2563eb"
 									stroke-width="16"
 									stroke-dasharray="94.2 377"
 									stroke-dashoffset="-150.8"
@@ -928,7 +930,7 @@
 
 							<!-- Donut Center Value -->
 							<div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-								<div class="text-3xl font-black text-slate-900 font-['Outfit']">
+								<div class="text-3xl font-black text-[#0f172a] font-['Outfit']">
 									{data.stats.totalOrders}
 								</div>
 								<div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -938,13 +940,13 @@
 						</div>
 
 						<!-- Legend Grid -->
-						<div class="grid grid-cols-2 gap-2.5 text-xs pt-3 border-t border-slate-100 font-medium">
+						<div class="grid grid-cols-2 gap-2.5 text-xs pt-3 border-t border-[#f4eee4] font-medium">
 							<div class="flex items-center gap-2">
-								<span class="w-3 h-3 rounded-md bg-blue-500 shadow-xs"></span>
+								<span class="w-3 h-3 rounded-md bg-[#c25e00] shadow-xs"></span>
 								<span class="text-slate-700">ডেলিভার্ড ({data.stats.deliveredRate}%)</span>
 							</div>
 							<div class="flex items-center gap-2">
-								<span class="w-3 h-3 rounded-md bg-amber-500 shadow-xs"></span>
+								<span class="w-3 h-3 rounded-md bg-blue-600 shadow-xs"></span>
 								<span class="text-slate-700">প্রসেসিং (২৫%)</span>
 							</div>
 							<div class="flex items-center gap-2">
@@ -963,15 +965,15 @@
 				<!-- ============================================== -->
 				<!-- RECENT ORDERS STREAM TABLE                    -->
 				<!-- ============================================== -->
-				<div class="bg-white rounded-2xl border border-slate-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6 space-y-4">
+				<div class="bg-white rounded-2xl border border-[#ede5d8] shadow-[0_2px_12px_rgba(180,83,9,0.03)] p-6 space-y-4">
 					<div class="flex items-center justify-between">
 						<div>
-							<h3 class="text-base font-black text-slate-900">সাম্প্রতিক অর্ডার স্ট্রিম (Recent Orders Stream)</h3>
+							<h3 class="text-base font-black text-[#0f172a]">সাম্প্রতিক অর্ডার স্ট্রিম (Recent Orders Stream)</h3>
 							<p class="text-xs text-slate-400">সর্বশেষ আসা কাস্টমার অর্ডার তালিকা এবং ডেলিভারি স্ট্যাটাস</p>
 						</div>
 						<button
 							onclick={() => activeTab = 'orders'}
-							class="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors"
+							class="text-xs font-bold text-[#c25e00] hover:text-[#9a3412] flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[#fff7ed] transition-colors"
 						>
 							<span>সব {data.orders.length}টি অর্ডার দেখুন</span>
 							<ChevronRight class="w-4 h-4" />
@@ -981,7 +983,7 @@
 					<div class="overflow-x-auto">
 						<table class="w-full text-left text-xs">
 							<thead>
-								<tr class="border-b border-slate-100 text-slate-500 bg-slate-50/60">
+								<tr class="border-b border-[#ede5d8] text-slate-500 bg-[#faf7f2]/80">
 									<th class="py-3.5 px-4 font-bold">অর্ডার আইডি</th>
 									<th class="py-3.5 px-4 font-bold">কাস্টমার</th>
 									<th class="py-3.5 px-4 font-bold">ঠিকানা ও জেলা</th>
@@ -991,12 +993,12 @@
 									<th class="py-3.5 px-4 font-bold text-right">অ্যাকশন</th>
 								</tr>
 							</thead>
-							<tbody class="divide-y divide-slate-100">
+							<tbody class="divide-y divide-[#f4eee4]">
 								{#each data.orders.slice(0, 6) as ord}
 									{@const parsedItems = parseItems(ord.items)}
-									<tr class="hover:bg-slate-50/70 transition-colors">
+									<tr class="hover:bg-[#faf7f2]/70 transition-colors">
 										<!-- ID -->
-										<td class="py-4 px-4 font-mono font-bold text-blue-600">
+										<td class="py-4 px-4 font-mono font-bold text-[#c25e00]">
 											<div class="flex items-center gap-1.5">
 												<span>{ord.id}</span>
 												<button
@@ -1015,7 +1017,7 @@
 
 										<!-- Customer Name & Contacts -->
 										<td class="py-4 px-4">
-											<div class="font-bold text-slate-900">{ord.customerName}</div>
+											<div class="font-bold text-[#0f172a]">{ord.customerName}</div>
 											<div class="text-[11px] text-slate-400">{ord.customerEmail}</div>
 										</td>
 
@@ -1028,13 +1030,13 @@
 										<td class="py-4 px-4">
 											{#each parsedItems as itm}
 												<div class="text-[11px] font-medium text-slate-700 truncate max-w-[160px]">
-													<strong class="text-blue-600">{itm.quantity}x</strong> {itm.name}
+													<strong class="text-[#c25e00]">{itm.quantity}x</strong> {itm.name}
 												</div>
 											{/each}
 										</td>
 
 										<!-- Total Amount -->
-										<td class="py-4 px-4 font-bold text-slate-900 font-['Outfit'] text-sm">
+										<td class="py-4 px-4 font-bold text-[#0f172a] font-['Outfit'] text-sm">
 											{formatTaka(ord.total)}
 										</td>
 
@@ -1049,7 +1051,7 @@
 													<Truck class="w-3 h-3" /> ইন ট্রানজিট
 												</span>
 											{:else if ord.status === 'processing'}
-												<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1">
+												<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#fff7ed] text-[#c25e00] border border-[#fed7aa] inline-flex items-center gap-1">
 													<Clock class="w-3 h-3" /> প্যাকিং
 												</span>
 											{:else if ord.status === 'refunded'}
@@ -1070,7 +1072,7 @@
 												<select
 													name="status"
 													onchange={(e) => (e.currentTarget.form as HTMLFormElement).requestSubmit()}
-													class="bg-slate-50 text-[11px] font-bold text-slate-700 border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:border-blue-500 shadow-2xs"
+													class="bg-[#faf7f2] text-[11px] font-bold text-slate-700 border border-[#ede5d8] rounded-lg px-2 py-1 focus:outline-none focus:border-[#c25e00] shadow-2xs"
 												>
 													<option value="paid" selected={ord.status === 'paid'}>পেইড</option>
 													<option value="processing" selected={ord.status === 'processing'}>প্রসেসিং</option>
@@ -1095,7 +1097,7 @@
 				<div class="space-y-4">
 					<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 						<div>
-							<h2 class="text-xl font-black text-slate-900 font-['Outfit']">অর্ডার ম্যানেজমেন্ট ও ট্র্যাকিং</h2>
+							<h2 class="text-xl font-black text-[#0f172a] font-['Outfit']">অর্ডার ম্যানেজমেন্ট ও ট্র্যাকিং</h2>
 							<p class="text-xs text-slate-400">মোট {filteredOrders.length} টি অর্ডারের সার্বিক তথ্য এবং ডেলিভারি নিয়ন্ত্রণ</p>
 						</div>
 
@@ -1111,7 +1113,7 @@
 									a.download = `orders-export-${Date.now()}.csv`;
 									a.click();
 								}}
-								class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs shadow-2xs transition-all"
+								class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-[#ede5d8] text-slate-700 hover:bg-[#fff7ed] font-bold text-xs shadow-2xs transition-all"
 							>
 								<Download class="w-3.5 h-3.5 text-slate-500" />
 								<span>CSV এক্সপোর্ট</span>
@@ -1119,7 +1121,7 @@
 
 							<button
 								onclick={() => activeTab = 'new_order'}
-								class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all"
+								class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#ea580c] to-[#d97706] hover:from-[#c2410c] hover:to-[#b45309] text-white font-bold text-xs shadow-md shadow-amber-600/20 transition-all"
 							>
 								<PlusCircle class="w-4 h-4" />
 								<span>নতুন অর্ডার তৈরি</span>
@@ -1128,14 +1130,14 @@
 					</div>
 
 					<!-- Search & Status Filter Ribbon -->
-					<div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+					<div class="bg-white p-4 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
 						<div class="relative flex-1 max-w-md">
 							<Search class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
 							<input
 								type="text"
 								bind:value={orderSearchQuery}
 								placeholder="অর্ডার আইডি, কাস্টমার নাম, ফোন বা ঠিকানা দিয়ে খুঁজুন..."
-								class="w-full bg-slate-50/70 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all shadow-2xs"
+								class="w-full bg-[#faf7f2] border border-[#ede5d8] rounded-xl pl-10 pr-4 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#c25e00] focus:bg-white transition-all shadow-2xs"
 							/>
 						</div>
 
@@ -1151,7 +1153,7 @@
 							] as st}
 								<button
 									onclick={() => orderStatusFilter = st.id}
-									class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all {orderStatusFilter === st.id ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100/80 text-slate-600 hover:bg-slate-200'}"
+									class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all {orderStatusFilter === st.id ? 'bg-[#c25e00] text-white shadow-xs' : 'bg-[#faf7f2] text-slate-600 hover:bg-[#f2ebe0]'}"
 								>
 									{st.label}
 								</button>
@@ -1160,11 +1162,11 @@
 					</div>
 
 					<!-- Orders Data Table -->
-					<div class="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
+					<div class="bg-white rounded-2xl border border-[#ede5d8] overflow-hidden shadow-[0_2px_12px_rgba(180,83,9,0.03)]">
 						<div class="overflow-x-auto">
 							<table class="w-full text-left text-xs">
 								<thead>
-									<tr class="border-b border-slate-100 bg-slate-50/70 text-slate-500">
+									<tr class="border-b border-[#ede5d8] bg-[#faf7f2]/90 text-slate-500">
 										<th class="py-3.5 px-4 font-bold">অর্ডার আইডি</th>
 										<th class="py-3.5 px-4 font-bold">গ্রাহক তথ্য</th>
 										<th class="py-3.5 px-4 font-bold">পণ্য বিবরণ</th>
@@ -1175,7 +1177,7 @@
 										<th class="py-3.5 px-4 font-bold text-right">অ্যাকশন</th>
 									</tr>
 								</thead>
-								<tbody class="divide-y divide-slate-100">
+								<tbody class="divide-y divide-[#f4eee4]">
 									{#if filteredOrders.length === 0}
 										<tr>
 											<td colspan="8" class="py-16 text-center text-slate-400">
@@ -1186,9 +1188,9 @@
 
 									{#each filteredOrders as order (order.id)}
 										{@const parsedItems = parseItems(order.items)}
-										<tr class="hover:bg-slate-50/80 transition-colors">
+										<tr class="hover:bg-[#faf7f2]/80 transition-colors">
 											<!-- ID with Copy -->
-											<td class="py-4 px-4 font-mono font-bold text-blue-600">
+											<td class="py-4 px-4 font-mono font-bold text-[#c25e00]">
 												<div class="flex items-center gap-1.5">
 													<span>{order.id}</span>
 													<button
@@ -1207,7 +1209,7 @@
 
 											<!-- Customer -->
 											<td class="py-4 px-4">
-												<div class="font-bold text-slate-900">{order.customerName}</div>
+												<div class="font-bold text-[#0f172a]">{order.customerName}</div>
 												<div class="text-[11px] text-slate-400">{order.customerEmail}</div>
 											</td>
 
@@ -1216,7 +1218,7 @@
 												<div class="space-y-1">
 													{#each parsedItems as itm}
 														<div class="flex items-center gap-1.5 text-[11px] text-slate-700">
-															<span class="px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 font-bold font-mono">
+															<span class="px-1.5 py-0.2 rounded bg-[#fff7ed] text-[#c25e00] font-bold font-mono border border-[#fed7aa]/50">
 																{itm.quantity}x
 															</span>
 															<span class="truncate">{itm.name}</span>
@@ -1232,13 +1234,13 @@
 
 											<!-- Payment Method -->
 											<td class="py-4 px-4">
-												<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+												<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#faf7f2] text-slate-700 border border-[#ede5d8]">
 													ক্যাশ অন ডেলিভারি
 												</span>
 											</td>
 
 											<!-- Total Amount -->
-											<td class="py-4 px-4 font-bold text-slate-900 font-['Outfit'] text-sm">
+											<td class="py-4 px-4 font-bold text-[#0f172a] font-['Outfit'] text-sm">
 												{formatTaka(order.total)}
 											</td>
 
@@ -1253,7 +1255,7 @@
 														<Truck class="w-3 h-3" /> ইন ট্রানজিট
 													</span>
 												{:else if order.status === 'processing'}
-													<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 border border-amber-200 text-amber-700 inline-flex items-center gap-1">
+													<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#fff7ed] border border-[#fed7aa] text-[#c25e00] inline-flex items-center gap-1">
 														<Clock class="w-3 h-3" /> প্যাকিং
 													</span>
 												{:else if order.status === 'refunded'}
@@ -1275,7 +1277,7 @@
 														<select
 															name="status"
 															onchange={(e) => (e.currentTarget.form as HTMLFormElement).requestSubmit()}
-															class="bg-slate-50 text-[11px] font-bold text-slate-700 border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:border-blue-500 shadow-2xs"
+															class="bg-[#faf7f2] text-[11px] font-bold text-slate-700 border border-[#ede5d8] rounded-lg px-2 py-1 focus:outline-none focus:border-[#c25e00] shadow-2xs"
 														>
 															<option value="paid" selected={order.status === 'paid'}>পেইড</option>
 															<option value="processing" selected={order.status === 'processing'}>প্রসেসিং</option>
@@ -1311,10 +1313,10 @@
 			<!-- TAB 3: NEW MANUAL ORDER FORM                  -->
 			<!-- ============================================== -->
 			{#if activeTab === 'new_order'}
-				<div class="max-w-2xl mx-auto bg-white rounded-2xl border border-slate-200/80 p-8 shadow-[0_2px_15px_rgba(0,0,0,0.04)] space-y-6">
+				<div class="max-w-2xl mx-auto bg-white rounded-2xl border border-[#ede5d8] p-8 shadow-[0_2px_15px_rgba(180,83,9,0.04)] space-y-6">
 					<div>
-						<h2 class="text-xl font-black text-slate-900 flex items-center gap-2 font-['Outfit']">
-							<PlusCircle class="w-5 h-5 text-blue-600" />
+						<h2 class="text-xl font-black text-[#0f172a] flex items-center gap-2 font-['Outfit']">
+							<PlusCircle class="w-5 h-5 text-[#c25e00]" />
 							নতুন অর্ডার তৈরি করুন
 						</h2>
 						<p class="text-xs text-slate-500 mt-1">
@@ -1330,7 +1332,7 @@
 								name="customerName"
 								required
 								placeholder="যেমন: তানভীর আহমেদ"
-								class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:border-blue-500 focus:outline-none shadow-2xs"
+								class="w-full px-3.5 py-2.5 rounded-xl border border-[#ede5d8] bg-[#faf7f2]/50 text-xs focus:border-[#c25e00] focus:bg-white focus:outline-none shadow-2xs"
 							/>
 						</div>
 
@@ -1341,7 +1343,7 @@
 								name="customerEmail"
 								required
 								placeholder="017XXXXXXXX বা customer@email.com"
-								class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:border-blue-500 focus:outline-none shadow-2xs font-mono"
+								class="w-full px-3.5 py-2.5 rounded-xl border border-[#ede5d8] bg-[#faf7f2]/50 text-xs focus:border-[#c25e00] focus:bg-white focus:outline-none shadow-2xs font-mono"
 							/>
 						</div>
 
@@ -1352,7 +1354,7 @@
 								required
 								rows="3"
 								placeholder="বাড়ি #, রোড #, এলাকা, থানা, জেলা..."
-								class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:border-blue-500 focus:outline-none shadow-2xs"
+								class="w-full px-3.5 py-2.5 rounded-xl border border-[#ede5d8] bg-[#faf7f2]/50 text-xs focus:border-[#c25e00] focus:bg-white focus:outline-none shadow-2xs"
 							></textarea>
 						</div>
 
@@ -1361,7 +1363,7 @@
 								<label class="text-xs font-bold text-slate-700">পণ্য নির্বাচন</label>
 								<select
 									name="productName"
-									class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:border-blue-500 focus:outline-none bg-white font-bold"
+									class="w-full px-3.5 py-2.5 rounded-xl border border-[#ede5d8] bg-[#faf7f2]/50 text-xs focus:border-[#c25e00] focus:outline-none bg-white font-bold"
 								>
 									<option value="AURA Spectrum X">AURA Spectrum X (Planar Flagship)</option>
 									<option value="AURA Wave Spatial Pro">AURA Wave Spatial Pro (IEM)</option>
@@ -1376,23 +1378,23 @@
 									name="total"
 									value="1250"
 									required
-									class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:border-blue-500 focus:outline-none font-['Outfit'] font-bold text-slate-900"
+									class="w-full px-3.5 py-2.5 rounded-xl border border-[#ede5d8] bg-[#faf7f2]/50 text-xs focus:border-[#c25e00] focus:outline-none font-['Outfit'] font-bold text-slate-900"
 								/>
 							</div>
 						</div>
 
-						<div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+						<div class="pt-4 border-t border-[#ede5d8] flex items-center justify-end gap-3">
 							<button
 								type="button"
 								onclick={() => activeTab = 'orders'}
-								class="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50"
+								class="px-4 py-2.5 rounded-xl border border-[#ede5d8] text-slate-600 font-bold text-xs hover:bg-[#faf7f2]"
 							>
 								বাতিল
 							</button>
 
 							<button
 								type="submit"
-								class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs shadow-md shadow-blue-500/20"
+								class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#ea580c] to-[#d97706] hover:from-[#c2410c] hover:to-[#b45309] text-white font-bold text-xs shadow-md shadow-amber-600/20"
 							>
 								অর্ডার সেভ করুন
 							</button>
@@ -1405,9 +1407,9 @@
 			<!-- TAB 4: TRASH (মুছে ফেলা ও বাতিল)               -->
 			<!-- ============================================== -->
 			{#if activeTab === 'trash'}
-				<div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)] space-y-4">
+				<div class="bg-white rounded-2xl border border-[#ede5d8] p-6 shadow-[0_2px_12px_rgba(180,83,9,0.03)] space-y-4">
 					<div>
-						<h2 class="text-xl font-black text-slate-900 flex items-center gap-2 font-['Outfit']">
+						<h2 class="text-xl font-black text-[#0f172a] flex items-center gap-2 font-['Outfit']">
 							<Trash2 class="w-5 h-5 text-rose-600" />
 							বাতিল ও ট্র্যাশ তালিকা ({trashedOrders.length})
 						</h2>
@@ -1417,7 +1419,7 @@
 					<div class="overflow-x-auto">
 						<table class="w-full text-left text-xs">
 							<thead>
-								<tr class="border-b border-slate-100 bg-slate-50 text-slate-500">
+								<tr class="border-b border-[#ede5d8] bg-[#faf7f2] text-slate-500">
 									<th class="py-3 px-4 font-bold">অর্ডার আইডি</th>
 									<th class="py-3 px-4 font-bold">কাস্টমার</th>
 									<th class="py-3 px-4 font-bold">ঠিকানা</th>
@@ -1425,7 +1427,7 @@
 									<th class="py-3 px-4 font-bold text-right">পুনরুদ্ধার</th>
 								</tr>
 							</thead>
-							<tbody class="divide-y divide-slate-100">
+							<tbody class="divide-y divide-[#f4eee4]">
 								{#if trashedOrders.length === 0}
 									<tr>
 										<td colspan="5" class="py-14 text-center text-slate-400">
@@ -1435,11 +1437,11 @@
 								{/if}
 
 								{#each trashedOrders as ord}
-									<tr class="hover:bg-slate-50">
+									<tr class="hover:bg-[#faf7f2]">
 										<td class="py-3.5 px-4 font-mono font-bold text-rose-600">{ord.id}</td>
-										<td class="py-3.5 px-4 font-bold text-slate-900">{ord.customerName}</td>
+										<td class="py-3.5 px-4 font-bold text-[#0f172a]">{ord.customerName}</td>
 										<td class="py-3.5 px-4 text-slate-500">{ord.shippingAddress}</td>
-										<td class="py-3.5 px-4 font-bold text-slate-900 font-['Outfit']">{formatTaka(ord.total)}</td>
+										<td class="py-3.5 px-4 font-bold text-[#0f172a] font-['Outfit']">{formatTaka(ord.total)}</td>
 										<td class="py-3.5 px-4 text-right">
 											<form action="?/restoreOrder" method="POST" use:enhance class="inline">
 												<input type="hidden" name="orderId" value={ord.id} />
@@ -1465,8 +1467,8 @@
 			{#if activeTab === 'inventory'}
 				<div class="space-y-6">
 					<div>
-						<h2 class="text-xl font-black text-slate-900 flex items-center gap-2 font-['Outfit']">
-							<Package class="w-5 h-5 text-blue-600" />
+						<h2 class="text-xl font-black text-[#0f172a] flex items-center gap-2 font-['Outfit']">
+							<Package class="w-5 h-5 text-[#c25e00]" />
 							প্রোডাক্ট ক্যাটালগ ও ইনভেন্টরি স্টক কন্ট্রোল
 						</h2>
 						<p class="text-xs text-slate-400 mt-1">
@@ -1476,27 +1478,27 @@
 
 					<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 						{#each data.products as prod}
-							<div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.03)] space-y-4 flex flex-col justify-between hover:shadow-md transition-shadow">
+							<div class="bg-white rounded-2xl border border-[#ede5d8] p-5 shadow-[0_2px_12px_rgba(180,83,9,0.03)] space-y-4 flex flex-col justify-between hover:shadow-md transition-shadow">
 								<div>
-									<div class="aspect-video w-full rounded-xl overflow-hidden bg-slate-100 mb-3 relative border border-slate-100">
+									<div class="aspect-video w-full rounded-xl overflow-hidden bg-[#faf7f2] mb-3 relative border border-[#ede5d8]">
 										<img src={prod.image} alt={prod.name} class="w-full h-full object-cover" />
 										{#if prod.badge}
-											<span class="absolute top-2 left-2 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-600 text-white shadow-xs">
+											<span class="absolute top-2 left-2 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#c25e00] text-white shadow-xs">
 												{prod.badge}
 											</span>
 										{/if}
 									</div>
 
 									<div class="flex items-center justify-between">
-										<h3 class="font-bold text-slate-900 text-base">{prod.name}</h3>
-										<span class="font-bold font-['Outfit'] text-blue-600 text-base">
+										<h3 class="font-bold text-[#0f172a] text-base">{prod.name}</h3>
+										<span class="font-bold font-['Outfit'] text-[#c25e00] text-base">
 											${(prod.price / 100).toFixed(0)}
 										</span>
 									</div>
 									<p class="text-xs text-slate-500 line-clamp-2 mt-1">{prod.tagline}</p>
 								</div>
 
-								<div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+								<div class="pt-3 border-t border-[#ede5d8] flex items-center justify-between">
 									<div>
 										{#if prod.inStock}
 											<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -1514,7 +1516,7 @@
 										<input type="hidden" name="inStock" value={prod.inStock ? 'false' : 'true'} />
 										<button
 											type="submit"
-											class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all {prod.inStock ? 'bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-700 border border-slate-200' : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm'}"
+											class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all {prod.inStock ? 'bg-[#faf7f2] hover:bg-rose-50 hover:text-rose-600 text-slate-700 border border-[#ede5d8]' : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm'}"
 										>
 											{prod.inStock ? 'স্টক বন্ধ করুন' : 'স্টক চালু করুন'}
 										</button>
@@ -1530,10 +1532,10 @@
 			<!-- TAB 6: COURIER & LOGISTICS HUB                 -->
 			<!-- ============================================== -->
 			{#if activeTab === 'courier'}
-				<div class="max-w-3xl bg-white rounded-2xl border border-slate-200/80 p-8 shadow-[0_2px_15px_rgba(0,0,0,0.04)] space-y-6">
+				<div class="max-w-3xl bg-white rounded-2xl border border-[#ede5d8] p-8 shadow-[0_2px_15px_rgba(180,83,9,0.04)] space-y-6">
 					<div>
-						<h2 class="text-xl font-black text-slate-900 flex items-center gap-2 font-['Outfit']">
-							<Truck class="w-5 h-5 text-blue-600" />
+						<h2 class="text-xl font-black text-[#0f172a] flex items-center gap-2 font-['Outfit']">
+							<Truck class="w-5 h-5 text-[#c25e00]" />
 							কুরিয়ার সার্ভিস ইন্টিগ্রেশন সেটিংস
 						</h2>
 						<p class="text-xs text-slate-500 mt-1">
@@ -1542,38 +1544,38 @@
 					</div>
 
 					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-						<div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+						<div class="p-4 rounded-xl bg-[#faf7f2] border border-[#ede5d8] space-y-2">
 							<div class="font-bold text-slate-900 text-xs uppercase tracking-wider">ঢাকা সিটির ভিতরে চার্জ</div>
 							<div class="flex items-center gap-2">
 								<span class="text-slate-400 font-bold">৳</span>
 								<input
 									type="number"
 									value="70"
-									class="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white font-['Outfit'] font-bold text-base"
+									class="w-full px-3 py-2 rounded-lg border border-[#ede5d8] bg-white font-['Outfit'] font-bold text-base"
 								/>
 							</div>
 						</div>
 
-						<div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+						<div class="p-4 rounded-xl bg-[#faf7f2] border border-[#ede5d8] space-y-2">
 							<div class="font-bold text-slate-900 text-xs uppercase tracking-wider">ঢাকা সিটির বাইরে চার্জ</div>
 							<div class="flex items-center gap-2">
 								<span class="text-slate-400 font-bold">৳</span>
 								<input
 									type="number"
 									value="130"
-									class="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white font-['Outfit'] font-bold text-base"
+									class="w-full px-3 py-2 rounded-lg border border-[#ede5d8] bg-white font-['Outfit'] font-bold text-base"
 								/>
 							</div>
 						</div>
 					</div>
 
-					<div class="space-y-4 pt-4 border-t border-slate-100">
+					<div class="space-y-4 pt-4 border-t border-[#ede5d8]">
 						<div class="space-y-1.5">
 							<label class="text-xs font-bold text-slate-700">Steadfast API Key</label>
 							<input
 								type="text"
 								placeholder="Steadfast API Key পেস্ট করুন..."
-								class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:border-blue-500 focus:outline-none font-mono"
+								class="w-full px-3.5 py-2.5 rounded-xl border border-[#ede5d8] bg-[#faf7f2]/50 text-xs focus:border-[#c25e00] focus:bg-white focus:outline-none font-mono"
 							/>
 						</div>
 
@@ -1582,7 +1584,7 @@
 							<input
 								type="password"
 								placeholder="••••••••••••••••"
-								class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:border-blue-500 focus:outline-none font-mono"
+								class="w-full px-3.5 py-2.5 rounded-xl border border-[#ede5d8] bg-[#faf7f2]/50 text-xs focus:border-[#c25e00] focus:bg-white focus:outline-none font-mono"
 							/>
 						</div>
 					</div>
@@ -1590,7 +1592,7 @@
 					<div class="flex justify-end">
 						<button
 							type="button"
-							class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-all"
+							class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#ea580c] to-[#d97706] hover:from-[#c2410c] hover:to-[#b45309] text-white font-bold text-xs shadow-md shadow-amber-600/20 transition-all"
 						>
 							<Save class="w-4 h-4" />
 							<span>কুরিয়ার সেটিংস সেভ করুন</span>
@@ -1603,10 +1605,10 @@
 			<!-- TAB 7: PIXELS & CAPI TRACKING                 -->
 			<!-- ============================================== -->
 			{#if activeTab === 'pixels'}
-				<div class="max-w-3xl bg-white rounded-2xl border border-slate-200/80 p-8 shadow-[0_2px_15px_rgba(0,0,0,0.04)] space-y-6">
+				<div class="max-w-3xl bg-white rounded-2xl border border-[#ede5d8] p-8 shadow-[0_2px_15px_rgba(180,83,9,0.04)] space-y-6">
 					<div>
-						<h2 class="text-xl font-black text-slate-900 flex items-center gap-2 font-['Outfit']">
-							<Radio class="w-5 h-5 text-blue-600" />
+						<h2 class="text-xl font-black text-[#0f172a] flex items-center gap-2 font-['Outfit']">
+							<Radio class="w-5 h-5 text-[#c25e00]" />
 							পিক্সেল ও কনভার্সন ট্র্যাকিং
 						</h2>
 						<p class="text-xs text-slate-500 mt-1">
@@ -1620,7 +1622,7 @@
 							<input
 								type="text"
 								placeholder="যেমন: 104928472918472"
-								class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:border-blue-500 focus:outline-none font-mono"
+								class="w-full px-3.5 py-2.5 rounded-xl border border-[#ede5d8] bg-[#faf7f2]/50 text-xs focus:border-[#c25e00] focus:bg-white focus:outline-none font-mono"
 							/>
 						</div>
 
@@ -1629,7 +1631,7 @@
 							<input
 								type="text"
 								placeholder="যেমন: C9284KJSHD8372"
-								class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:border-blue-500 focus:outline-none font-mono"
+								class="w-full px-3.5 py-2.5 rounded-xl border border-[#ede5d8] bg-[#faf7f2]/50 text-xs focus:border-[#c25e00] focus:bg-white focus:outline-none font-mono"
 							/>
 						</div>
 
@@ -1638,14 +1640,14 @@
 							<input
 								type="text"
 								placeholder="যেমন: GTM-XXXXXXX"
-								class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:border-blue-500 focus:outline-none font-mono"
+								class="w-full px-3.5 py-2.5 rounded-xl border border-[#ede5d8] bg-[#faf7f2]/50 text-xs focus:border-[#c25e00] focus:bg-white focus:outline-none font-mono"
 							/>
 						</div>
 
-						<div class="pt-4 border-t border-slate-100 flex justify-end">
+						<div class="pt-4 border-t border-[#ede5d8] flex justify-end">
 							<button
 								type="button"
-								class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-all"
+								class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#ea580c] to-[#d97706] hover:from-[#c2410c] hover:to-[#b45309] text-white font-bold text-xs shadow-md shadow-amber-600/20 transition-all"
 							>
 								<Save class="w-4 h-4" />
 								<span>পিক্সেল সেটিংস সেভ করুন</span>
@@ -1659,9 +1661,9 @@
 			<!-- TAB 8: CLOUDFLARE D1 DATABASE CONSOLE          -->
 			<!-- ============================================== -->
 			{#if activeTab === 'database'}
-				<div class="max-w-4xl bg-white rounded-2xl border border-slate-200/80 p-8 shadow-[0_2px_15px_rgba(0,0,0,0.04)] space-y-6">
+				<div class="max-w-4xl bg-white rounded-2xl border border-[#ede5d8] p-8 shadow-[0_2px_15px_rgba(180,83,9,0.04)] space-y-6">
 					<div>
-						<h2 class="text-xl font-black text-slate-900 flex items-center gap-2 font-['Outfit']">
+						<h2 class="text-xl font-black text-[#0f172a] flex items-center gap-2 font-['Outfit']">
 							<Database class="w-5 h-5 text-emerald-600" />
 							Cloudflare D1 Edge Database Console
 						</h2>
@@ -1671,26 +1673,26 @@
 					</div>
 
 					<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-						<div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+						<div class="p-4 rounded-xl bg-[#faf7f2] border border-[#ede5d8] space-y-1">
 							<div class="text-[10px] font-bold uppercase text-slate-400">Database Binding</div>
-							<div class="font-mono text-base font-black text-blue-600">env.DB</div>
+							<div class="font-mono text-base font-black text-[#c25e00]">env.DB</div>
 							<div class="text-[11px] text-slate-500">Connected through Cloudflare Worker</div>
 						</div>
 
-						<div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+						<div class="p-4 rounded-xl bg-[#faf7f2] border border-[#ede5d8] space-y-1">
 							<div class="text-[10px] font-bold uppercase text-slate-400">Database Name</div>
-							<div class="font-mono text-base font-black text-slate-900">aura</div>
+							<div class="font-mono text-base font-black text-[#0f172a]">aura</div>
 							<div class="text-[11px] text-slate-500">ID: 85e821c2-73e0-4490-b87a...</div>
 						</div>
 
-						<div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+						<div class="p-4 rounded-xl bg-[#faf7f2] border border-[#ede5d8] space-y-1">
 							<div class="text-[10px] font-bold uppercase text-slate-400">মোট টেবিল</div>
 							<div class="font-mono text-base font-black text-emerald-600">৮ টি টেবিল সক্রিয়</div>
 							<div class="text-[11px] text-slate-500">products, orders, reviews, newsletter</div>
 						</div>
 					</div>
 
-					<div class="pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+					<div class="pt-6 border-t border-[#ede5d8] flex flex-col sm:flex-row items-center justify-between gap-4">
 						<div>
 							<div class="font-bold text-slate-900 text-sm">ডেমো ক্যাটালগ ও অর্ডার রিসিঙ্ক (Seed Database)</div>
 							<div class="text-xs text-slate-500">ডাটাবেজে ডিফল্ট ২০টি লাইভ অর্ডার এবং প্রোডাক্ট পুনরায় সিঙ্ক করুন।</div>
@@ -1713,11 +1715,11 @@
 			<!-- TAB 9: CUSTOMERS & VIP CLUB                    -->
 			<!-- ============================================== -->
 			{#if activeTab === 'customers'}
-				<div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)] space-y-4">
+				<div class="bg-white rounded-2xl border border-[#ede5d8] p-6 shadow-[0_2px_12px_rgba(180,83,9,0.03)] space-y-4">
 					<div class="flex items-center justify-between">
 						<div>
-							<h2 class="text-xl font-black text-slate-900 flex items-center gap-2 font-['Outfit']">
-								<Users class="w-5 h-5 text-indigo-600" />
+							<h2 class="text-xl font-black text-[#0f172a] flex items-center gap-2 font-['Outfit']">
+								<Users class="w-5 h-5 text-[#c25e00]" />
 								ভিআইপি অডিয়েন্স ও সাবস্ক্রাইবার তালিকা
 							</h2>
 							<p class="text-xs text-slate-400">ল্যান্ডিং পেজ থেকে সংগ্রহ করা ভেরিফায়েড লিডস।</p>
@@ -1733,7 +1735,7 @@
 								a.download = 'aura-leads.csv';
 								a.click();
 							}}
-							class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs shadow-2xs"
+							class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-[#ede5d8] text-slate-700 hover:bg-[#fff7ed] font-bold text-xs shadow-2xs"
 						>
 							<Download class="w-3.5 h-3.5 text-slate-500" />
 							<span>CSV এক্সপোর্ট</span>
@@ -1743,21 +1745,21 @@
 					<div class="overflow-x-auto">
 						<table class="w-full text-left text-xs">
 							<thead>
-								<tr class="border-b border-slate-100 bg-slate-50 text-slate-500">
+								<tr class="border-b border-[#ede5d8] bg-[#faf7f2] text-slate-500">
 									<th class="py-3 px-4 font-bold">ইমেইল ঠিকানা</th>
 									<th class="py-3 px-4 font-bold">নিবন্ধনের তারিখ</th>
 									<th class="py-3 px-4 font-bold text-right">অ্যাকশন</th>
 								</tr>
 							</thead>
-							<tbody class="divide-y divide-slate-100">
+							<tbody class="divide-y divide-[#f4eee4]">
 								{#each data.newsletter as sub}
-									<tr class="hover:bg-slate-50">
-										<td class="py-3.5 px-4 font-mono font-bold text-blue-600">{sub.email}</td>
+									<tr class="hover:bg-[#faf7f2]">
+										<td class="py-3.5 px-4 font-mono font-bold text-[#c25e00]">{sub.email}</td>
 										<td class="py-3.5 px-4 text-slate-500">{new Date(sub.createdAt).toLocaleDateString()}</td>
 										<td class="py-3.5 px-4 text-right">
 											<button
 												onclick={() => copyToClipboard(sub.email, sub.email)}
-												class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
+												class="px-2.5 py-1 rounded-lg bg-[#faf7f2] hover:bg-[#ede5d8] text-slate-700 font-bold text-xs"
 											>
 												{isCopied === sub.email ? 'কপি হয়েছে!' : 'ইমেইল কপি'}
 											</button>

@@ -174,7 +174,7 @@ const INITIAL_ORDERS = [
 			}
 		]),
 		total: 2100,
-		status: 'no_response_3' // ৩য় বার নো রেসপন্স
+		status: 'good_no_response' // গুড বাট নো রেসপন্স
 	},
 	{
 		id: '84654',
@@ -520,6 +520,7 @@ function normalizeOrderStatus(status: string): string {
 	if (status === 'processing') return 'entry_done';
 	if (status === 'dispatched') return 'shipped';
 	if (status === 'refunded') return 'cancelled';
+	if (status === 'no_response_3') return 'good_no_response';
 	return status;
 }
 
@@ -594,7 +595,7 @@ export const load: PageServerLoad = async ({ platform }) => {
 	const confirmedRevenue = confirmedOrders.reduce((acc, o) => acc + (o.total || 0), 0);
 	
 	const cancelledOrReturnedOrders = ordersList.filter(o => ['cancelled', 'returned'].includes(o.status));
-	const pendingWebOrders = ordersList.filter(o => ['pending', 'incomplete', 'no_response', 'no_response_3', 'busy', 'hold', 'recall'].includes(o.status));
+	const pendingWebOrders = ordersList.filter(o => ['pending', 'incomplete', 'no_response', 'no_response_3', 'good_no_response', 'busy', 'hold', 'recall'].includes(o.status));
 
 	const confirmedRate = totalOrders > 0 ? ((confirmedOrders.length / totalOrders) * 100).toFixed(1) : '0.0';
 	const deliveredRate = totalOrders > 0 ? ((deliveredOrders.length / totalOrders) * 100).toFixed(1) : '0.0';

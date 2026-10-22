@@ -67,7 +67,12 @@
 		ClipboardCheck,
 		AlertCircle,
 		Inbox,
-		Send
+		Send,
+		ThumbsUp,
+		Menu,
+		X,
+		MapPin,
+		User
 	} from 'lucide-svelte';
 	import type { PageData } from './$types';
 
@@ -127,11 +132,12 @@
 	// ==============================================================
 
 	// ১. ওয়েব অর্ডার (Pre-Confirmation: কনফার্মেশনের আগের পর্যায় - Image 1)
+	// User Requirement: "৩য় বার নো রেসপন্স" এর জায়গায় "গুড বাট নো রেসপন্স" (Good but no response)
 	const WEB_ORDER_STATUS_TABS = [
 		{ id: 'pending', label: 'পেন্ডিং', icon: Clock },
 		{ id: 'incomplete', label: 'ইনকমপ্লিট', icon: AlertTriangle },
 		{ id: 'no_response', label: 'নো রেসপন্স', icon: PhoneMissed },
-		{ id: 'no_response_3', label: '৩য় বার নো রেসপন্স', icon: PhoneOff },
+		{ id: 'good_no_response', label: 'গুড বাট নো রেসপন্স', icon: ThumbsUp },
 		{ id: 'busy', label: 'বিজি', icon: Phone },
 		{ id: 'hold', label: 'হোল্ড', icon: PauseCircle },
 		{ id: 'recall', label: 'রি', icon: RotateCcw },
@@ -160,6 +166,7 @@
 		'incomplete',
 		'no_response',
 		'no_response_3',
+		'good_no_response',
 		'busy',
 		'hold',
 		'recall'
@@ -193,7 +200,12 @@
 				order.customerName.toLowerCase().includes(query) ||
 				order.customerEmail.toLowerCase().includes(query) ||
 				order.shippingAddress.toLowerCase().includes(query);
-			const matchesStatus = webStatusFilter === 'all' || order.status === webStatusFilter;
+			
+			// Match status (including mapping no_response_3 to good_no_response)
+			let currentStatus = order.status;
+			if (currentStatus === 'no_response_3') currentStatus = 'good_no_response';
+			
+			const matchesStatus = webStatusFilter === 'all' || currentStatus === webStatusFilter;
 			return matchesSearch && matchesStatus;
 		})
 	);
@@ -279,8 +291,9 @@
 				return { label: 'ইনকমপ্লিট', icon: AlertTriangle, bg: 'bg-[#fff7ed]', text: 'text-[#c2410c]', border: 'border-[#fed7aa]' };
 			case 'no_response':
 				return { label: 'নো রেসপন্স', icon: PhoneMissed, bg: 'bg-[#f8fafc]', text: 'text-[#475569]', border: 'border-[#e2e8f0]' };
+			case 'good_no_response':
 			case 'no_response_3':
-				return { label: '৩য় বার নো রেসপন্স', icon: PhoneOff, bg: 'bg-[#faf5ff]', text: 'text-[#7e22ce]', border: 'border-[#f3e8ff]' };
+				return { label: 'গুড বাট নো রেসপন্স', icon: ThumbsUp, bg: 'bg-[#faf5ff]', text: 'text-[#7e22ce]', border: 'border-[#f3e8ff]' };
 			case 'busy':
 				return { label: 'বিজি', icon: Phone, bg: 'bg-[#f0f9ff]', text: 'text-[#0369a1]', border: 'border-[#e0f2fe]' };
 			case 'hold':
@@ -320,8 +333,8 @@
 	<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </svelte:head>
 
-<!-- Fullscreen Warm Ivory / Terracotta Amber Executive Dashboard (NO EMOJIS - PURE VECTOR ICONS) -->
-<div class="min-h-screen bg-[#faf7f2] text-slate-800 flex font-['Hind_Siliguri',sans-serif] selection:bg-[#d97706]/20 selection:text-[#9a3412] antialiased">
+<!-- Fullscreen Warm Ivory / Terracotta Amber Executive Dashboard (NO EMOJIS - 100% RESPONSIVE) -->
+<div class="min-h-screen bg-[#faf7f2] text-slate-800 flex flex-col md:flex-row font-['Hind_Siliguri',sans-serif] selection:bg-[#d97706]/20 selection:text-[#9a3412] antialiased">
 
 	<!-- ============================================== -->
 	<!-- 1. HIGH-END EXECUTIVE MIDNIGHT SIDEBAR        -->
@@ -332,18 +345,18 @@
 		<div class="flex-1 flex flex-col min-h-0 overflow-y-auto">
 			
 			<!-- Workspace / Store Brand Header -->
-			<div class="h-20 flex items-center justify-between px-5 border-b border-slate-800/60 bg-[#0e1424]/40">
+			<div class="h-16 md:h-20 flex items-center justify-between px-4 md:px-5 border-b border-slate-800/60 bg-[#0e1424]/40">
 				<a href="/admin" class="flex items-center gap-3 group">
-					<div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#ea580c] via-[#d97706] to-[#f59e0b] p-[1.5px] shadow-lg shadow-amber-600/25 transition-transform group-hover:scale-105">
+					<div class="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gradient-to-tr from-[#ea580c] via-[#d97706] to-[#f59e0b] p-[1.5px] shadow-lg shadow-amber-600/25 transition-transform group-hover:scale-105">
 						<div class="w-full h-full bg-[#0c101a] rounded-[10px] flex items-center justify-center">
-							<Flame class="w-5 h-5 text-[#f59e0b] fill-[#f59e0b]/20" />
+							<Flame class="w-4 h-4 md:w-5 md:h-5 text-[#f59e0b] fill-[#f59e0b]/20" />
 						</div>
 					</div>
 					
 					{#if !isSidebarCollapsed}
 						<div class="flex flex-col">
 							<div class="flex items-center gap-1.5">
-								<span class="font-['Outfit'] font-black text-lg text-white tracking-wide">AURA</span>
+								<span class="font-['Outfit'] font-black text-base md:text-lg text-white tracking-wide">AURA</span>
 								<span class="px-1.5 py-0.2 rounded text-[8px] font-black uppercase tracking-widest bg-[#d97706]/20 text-[#fbbf24] border border-[#d97706]/30">
 									PRO
 								</span>
@@ -353,20 +366,31 @@
 					{/if}
 				</a>
 
-				<!-- Collapse toggle button for desktop -->
-				{#if !isSidebarCollapsed}
+				<!-- Desktop Collapse / Mobile Close -->
+				<div class="flex items-center gap-1">
+					{#if !isSidebarCollapsed}
+						<button
+							onclick={() => isSidebarCollapsed = true}
+							class="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors"
+							title="সাইডবার সংকুচিত করুন"
+							aria-label="Collapse sidebar"
+						>
+							<PanelLeftClose class="w-4 h-4" />
+						</button>
+					{/if}
+					
+					<!-- Mobile Drawer Close Button (X) -->
 					<button
-						onclick={() => isSidebarCollapsed = true}
-						class="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors"
-						title="সাইডবার সংকুচিত করুন"
-						aria-label="Collapse sidebar"
+						onclick={() => isMobileSidebarOpen = false}
+						class="md:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+						aria-label="Close sidebar"
 					>
-						<PanelLeftClose class="w-4 h-4" />
+						<X class="w-5 h-5" />
 					</button>
-				{/if}
+				</div>
 			</div>
 
-			<!-- Sidebar Quick Global Search Bar -->
+			<!-- Sidebar Quick Search Bar -->
 			{#if !isSidebarCollapsed}
 				<div class="p-3">
 					<div class="relative">
@@ -382,7 +406,7 @@
 			{/if}
 
 			<!-- Navigation Links Menu -->
-			<nav class="p-3 space-y-6">
+			<nav class="p-3 space-y-5">
 				
 				<!-- Section 0: ওভারভিউ -->
 				<div>
@@ -693,198 +717,200 @@
 	<!-- ============================================== -->
 	<div class="flex-1 flex flex-col min-w-0 min-h-screen">
 		
-		<!-- TOP WORKSPACE HEADER (Warm Ivory / Polaris style) -->
-		<header class="h-16 bg-white/95 backdrop-blur-md border-b border-[#ede5d8] px-6 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
-			<div class="flex items-center gap-4">
+		<!-- TOP WORKSPACE HEADER (Responsive layout) -->
+		<header class="h-16 bg-white/95 backdrop-blur-md border-b border-[#ede5d8] px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
+			<div class="flex items-center gap-3 sm:gap-4 min-w-0">
 				<!-- Mobile Sidebar Toggle -->
 				<button
 					onclick={() => isMobileSidebarOpen = !isMobileSidebarOpen}
-					class="md:hidden p-2 rounded-lg text-slate-600 hover:bg-[#faf7f2]"
+					class="md:hidden p-2 rounded-xl text-slate-700 bg-[#faf7f2] border border-[#ede5d8] hover:bg-[#fff7ed] transition-colors shrink-0"
 					aria-label="Open sidebar"
 				>
-					<PanelLeftOpen class="w-5 h-5" />
+					<Menu class="w-5 h-5" />
 				</button>
 
 				<!-- Breadcrumb Header -->
-				<div class="flex items-center gap-2 text-xs font-medium text-slate-500">
-					<span>AURA ড্যাশবোর্ড</span>
-					<span>/</span>
-					<span class="text-slate-900 font-bold capitalize">
+				<div class="flex items-center gap-1.5 sm:gap-2 text-xs font-medium text-slate-500 truncate">
+					<span class="hidden sm:inline">AURA ড্যাশবোর্ড</span>
+					<span class="hidden sm:inline">/</span>
+					<span class="text-slate-900 font-bold capitalize truncate">
 						{#if activeTab === 'overview'}ওভারভিউ ও অ্যানালিটিক্স
-						{:else if activeTab === 'web_orders' || activeTab === 'orders'}ওয়েব অর্ডার (কনফার্মেশনের পূর্বে)
-						{:else if activeTab === 'order_list'}অর্ডার তালিকা (কুরিয়ার ও ফুলফিলমেন্ট)
-						{:else if activeTab === 'pre_order'}প্রি-অর্ডার পাইপলাইন
-						{:else if activeTab === 'new_order'}নতুন ম্যানুয়াল অর্ডার তৈরি
+						{:else if activeTab === 'web_orders' || activeTab === 'orders'}ওয়েব অর্ডার
+						{:else if activeTab === 'order_list'}অর্ডার তালিকা
+						{:else if activeTab === 'pre_order'}প্রি-অর্ডার
+						{:else if activeTab === 'new_order'}ম্যানুয়াল অর্ডার
 						{:else if activeTab === 'inventory'}প্রোডাক্ট ইনভেন্টরি
 						{:else if activeTab === 'courier'}কুরিয়ার লজিস্টিকস
 						{:else if activeTab === 'pixels'}পিক্সেল ট্র্যাকিং
 						{:else if activeTab === 'customers'}ভিআইপি গ্রাহক
-						{:else if activeTab === 'trash'}বাতিল ও মুছে ফেলা
-						{:else if activeTab === 'database'}Cloudflare D1 সেটিংস
+						{:else if activeTab === 'trash'}মুছে ফেলা
+						{:else if activeTab === 'database'}D1 সেটিংস
 						{/if}
 					</span>
 				</div>
 			</div>
 
 			<!-- Header Right Action Tools -->
-			<div class="flex items-center gap-3">
+			<div class="flex items-center gap-2 sm:gap-3 shrink-0">
 				<!-- Live Store Quick Link -->
 				<a
 					href="/"
 					target="_blank"
-					class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#ede5d8] text-xs font-bold text-slate-700 bg-white hover:bg-[#fff7ed] hover:border-amber-300 transition-all shadow-2xs"
+					class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-[#ede5d8] text-xs font-bold text-slate-700 bg-white hover:bg-[#fff7ed] hover:border-amber-300 transition-all shadow-2xs"
+					title="লাইভ স্টোর ভিজিট"
 				>
 					<ExternalLink class="w-3.5 h-3.5 text-[#c25e00]" />
-					<span>লাইভ স্টোর ভিজিট</span>
+					<span class="hidden sm:inline">লাইভ স্টোর</span>
 				</a>
 
 				<!-- Quick Create Order Button -->
 				<button
 					onclick={() => activeTab = 'new_order'}
-					class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#ea580c] to-[#d97706] hover:from-[#c2410c] hover:to-[#b45309] text-white font-bold text-xs shadow-md shadow-amber-600/20 transition-all hover:scale-[1.02]"
+					class="flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#ea580c] to-[#d97706] hover:from-[#c2410c] hover:to-[#b45309] text-white font-bold text-xs shadow-md shadow-amber-600/20 transition-all hover:scale-[1.02]"
 				>
 					<PlusCircle class="w-3.5 h-3.5" />
-					<span>নতুন অর্ডার</span>
+					<span class="hidden sm:inline">নতুন অর্ডার</span>
+					<span class="sm:hidden">অর্ডার</span>
 				</button>
 			</div>
 		</header>
 
 		<!-- Courier Sync Toast Banner (If Triggered) -->
 		{#if courierSyncMessage}
-			<div class="bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white px-6 py-2.5 flex items-center justify-between text-xs font-bold shadow-md transition-all">
-				<div class="flex items-center gap-2">
-					<RefreshCw class="w-4 h-4 {isCourierSyncing ? 'animate-spin' : ''}" />
-					<span>{courierSyncMessage}</span>
+			<div class="bg-gradient-to-r from-[#ea580c] to-[#d97706] text-white px-4 sm:px-6 py-2.5 flex items-center justify-between text-xs font-bold shadow-md transition-all">
+				<div class="flex items-center gap-2 truncate">
+					<RefreshCw class="w-4 h-4 shrink-0 {isCourierSyncing ? 'animate-spin' : ''}" />
+					<span class="truncate">{courierSyncMessage}</span>
 				</div>
-				<button onclick={() => courierSyncMessage = null} class="text-white/80 hover:text-white">
-					<XCircle class="w-4 h-4" />
+				<button onclick={() => courierSyncMessage = null} class="text-white/80 hover:text-white p-1">
+					<X class="w-4 h-4" />
 				</button>
 			</div>
 		{/if}
 
-		<!-- WORKSPACE BODY CONTENT AREA -->
-		<main class="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl w-full mx-auto">
+		<!-- WORKSPACE BODY CONTENT AREA (Full Width & Responsive Padding) -->
+		<main class="flex-1 p-3 sm:p-5 lg:p-8 space-y-4 sm:space-y-6 max-w-7xl w-full mx-auto">
 			
 			<!-- ============================================== -->
 			<!-- TAB 0: EXECUTIVE OVERVIEW                      -->
 			<!-- ============================================== -->
 			{#if activeTab === 'overview'}
-				<!-- 6 KPI Metric Summary Cards -->
-				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+				<!-- 6 KPI Metric Summary Cards (Responsive 2 cols on mobile, 3 on tablet, 6 on desktop) -->
+				<div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
 					
 					<!-- 1. Total Revenue -->
-					<div class="bg-white p-4 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-[0_4px_16px_rgba(180,83,9,0.08)] transition-all">
-						<div class="flex items-center justify-between mb-2">
-							<span class="text-xs font-bold text-slate-500">মোট বিক্রয়</span>
-							<div class="w-8 h-8 rounded-lg bg-[#fff7ed] flex items-center justify-center text-[#c25e00]">
-								<DollarSign class="w-4 h-4" />
+					<div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-[0_4px_16px_rgba(180,83,9,0.08)] transition-all">
+						<div class="flex items-center justify-between mb-1 sm:mb-2">
+							<span class="text-[11px] sm:text-xs font-bold text-slate-500">মোট বিক্রয়</span>
+							<div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#fff7ed] flex items-center justify-center text-[#c25e00]">
+								<DollarSign class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
 							</div>
 						</div>
-						<div class="text-xl font-black text-[#0f172a] font-['Outfit']">
+						<div class="text-base sm:text-xl font-black text-[#0f172a] font-['Outfit'] truncate">
 							{formatTaka(data.stats.totalRevenue)}
 						</div>
-						<div class="mt-2 flex items-center gap-1 text-[11px] font-bold text-emerald-600">
+						<div class="mt-1 flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-emerald-600">
 							<TrendingUp class="w-3 h-3" />
-							<span>+১৮.৪% প্রবৃদ্ধি</span>
+							<span>+১৮.৪%</span>
 						</div>
 					</div>
 
 					<!-- 2. Web Orders (Pre-Confirmation) -->
 					<button
 						onclick={() => activeTab = 'web_orders'}
-						class="text-left bg-white p-4 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-[0_4px_16px_rgba(180,83,9,0.08)] transition-all"
+						class="text-left bg-white p-3.5 sm:p-4 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-[0_4px_16px_rgba(180,83,9,0.08)] transition-all"
 					>
-						<div class="flex items-center justify-between mb-2">
-							<span class="text-xs font-bold text-slate-500">ওয়েব অর্ডার</span>
-							<div class="w-8 h-8 rounded-lg bg-[#fffbeb] flex items-center justify-center text-[#b45309]">
-								<Inbox class="w-4 h-4" />
+						<div class="flex items-center justify-between mb-1 sm:mb-2">
+							<span class="text-[11px] sm:text-xs font-bold text-slate-500">ওয়েব অর্ডার</span>
+							<div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#fffbeb] flex items-center justify-center text-[#b45309]">
+								<Inbox class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
 							</div>
 						</div>
-						<div class="text-xl font-black text-[#0f172a] font-['Outfit']">
+						<div class="text-base sm:text-xl font-black text-[#0f172a] font-['Outfit']">
 							{webOrders.length} টি
 						</div>
-						<div class="mt-2 text-[11px] font-bold text-amber-700">
-							কল ও কনফার্মেশন প্রয়োজন
+						<div class="mt-1 text-[10px] sm:text-[11px] font-bold text-amber-700 truncate">
+							কল প্রয়োজন
 						</div>
 					</button>
 
 					<!-- 3. Confirmed Orders (Order List) -->
 					<button
 						onclick={() => activeTab = 'order_list'}
-						class="text-left bg-white p-4 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-[0_4px_16px_rgba(180,83,9,0.08)] transition-all"
+						class="text-left bg-white p-3.5 sm:p-4 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-[0_4px_16px_rgba(180,83,9,0.08)] transition-all"
 					>
-						<div class="flex items-center justify-between mb-2">
-							<span class="text-xs font-bold text-slate-500">কনফার্মড অর্ডার</span>
-							<div class="w-8 h-8 rounded-lg bg-[#ecfdf5] flex items-center justify-center text-[#047857]">
-								<CheckCircle2 class="w-4 h-4" />
+						<div class="flex items-center justify-between mb-1 sm:mb-2">
+							<span class="text-[11px] sm:text-xs font-bold text-slate-500">কনফার্মড</span>
+							<div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#ecfdf5] flex items-center justify-center text-[#047857]">
+								<CheckCircle2 class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
 							</div>
 						</div>
-						<div class="text-xl font-black text-[#0f172a] font-['Outfit']">
+						<div class="text-base sm:text-xl font-black text-[#0f172a] font-['Outfit']">
 							{orderListOrders.length} টি
 						</div>
-						<div class="mt-2 text-[11px] font-bold text-emerald-600">
-							কুরিয়ার ও ডেলিভারি পাইপলাইন
+						<div class="mt-1 text-[10px] sm:text-[11px] font-bold text-emerald-600 truncate">
+							ডেলিভারি পাইপলাইন
 						</div>
 					</button>
 
 					<!-- 4. Delivered Orders -->
-					<div class="bg-white p-4 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-[0_4px_16px_rgba(180,83,9,0.08)] transition-all">
-						<div class="flex items-center justify-between mb-2">
-							<span class="text-xs font-bold text-slate-500">ডেলিভারড</span>
-							<div class="w-8 h-8 rounded-lg bg-[#f0fdf4] flex items-center justify-center text-[#166534]">
-								<Truck class="w-4 h-4" />
+					<div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-[0_4px_16px_rgba(180,83,9,0.08)] transition-all">
+						<div class="flex items-center justify-between mb-1 sm:mb-2">
+							<span class="text-[11px] sm:text-xs font-bold text-slate-500">ডেলিভারড</span>
+							<div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#f0fdf4] flex items-center justify-center text-[#166534]">
+								<Truck class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
 							</div>
 						</div>
-						<div class="text-xl font-black text-[#0f172a] font-['Outfit']">
+						<div class="text-base sm:text-xl font-black text-[#0f172a] font-['Outfit']">
 							{data.stats.deliveredCount} টি
 						</div>
-						<div class="mt-2 text-[11px] font-bold text-emerald-600">
-							{data.stats.deliveredRate}% সাকসেস রেট
+						<div class="mt-1 text-[10px] sm:text-[11px] font-bold text-emerald-600">
+							{data.stats.deliveredRate}% সাকসেস
 						</div>
 					</div>
 
 					<!-- 5. Trashed / Cancelled -->
 					<button
 						onclick={() => activeTab = 'trash'}
-						class="text-left bg-white p-4 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-[0_4px_16px_rgba(180,83,9,0.08)] transition-all"
+						class="text-left bg-white p-3.5 sm:p-4 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-[0_4px_16px_rgba(180,83,9,0.08)] transition-all"
 					>
-						<div class="flex items-center justify-between mb-2">
-							<span class="text-xs font-bold text-slate-500">বাতিল / ট্র্যাশ</span>
-							<div class="w-8 h-8 rounded-lg bg-[#fff1f2] flex items-center justify-center text-[#be123c]">
-								<Trash2 class="w-4 h-4" />
+						<div class="flex items-center justify-between mb-1 sm:mb-2">
+							<span class="text-[11px] sm:text-xs font-bold text-slate-500">বাতিল</span>
+							<div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#fff1f2] flex items-center justify-center text-[#be123c]">
+								<Trash2 class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
 							</div>
 						</div>
-						<div class="text-xl font-black text-[#0f172a] font-['Outfit']">
+						<div class="text-base sm:text-xl font-black text-[#0f172a] font-['Outfit']">
 							{trashedOrders.length} টি
 						</div>
-						<div class="mt-2 text-[11px] font-bold text-rose-600">
+						<div class="mt-1 text-[10px] sm:text-[11px] font-bold text-rose-600">
 							{data.stats.cancelledRate}% বাতিল হার
 						</div>
 					</button>
 
 					<!-- 6. Average Order Value -->
-					<div class="bg-white p-4 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-[0_4px_16px_rgba(180,83,9,0.08)] transition-all">
-						<div class="flex items-center justify-between mb-2">
-							<span class="text-xs font-bold text-slate-500">গড় অর্ডার (AOV)</span>
-							<div class="w-8 h-8 rounded-lg bg-[#fff7ed] flex items-center justify-center text-[#c25e00]">
-								<Tag class="w-4 h-4" />
+					<div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] hover:shadow-[0_4px_16px_rgba(180,83,9,0.08)] transition-all">
+						<div class="flex items-center justify-between mb-1 sm:mb-2">
+							<span class="text-[11px] sm:text-xs font-bold text-slate-500">গড় অর্ডার (AOV)</span>
+							<div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#fff7ed] flex items-center justify-center text-[#c25e00]">
+								<Tag class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
 							</div>
 						</div>
-						<div class="text-xl font-black text-[#0f172a] font-['Outfit']">
+						<div class="text-base sm:text-xl font-black text-[#0f172a] font-['Outfit'] truncate">
 							{formatTaka(data.stats.aov)}
 						</div>
-						<div class="mt-2 text-[11px] font-bold text-slate-500">
-							প্রতি কার্ট মূল্য
+						<div class="mt-1 text-[10px] sm:text-[11px] font-bold text-slate-500 truncate">
+							প্রতি কার্ট ভ্যালু
 						</div>
 					</div>
 				</div>
 
 				<!-- Visual Dual Analytics Section -->
-				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+				<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
 					
 					<!-- Left 2 Cols: Smooth Vector Area Sales Spline Chart -->
-					<div class="lg:col-span-2 bg-white p-5 rounded-2xl border border-[#ede5d8] shadow-[0_2px_12px_rgba(180,83,9,0.03)] flex flex-col justify-between">
-						<div class="flex items-center justify-between mb-4 pb-3 border-b border-[#ede5d8]">
+					<div class="lg:col-span-2 bg-white p-4 sm:p-5 rounded-2xl border border-[#ede5d8] shadow-[0_2px_12px_rgba(180,83,9,0.03)] flex flex-col justify-between">
+						<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4 pb-3 border-b border-[#ede5d8]">
 							<div>
 								<h3 class="text-sm font-black text-[#0f172a]">৭ দিনের বিক্রয় ও অর্ডার প্রবাহ</h3>
 								<p class="text-xs text-slate-400">লাইভ রেভিনিউ ট্রেন্ড ও ডেলিভারি ট্র্যাকিং</p>
@@ -892,18 +918,18 @@
 							<div class="flex items-center gap-3 text-xs">
 								<div class="flex items-center gap-1.5">
 									<span class="w-2.5 h-2.5 rounded-full bg-[#ea580c]"></span>
-									<span class="text-slate-600 font-bold">বিক্রয় (টাকা)</span>
+									<span class="text-slate-600 font-bold">বিক্রয়</span>
 								</div>
 								<div class="flex items-center gap-1.5">
 									<span class="w-2.5 h-2.5 rounded-full bg-[#d97706]"></span>
-									<span class="text-slate-600 font-bold">অর্ডার সংখ্যা</span>
+									<span class="text-slate-600 font-bold">অর্ডার</span>
 								</div>
 							</div>
 						</div>
 
-						<!-- Interactive SVG Chart Canvas -->
-						<div class="relative w-full h-56 flex items-center justify-center">
-							<svg viewBox="0 0 640 220" class="w-full h-full overflow-visible">
+						<!-- Interactive SVG Chart Canvas (Responsive) -->
+						<div class="relative w-full h-48 sm:h-56 flex items-center justify-center overflow-x-auto">
+							<svg viewBox="0 0 640 220" class="w-full h-full min-w-[500px] sm:min-w-0 overflow-visible">
 								<defs>
 									<linearGradient id="areaGradientSales" x1="0" y1="0" x2="0" y2="1">
 										<stop offset="0%" stop-color="#ea580c" stop-opacity="0.25" />
@@ -946,6 +972,9 @@
 								<!-- Interactive Points -->
 								{#each trendData as pt}
 									<circle
+										role="button"
+										tabindex="0"
+										aria-label={`${pt.date}: ${pt.sales} Taka`}
 										cx={pt.x}
 										cy={pt.ySales}
 										r="5"
@@ -963,21 +992,21 @@
 							</svg>
 						</div>
 
-						<div class="mt-3 flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-[#ede5d8]">
+						<div class="mt-3 flex items-center justify-between text-[11px] sm:text-xs text-slate-500 pt-2 border-t border-[#ede5d8]">
 							<span>সর্বোচ্চ সেলস: ২১ অক্টো (৳৫,৯০০)</span>
 							<span>সাপ্তাহিক মোট: ৳২২,৮০০</span>
 						</div>
 					</div>
 
 					<!-- Right 1 Col: Donut Status Ratio -->
-					<div class="bg-white p-5 rounded-2xl border border-[#ede5d8] shadow-[0_2px_12px_rgba(180,83,9,0.03)] flex flex-col justify-between">
+					<div class="bg-white p-4 sm:p-5 rounded-2xl border border-[#ede5d8] shadow-[0_2px_12px_rgba(180,83,9,0.03)] flex flex-col justify-between">
 						<div>
 							<h3 class="text-sm font-black text-[#0f172a]">অর্ডার স্থিতি বিভাজন</h3>
 							<p class="text-xs text-slate-400">লাইভ পাইপলাইন অনুপাত</p>
 						</div>
 
 						<div class="my-4 flex items-center justify-center">
-							<div class="relative w-36 h-36 flex items-center justify-center">
+							<div class="relative w-32 h-32 sm:w-36 sm:h-36 flex items-center justify-center">
 								<svg viewBox="0 0 100 100" class="w-full h-full -rotate-90">
 									<circle cx="50" cy="50" r="40" stroke="#f4eee4" stroke-width="12" fill="none" />
 									<circle
@@ -989,7 +1018,7 @@
 									/>
 								</svg>
 								<div class="absolute inset-0 flex flex-col items-center justify-center text-center">
-									<span class="text-2xl font-black text-[#0f172a] font-['Outfit']">{data.stats.deliveredRate}%</span>
+									<span class="text-xl sm:text-2xl font-black text-[#0f172a] font-['Outfit']">{data.stats.deliveredRate}%</span>
 									<span class="text-[9px] font-bold text-slate-400 uppercase">ডেলিভারড</span>
 								</div>
 							</div>
@@ -1023,20 +1052,22 @@
 			{/if}
 
 			<!-- ============================================================== -->
-			<!-- TAB 1: ওয়েব অর্ডার (Pre-Confirmation - Exact Match to Image 1)-->
+			<!-- TAB 1: ওয়েব অর্ডার (Pre-Confirmation - Image 1 + Responsive)    -->
 			<!-- ============================================================== -->
 			{#if activeTab === 'web_orders' || activeTab === 'orders'}
-				<div class="space-y-4">
+				<div class="space-y-3 sm:space-y-4">
 					
-					<!-- Top Pre-Confirmation Status Filter Tabs (Matches Image 1) -->
-					<div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+					<!-- Top Pre-Confirmation Status Filter Tabs (Swipeable on Mobile) -->
+					<div class="flex items-center gap-2 overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-none">
 						{#each WEB_ORDER_STATUS_TABS as tab}
 							{@const count = tab.id === 'all' 
 								? webOrders.length 
-								: webOrders.filter(o => o.status === tab.id).length}
+								: tab.id === 'good_no_response'
+									? webOrders.filter(o => o.status === 'good_no_response' || o.status === 'no_response_3').length
+									: webOrders.filter(o => o.status === tab.id).length}
 							<button
 								onclick={() => webStatusFilter = tab.id}
-								class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold shrink-0 transition-all shadow-2xs border {webStatusFilter === tab.id
+								class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-bold shrink-0 transition-all shadow-2xs border {webStatusFilter === tab.id
 									? 'bg-[#fffbeb] text-[#92400e] border-[#f59e0b] ring-1 ring-[#f59e0b]/40 shadow-xs'
 									: 'bg-white hover:bg-[#faf7f2] text-slate-700 border-[#ede5d8]'}"
 							>
@@ -1049,8 +1080,8 @@
 						{/each}
 					</div>
 
-					<!-- Subheader Search and Date Filter Ribbon (Matches Image 1) -->
-					<div class="bg-white p-3.5 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+					<!-- Subheader Search and Date Filter Ribbon (Responsive Stacking) -->
+					<div class="bg-white p-3 sm:p-3.5 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
 						<div class="relative flex-1 max-w-md">
 							<Search class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
 							<input
@@ -1062,11 +1093,11 @@
 						</div>
 
 						<div class="flex items-center gap-2">
-							<div class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#faf7f2] border border-[#ede5d8] text-xs font-bold text-slate-700">
-								<Clock class="w-3.5 h-3.5 text-slate-400" />
+							<div class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#faf7f2] border border-[#ede5d8] text-xs font-bold text-slate-700 flex-1 sm:flex-none">
+								<Clock class="w-3.5 h-3.5 text-slate-400 shrink-0" />
 								<select
 									bind:value={activeDateFilter}
-									class="bg-transparent focus:outline-none cursor-pointer"
+									class="bg-transparent focus:outline-none cursor-pointer w-full text-xs"
 								>
 									<option value="all">সব সময়</option>
 									<option value="today">আজকের অর্ডার</option>
@@ -1081,14 +1112,17 @@
 								class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#ea580c] to-[#d97706] hover:from-[#c2410c] hover:to-[#b45309] text-white font-bold text-xs shadow-md shadow-amber-600/20 transition-all shrink-0"
 							>
 								<PlusCircle class="w-4 h-4" />
-								<span>নতুন অর্ডার তৈরি</span>
+								<span class="hidden sm:inline">নতুন অর্ডার</span>
+								<span class="sm:hidden">নতুন</span>
 							</button>
 						</div>
 					</div>
 
-					<!-- Web Orders Data Table (Exact Columns of Image 1) -->
+					<!-- Web Orders Container: DUAL VIEW (Mobile Cards + Desktop Table) -->
 					<div class="bg-white rounded-2xl border border-[#ede5d8] overflow-hidden shadow-[0_2px_12px_rgba(180,83,9,0.03)]">
-						<div class="overflow-x-auto">
+						
+						<!-- 1. DESKTOP TABLE VIEW (Visible on >= 768px) -->
+						<div class="hidden md:block overflow-x-auto">
 							<table class="w-full text-left text-xs">
 								<thead>
 									<tr class="border-b border-[#ede5d8] bg-[#faf7f2]/90 text-slate-500 font-bold">
@@ -1204,14 +1238,14 @@
 													<div class="relative inline-flex items-center">
 														<select
 															name="status"
-															value={order.status}
+															value={order.status === 'no_response_3' ? 'good_no_response' : order.status}
 															onchange={(e) => (e.currentTarget.form as HTMLFormElement)?.requestSubmit()}
 															class="pl-6 pr-6 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer appearance-none {statusStyle.bg} {statusStyle.text} {statusStyle.border} focus:outline-none"
 														>
 															<option value="pending">পেন্ডিং</option>
 															<option value="incomplete">ইনকমপ্লিট</option>
 															<option value="no_response">নো রেসপন্স</option>
-															<option value="no_response_3">৩য় বার নো রেসপন্স</option>
+															<option value="good_no_response">গুড বাট নো রেসপন্স</option>
 															<option value="busy">বিজি</option>
 															<option value="hold">হোল্ড</option>
 															<option value="recall">রি</option>
@@ -1237,7 +1271,7 @@
 														<FileEdit class="w-3.5 h-3.5" />
 													</button>
 
-													<!-- Quick Confirm Checkmark Button (Moves to Order List!) -->
+													<!-- Quick Confirm Checkmark Button -->
 													<form method="POST" action="?/quickConfirmOrder" use:enhance class="inline-block">
 														<input type="hidden" name="orderId" value={order.id} />
 														<button
@@ -1286,25 +1320,178 @@
 								</tbody>
 							</table>
 						</div>
+
+						<!-- 2. MOBILE CARD VIEW (Visible on < 768px: 100% Touch-Friendly Responsiveness) -->
+						<div class="md:hidden divide-y divide-[#ede5d8]/80">
+							{#if filteredWebOrders.length === 0}
+								<div class="py-12 text-center text-slate-400 text-xs">
+									কোনো ওয়েব অর্ডার পাওয়া যায়নি।
+								</div>
+							{/if}
+
+							{#each filteredWebOrders as order (order.id)}
+								{@const parsedItems = parseItems(order.items)}
+								{@const firstItem = parsedItems[0] || {}}
+								{@const statusStyle = getStatusInfo(order.status)}
+
+								<div class="p-3.5 space-y-3 hover:bg-[#faf7f2]/50 transition-colors">
+									
+									<!-- Card Top Row: Order ID, Time, Source, and Status Dropdown -->
+									<div class="flex items-center justify-between gap-2">
+										<div class="flex items-center gap-1.5 flex-wrap">
+											<span class="text-[#047857] font-mono font-bold text-sm">#{order.id}</span>
+											<span class="text-[10px] text-slate-400">{firstItem.timeAgo || '12m ago'}</span>
+											<span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold {firstItem.source === 'Facebook' ? 'bg-sky-50 text-sky-700 border border-sky-200' : 'bg-slate-100 text-slate-700 border border-slate-200'}">
+												{firstItem.source || 'Direct'}
+											</span>
+										</div>
+
+										<!-- Touch-Friendly Status Dropdown -->
+										<form method="POST" action="?/updateOrderStatus" use:enhance class="inline-block shrink-0">
+											<input type="hidden" name="orderId" value={order.id} />
+											<div class="relative inline-flex items-center">
+												<select
+													name="status"
+													value={order.status === 'no_response_3' ? 'good_no_response' : order.status}
+													onchange={(e) => (e.currentTarget.form as HTMLFormElement)?.requestSubmit()}
+													class="pl-6 pr-5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer appearance-none {statusStyle.bg} {statusStyle.text} {statusStyle.border} focus:outline-none"
+												>
+													<option value="pending">পেন্ডিং</option>
+													<option value="incomplete">ইনকমপ্লিট</option>
+													<option value="no_response">নো রেসপন্স</option>
+													<option value="good_no_response">গুড বাট নো রেসপন্স</option>
+													<option value="busy">বিজি</option>
+													<option value="hold">হোল্ড</option>
+													<option value="recall">রি</option>
+													<option value="confirmed">কনফার্মড</option>
+													<option value="cancelled">বাতিল</option>
+												</select>
+												<statusStyle.icon class="w-3.5 h-3.5 absolute left-1.5 pointer-events-none {statusStyle.text}" />
+												<ChevronDown class="w-3 h-3 absolute right-1.5 pointer-events-none text-slate-400" />
+											</div>
+										</form>
+									</div>
+
+									<!-- Customer Info Box with 1-Tap Dial Button -->
+									<div class="flex items-start justify-between gap-2 bg-[#faf7f2] p-2.5 rounded-xl border border-[#ede5d8]">
+										<div class="space-y-0.5 min-w-0 flex-1">
+											<div class="font-bold text-xs text-[#0f172a] truncate">{order.customerName}</div>
+											
+											<!-- Phone + Steadfast Success Ratio -->
+											<div class="flex items-center gap-1.5 text-xs font-mono font-bold text-slate-700 flex-wrap">
+												<span>{order.customerEmail}</span>
+												{#if firstItem.successRate}
+													<span class="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[9px] font-bold border border-emerald-300">
+														{firstItem.successRate.delivered}|{firstItem.successRate.returned}|{firstItem.successRate.percent}%
+													</span>
+												{/if}
+											</div>
+
+											<!-- Address -->
+											<div class="flex items-start gap-1 text-[11px] text-slate-500 pt-0.5">
+												<MapPin class="w-3 h-3 shrink-0 text-slate-400 mt-0.5" />
+												<span class="line-clamp-2 leading-tight">{order.shippingAddress}</span>
+											</div>
+										</div>
+
+										<!-- Direct 1-Tap Phone Call -->
+										<a
+											href="tel:{order.customerEmail}"
+											class="p-2.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 shadow-2xs shrink-0 flex items-center justify-center transition-colors"
+											title="সরাসরি কল দিন"
+										>
+											<PhoneCall class="w-4 h-4" />
+										</a>
+									</div>
+
+									<!-- Product & Total Price Row -->
+									<div class="flex items-center justify-between text-xs pt-1">
+										<div class="flex items-center gap-2 min-w-0">
+											<div class="w-7 h-7 rounded-lg bg-[#faf7f2] border border-[#ede5d8] flex items-center justify-center shrink-0">
+												<Package class="w-3.5 h-3.5 text-[#c25e00]" />
+											</div>
+											<div class="text-[11px] font-medium text-slate-700 truncate">
+												{firstItem.name || 'AURA প্রডাক্ট'}
+												{#if parsedItems.length > 1}
+													<span class="text-[10px] text-slate-400"> +{parsedItems.length - 1} টি</span>
+												{/if}
+											</div>
+										</div>
+
+										<div class="text-sm font-black text-[#0f172a] whitespace-nowrap font-['Outfit']">
+											{formatTaka(order.total)}
+										</div>
+									</div>
+
+									<!-- Touch Action Buttons Grid -->
+									<div class="grid grid-cols-4 gap-1.5 pt-2 border-t border-[#ede5d8]">
+										<!-- 1. Quick Confirm Button -->
+										<form method="POST" action="?/quickConfirmOrder" use:enhance class="w-full">
+											<input type="hidden" name="orderId" value={order.id} />
+											<button
+												type="submit"
+												class="w-full py-1.5 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-xs transition-colors"
+											>
+												<CheckCircle2 class="w-3.5 h-3.5" />
+												<span>কনফার্ম</span>
+											</button>
+										</form>
+
+										<!-- 2. Edit Button -->
+										<button
+											onclick={() => activeTab = 'new_order'}
+											class="w-full py-1.5 px-2 rounded-xl bg-[#faf7f2] border border-[#ede5d8] text-slate-700 hover:bg-white font-bold text-xs flex items-center justify-center gap-1"
+										>
+											<FileEdit class="w-3.5 h-3.5 text-slate-500" />
+											<span>এডিট</span>
+										</button>
+
+										<!-- 3. Cancel Button -->
+										<form method="POST" action="?/quickCancelOrder" use:enhance class="w-full">
+											<input type="hidden" name="orderId" value={order.id} />
+											<button
+												type="submit"
+												class="w-full py-1.5 px-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 font-bold text-xs flex items-center justify-center gap-1"
+											>
+												<XCircle class="w-3.5 h-3.5 text-rose-600" />
+												<span>বাতিল</span>
+											</button>
+										</form>
+
+										<!-- 4. Trash Button -->
+										<form method="POST" action="?/deleteOrder" use:enhance class="w-full">
+											<input type="hidden" name="orderId" value={order.id} />
+											<button
+												type="submit"
+												class="w-full py-1.5 px-2 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 font-bold text-xs flex items-center justify-center gap-1"
+											>
+												<Trash2 class="w-3.5 h-3.5 text-slate-500" />
+												<span>মুছুন</span>
+											</button>
+										</form>
+									</div>
+								</div>
+							{/each}
+						</div>
 					</div>
 				</div>
 			{/if}
 
 			<!-- ============================================================== -->
-			<!-- TAB 2: অর্ডার তালিকা (Post-Confirmation - Exact Match to Image 2)-->
+			<!-- TAB 2: অর্ডার তালিকা (Post-Confirmation - Image 2 + Responsive) -->
 			<!-- ============================================================== -->
 			{#if activeTab === 'order_list'}
-				<div class="space-y-4">
+				<div class="space-y-3 sm:space-y-4">
 					
-					<!-- Top Post-Confirmation Status Filter Tabs (Matches Image 2) -->
-					<div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+					<!-- Top Post-Confirmation Status Filter Tabs (Swipeable on Mobile) -->
+					<div class="flex items-center gap-2 overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-none">
 						{#each ORDER_LIST_STATUS_TABS as tab}
 							{@const count = tab.id === 'all' 
 								? orderListOrders.length 
 								: orderListOrders.filter(o => o.status === tab.id).length}
 							<button
 								onclick={() => orderListStatusFilter = tab.id}
-								class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold shrink-0 transition-all shadow-2xs border {orderListStatusFilter === tab.id
+								class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-bold shrink-0 transition-all shadow-2xs border {orderListStatusFilter === tab.id
 									? 'bg-[#fffbeb] text-[#92400e] border-[#f59e0b] ring-1 ring-[#f59e0b]/40 shadow-xs'
 									: 'bg-white hover:bg-[#faf7f2] text-slate-700 border-[#ede5d8]'}"
 							>
@@ -1317,8 +1504,8 @@
 						{/each}
 					</div>
 
-					<!-- Subheader Bar with Courier Sync Button (Matches Image 2) -->
-					<div class="bg-white p-3.5 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+					<!-- Subheader Bar with Courier Sync Button (Responsive Stacking) -->
+					<div class="bg-white p-3 sm:p-3.5 rounded-2xl border border-[#ede5d8] shadow-[0_2px_10px_rgba(180,83,9,0.03)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
 						<div class="relative flex-1 max-w-md">
 							<Search class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
 							<input
@@ -1331,11 +1518,11 @@
 
 						<div class="flex items-center gap-2">
 							<!-- Date Filter Dropdown -->
-							<div class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#faf7f2] border border-[#ede5d8] text-xs font-bold text-slate-700">
-								<Clock class="w-3.5 h-3.5 text-slate-400" />
+							<div class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#faf7f2] border border-[#ede5d8] text-xs font-bold text-slate-700 flex-1 sm:flex-none">
+								<Clock class="w-3.5 h-3.5 text-slate-400 shrink-0" />
 								<select
 									bind:value={activeDateFilter}
-									class="bg-transparent focus:outline-none cursor-pointer"
+									class="bg-transparent focus:outline-none cursor-pointer w-full text-xs"
 								>
 									<option value="all">সব সময়</option>
 									<option value="today">আজ</option>
@@ -1357,9 +1544,11 @@
 						</div>
 					</div>
 
-					<!-- Post-Confirmation Orders Data Table (Exact Columns of Image 2) -->
+					<!-- Post-Confirmation Orders Container: DUAL VIEW (Mobile Cards + Desktop Table) -->
 					<div class="bg-white rounded-2xl border border-[#ede5d8] overflow-hidden shadow-[0_2px_12px_rgba(180,83,9,0.03)]">
-						<div class="overflow-x-auto">
+						
+						<!-- 1. DESKTOP TABLE VIEW (Visible on >= 768px) -->
+						<div class="hidden md:block overflow-x-auto">
 							<table class="w-full text-left text-xs">
 								<thead>
 									<tr class="border-b border-[#ede5d8] bg-[#faf7f2]/90 text-slate-500 font-bold">
@@ -1538,6 +1727,132 @@
 								</tbody>
 							</table>
 						</div>
+
+						<!-- 2. MOBILE CARD VIEW FOR ORDER LIST (Visible on < 768px: 100% Responsive) -->
+						<div class="md:hidden divide-y divide-[#ede5d8]/80">
+							{#if filteredOrderList.length === 0}
+								<div class="py-12 text-center text-slate-400 text-xs">
+									কোনো কনফার্মড অর্ডার পাওয়া যায়নি।
+								</div>
+							{/if}
+
+							{#each filteredOrderList as order (order.id)}
+								{@const parsedItems = parseItems(order.items)}
+								{@const firstItem = parsedItems[0] || {}}
+								{@const statusStyle = getStatusInfo(order.status)}
+								{@const isSelected = selectedOrderIds.includes(order.id)}
+
+								<div class="p-3.5 space-y-3 hover:bg-[#faf7f2]/50 transition-colors {isSelected ? 'bg-amber-50/40' : ''}">
+									
+									<!-- Card Top Row: Checkbox, Invoice ID, Courier Sub-status, Time -->
+									<div class="flex items-center justify-between gap-2">
+										<div class="flex items-center gap-2">
+											<input
+												type="checkbox"
+												checked={isSelected}
+												onchange={() => toggleSelectOrder(order.id)}
+												class="rounded text-amber-600 focus:ring-amber-500"
+											/>
+											<span class="font-bold text-[#0f172a] font-mono text-sm">{order.id}</span>
+											<span class="text-[10px] text-slate-400">{firstItem.confirmedAt || firstItem.timeAgo || '১ দিন আগে'}</span>
+										</div>
+
+										<!-- Substatus badge -->
+										<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-sky-50 text-sky-800 border border-sky-200">
+											<FileText class="w-2.5 h-2.5" />
+											<span>{firstItem.subStatus || order.status}</span>
+										</div>
+									</div>
+
+									<!-- Customer Info & Address -->
+									<div class="bg-[#faf7f2] p-2.5 rounded-xl border border-[#ede5d8] space-y-1">
+										<div class="flex items-center justify-between">
+											<span class="font-bold text-xs text-[#0f172a]">{order.customerName}</span>
+											<span class="font-mono text-xs font-bold text-slate-700">{order.customerEmail}</span>
+										</div>
+										<div class="flex items-start gap-1 text-[11px] text-slate-500">
+											<MapPin class="w-3 h-3 shrink-0 text-slate-400 mt-0.5" />
+											<span class="line-clamp-2 leading-tight">{order.shippingAddress}</span>
+										</div>
+									</div>
+
+									<!-- Product & Price Row -->
+									<div class="flex items-center justify-between text-xs">
+										<div class="flex items-center gap-2">
+											<div class="w-7 h-7 rounded-md bg-[#faf7f2] border border-[#ede5d8] flex items-center justify-center">
+												<Package class="w-3.5 h-3.5 text-[#c25e00]" />
+											</div>
+											<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#eff6ff] text-[#1d4ed8] border border-[#bfdbfe]">
+												{firstItem.source || 'Facebook'}
+											</span>
+										</div>
+
+										<div class="text-sm font-black text-[#0f172a] font-['Outfit']">
+											{formatTaka(order.total)}
+										</div>
+									</div>
+
+									<!-- Status Dropdown & Action Icons Row -->
+									<div class="flex items-center justify-between gap-2 pt-2 border-t border-[#ede5d8]">
+										<!-- Status Dropdown -->
+										<form method="POST" action="?/updateOrderStatus" use:enhance class="flex-1">
+											<input type="hidden" name="orderId" value={order.id} />
+											<div class="relative flex items-center">
+												<select
+													name="status"
+													value={order.status}
+													onchange={(e) => (e.currentTarget.form as HTMLFormElement)?.requestSubmit()}
+													class="w-full pl-6 pr-5 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer appearance-none {statusStyle.bg} {statusStyle.text} {statusStyle.border} focus:outline-none"
+												>
+													<option value="confirmed">কনফার্মড</option>
+													<option value="printed">প্রিন্টেড</option>
+													<option value="entry_done">এন্ট্রি ডান</option>
+													<option value="shipped">শিপড</option>
+													<option value="delivered">ডেলিভারড</option>
+													<option value="partial_delivered">পার্শিয়াল</option>
+													<option value="pending_return">পেন্ডিং রিটার্ন</option>
+													<option value="returned">রিটার্ন</option>
+													<option value="cancelled">বাতিল</option>
+													<option value="missing">মিসিং</option>
+												</select>
+												<statusStyle.icon class="w-3.5 h-3.5 absolute left-1.5 pointer-events-none {statusStyle.text}" />
+												<ChevronDown class="w-3 h-3 absolute right-1.5 pointer-events-none text-slate-400" />
+											</div>
+										</form>
+
+										<!-- Quick Action Buttons -->
+										<div class="flex items-center gap-1 shrink-0">
+											<button
+												onclick={triggerCourierSync}
+												class="p-2 text-slate-600 hover:text-[#c25e00] rounded-xl bg-[#faf7f2] border border-[#ede5d8]"
+												title="কুরিয়ার সিঙ্ক"
+											>
+												<RefreshCw class="w-3.5 h-3.5" />
+											</button>
+
+											<button
+												onclick={() => copyToClipboard(`${order.id} - ${order.customerName} - ${order.customerEmail}`, order.id)}
+												class="p-2 text-slate-600 hover:text-slate-900 rounded-xl bg-[#faf7f2] border border-[#ede5d8]"
+												title="কপি"
+											>
+												{#if isCopied === order.id}
+													<Check class="w-3.5 h-3.5 text-emerald-600" />
+												{:else}
+													<Copy class="w-3.5 h-3.5" />
+												{/if}
+											</button>
+
+											<button
+												class="p-2 text-slate-600 hover:text-slate-900 rounded-xl bg-[#faf7f2] border border-[#ede5d8]"
+												title="প্রিন্ট"
+											>
+												<Printer class="w-3.5 h-3.5" />
+											</button>
+										</div>
+									</div>
+								</div>
+							{/each}
+						</div>
 					</div>
 				</div>
 			{/if}
@@ -1546,7 +1861,7 @@
 			<!-- TAB 3: NEW MANUAL ORDER FORM                  -->
 			<!-- ============================================== -->
 			{#if activeTab === 'new_order'}
-				<div class="max-w-2xl bg-white p-6 rounded-2xl border border-[#ede5d8] shadow-[0_2px_12px_rgba(180,83,9,0.03)] space-y-6">
+				<div class="max-w-2xl bg-white p-4 sm:p-6 rounded-2xl border border-[#ede5d8] shadow-[0_2px_12px_rgba(180,83,9,0.03)] space-y-6">
 					<div class="border-b border-[#ede5d8] pb-4 flex items-center justify-between">
 						<div>
 							<h3 class="text-base font-black text-[#0f172a]">ম্যানুয়াল কাস্টমার অর্ডার এন্ট্রি</h3>
@@ -1711,7 +2026,7 @@
 						</div>
 					</div>
 
-					<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 						{#each data.products as prod}
 							<div class="bg-white p-5 rounded-2xl border border-[#ede5d8] shadow-2xs space-y-4">
 								<div class="flex items-center justify-between">
@@ -1752,7 +2067,7 @@
 			<!-- TAB 6: COURIER & LOGISTICS HUB                 -->
 			<!-- ============================================== -->
 			{#if activeTab === 'courier'}
-				<div class="max-w-2xl bg-white p-6 rounded-2xl border border-[#ede5d8] shadow-2xs space-y-6">
+				<div class="max-w-2xl bg-white p-4 sm:p-6 rounded-2xl border border-[#ede5d8] shadow-2xs space-y-6">
 					<div>
 						<h3 class="text-base font-black text-[#0f172a]">কুরিয়ার লজিস্টিকস এপিআই ইন্টিগ্রেশন</h3>
 						<p class="text-xs text-slate-400">Steadfast, Pathao ও Paperfly সরাসরি পার্সেল বুকিং কনফিগারেশন</p>
@@ -1779,9 +2094,9 @@
 							/>
 						</div>
 
-						<div class="pt-2 flex items-center justify-between">
+						<div class="pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
 							<div class="flex items-center gap-2 text-xs font-bold text-emerald-600">
-								<CheckCircle2 class="w-4 h-4" />
+								<CheckCircle2 class="w-4 h-4 shrink-0" />
 								<span>Steadfast Webhook সক্রিয় আছে</span>
 							</div>
 							<button
@@ -1799,7 +2114,7 @@
 			<!-- TAB 7: PIXELS & CAPI TRACKING                 -->
 			<!-- ============================================== -->
 			{#if activeTab === 'pixels'}
-				<div class="max-w-2xl bg-white p-6 rounded-2xl border border-[#ede5d8] shadow-2xs space-y-6">
+				<div class="max-w-2xl bg-white p-4 sm:p-6 rounded-2xl border border-[#ede5d8] shadow-2xs space-y-6">
 					<div>
 						<h3 class="text-base font-black text-[#0f172a]">পিক্সেল ও সার্ভার সাইড ট্র্যাকিং (CAPI)</h3>
 						<p class="text-xs text-slate-400">Meta Pixel, TikTok Pixel এবং Google Tag Manager ট্র্যাকিং কোড</p>
@@ -1849,7 +2164,7 @@
 			<!-- TAB 8: CLOUDFLARE D1 DATABASE CONSOLE          -->
 			<!-- ============================================== -->
 			{#if activeTab === 'database'}
-				<div class="bg-white p-6 rounded-2xl border border-[#ede5d8] shadow-2xs space-y-6">
+				<div class="bg-white p-4 sm:p-6 rounded-2xl border border-[#ede5d8] shadow-2xs space-y-6">
 					<div class="flex items-center justify-between pb-4 border-b border-[#ede5d8]">
 						<div>
 							<h3 class="text-base font-black text-[#0f172a]">Cloudflare D1 ডেটাবেজ স্ট্যাটাস</h3>
@@ -1863,33 +2178,33 @@
 						</div>
 					</div>
 
-					<div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
-						<div class="p-4 rounded-xl bg-[#faf7f2] border border-[#ede5d8]">
+					<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+						<div class="p-3.5 sm:p-4 rounded-xl bg-[#faf7f2] border border-[#ede5d8]">
 							<span class="text-xs text-slate-500 block">মোট প্রোডাক্টস</span>
 							<span class="text-lg font-black text-[#0f172a]">{data.products.length}</span>
 						</div>
-						<div class="p-4 rounded-xl bg-[#faf7f2] border border-[#ede5d8]">
+						<div class="p-3.5 sm:p-4 rounded-xl bg-[#faf7f2] border border-[#ede5d8]">
 							<span class="text-xs text-slate-500 block">মোট অর্ডারস</span>
 							<span class="text-lg font-black text-[#0f172a]">{data.orders.length}</span>
 						</div>
-						<div class="p-4 rounded-xl bg-[#faf7f2] border border-[#ede5d8]">
+						<div class="p-3.5 sm:p-4 rounded-xl bg-[#faf7f2] border border-[#ede5d8]">
 							<span class="text-xs text-slate-500 block">গ্রাহক রিভিউ</span>
 							<span class="text-lg font-black text-[#0f172a]">{data.reviews.length}</span>
 						</div>
-						<div class="p-4 rounded-xl bg-[#faf7f2] border border-[#ede5d8]">
-							<span class="text-xs text-slate-500 block">নিউজলেটার সাবস্ক্রাইবার</span>
+						<div class="p-3.5 sm:p-4 rounded-xl bg-[#faf7f2] border border-[#ede5d8]">
+							<span class="text-xs text-slate-500 block">নিউজলেটার</span>
 							<span class="text-lg font-black text-[#0f172a]">{data.newsletter.length}</span>
 						</div>
 					</div>
 
-					<div class="pt-4 border-t border-[#ede5d8] flex items-center justify-between">
+					<div class="pt-4 border-t border-[#ede5d8] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
 						<span class="text-xs text-slate-500">
 							ডেটাবেজ নতুন করে রিসিড করতে নিচের বাটনটি ব্যবহার করুন:
 						</span>
 						<form method="POST" action="?/seedDatabase" use:enhance>
 							<button
 								type="submit"
-								class="px-4 py-2 rounded-xl bg-[#faf7f2] hover:bg-rose-50 border border-[#ede5d8] hover:border-rose-300 text-slate-700 hover:text-rose-700 font-bold text-xs transition-colors"
+								class="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#faf7f2] hover:bg-rose-50 border border-[#ede5d8] hover:border-rose-300 text-slate-700 hover:text-rose-700 font-bold text-xs transition-colors"
 							>
 								D1 ডেটাবেজ রিসিড করুন
 							</button>
@@ -1902,7 +2217,7 @@
 			<!-- TAB 9: CUSTOMERS & VIP CLUB                    -->
 			<!-- ============================================== -->
 			{#if activeTab === 'customers'}
-				<div class="bg-white p-6 rounded-2xl border border-[#ede5d8] shadow-2xs space-y-4">
+				<div class="bg-white p-4 sm:p-6 rounded-2xl border border-[#ede5d8] shadow-2xs space-y-4">
 					<div>
 						<h3 class="text-base font-black text-[#0f172a]">গ্রাহক ডেটাবেজ ও ভিআইপি ক্লাব</h3>
 						<p class="text-xs text-slate-400">নিবন্ধিত কাস্টমার ও রিপিট বায়ার টেলিমেট্রি</p>

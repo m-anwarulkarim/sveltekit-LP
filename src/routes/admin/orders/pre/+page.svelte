@@ -29,8 +29,8 @@
 			const matchesStatus =
 				statusFilter === 'all'
 					? true
-					: statusFilter === 'confirmed'
-						? order.status === 'confirmed'
+					: statusFilter === 'confirmed' || statusFilter === 'processing'
+						? order.status === 'processing' || order.status === 'confirmed'
 						: statusFilter === 'pending'
 							? order.status === 'pending'
 							: true;
@@ -48,7 +48,7 @@
 
 	// Metrics
 	let totalValue = $derived(preOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0));
-	let pendingPreOrders = $derived(preOrders.filter((o: any) => o.status !== 'confirmed' && o.status !== 'delivered').length);
+	let pendingPreOrders = $derived(preOrders.filter((o: any) => o.status !== 'processing' && o.status !== 'confirmed' && o.status !== 'delivered').length);
 </script>
 
 <div class="space-y-6">
@@ -142,12 +142,12 @@
 				</button>
 				<button
 					type="button"
-					onclick={() => statusFilter = 'confirmed'}
-					class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all {statusFilter === 'confirmed'
+					onclick={() => statusFilter = 'processing'}
+					class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all {statusFilter === 'processing' || statusFilter === 'confirmed'
 						? 'bg-emerald-600 text-white shadow-sm'
 						: 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'}"
 				>
-					কনফার্মড
+					প্রসেসিং
 				</button>
 			</div>
 		</div>
@@ -229,9 +229,9 @@
 								</td>
 
 								<td class="py-3.5 px-4 text-center">
-									{#if order.status === 'confirmed'}
+									{#if order.status === 'processing' || order.status === 'confirmed'}
 										<Badge variant="success" class="text-[10px] px-2 py-0.5">
-											কনফার্মড
+											প্রসেসিং
 										</Badge>
 									{:else if order.status === 'delivered'}
 										<Badge variant="default" class="text-[10px] px-2 py-0.5 bg-emerald-600">
@@ -247,7 +247,7 @@
 								<td class="py-3.5 px-4 text-right">
 									<div class="flex items-center justify-end gap-1.5">
 										<!-- Quick Confirm Form -->
-										{#if order.status !== 'confirmed'}
+										{#if order.status !== 'processing' && order.status !== 'confirmed'}
 											<form method="POST" action="?/quickConfirmOrder" use:enhance>
 												<input type="hidden" name="orderId" value={order.id} />
 												<Button

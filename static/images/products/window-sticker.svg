@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="60%" stop-color="#7dd3fc" />
+      <stop offset="100%" stop-color="#bae6fd" />
+    </linearGradient>
+    <linearGradient id="hillGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#22c55e" />
+      <stop offset="100%" stop-color="#15803d" />
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="24" fill="#f8fafc" />
+  <!-- Window frame arched -->
+  <g transform="translate(20, 16)">
+    <!-- Window background scenery -->
+    <path d="M 0 35 A 40 40 0 0 1 80 35 L 80 88 L 0 88 Z" fill="url(#skyGrad)" />
+    <!-- Sun -->
+    <circle cx="26" cy="34" r="10" fill="#fde047" opacity="0.9" />
+    <!-- Hills -->
+    <path d="M 0 70 Q 25 55 50 68 T 80 62 L 80 88 L 0 88 Z" fill="url(#hillGrad)" />
+    <path d="M 20 76 Q 45 65 70 72 L 80 88 L 10 88 Z" fill="#166534" opacity="0.8" />
+    <!-- Window Mullions (Wood Frame) -->
+    <path d="M 0 35 A 40 40 0 0 1 80 35 L 80 88 L 0 88 Z" fill="none" stroke="#78350f" stroke-width="6" />
+    <!-- Window Panes cross -->
+    <line x1="40" y1="0" x2="40" y2="88" stroke="#78350f" stroke-width="4" />
+    <line x1="0" y1="52" x2="80" y2="52" stroke="#78350f" stroke-width="4" />
+    <!-- Window sill -->
+    <rect x="-6" y="86" width="92" height="6" rx="2" fill="#92400e" />
+  </g>
+</svg>

@@ -27,6 +27,7 @@
 
 	const ORDER_LIST_STATUS_TABS = [
 		{ id: 'all', label: 'সব', icon: Clock },
+		{ id: 'processing', label: 'প্রসেসিং', icon: CheckCircle2 },
 		{ id: 'confirmed', label: 'কনফার্মড', icon: CheckCircle2 },
 		{ id: 'printed', label: 'প্রিন্টেড', icon: Printer },
 		{ id: 'entry_done', label: 'এন্ট্রি ডান', icon: ClipboardCheck },
@@ -41,7 +42,7 @@
 
 	let orderListOrders = $derived(
 		(data.orders || []).filter((o: any) =>
-			['confirmed', 'printed', 'entry_done', 'shipped', 'delivered', 'partial_delivered', 'pending_return', 'returned', 'missing'].includes(o.status)
+			['processing', 'confirmed', 'printed', 'entry_done', 'shipped', 'delivered', 'partial_delivered', 'pending_return', 'returned', 'missing'].includes(o.status)
 		)
 	);
 
@@ -282,6 +283,7 @@
 											onchange={(e: Event) => (e.target as HTMLSelectElement).form?.requestSubmit()}
 											class="text-xs font-bold rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-slate-800 focus:outline-none focus:border-[#5845eb] shadow-2xs cursor-pointer"
 										>
+											<option value="processing">প্রসেসিং</option>
 											<option value="confirmed">কনফার্মড</option>
 											<option value="printed">প্রিন্টেড</option>
 											<option value="entry_done">এন্ট্রি ডান</option>

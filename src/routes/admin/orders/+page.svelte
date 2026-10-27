@@ -34,6 +34,7 @@
 		{ id: 'busy', label: 'বিজি', icon: Phone },
 		{ id: 'hold', label: 'হোল্ড', icon: PauseCircle },
 		{ id: 'recall', label: 'রি', icon: RotateCcw },
+		{ id: 'processing', label: 'প্রসেসিং', icon: CheckCircle2 },
 		{ id: 'confirmed', label: 'কনফার্মড', icon: CheckCircle2 },
 		{ id: 'cancelled', label: 'বাতিল', icon: XCircle }
 	];
@@ -219,6 +220,7 @@
 											<option value="busy">বিজি</option>
 											<option value="hold">হোল্ড</option>
 											<option value="recall">রি</option>
+											<option value="processing">প্রসেসিং</option>
 											<option value="confirmed">কনফার্মড</option>
 											<option value="cancelled">বাতিল</option>
 										</select>
@@ -340,6 +342,7 @@
 					<option value="busy">বিজি</option>
 					<option value="hold">হোল্ড</option>
 					<option value="recall">রি</option>
+					<option value="processing">প্রসেসিং</option>
 					<option value="confirmed">কনফার্মড</option>
 					<option value="cancelled">বাতিল</option>
 				</select>

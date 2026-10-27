@@ -36,15 +36,15 @@ export async function handleQuickConfirm(request: Request, platform: any) {
 		try {
 			const db = getDb(platform.env.DB);
 			await db.update(schema.orders)
-				.set({ status: 'confirmed' })
+				.set({ status: 'processing' })
 				.where(eq(schema.orders.id, orderId));
-			return { success: true, confirmedOrder: orderId };
+			return { success: true, confirmedOrder: orderId, newStatus: 'processing' };
 		} catch (err: any) {
 			return fail(500, { message: err?.message || 'Failed to confirm order' });
 		}
 	}
 
-	return { success: true, confirmedOrder: orderId };
+	return { success: true, confirmedOrder: orderId, newStatus: 'processing' };
 }
 
 export async function handleQuickCancel(request: Request, platform: any) {

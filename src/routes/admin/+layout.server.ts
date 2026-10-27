@@ -5,9 +5,9 @@ import { desc } from 'drizzle-orm';
 import { INITIAL_PRODUCTS, INITIAL_ORDERS, normalizeOrderStatus } from './_data.ts';
 
 export const load: LayoutServerLoad = async ({ platform }) => {
-	let productsList = INITIAL_PRODUCTS;
-	let ordersList = INITIAL_ORDERS;
-	let reviewsList = [
+	let productsList: any[] = INITIAL_PRODUCTS;
+	let ordersList: any[] = INITIAL_ORDERS;
+	let reviewsList: any[] = [
 		{
 			id: 'rev-1',
 			productId: 'prod-spectrum-x',
@@ -33,7 +33,8 @@ export const load: LayoutServerLoad = async ({ platform }) => {
 			const existingProducts = await db.select().from(schema.products).all();
 			if (existingProducts.length === 0) {
 				for (const p of INITIAL_PRODUCTS) {
-					await db.insert(schema.products).values(p).onConflictDoNothing();
+					const { variants, tags, status, priority, stock, openingStock, subCategory, isLowStock, ...dbProduct } = p as any;
+					await db.insert(schema.products).values(dbProduct).onConflictDoNothing();
 				}
 			}
 
@@ -68,7 +69,7 @@ export const load: LayoutServerLoad = async ({ platform }) => {
 	const deliveredOrders = ordersList.filter(o => o.status === 'delivered');
 	const deliveredRevenue = deliveredOrders.reduce((acc, o) => acc + (o.total || 0), 0);
 	
-	const postConfirmationStatuses = ['confirmed', 'printed', 'entry_done', 'shipped', 'delivered', 'partial_delivered', 'pending_return', 'returned', 'missing'];
+	const postConfirmationStatuses = ['processing', 'confirmed', 'printed', 'entry_done', 'shipped', 'delivered', 'partial_delivered', 'pending_return', 'returned', 'missing'];
 	const confirmedOrders = ordersList.filter(o => postConfirmationStatuses.includes(o.status));
 	const confirmedRevenue = confirmedOrders.reduce((acc, o) => acc + (o.total || 0), 0);
 	

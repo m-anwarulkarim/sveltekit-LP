@@ -1,3 +1,4 @@
+// Central Barrel Export for all shadcn UI components
 export * from './button';
 export * from './card';
 export * from './badge';
@@ -5,3 +6,18 @@ export * from './input';
 export * from './textarea';
 export * from './switch';
 export * from './dialog';
+export * from './table';
+export * from './tabs';
+export * from './select';
+export * from './dropdown-menu';
+export * from './checkbox';
+export * from './radio-group';
+export * from './avatar';
+export * from './alert';
+export * from './separator';
+export * from './skeleton';
+export * from './progress';
+export * from './sheet';
+export * from './tooltip';
+export * from './accordion';
+export * from './pagination';

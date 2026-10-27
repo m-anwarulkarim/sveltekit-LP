@@ -6,3 +6,4 @@ export * from './modules/reviews';
 export * from './modules/layout';
 export * from './modules/auth';
 export * from './config/site';
+export * from './utils';

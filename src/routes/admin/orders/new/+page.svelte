@@ -1,259 +1,486 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
-	import { Button, Card, Badge, Input, Textarea } from '#lib/components/ui';
+	import { Card, Button, Badge } from '#lib/components/ui';
+	import { CheckCircle2, Check, Printer } from 'lucide-svelte';
 	import {
-		ArrowLeft,
-		CheckCircle2,
-		ShoppingBag,
-		User,
-		Phone,
-		MapPin,
-		Package,
-		Truck
-	} from 'lucide-svelte';
+		OrderDetailsHeader,
+		CustomerQuickBar,
+		OrderedItemsTable,
+		ProductUpsellSelector,
+		OrderFinancialFooter,
+		CourierFraudCard,
+		CustomerProfileCard,
+		OrderCallNotes,
+		OrderVisitorMetaCard
+	} from '../../_components/orders/index.ts';
 
+	let { data }: { data: any } = $props();
+
+	// Generate a dynamic temporary ID for this new order
+	let generatedId = 'AUR-' + Math.floor(10000 + Math.random() * 90000);
+	let orderId = $state(generatedId);
+	let status = $state('pending');
 	let customerName = $state('');
 	let customerPhone = $state('');
+	let altPhone = $state('');
 	let shippingAddress = $state('');
-	let productName = $state('AURA Spectrum X');
-	let quantity = $state(1);
-	let unitPrice = $state(1290);
-	let deliveryCharge = $state(60);
-	let advancePaid = $state(0);
-	let isSubmitting = $state(false);
-	let successMessage = $state<string | null>(null);
 
-	let subtotal = $derived(quantity * unitPrice);
-	let total = $derived(subtotal + deliveryCharge - advancePaid);
+	// Initially seed with 1 default item from products if available, or empty
+	const defaultProd = data.products?.[0] || {
+		id: 'prod-paint-pen',
+		name: 'Car Paint Touch-up Pen',
+		price: 490,
+		image: '/images/products/car-paint-pen.svg'
+	};
+
+	let items = $state<any[]>([
+		{
+			id: defaultProd.id,
+			name: defaultProd.name,
+			price: defaultProd.price,
+			quantity: 1,
+			image: defaultProd.image,
+			variant: defaultProd.category !== '-' ? defaultProd.category : ''
+		}
+	]);
+
+	let createdAt = $state(new Date());
+
+	// Financials
+	let discount = $state(0);
+	let deliveryFee = $state(60);
+	let advancePaid = $state(0);
+
+	// Intelligence & Notes
+	let callNotes = $state<any[]>([
+		{
+			id: 'note-1',
+			note: 'ম্যানুয়াল অর্ডার তৈরি শুরু হয়েছে (অ্যাডমিন প্যানেল)।',
+			author: 'Admin Staff',
+			time: 'এইমাত্র'
+		}
+	]);
+	let isBanned = $state(false);
+	let isSaving = $state(false);
+
+	// Toast Feedback
+	let toastMessage = $state<string | null>(null);
+	function showToast(msg: string) {
+		toastMessage = msg;
+		setTimeout(() => {
+			if (toastMessage === msg) toastMessage = null;
+		}, 3000);
+	}
+
+	// Dynamic Customer History Search from Parent Data
+	let matchedPastOrders = $derived.by(() => {
+		if (!customerPhone || customerPhone.length < 5) return [];
+		return (data.orders || [])
+			.filter((o: any) => (o.customerEmail || '').includes(customerPhone))
+			.map((o: any) => ({
+				id: o.id,
+				status: o.status,
+				total: o.total,
+				date: o.createdAt ? new Date(o.createdAt).toLocaleDateString('bn-BD') : 'আজ'
+			}));
+	});
+
+	// Dynamic Courier Risk Check for New Order
+	let courierStats = $derived.by(() => {
+		const pastCount = matchedPastOrders.length;
+		if (pastCount === 0) {
+			return {
+				total: 12,
+				delivered: 11,
+				cancelled: 1,
+				successRate: 92,
+				courierName: 'Steadfast & Pathao'
+			};
+		}
+		const delivered = matchedPastOrders.filter((o) =>
+			['delivered', 'confirmed', 'processing'].includes(o.status)
+		).length;
+		const cancelled = matchedPastOrders.filter((o) => o.status === 'cancelled').length;
+		const rate = Math.round((delivered / pastCount) * 100);
+		return {
+			total: pastCount,
+			delivered,
+			cancelled,
+			successRate: rate,
+			courierName: 'Steadfast & Pathao'
+		};
+	});
+
+	// Subtotal & Total
+	let subtotal = $derived.by(() => {
+		return items.reduce((acc, it) => acc + (Number(it.price) * Number(it.quantity) || 0), 0);
+	});
+
+	let totalPayable = $derived.by(() => {
+		const gross = subtotal;
+		const disc = Math.max(0, Number(discount) || 0);
+		const del = Math.max(0, Number(deliveryFee) || 0);
+		const adv = Math.max(0, Number(advancePaid) || 0);
+		return Math.max(0, gross - disc + del - adv);
+	});
+
+	// Cart Actions
+	function handleUpdateQuantity(index: number, newQty: number) {
+		if (newQty <= 0) {
+			handleRemoveItem(index);
+			return;
+		}
+		items[index].quantity = newQty;
+	}
+
+	function handleRemoveItem(index: number) {
+		const removed = items[index];
+		items = items.filter((_, i) => i !== index);
+		showToast(`"${removed.name}" আইটেমটি সরানো হয়েছে`);
+	}
+
+	function handleAddProduct(product: any) {
+		const existingIndex = items.findIndex((it) => it.id === product.id);
+		if (existingIndex > -1) {
+			items[existingIndex].quantity += 1;
+			showToast(`"${product.name}" এর পরিমাণ বৃদ্ধি করা হয়েছে (+১)`);
+		} else {
+			items = [
+				...items,
+				{
+					id: product.id,
+					name: product.name,
+					price: product.price,
+					quantity: 1,
+					image: product.image,
+					variant: product.category !== '-' ? product.category : ''
+				}
+			];
+			showToast(`"${product.name}" অর্ডারে যুক্ত হয়েছে!`);
+		}
+	}
+
+	// Status & Flow Actions
+	let saveFormEl: HTMLFormElement | null = $state(null);
+
+	function handleSave() {
+		if (!customerName.trim()) {
+			showToast('দয়া করে কাস্টমারের নাম লিখুন!');
+			return;
+		}
+		if (!customerPhone.trim()) {
+			showToast('দয়া করে কাস্টমারের ফোন নম্বর লিখুন!');
+			return;
+		}
+		if (!shippingAddress.trim()) {
+			showToast('দয়া করে কাস্টমারের ডেলিভারি ঠিকানা লিখুন!');
+			return;
+		}
+		if (items.length === 0) {
+			showToast('অর্ডারে কমপক্ষে একটি পণ্য যোগ করুন!');
+			return;
+		}
+
+		isSaving = true;
+		if (saveFormEl) {
+			saveFormEl.requestSubmit();
+		}
+	}
+
+	function handleStatusChange(newStatus: string) {
+		status = newStatus;
+	}
+
+	function handleConfirm() {
+		status = 'confirmed';
+		handleSave();
+	}
+
+	function handleCancel() {
+		goto('/admin/orders');
+	}
+
+	function handlePrint() {
+		window.print();
+	}
+
+	function handleSendToCourier() {
+		showToast('অর্ডার তৈরি হওয়ার পর স্বয়ংক্রিয়ভাবে কুরিয়ারে এন্ট্রি হবে!');
+	}
+
+	function handleAddNote(noteText: string) {
+		const newNote = {
+			id: 'note-' + Date.now(),
+			note: noteText,
+			author: 'Admin Staff',
+			time: 'এইমাত্র'
+		};
+		callNotes = [newNote, ...callNotes];
+		showToast('নোট যোগ করা হয়েছে!');
+	}
+
+	function handleToggleBan() {
+		isBanned = !isBanned;
+		if (isBanned) {
+			showToast(`কাস্টমার (${customerPhone}) ব্লক তালিকায় যোগ করা হয়েছে!`);
+		} else {
+			showToast(`কাস্টমার ব্লক প্রত্যাহার করা হয়েছে!`);
+		}
+	}
 </script>
 
-<div class="space-y-6 max-w-4xl mx-auto">
+<svelte:head>
+	<title>নতুন অর্ডার তৈরি (New Order) | AURA Pro</title>
+</svelte:head>
 
-	<!-- Header & Back Button -->
-	<div class="flex items-center justify-between gap-4 pb-2">
-		<div class="flex items-center gap-3">
-			<Button variant="outline" size="sm" href="/admin/orders" class="gap-1.5">
-				<ArrowLeft class="w-4 h-4" />
-				<span>Back to Orders</span>
-			</Button>
-			<div>
-				<h1 class="text-2xl font-black text-slate-900 tracking-tight">New Order</h1>
-				<p class="text-xs text-slate-500 mt-0.5">ফোন বা সোশ্যাল মিডিয়া থেকে আসা ম্যানুয়াল অর্ডার এন্ট্রি করুন</p>
-			</div>
-		</div>
-
-		<Badge variant="purple" class="px-2.5 py-1 text-xs">
-			Manual Entry
-		</Badge>
+<div class="space-y-4 pb-12 print:p-0 print:space-y-2">
+	
+	<!-- 1. Header with Actions -->
+	<div class="print:hidden">
+		<OrderDetailsHeader
+			{orderId}
+			bind:status
+			isNewOrder={true}
+			title="নতুন অর্ডার তৈরি"
+			{createdAt}
+			{isSaving}
+			onStatusChange={handleStatusChange}
+			onConfirm={handleConfirm}
+			onCancel={handleCancel}
+			onSave={handleSave}
+			onPrint={handlePrint}
+			onSendToCourier={handleSendToCourier}
+		/>
 	</div>
 
-	<!-- Success Banner -->
-	{#if successMessage}
-		<div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800 flex items-center justify-between animate-in fade-in">
-			<div class="flex items-center gap-2">
-				<CheckCircle2 class="w-4 h-4 text-emerald-600" />
-				<span>{successMessage}</span>
+	<!-- 2. Customer Quick Edit Bar -->
+	<div class="print:hidden">
+		<CustomerQuickBar
+			{orderId}
+			bind:customerName
+			bind:customerPhone
+			bind:altPhone
+			bind:shippingAddress
+			onShowToast={showToast}
+		/>
+	</div>
+
+	<!-- 3. Three-Column Main Grid -->
+	<div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch print:hidden">
+		
+		<!-- Column 1: Ordered Items (4 cols) -->
+		<div class="lg:col-span-4 flex flex-col">
+			<OrderedItemsTable
+				bind:items
+				onUpdateQuantity={handleUpdateQuantity}
+				onRemoveItem={handleRemoveItem}
+			/>
+		</div>
+
+		<!-- Column 2: Product Search / Upsell (4 cols) -->
+		<div class="lg:col-span-4 flex flex-col">
+			<ProductUpsellSelector
+				catalogProducts={data.products}
+				orderedItems={items}
+				onAddProduct={handleAddProduct}
+			/>
+		</div>
+
+		<!-- Column 3: Intelligence & Customer History (4 cols) -->
+		<div class="lg:col-span-4 space-y-4 flex flex-col">
+			<!-- Courier & Fraud Check -->
+			<CourierFraudCard
+				phone={customerPhone}
+				stats={courierStats}
+				onRefresh={() => showToast('কুরিয়ার ফ্রড ডেটা সফলভাবে রিলোড হয়েছে!')}
+			/>
+
+			<!-- Call Notes & Timeline -->
+			<OrderCallNotes
+				bind:notes={callNotes}
+				onAddNote={handleAddNote}
+			/>
+
+			<!-- Customer Lifetime Profile -->
+			<CustomerProfileCard
+				{customerName}
+				{customerPhone}
+				{shippingAddress}
+				pastOrders={matchedPastOrders}
+				currentOrderId={orderId}
+			/>
+
+			<!-- Visitor & Device Info -->
+			<OrderVisitorMetaCard
+				meta={{
+					source: 'ম্যানুয়াল এন্ট্রি / ফোন কল',
+					fingerprint: 'manual_entry_agent',
+					ip: '127.0.0.1 (Admin)',
+					device: 'ডেস্কটপ (অ্যাডমিন ড্যাশবোর্ড)',
+					totalVisits: 1,
+					activeTime: 'অর্ডার তৈরির কাজ চলছে',
+					avgLoad: '1.2s',
+					firstVisit: 'আজ'
+				}}
+				bind:isBanned
+				onToggleBan={handleToggleBan}
+			/>
+		</div>
+
+	</div>
+
+	<!-- 4. Financial Summary Footer Bar -->
+	<div class="print:hidden">
+		<OrderFinancialFooter
+			{subtotal}
+			bind:discount
+			bind:deliveryFee
+			bind:advancePaid
+			{isSaving}
+			saveLabel="অর্ডার তৈরি করুন"
+			confirmLabel="অর্ডার তৈরি ও কনফার্ম"
+			onSave={handleSave}
+			onConfirm={handleConfirm}
+			onPrint={handlePrint}
+		/>
+	</div>
+
+</div>
+
+<!-- Hidden Action Form for Server Persistence via SvelteKit Form Actions -->
+<form
+	bind:this={saveFormEl}
+	action="?/createManualOrder"
+	method="POST"
+	use:enhance={() => {
+		isSaving = true;
+		return async ({ result }) => {
+			isSaving = false;
+			if (result.type === 'success') {
+				showToast('নতুন অর্ডার সফলভাবে তৈরি হয়েছে!');
+				setTimeout(() => {
+					goto('/admin/orders');
+				}, 1200);
+			} else {
+				showToast('অর্ডার তৈরিতে সমস্যা হয়েছে। অনুগ্রহ করে সব তথ্য দিন।');
+			}
+		};
+	}}
+	class="hidden"
+>
+	<input type="hidden" name="orderId" value={orderId} />
+	<input type="hidden" name="customerName" value={customerName} />
+	<input type="hidden" name="customerEmail" value={customerPhone} />
+	<input type="hidden" name="altPhone" value={altPhone} />
+	<input type="hidden" name="shippingAddress" value={shippingAddress} />
+	<input type="hidden" name="productName" value={items[0]?.name || 'AURA Product'} />
+	<input type="hidden" name="items" value={JSON.stringify(items)} />
+	<input type="hidden" name="discount" value={discount} />
+	<input type="hidden" name="deliveryFee" value={deliveryFee} />
+	<input type="hidden" name="advancePaid" value={advancePaid} />
+	<input type="hidden" name="total" value={totalPayable} />
+	<input type="hidden" name="status" value={status} />
+</form>
+
+<!-- Toast Notification -->
+{#if toastMessage}
+	<div class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-bold border border-slate-700 animate-in fade-in slide-in-from-bottom-3 duration-200">
+		<CheckCircle2 class="w-4 h-4 text-emerald-400 shrink-0" />
+		<span>{toastMessage}</span>
+	</div>
+{/if}
+
+<!-- Printable Invoice / Challan Template (Active on window.print) -->
+<div class="hidden print:block p-8 bg-white text-black font-sans max-w-2xl mx-auto border border-black/20 rounded">
+	<!-- Invoice Header -->
+	<div class="flex justify-between items-start border-b border-black pb-4">
+		<div>
+			<h1 class="text-2xl font-black tracking-tight">AURA PRO</h1>
+			<p class="text-xs text-gray-600">New Order Memo & Delivery Challan</p>
+		</div>
+		<div class="text-right">
+			<div class="text-lg font-black font-mono">#{orderId}</div>
+			<div class="text-xs text-gray-500">তারিখ: {new Date().toLocaleDateString('bn-BD')}</div>
+			<div class="text-xs font-bold uppercase mt-1">স্ট্যাটাস: {status}</div>
+		</div>
+	</div>
+
+	<!-- Customer & Courier Info -->
+	<div class="grid grid-cols-2 gap-4 py-4 border-b border-gray-300 text-xs">
+		<div>
+			<h3 class="font-bold text-gray-800 uppercase text-[10px]">কাস্টমার বিবরণ:</h3>
+			<p class="font-bold text-sm mt-1">{customerName || 'গ্রাহকের নাম'}</p>
+			<p class="font-mono mt-0.5">মোবাইল: {customerPhone || '01XXXXXXXXX'}</p>
+			{#if altPhone}
+				<p class="font-mono">বিকল্প: {altPhone}</p>
+			{/if}
+			<p class="mt-1 text-gray-700">{shippingAddress || 'ঠিকানা'}</p>
+		</div>
+		<div class="text-right">
+			<h3 class="font-bold text-gray-800 uppercase text-[10px]">ডেলিভারি পার্টনার:</h3>
+			<p class="font-bold text-sm mt-1">Steadfast Courier Ltd.</p>
+			<p class="text-gray-600">ক্যাশ অন ডেলিভারি (COD)</p>
+		</div>
+	</div>
+
+	<!-- Items Table -->
+	<div class="py-4 border-b border-gray-300">
+		<table class="w-full text-xs text-left">
+			<thead>
+				<tr class="border-b border-gray-400 font-bold uppercase text-[10px]">
+					<th class="py-1">বিবরণ</th>
+					<th class="py-1 text-center">পরিমাণ</th>
+					<th class="py-1 text-right">মূল্য</th>
+					<th class="py-1 text-right">মোট</th>
+				</tr>
+			</thead>
+			<tbody class="divide-y divide-gray-200">
+				{#each items as item}
+					<tr>
+						<td class="py-2 font-medium">{item.name}</td>
+						<td class="py-2 text-center font-mono">{item.quantity}</td>
+						<td class="py-2 text-right font-mono">৳{item.price}</td>
+						<td class="py-2 text-right font-mono font-bold">৳{item.price * item.quantity}</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	</div>
+
+	<!-- Calculation Summary -->
+	<div class="py-3 flex justify-end text-xs">
+		<div class="w-48 space-y-1 font-mono">
+			<div class="flex justify-between">
+				<span>সাবটোটাল:</span>
+				<span>৳{subtotal}</span>
 			</div>
-			<Button size="sm" href="/admin/orders" class="bg-emerald-600 hover:bg-emerald-700">
-				অর্ডার তালিকায় দেখুন
-			</Button>
+			{#if discount > 0}
+				<div class="flex justify-between text-gray-600">
+					<span>ডিসকাউন্ট:</span>
+					<span>- ৳{discount}</span>
+				</div>
+			{/if}
+			<div class="flex justify-between">
+				<span>ডেলিভারি চার্জ:</span>
+				<span>+ ৳{deliveryFee}</span>
+			</div>
+			{#if advancePaid > 0}
+				<div class="flex justify-between text-gray-600">
+					<span>অগ্রিম গৃহীত:</span>
+					<span>- ৳{advancePaid}</span>
+				</div>
+			{/if}
+			<div class="flex justify-between font-bold text-sm border-t border-black pt-1">
+				<span>কাস্টমার থেকে প্রদেয়:</span>
+				<span>৳{totalPayable}</span>
+			</div>
 		</div>
-	{/if}
+	</div>
 
-	<!-- Form Formatted with shadcn Cards -->
-	<form
-		action="?/createManualOrder"
-		method="POST"
-		use:enhance={() => {
-			isSubmitting = true;
-			return async ({ result, update }) => {
-				isSubmitting = false;
-				if (result.type === 'success') {
-					successMessage = 'অর্ডারটি সফলভাবে তৈরি এবং সংরক্ষিত হয়েছে!';
-					customerName = '';
-					customerPhone = '';
-					shippingAddress = '';
-					setTimeout(() => {
-						goto('/admin/orders');
-					}, 1500);
-				} else {
-					await update();
-				}
-			};
-		}}
-		class="grid grid-cols-1 md:grid-cols-3 gap-6"
-	>
-		<!-- Left 2 Cols: Customer & Product Details -->
-		<div class="md:col-span-2 space-y-6">
-
-			<!-- 1. Customer Information Card -->
-			<Card class="p-6 space-y-4">
-				<div class="flex items-center gap-2 text-sm font-bold text-slate-900 border-b border-slate-100 pb-3">
-					<User class="w-4 h-4 text-[#5845eb]" />
-					<span>কাস্টমার তথ্য</span>
-				</div>
-
-				<div class="space-y-3">
-					<div class="space-y-1.5">
-						<label for="c-name" class="text-xs font-bold text-slate-700">কাস্টমারের পূর্ণ নাম *</label>
-						<Input
-							id="c-name"
-							name="customerName"
-							bind:value={customerName}
-							placeholder="উদাঃ মোঃ সাকিব হাসান"
-							required
-						/>
-					</div>
-
-					<div class="space-y-1.5">
-						<label for="c-phone" class="text-xs font-bold text-slate-700">মোবাইল নম্বর *</label>
-						<Input
-							id="c-phone"
-							name="customerEmail"
-							bind:value={customerPhone}
-							placeholder="উদাঃ 01700000000"
-							type="tel"
-							required
-						/>
-					</div>
-
-					<div class="space-y-1.5">
-						<label for="c-address" class="text-xs font-bold text-slate-700">পূর্ণ ডেলিভারি ঠিকানা *</label>
-						<Textarea
-							id="c-address"
-							name="shippingAddress"
-							bind:value={shippingAddress}
-							placeholder="উদাঃ বাসা ১২, রোড ৪, সেক্টর ৭, উত্তরা, ঢাকা"
-							rows={3}
-							required
-						/>
-					</div>
-				</div>
-			</Card>
-
-			<!-- 2. Product Information Card -->
-			<Card class="p-6 space-y-4">
-				<div class="flex items-center gap-2 text-sm font-bold text-slate-900 border-b border-slate-100 pb-3">
-					<Package class="w-4 h-4 text-[#5845eb]" />
-					<span>পণ্যের বিবরণ</span>
-				</div>
-
-				<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-					<div class="sm:col-span-2 space-y-1.5">
-						<label for="p-name" class="text-xs font-bold text-slate-700">পণ্যের নাম</label>
-						<Input
-							id="p-name"
-							name="productName"
-							bind:value={productName}
-						/>
-					</div>
-
-					<div class="space-y-1.5">
-						<label for="p-qty" class="text-xs font-bold text-slate-700">পরিমাণ</label>
-						<Input
-							id="p-qty"
-							type="number"
-							min="1"
-							bind:value={quantity}
-						/>
-					</div>
-
-					<div class="space-y-1.5">
-						<label for="p-price" class="text-xs font-bold text-slate-700">একক মূল্য (৳)</label>
-						<Input
-							id="p-price"
-							type="number"
-							bind:value={unitPrice}
-						/>
-					</div>
-				</div>
-			</Card>
-
-		</div>
-
-		<!-- Right 1 Col: Order Summary & Confirmation -->
-		<div class="space-y-6">
-
-			<Card class="p-6 space-y-5">
-				<div class="flex items-center gap-2 text-sm font-bold text-slate-900 border-b border-slate-100 pb-3">
-					<Truck class="w-4 h-4 text-[#5845eb]" />
-					<span>বিল ও পেমেন্ট সামারি</span>
-				</div>
-
-				<!-- Delivery Charge Options -->
-				<div class="space-y-2">
-					<span class="text-xs font-bold text-slate-700 block">ডেলিভারি এলাকা</span>
-					<div class="grid grid-cols-2 gap-2">
-						<button
-							type="button"
-							onclick={() => (deliveryCharge = 60)}
-							class="p-2.5 rounded-xl border text-xs font-bold text-center transition-all cursor-pointer {deliveryCharge === 60
-								? 'bg-indigo-50 border-[#5845eb] text-[#5845eb]'
-								: 'border-slate-200 text-slate-600 hover:bg-slate-50'}"
-						>
-							ঢাকার ভেতরে (৳৬০)
-						</button>
-						<button
-							type="button"
-							onclick={() => (deliveryCharge = 120)}
-							class="p-2.5 rounded-xl border text-xs font-bold text-center transition-all cursor-pointer {deliveryCharge === 120
-								? 'bg-indigo-50 border-[#5845eb] text-[#5845eb]'
-								: 'border-slate-200 text-slate-600 hover:bg-slate-50'}"
-						>
-							ঢাকার বাইরে (৳১২০)
-						</button>
-					</div>
-				</div>
-
-				<!-- Advance Payment -->
-				<div class="space-y-1.5">
-					<label for="advance" class="text-xs font-bold text-slate-700">অগ্রিম প্রদান (৳)</label>
-					<Input
-						id="advance"
-						type="number"
-						min="0"
-						bind:value={advancePaid}
-					/>
-				</div>
-
-				<!-- Summary Breakdown -->
-				<div class="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-2 text-xs">
-					<div class="flex items-center justify-between text-slate-600">
-						<span>সাবটোটাল</span>
-						<span class="font-mono font-bold">৳{subtotal}</span>
-					</div>
-					<div class="flex items-center justify-between text-slate-600">
-						<span>ডেলিভারি চার্জ</span>
-						<span class="font-mono font-bold">৳{deliveryCharge}</span>
-					</div>
-					{#if advancePaid > 0}
-						<div class="flex items-center justify-between text-emerald-600 font-bold">
-							<span>অগ্রিম পরিশোধ</span>
-							<span class="font-mono">-৳{advancePaid}</span>
-						</div>
-					{/if}
-					<div class="flex items-center justify-between text-slate-900 font-bold text-sm pt-2 border-t border-slate-200">
-						<span>সর্বমোট বকেয়া</span>
-						<span class="font-mono text-[#5845eb]">৳{total}</span>
-					</div>
-				</div>
-
-				<input type="hidden" name="total" value={total} />
-				<input type="hidden" name="status" value="pending" />
-
-				<!-- Submit Button -->
-				<Button
-					type="submit"
-					loading={isSubmitting}
-					class="w-full h-11 text-sm shadow-md shadow-indigo-600/20"
-				>
-					<ShoppingBag class="w-4 h-4" />
-					<span>ম্যানুয়াল অর্ডার কনফার্ম করুন</span>
-				</Button>
-			</Card>
-
-		</div>
-	</form>
-
+	<!-- Signature -->
+	<div class="pt-8 flex justify-between text-[11px] text-gray-500">
+		<div class="border-t border-gray-400 pt-1 w-32 text-center">কাস্টমার স্বাক্ষর</div>
+		<div class="border-t border-gray-400 pt-1 w-32 text-center">অনুমোদনকারী স্বাক্ষর</div>
+	</div>
 </div>

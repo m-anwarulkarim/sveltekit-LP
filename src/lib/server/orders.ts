@@ -185,3 +185,81 @@ export async function handleEmptyTrash(platform: any) {
 
 	return { success: true, emptied: true };
 }
+
+export async function handleConvertIncompleteToOrder(request: Request, platform: any) {
+	const data = await request.formData();
+	const orderId = data.get('orderId')?.toString();
+	const shippingAddress = data.get('shippingAddress')?.toString();
+	const customerName = data.get('customerName')?.toString();
+
+	if (!orderId) return fail(400, { message: 'Order ID required' });
+
+	if (platform?.env?.DB) {
+		try {
+			const db = getDb(platform.env.DB);
+			const updatePayload: Record<string, any> = { status: 'processing' };
+			if (shippingAddress) updatePayload.shippingAddress = shippingAddress;
+			if (customerName) updatePayload.customerName = customerName;
+
+			await db.update(schema.orders)
+				.set(updatePayload)
+				.where(eq(schema.orders.id, orderId));
+			return { success: true, convertedOrder: orderId, newStatus: 'processing' };
+		} catch (err: any) {
+			return fail(500, { message: err?.message || 'Failed to convert order' });
+		}
+	}
+
+	return { success: true, convertedOrder: orderId, newStatus: 'processing' };
+}
+
+export async function handleUpdateIncompleteOrder(request: Request, platform: any) {
+	const data = await request.formData();
+	const orderId = data.get('orderId')?.toString();
+	const customerName = data.get('customerName')?.toString();
+	const customerPhone = data.get('customerPhone')?.toString();
+	const shippingAddress = data.get('shippingAddress')?.toString();
+	const totalStr = data.get('total')?.toString();
+	const notes = data.get('notes')?.toString() || '';
+	const recoveryStatus = data.get('recoveryStatus')?.toString() || 'uncontacted';
+	const dropOffStage = data.get('dropOffStage')?.toString() || 'Step 2: ফর্ম অসম্পূর্ণ';
+
+	if (!orderId) return fail(400, { message: 'Order ID required' });
+
+	if (platform?.env?.DB) {
+		try {
+			const db = getDb(platform.env.DB);
+			const existing = await db.select().from(schema.orders).where(eq(schema.orders.id, orderId)).get();
+			let currentItems: any[] = [];
+			try {
+				currentItems = existing ? JSON.parse(existing.items) : [];
+			} catch {
+				currentItems = [];
+			}
+
+			if (currentItems.length > 0) {
+				currentItems[0].notes = notes;
+				currentItems[0].recoveryStatus = recoveryStatus;
+				currentItems[0].dropOffStage = dropOffStage;
+			}
+
+			const updatePayload: Record<string, any> = {
+				items: JSON.stringify(currentItems)
+			};
+			if (customerName) updatePayload.customerName = customerName;
+			if (customerPhone) updatePayload.customerEmail = customerPhone;
+			if (shippingAddress) updatePayload.shippingAddress = shippingAddress;
+			if (totalStr) updatePayload.total = parseInt(totalStr, 10);
+
+			await db.update(schema.orders)
+				.set(updatePayload)
+				.where(eq(schema.orders.id, orderId));
+
+			return { success: true, updatedOrder: orderId };
+		} catch (err: any) {
+			return fail(500, { message: err?.message || 'Failed to update incomplete order' });
+		}
+	}
+
+	return { success: true, updatedOrder: orderId };
+}

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import {
 		Flame,
 		Search,
@@ -56,6 +57,20 @@
 		openSubmenu = openSubmenu === menu ? null : menu;
 	}
 
+	function handleParentClick(menu: SubmenuType, defaultHref: string) {
+		if (collapsed) collapsed = false;
+
+		if (currentPath === defaultHref) {
+			// Already on this starting page, toggle the submenu accordion
+			openSubmenu = openSubmenu === menu ? null : menu;
+		} else {
+			// Navigate to the default starting sub-item and open submenu
+			openSubmenu = menu;
+			if (mobileOpen) mobileOpen = false;
+			goto(defaultHref);
+		}
+	}
+
 	function closeAllSubmenus() {
 		openSubmenu = null;
 	}
@@ -69,8 +84,12 @@
 	// Derived counts from layout data
 	let webOrders = $derived(
 		(data?.orders || []).filter((o: any) =>
-			['pending', 'incomplete', 'no_response', 'no_response_3', 'good_no_response', 'busy', 'hold', 'recall'].includes(o.status)
+			['pending', 'no_response', 'no_response_3', 'good_no_response', 'busy', 'hold', 'recall'].includes(o.status)
 		)
+	);
+
+	let incompleteOrders = $derived(
+		(data?.orders || []).filter((o: any) => o.status === 'incomplete')
 	);
 
 	let orderListOrders = $derived(
@@ -205,15 +224,17 @@
 			
 			<!-- 1. Dashboard Dropdown (With Overview, My Activity, Bot Activity) -->
 			<div class="space-y-1 relative">
-				<button
-					type="button"
-					onclick={() => toggleSubmenu('dashboard')}
-					class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isDashboardGroupActive
+				<div
+					class="w-full flex items-center {collapsed ? 'justify-center' : 'justify-between'} rounded-2xl transition-all font-semibold text-[15px] {isDashboardGroupActive
 						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
-						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'} cursor-pointer"
-					title="Dashboard"
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
 				>
-					<div class="flex items-center gap-3.5">
+					<button
+						type="button"
+						onclick={() => handleParentClick('dashboard', '/admin')}
+						class="flex-1 flex items-center gap-3.5 {collapsed ? 'p-3 justify-center' : 'px-4 py-3.5'} text-left cursor-pointer transition-colors"
+						title="Dashboard"
+					>
 						<svg class="w-5 h-5 shrink-0 {isDashboardGroupActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="currentColor">
 							<rect x="3" y="3" width="7.5" height="7.5" rx="2" />
 							<rect x="13.5" y="3" width="7.5" height="7.5" rx="2" />
@@ -223,11 +244,22 @@
 						{#if !collapsed}
 							<span>Dashboard</span>
 						{/if}
-					</div>
+					</button>
 					{#if !collapsed}
-						<ChevronDown class="w-4 h-4 transition-transform duration-200 {isDashboardOpen ? 'rotate-180' : ''} {isDashboardGroupActive ? 'text-white' : 'text-slate-400'}" />
+						<button
+							type="button"
+							onclick={(e) => {
+								e.stopPropagation();
+								toggleSubmenu('dashboard');
+							}}
+							class="px-3.5 py-3.5 flex items-center justify-center cursor-pointer rounded-r-2xl transition-colors {isDashboardGroupActive ? 'hover:bg-white/10' : 'hover:bg-slate-200/50'}"
+							aria-label="Toggle Dashboard submenu"
+							title="টগল সাবমেনু"
+						>
+							<ChevronDown class="w-4 h-4 transition-transform duration-200 {isDashboardOpen ? 'rotate-180' : ''} {isDashboardGroupActive ? 'text-white' : 'text-slate-400'}" />
+						</button>
 					{/if}
-				</button>
+				</div>
 
 				<!-- Dashboard Submenu -->
 				{#if !collapsed && isDashboardOpen}
@@ -273,36 +305,50 @@
 
 			<!-- 2. Orders Dropdown -->
 			<div class="space-y-1 relative">
-				<button
-					type="button"
-					onclick={() => toggleSubmenu('orders')}
-					class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isOrdersActive
+				<div
+					class="w-full flex items-center {collapsed ? 'justify-center' : 'justify-between'} rounded-2xl transition-all font-semibold text-[15px] {isOrdersActive
 						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
-						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'} cursor-pointer"
-					title="Orders"
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
 				>
-					<div class="flex items-center gap-3.5">
+					<button
+						type="button"
+						onclick={() => handleParentClick('orders', '/admin/orders')}
+						class="flex-1 flex items-center gap-3.5 {collapsed ? 'p-3 justify-center' : 'px-4 py-3.5'} text-left cursor-pointer transition-colors"
+						title="Orders"
+					>
 						<svg class="w-5 h-5 shrink-0 {isOrdersActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="currentColor">
 							<path fill-rule="evenodd" clip-rule="evenodd" d="M6 5C4.89543 5 4 5.89543 4 7L3.1 17C2.98 18.3 3.99 19.5 5.3 19.5H18.7C20.01 19.5 21.02 18.3 20.9 17L20 7C20 5.89543 19.1046 5 18 5H6ZM8 8C8 7.44772 8.44772 7 9 7H15C15.5523 7 16 7.44772 16 8C16 10.2091 14.2091 12 12 12C9.79086 12 8 10.2091 8 8Z" />
 						</svg>
 						{#if !collapsed}
 							<span>Orders</span>
 						{/if}
-					</div>
+					</button>
 					{#if !collapsed}
-						<div class="flex items-center gap-2">
+						<div class="flex items-center gap-1 pr-2">
 							<span class="text-xs font-bold px-2 py-0.5 rounded-full {isOrdersActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
-								{webOrders.length + orderListOrders.length}
+								{webOrders.length + orderListOrders.length + incompleteOrders.length}
 							</span>
-							<ChevronDown class="w-4 h-4 transition-transform duration-200 {isOrdersOpen ? 'rotate-180' : ''} {isOrdersActive ? 'text-white' : 'text-slate-400'}" />
+							<button
+								type="button"
+								onclick={(e) => {
+									e.stopPropagation();
+									toggleSubmenu('orders');
+								}}
+								class="p-1.5 flex items-center justify-center cursor-pointer rounded-lg transition-colors {isOrdersActive ? 'hover:bg-white/10' : 'hover:bg-slate-200/50'}"
+								aria-label="Toggle Orders submenu"
+								title="টগল সাবমেনু"
+							>
+								<ChevronDown class="w-4 h-4 transition-transform duration-200 {isOrdersOpen ? 'rotate-180' : ''} {isOrdersActive ? 'text-white' : 'text-slate-400'}" />
+							</button>
 						</div>
 					{/if}
-				</button>
+				</div>
 
 				<!-- Orders Submenu -->
 				{#if !collapsed && isOrdersOpen}
 					<div class="pl-3 pr-1 py-1 space-y-1 border-l-2 border-slate-100 ml-6 my-1 animate-in fade-in duration-150">
-							<a
+						<!-- 1. New Order (Manual) -->
+						<a
 							href="/admin/orders/new"
 							onclick={() => (mobileOpen = false)}
 							class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {currentPath === '/admin/orders/new'
@@ -314,6 +360,8 @@
 								Manual
 							</span>
 						</a>
+
+						<!-- 2. Web Orders -->
 						<a
 							href="/admin/orders"
 							onclick={() => (mobileOpen = false)}
@@ -327,6 +375,25 @@
 							</span>
 						</a>
 
+						<!-- 3. Incomplete Orders (NEW) -->
+						<a
+							href="/admin/orders/incomplete"
+							onclick={() => (mobileOpen = false)}
+							class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {currentPath === '/admin/orders/incomplete'
+								? 'bg-amber-50 text-amber-800 font-bold border border-amber-200/80 shadow-2xs'
+								: 'text-slate-600 hover:text-amber-800 hover:bg-amber-50/50'}"
+						>
+							<div class="flex items-center gap-1.5">
+								<span>Incomplete Orders</span>
+							</div>
+							{#if incompleteOrders.length > 0}
+								<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200/90">
+									{incompleteOrders.length}
+								</span>
+							{/if}
+						</a>
+
+						<!-- 4. Order List -->
 						<a
 							href="/admin/orders/list"
 							onclick={() => (mobileOpen = false)}
@@ -340,8 +407,7 @@
 							</span>
 						</a>
 
-					
-
+						<!-- 4. Pre-Orders -->
 						<a
 							href="/admin/orders/pre"
 							onclick={() => (mobileOpen = false)}
@@ -357,6 +423,7 @@
 							{/if}
 						</a>
 
+						<!-- 5. Trash -->
 						<a
 							href="/admin/orders/trash"
 							onclick={() => (mobileOpen = false)}
@@ -402,24 +469,37 @@
 
 			<!-- 4. Customization Dropdown -->
 			<div class="space-y-1 relative">
-				<button
-					type="button"
-					onclick={() => toggleSubmenu('customization')}
-					class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isCustomizationActive
+				<div
+					class="w-full flex items-center {collapsed ? 'justify-center' : 'justify-between'} rounded-2xl transition-all font-semibold text-[15px] {isCustomizationActive
 						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
-						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'} cursor-pointer"
-					title="Customization"
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
 				>
-					<div class="flex items-center gap-3.5">
+					<button
+						type="button"
+						onclick={() => handleParentClick('customization', '/admin/customization/carousel')}
+						class="flex-1 flex items-center gap-3.5 {collapsed ? 'p-3 justify-center' : 'px-4 py-3.5'} text-left cursor-pointer transition-colors"
+						title="Customization"
+					>
 						<SlidersHorizontal class="w-5 h-5 shrink-0 {isCustomizationActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" />
 						{#if !collapsed}
 							<span>Customization</span>
 						{/if}
-					</div>
+					</button>
 					{#if !collapsed}
-						<ChevronDown class="w-4 h-4 transition-transform duration-200 {isCustomizationOpen ? 'rotate-180' : ''}" />
+						<button
+							type="button"
+							onclick={(e) => {
+								e.stopPropagation();
+								toggleSubmenu('customization');
+							}}
+							class="px-3.5 py-3.5 flex items-center justify-center cursor-pointer rounded-r-2xl transition-colors {isCustomizationActive ? 'hover:bg-white/10' : 'hover:bg-slate-200/50'}"
+							aria-label="Toggle Customization submenu"
+							title="টগল সাবমেনু"
+						>
+							<ChevronDown class="w-4 h-4 transition-transform duration-200 {isCustomizationOpen ? 'rotate-180' : ''} {isCustomizationActive ? 'text-white' : 'text-slate-400'}" />
+						</button>
 					{/if}
-				</button>
+				</div>
 
 				<!-- Customization Submenu -->
 				{#if !collapsed && isCustomizationOpen}
@@ -535,15 +615,17 @@
 
 			<!-- 6. Catalog Dropdown -->
 			<div class="space-y-1 relative">
-				<button
-					type="button"
-					onclick={() => toggleSubmenu('catalog')}
-					class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isCatalogActive
+				<div
+					class="w-full flex items-center {collapsed ? 'justify-center' : 'justify-between'} rounded-2xl transition-all font-semibold text-[15px] {isCatalogActive
 						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
-						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'} cursor-pointer"
-					title="Catalog"
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
 				>
-					<div class="flex items-center gap-3.5">
+					<button
+						type="button"
+						onclick={() => handleParentClick('catalog', '/admin/catalog/categories')}
+						class="flex-1 flex items-center gap-3.5 {collapsed ? 'p-3 justify-center' : 'px-4 py-3.5'} text-left cursor-pointer transition-colors"
+						title="Catalog"
+					>
 						<!-- Catalog Icon matching screenshot -->
 						<div class="w-5 h-5 flex items-center justify-center {isCatalogActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}">
 							<svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
@@ -554,13 +636,25 @@
 						{#if !collapsed}
 							<span>Catalog</span>
 						{/if}
-					</div>
+					</button>
+
 					{#if !collapsed}
-						<ChevronDown
-							class="w-4 h-4 transition-transform duration-200 {isCatalogOpen ? 'rotate-180' : ''} {isCatalogActive ? 'text-white' : 'text-slate-400'}"
-						/>
+						<button
+							type="button"
+							onclick={(e) => {
+								e.stopPropagation();
+								toggleSubmenu('catalog');
+							}}
+							class="px-3.5 py-3.5 flex items-center justify-center cursor-pointer rounded-r-2xl transition-colors {isCatalogActive ? 'hover:bg-white/10' : 'hover:bg-slate-200/50'}"
+							aria-label="Toggle Catalog submenu"
+							title="টগল সাবমেনু"
+						>
+							<ChevronDown
+								class="w-4 h-4 transition-transform duration-200 {isCatalogOpen ? 'rotate-180' : ''} {isCatalogActive ? 'text-white' : 'text-slate-400'}"
+							/>
+						</button>
 					{/if}
-				</button>
+				</div>
 
 				{#if isCatalogOpen && !collapsed}
 					<div class="pl-4 pr-1 py-1 space-y-1 text-xs transition-all">
@@ -764,15 +858,17 @@
 
 			<!-- 12. Reports Dropdown -->
 			<div class="space-y-1 relative">
-				<button
-					type="button"
-					onclick={() => toggleSubmenu('reports')}
-					class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isReportsActive
+				<div
+					class="w-full flex items-center {collapsed ? 'justify-center' : 'justify-between'} rounded-2xl transition-all font-semibold text-[15px] {isReportsActive
 						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
-						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'} cursor-pointer"
-					title="Reports"
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
 				>
-					<div class="flex items-center gap-3.5">
+					<button
+						type="button"
+						onclick={() => handleParentClick('reports', '/admin/reports/daily-business-summary')}
+						class="flex-1 flex items-center gap-3.5 {collapsed ? 'p-3 justify-center' : 'px-4 py-3.5'} text-left cursor-pointer transition-colors"
+						title="Reports"
+					>
 						<svg class="w-5 h-5 shrink-0 {isReportsActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 							<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
 							<polyline points="14 2 14 8 20 8" />
@@ -783,11 +879,23 @@
 						{#if !collapsed}
 							<span>Reports</span>
 						{/if}
-					</div>
+					</button>
+
 					{#if !collapsed}
-						<ChevronDown class="w-4 h-4 transition-transform duration-200 {isReportsOpen ? 'rotate-180' : ''} {isReportsActive ? 'text-white' : 'text-slate-400'}" />
+						<button
+							type="button"
+							onclick={(e) => {
+								e.stopPropagation();
+								toggleSubmenu('reports');
+							}}
+							class="px-3.5 py-3.5 flex items-center justify-center cursor-pointer rounded-r-2xl transition-colors {isReportsActive ? 'hover:bg-white/10' : 'hover:bg-slate-200/50'}"
+							aria-label="Toggle Reports submenu"
+							title="টগল সাবমেনু"
+						>
+							<ChevronDown class="w-4 h-4 transition-transform duration-200 {isReportsOpen ? 'rotate-180' : ''} {isReportsActive ? 'text-white' : 'text-slate-400'}" />
+						</button>
 					{/if}
-				</button>
+				</div>
 
 				<!-- Reports Submenu -->
 				{#if !collapsed && isReportsOpen}

@@ -282,11 +282,124 @@ export const INITIAL_ORDERS = [
 				price: 1250,
 				quantity: 1,
 				source: 'Facebook',
-				timeAgo: '3 hours ago',
+				timeAgo: '15 মিনিট আগে',
+				dropOffStage: 'Step 2: ঠিকানা অসম্পূর্ণ',
+				recoveryStatus: 'uncontacted',
+				notes: 'নাম ও ফোন নম্বর দিয়েছেন, কিন্তু পূর্ণ ঠিকানা লেখেননি',
 				successRate: { delivered: 8, returned: 4, percent: 66 }
 			}
 		]),
 		total: 1250,
+		status: 'incomplete'
+	},
+	{
+		id: '84670',
+		customerName: 'সাদিয়া আফরিন',
+		customerEmail: '01755123987',
+		shippingAddress: 'গুলশান-১, ঢাকা',
+		items: JSON.stringify([
+			{
+				id: 'prod-wave-earbuds',
+				name: 'AURA Wave Spatial Pro',
+				price: 18900,
+				quantity: 1,
+				source: 'Instagram Ad',
+				timeAgo: '25 মিনিট আগে',
+				dropOffStage: 'Step 3: পেমেন্ট গেটওয়ে ড্রপ',
+				recoveryStatus: 'uncontacted',
+				notes: 'বিকাশ গেটওয়ে পেজে গিয়ে ব্রাউজার ক্লোজ করেছে',
+				successRate: { delivered: 24, returned: 1, percent: 96 }
+			}
+		]),
+		total: 18900,
+		status: 'incomplete'
+	},
+	{
+		id: '84671',
+		customerName: 'কাজী ফাহিম',
+		customerEmail: '01912345678',
+		shippingAddress: 'আগ্রাবাদ বাণিজ্যিক এলাকা, চট্টগ্রাম',
+		items: JSON.stringify([
+			{
+				id: 'prod-paint-pen',
+				name: 'Car Paint Touch-up Pen',
+				price: 490,
+				quantity: 1,
+				source: 'Google Search',
+				timeAgo: '১ ঘণ্টা আগে',
+				dropOffStage: 'Step 1: মোবাইল নম্বর ইনপুট ড্রপ',
+				recoveryStatus: 'called',
+				notes: 'কল দেওয়া হয়েছিল, বলেছেন অফিসে ব্যস্ত আছেন, সন্ধ্যায় অর্ডার করবেন',
+				successRate: { delivered: 15, returned: 2, percent: 88 }
+			}
+		]),
+		total: 490,
+		status: 'incomplete'
+	},
+	{
+		id: '84672',
+		customerName: 'নুসরাত জাহান',
+		customerEmail: '01622334455',
+		shippingAddress: 'উপশহর, রাজশাহী',
+		items: JSON.stringify([
+			{
+				id: 'prod-window-sticker',
+				name: '3d Window View Wall Sticker',
+				price: 650,
+				quantity: 1,
+				source: 'Facebook Lead',
+				timeAgo: '২ ঘণ্টা আগে',
+				dropOffStage: 'Step 2: ডেলিভারি এরিয়া অপূর্ণ',
+				recoveryStatus: 'whatsapp_sent',
+				notes: 'হোয়াটসঅ্যাপে ১০% স্পেশাল ডিসকাউন্ট কোড পাঠানো হয়েছে',
+				successRate: { delivered: 12, returned: 0, percent: 100 }
+			}
+		]),
+		total: 650,
+		status: 'incomplete'
+	},
+	{
+		id: '84673',
+		customerName: 'কামরুল হাসান',
+		customerEmail: '01301928374',
+		shippingAddress: 'মিরপুর-১০, ঢাকা',
+		items: JSON.stringify([
+			{
+				id: 'prod-mosquito-lamp',
+				name: 'Electric Shock Mosquito Killing Lamp',
+				price: 890,
+				quantity: 1,
+				source: 'TikTok Shop',
+				timeAgo: '৩ ঘণ্টা আগে',
+				dropOffStage: 'Step 2: ফর্ম অসম্পূর্ণ',
+				recoveryStatus: 'followup',
+				notes: 'ডেলিভারি চার্জ নিয়ে প্রশ্ন করেছিলেন, ফ্রি ডেলিভারি অফার দেওয়া হয়েছে',
+				successRate: { delivered: 19, returned: 3, percent: 86 }
+			}
+		]),
+		total: 890,
+		status: 'incomplete'
+	},
+	{
+		id: '84674',
+		customerName: 'তানভীর আহমেদ',
+		customerEmail: '01719887766',
+		shippingAddress: 'উত্তরা সেক্টর-৭, ঢাকা',
+		items: JSON.stringify([
+			{
+				id: 'prod-spectrum-x',
+				name: 'AURA Spectrum X (Black)',
+				price: 1466,
+				quantity: 1,
+				source: 'Direct',
+				timeAgo: '৫ ঘণ্টা আগে',
+				dropOffStage: 'Step 3: অর্ডার পেজ ক্লোজড',
+				recoveryStatus: 'converted',
+				notes: 'সফলভাবে টেলিফোনে কনফার্ম করা হয়েছে এবং মূল অর্ডারে ট্রান্সফার করা হয়েছে',
+				successRate: { delivered: 28, returned: 2, percent: 93 }
+			}
+		]),
+		total: 1466,
 		status: 'incomplete'
 	},
 	{

@@ -17,7 +17,7 @@
 
 	let { data }: { data: any } = $props();
 
-	// Generate a dynamic temporary ID for this new order
+	// New order starts completely fresh with empty fields
 	let generatedId = 'AUR-' + Math.floor(10000 + Math.random() * 90000);
 	let orderId = $state(generatedId);
 	let status = $state('pending');
@@ -26,24 +26,8 @@
 	let altPhone = $state('');
 	let shippingAddress = $state('');
 
-	// Initially seed with 1 default item from products if available, or empty
-	const defaultProd = data.products?.[0] || {
-		id: 'prod-paint-pen',
-		name: 'Car Paint Touch-up Pen',
-		price: 490,
-		image: '/images/products/car-paint-pen.svg'
-	};
-
-	let items = $state<any[]>([
-		{
-			id: defaultProd.id,
-			name: defaultProd.name,
-			price: defaultProd.price,
-			quantity: 1,
-			image: defaultProd.image,
-			variant: defaultProd.category !== '-' ? defaultProd.category : ''
-		}
-	]);
+	// Initially empty: staff chooses products using the live search upsell panel
+	let items = $state<any[]>([]);
 
 	let createdAt = $state(new Date());
 
@@ -52,15 +36,8 @@
 	let deliveryFee = $state(60);
 	let advancePaid = $state(0);
 
-	// Intelligence & Notes
-	let callNotes = $state<any[]>([
-		{
-			id: 'note-1',
-			note: 'ম্যানুয়াল অর্ডার তৈরি শুরু হয়েছে (অ্যাডমিন প্যানেল)।',
-			author: 'Admin Staff',
-			time: 'এইমাত্র'
-		}
-	]);
+	// Intelligence & Notes start clean
+	let callNotes = $state<any[]>([]);
 	let isBanned = $state(false);
 	let isSaving = $state(false);
 
@@ -73,11 +50,11 @@
 		}, 3000);
 	}
 
-	// Dynamic Customer History Search from Parent Data
+	// Dynamic Customer History Search from Parent Data (only when phone is typed)
 	let matchedPastOrders = $derived.by(() => {
-		if (!customerPhone || customerPhone.length < 5) return [];
+		if (!customerPhone || customerPhone.trim().length < 6) return [];
 		return (data.orders || [])
-			.filter((o: any) => (o.customerEmail || '').includes(customerPhone))
+			.filter((o: any) => (o.customerEmail || '').includes(customerPhone.trim()))
 			.map((o: any) => ({
 				id: o.id,
 				status: o.status,
@@ -86,22 +63,23 @@
 			}));
 	});
 
-	// Dynamic Courier Risk Check for New Order
+	// Dynamic Courier Risk Check for New Order (null when no phone is typed)
 	let courierStats = $derived.by(() => {
+		if (!customerPhone || customerPhone.trim().length < 6) return null;
 		const pastCount = matchedPastOrders.length;
 		if (pastCount === 0) {
 			return {
-				total: 12,
-				delivered: 11,
-				cancelled: 1,
-				successRate: 92,
+				total: 0,
+				delivered: 0,
+				cancelled: 0,
+				successRate: 0,
 				courierName: 'Steadfast & Pathao'
 			};
 		}
-		const delivered = matchedPastOrders.filter((o) =>
+		const delivered = matchedPastOrders.filter((o: any) =>
 			['delivered', 'confirmed', 'processing'].includes(o.status)
 		).length;
-		const cancelled = matchedPastOrders.filter((o) => o.status === 'cancelled').length;
+		const cancelled = matchedPastOrders.filter((o: any) => o.status === 'cancelled').length;
 		const rate = Math.round((delivered / pastCount) * 100);
 		return {
 			total: pastCount,
@@ -112,12 +90,13 @@
 		};
 	});
 
-	// Subtotal & Total
+	// Subtotal & Total (returns 0 if no items added yet)
 	let subtotal = $derived.by(() => {
-		return items.reduce((acc, it) => acc + (Number(it.price) * Number(it.quantity) || 0), 0);
+		return items.reduce((acc: number, it: any) => acc + (Number(it.price) * Number(it.quantity) || 0), 0);
 	});
 
 	let totalPayable = $derived.by(() => {
+		if (items.length === 0) return 0;
 		const gross = subtotal;
 		const disc = Math.max(0, Number(discount) || 0);
 		const del = Math.max(0, Number(deliveryFee) || 0);
@@ -136,12 +115,12 @@
 
 	function handleRemoveItem(index: number) {
 		const removed = items[index];
-		items = items.filter((_, i) => i !== index);
+		items = items.filter((_, i: number) => i !== index);
 		showToast(`"${removed.name}" আইটেমটি সরানো হয়েছে`);
 	}
 
 	function handleAddProduct(product: any) {
-		const existingIndex = items.findIndex((it) => it.id === product.id);
+		const existingIndex = items.findIndex((it: any) => it.id === product.id);
 		if (existingIndex > -1) {
 			items[existingIndex].quantity += 1;
 			showToast(`"${product.name}" এর পরিমাণ বৃদ্ধি করা হয়েছে (+১)`);

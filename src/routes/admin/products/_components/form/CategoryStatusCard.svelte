@@ -147,7 +147,9 @@
 		<div class="flex items-center justify-between border-b border-slate-100 pb-3">
 			<h2 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
 				<span>Size Chart</span>
-				<HelpCircle class="w-3.5 h-3.5 text-slate-400 cursor-pointer" title="পোশাক বা ফুটওয়্যারের ক্ষেত্রে সাইজ চার্ট আপলোড করতে পারেন" />
+				<span title="পোশাক বা ফুটওয়্যারের ক্ষেত্রে সাইজ চার্ট আপলোড করতে পারেন">
+					<HelpCircle class="w-3.5 h-3.5 text-slate-400 cursor-pointer" />
+				</span>
 			</h2>
 			{#if sizeChartImage}
 				<button
@@ -178,3 +180,4 @@
 		{/if}
 	</div>
 </div>
+

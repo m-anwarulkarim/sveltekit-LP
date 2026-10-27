@@ -47,7 +47,7 @@
 
 	// Subtotal & Total
 	let subtotal = $derived.by(() => {
-		return items.reduce((acc, it) => acc + (Number(it.price) * Number(it.quantity) || 0), 0);
+		return items.reduce((acc: number, it: any) => acc + (Number(it.price) * Number(it.quantity) || 0), 0);
 	});
 
 	let totalPayable = $derived.by(() => {
@@ -69,12 +69,12 @@
 
 	function handleRemoveItem(index: number) {
 		const removed = items[index];
-		items = items.filter((_, i) => i !== index);
+		items = items.filter((_, i: number) => i !== index);
 		showToast(`"${removed.name}" আইটেমটি সরানো হয়েছে`);
 	}
 
 	function handleAddProduct(product: any) {
-		const existingIndex = items.findIndex((it) => it.id === product.id);
+		const existingIndex = items.findIndex((it: any) => it.id === product.id);
 		if (existingIndex > -1) {
 			items[existingIndex].quantity += 1;
 			showToast(`"${product.name}" এর পরিমাণ বৃদ্ধি করা হয়েছে (+১)`);

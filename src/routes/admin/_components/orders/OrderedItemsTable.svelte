@@ -50,10 +50,16 @@
 	<!-- Items List -->
 	<div class="divide-y divide-slate-100 flex-1 overflow-y-auto max-h-[460px] py-1">
 		{#if items.length === 0}
-			<div class="py-12 text-center text-slate-400 space-y-2">
-				<PackageOpen class="w-8 h-8 mx-auto text-slate-300 stroke-1" />
-				<p class="text-xs font-semibold">এই অর্ডারে কোনো আইটেম নেই</p>
-				<p class="text-[11px] text-slate-400">ডানপাশের সার্চ প্যানেল থেকে পণ্য যুক্ত করুন</p>
+			<div class="py-14 px-4 text-center text-slate-400 space-y-3 my-auto border-2 border-dashed border-slate-200/90 rounded-2xl bg-slate-50/50">
+				<div class="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mx-auto text-[#5845eb]">
+					<ShoppingBag class="w-6 h-6 stroke-1.5" />
+				</div>
+				<div class="space-y-1">
+					<p class="text-xs font-bold text-slate-800">এখনো কোনো পণ্য নির্বাচন করা হয়নি</p>
+					<p class="text-[11px] text-slate-400 max-w-[240px] mx-auto leading-relaxed">
+						ডানপাশের ক্যাটালগ থেকে পণ্য খুঁজুন এবং <span class="text-indigo-600 font-bold">[+]</span> আইকনে ক্লিক করে অর্ডারে যুক্ত করুন।
+					</p>
+				</div>
 			</div>
 		{:else}
 			{#each items as item, index}

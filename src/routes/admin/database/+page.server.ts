@@ -21,7 +21,8 @@ export const actions: Actions = {
 			const db = getDb(platform.env.DB);
 			await db.delete(schema.products);
 			for (const p of INITIAL_PRODUCTS) {
-				await db.insert(schema.products).values(p);
+				const { variants, tags, status, priority, stock, openingStock, subCategory, isLowStock, ...dbProduct } = p as any;
+				await db.insert(schema.products).values(dbProduct);
 			}
 
 			await db.delete(schema.orders);

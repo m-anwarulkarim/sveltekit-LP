@@ -123,10 +123,10 @@
 				</select>
 			</div>
 
-			<!-- Time Ago Badge -->
-			<span class="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 bg-slate-100/80 px-2 py-1 rounded-lg border border-slate-200/60">
+			<!-- Time Ago / Status Badge -->
+			<span class="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 bg-slate-100/80 px-2.5 py-1 rounded-lg border border-slate-200/60">
 				<Clock class="w-3 h-3 text-slate-400" />
-				<span>{formatTimeAgo(createdAt)}</span>
+				<span>{isNewOrder ? 'নতুন খসড়া (Draft)' : formatTimeAgo(createdAt)}</span>
 			</span>
 		</div>
 	</div>
@@ -143,34 +143,38 @@
 			class="h-9 gap-1.5 text-xs font-bold border-indigo-200 text-indigo-700 bg-indigo-50/60 hover:bg-indigo-100 shadow-2xs"
 		>
 			<Save class="w-3.5 h-3.5" />
-			<span>{isSaving ? 'সংরক্ষণ হচ্ছে...' : 'সেভ করুন'}</span>
+			<span>{isSaving ? 'সংরক্ষণ হচ্ছে...' : (isNewOrder ? 'অর্ডার তৈরি করুন' : 'সেভ করুন')}</span>
 		</Button>
 
-		<!-- Print Invoice Button -->
-		<Button
-			type="button"
-			variant="outline"
-			size="sm"
-			onclick={onPrint}
-			class="h-9 gap-1.5 text-xs font-bold border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-100 shadow-2xs"
-			title="চালান / ইনভয়েস প্রিন্ট"
-		>
-			<Printer class="w-3.5 h-3.5" />
-			<span class="hidden sm:inline">চালান প্রিন্ট</span>
-		</Button>
+		<!-- Print Invoice Button (only on existing orders) -->
+		{#if !isNewOrder}
+			<Button
+				type="button"
+				variant="outline"
+				size="sm"
+				onclick={onPrint}
+				class="h-9 gap-1.5 text-xs font-bold border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-100 shadow-2xs"
+				title="চালান / ইনভয়েস প্রিন্ট"
+			>
+				<Printer class="w-3.5 h-3.5" />
+				<span class="hidden sm:inline">চালান প্রিন্ট</span>
+			</Button>
+		{/if}
 
-		<!-- Send to Courier Button -->
-		<Button
-			type="button"
-			variant="outline"
-			size="sm"
-			onclick={onSendToCourier}
-			class="h-9 gap-1.5 text-xs font-bold border-blue-200 text-blue-700 hover:bg-blue-50 shadow-2xs"
-			title="Steadfast বা Pathao কুরিয়ারে এন্ট্রি"
-		>
-			<Truck class="w-3.5 h-3.5" />
-			<span>কুরিয়ার এন্ট্রি</span>
-		</Button>
+		<!-- Send to Courier Button (only on existing orders) -->
+		{#if !isNewOrder}
+			<Button
+				type="button"
+				variant="outline"
+				size="sm"
+				onclick={onSendToCourier}
+				class="h-9 gap-1.5 text-xs font-bold border-blue-200 text-blue-700 hover:bg-blue-50 shadow-2xs"
+				title="Steadfast বা Pathao কুরিয়ারে এন্ট্রি"
+			>
+				<Truck class="w-3.5 h-3.5" />
+				<span>কুরিয়ার এন্ট্রি</span>
+			</Button>
+		{/if}
 
 		<!-- Quick Confirm Button -->
 		{#if status !== 'confirmed'}
@@ -181,24 +185,22 @@
 				class="h-9 gap-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20"
 			>
 				<CheckCircle2 class="w-3.5 h-3.5" />
-				<span>কনফার্ম অর্ডার</span>
+				<span>{isNewOrder ? 'অর্ডার তৈরি ও কনফার্ম' : 'কনফার্ম অর্ডার'}</span>
 			</Button>
 		{/if}
 
-		<!-- Cancel Button -->
-		{#if status !== 'cancelled'}
-			<Button
-				type="button"
-				variant="ghost"
-				size="sm"
-				onclick={onCancel}
-				class="h-9 gap-1 text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-				title="অর্ডারটি বাতিল করুন"
-			>
-				<Trash2 class="w-3.5 h-3.5" />
-				<span class="hidden sm:inline">বাতিল</span>
-			</Button>
-		{/if}
+		<!-- Cancel / Back Button -->
+		<Button
+			type="button"
+			variant="ghost"
+			size="sm"
+			onclick={onCancel}
+			class="h-9 gap-1 text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+			title={isNewOrder ? 'বাতিল করে ফিরে যান' : 'অর্ডারটি বাতিল করুন'}
+		>
+			<Trash2 class="w-3.5 h-3.5" />
+			<span class="hidden sm:inline">{isNewOrder ? 'বাতিল' : 'বাতিল'}</span>
+		</Button>
 	</div>
 </div>
 

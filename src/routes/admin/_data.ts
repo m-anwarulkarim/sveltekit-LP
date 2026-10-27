@@ -16,7 +16,7 @@ export interface AdminProduct {
 	id: string;
 	name: string;
 	slug: string;
-	tagline?: string;
+	tagline: string;
 	price: number;
 	originalPrice: number;
 	costPrice?: number;
@@ -163,6 +163,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
 		status: 'published',
 		priority: '2',
 		inStock: true,
+		description: 'High performance spatial audio earbuds with head tracking.',
 		variants: [
 			{ name: 'MATTE WHITE', stock: 450, openingStock: 500 },
 			{ name: 'JET BLACK', stock: 380, openingStock: 400 }

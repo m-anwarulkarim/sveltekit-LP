@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Plus, Trash2, Layers, Check, Image as ImageIcon } from 'lucide-svelte';
-	import type { ProductVariant } from '../../_data';
+	import type { ProductVariant } from '../../../_data';
 
 	interface Props {
 		variants: ProductVariant[];
@@ -328,3 +328,4 @@
 		</div>
 	{/if}
 </div>
+

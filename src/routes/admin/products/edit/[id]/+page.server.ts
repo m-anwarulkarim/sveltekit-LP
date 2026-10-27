@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { INITIAL_PRODUCTS } from '../../../../_data';
+import { INITIAL_PRODUCTS } from '../../../_data';
 
 export const load: PageServerLoad = async ({ params, parent }) => {
 	const layoutData = await parent();
@@ -14,3 +14,4 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 		productId: params.id
 	};
 };
+

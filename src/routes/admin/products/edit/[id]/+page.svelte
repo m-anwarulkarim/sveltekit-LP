@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ProductFormLayout } from '../../../_components/form';
+	import { ProductFormLayout } from '../../_components/form';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -25,3 +25,4 @@
 		</div>
 	{/if}
 </div>
+

@@ -20,26 +20,22 @@
 
 	interface Props {
 		phone: string;
-		stats?: CourierStats;
+		stats?: CourierStats | null;
 		onRefresh?: () => void;
 	}
 
 	let {
 		phone,
-		stats = {
-			total: 18,
-			delivered: 16,
-			cancelled: 2,
-			successRate: 89,
-			courierName: 'Steadfast & Pathao'
-		},
+		stats = null,
 		onRefresh
 	}: Props = $props();
 
 	let isRefreshing = $state(false);
 
+	let hasPhone = $derived(!!phone && phone.trim().length >= 6);
+
 	let riskStatus = $derived.by(() => {
-		if (stats.total === 0) {
+		if (!stats || stats.total === 0) {
 			return {
 				level: 'unknown',
 				label: 'নতুন কাস্টমার (রেকর্ড নেই)',
@@ -72,6 +68,7 @@
 	});
 
 	function handleRefreshClick() {
+		if (!hasPhone) return;
 		isRefreshing = true;
 		onRefresh?.();
 		setTimeout(() => {
@@ -94,60 +91,82 @@
 			<span class="text-[10px] font-bold text-slate-400">
 				BD COURIER
 			</span>
-			<button
-				type="button"
-				onclick={handleRefreshClick}
-				class="p-1 rounded text-slate-400 hover:text-indigo-600 hover:bg-slate-100 transition-colors cursor-pointer"
-				title="কুরিয়ার ডেটা রিফ্রেশ করুন"
-			>
-				<RotateCw class="w-3.5 h-3.5 {isRefreshing ? 'animate-spin text-indigo-600' : ''}" />
-			</button>
-		</div>
-	</div>
-
-	<!-- Risk Assessment Status Pill -->
-	<div class="flex items-center justify-between p-2 rounded-xl border text-xs font-bold {riskStatus.color}">
-		<div class="flex items-center gap-1.5">
-			{#if riskStatus.level === 'low'}
-				<CheckCircle2 class="w-4 h-4 text-emerald-600" />
-			{:else if riskStatus.level === 'high'}
-				<AlertTriangle class="w-4 h-4 text-rose-600" />
-			{:else}
-				<Truck class="w-4 h-4 text-amber-600" />
+			{#if hasPhone}
+				<button
+					type="button"
+					onclick={handleRefreshClick}
+					class="p-1 rounded text-slate-400 hover:text-indigo-600 hover:bg-slate-100 transition-colors cursor-pointer"
+					title="কুরিয়ার ডেটা রিফ্রেশ করুন"
+				>
+					<RotateCw class="w-3.5 h-3.5 {isRefreshing ? 'animate-spin text-indigo-600' : ''}" />
+				</button>
 			{/if}
-			<span>{riskStatus.label}</span>
-		</div>
-		<span class="font-mono text-sm">{stats.successRate}%</span>
-	</div>
-
-	<!-- Progress Bar -->
-	<div class="space-y-1">
-		<div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-			<div
-				class="h-full rounded-full transition-all duration-500 {riskStatus.barColor}"
-				style="width: {stats.successRate}%"
-			></div>
-		</div>
-		<div class="flex justify-between text-[10px] text-slate-400 font-medium">
-			<span>সাকসেস রেট</span>
-			<span>{stats.courierName || 'Steadfast & Pathao'}</span>
 		</div>
 	</div>
 
-	<!-- Mini Metrics Grid -->
-	<div class="grid grid-cols-3 gap-2 text-center pt-1">
-		<div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
-			<span class="text-[10px] font-bold text-slate-500 block">মোট অর্ডার</span>
-			<span class="text-sm font-black font-mono text-slate-900">{stats.total}</span>
+	{#if !hasPhone}
+		<!-- Empty / Inactive state when no phone is typed -->
+		<div class="py-6 px-3 text-center text-slate-400 space-y-1.5 bg-slate-50/60 rounded-xl border border-slate-100">
+			<ShieldAlert class="w-7 h-7 mx-auto text-slate-300 stroke-1" />
+			<p class="text-xs font-bold text-slate-600">কুরিয়ার হিস্ট্রি খালি</p>
+			<p class="text-[11px] text-slate-400 leading-relaxed">
+				কাস্টমারের ফোন নম্বর লিখলে স্বয়ংক্রিয়ভাবে Steadfast ও Pathao কুরিয়ারের ডেলিভারি রেট ও ফ্রড রেকর্ড যাচাই হবে।
+			</p>
 		</div>
-		<div class="bg-emerald-50/60 p-2 rounded-xl border border-emerald-100">
-			<span class="text-[10px] font-bold text-emerald-700 block">রিসিভড</span>
-			<span class="text-sm font-black font-mono text-emerald-700">{stats.delivered}</span>
+	{:else if !stats || stats.total === 0}
+		<!-- Phone is typed, but no history in courier -->
+		<div class="p-3 text-center bg-slate-50 rounded-xl border border-slate-200/80 space-y-1">
+			<div class="flex items-center justify-center gap-1.5 text-xs font-bold text-slate-700">
+				<CheckCircle2 class="w-4 h-4 text-emerald-500" />
+				<span>নতুন কাস্টমার (রেকর্ড নেই)</span>
+			</div>
+			<p class="text-[11px] text-slate-400">এই নম্বরে অতীতে কোনো ডেলিভারি বা রিটার্ন রেকর্ড নেই।</p>
 		</div>
-		<div class="bg-rose-50/60 p-2 rounded-xl border border-rose-100">
-			<span class="text-[10px] font-bold text-rose-700 block">ক্যান্সেল</span>
-			<span class="text-sm font-black font-mono text-rose-700">{stats.cancelled}</span>
+	{:else}
+		<!-- Risk Assessment Status Pill -->
+		<div class="flex items-center justify-between p-2 rounded-xl border text-xs font-bold {riskStatus.color}">
+			<div class="flex items-center gap-1.5">
+				{#if riskStatus.level === 'low'}
+					<CheckCircle2 class="w-4 h-4 text-emerald-600" />
+				{:else if riskStatus.level === 'high'}
+					<AlertTriangle class="w-4 h-4 text-rose-600" />
+				{:else}
+					<Truck class="w-4 h-4 text-amber-600" />
+				{/if}
+				<span>{riskStatus.label}</span>
+			</div>
+			<span class="font-mono text-sm">{stats.successRate}%</span>
 		</div>
-	</div>
+
+		<!-- Progress Bar -->
+		<div class="space-y-1">
+			<div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+				<div
+					class="h-full rounded-full transition-all duration-500 {riskStatus.barColor}"
+					style="width: {stats.successRate}%"
+				></div>
+			</div>
+			<div class="flex justify-between text-[10px] text-slate-400 font-medium">
+				<span>সাকসেস রেট</span>
+				<span>{stats.courierName || 'Steadfast & Pathao'}</span>
+			</div>
+		</div>
+
+		<!-- Mini Metrics Grid -->
+		<div class="grid grid-cols-3 gap-2 text-center pt-1">
+			<div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
+				<span class="text-[10px] font-bold text-slate-500 block">মোট অর্ডার</span>
+				<span class="text-sm font-black font-mono text-slate-900">{stats.total}</span>
+			</div>
+			<div class="bg-emerald-50/60 p-2 rounded-xl border border-emerald-100">
+				<span class="text-[10px] font-bold text-emerald-700 block">রিসিভড</span>
+				<span class="text-sm font-black font-mono text-emerald-700">{stats.delivered}</span>
+			</div>
+			<div class="bg-rose-50/60 p-2 rounded-xl border border-rose-100">
+				<span class="text-[10px] font-bold text-rose-700 block">ক্যান্সেল</span>
+				<span class="text-sm font-black font-mono text-rose-700">{stats.cancelled}</span>
+			</div>
+		</div>
+	{/if}
 </Card>
 

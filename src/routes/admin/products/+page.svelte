@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import type { PageData } from './$types';
 	import type { AdminProduct } from '../_data.ts';
 	import { INITIAL_PRODUCTS } from '../_data.ts';
@@ -170,8 +171,7 @@
 
 	// Single Product Actions
 	function handleEditProduct(product: AdminProduct) {
-		currentEditingProduct = product;
-		isModalOpen = true;
+		goto(`/admin/products/edit/${product.id}`);
 	}
 
 	function handleDuplicateProduct(product: AdminProduct) {
@@ -259,8 +259,7 @@
 		{counts}
 		selectedCount={selectedIds.length}
 		onAddProduct={() => {
-			currentEditingProduct = null;
-			isModalOpen = true;
+			goto('/admin/products/new');
 		}}
 		onBulkAction={handleBulkAction}
 	/>

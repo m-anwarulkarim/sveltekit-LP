@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Plus, Trash2, Tag, Check, X } from 'lucide-svelte';
-	import type { ProductSpec } from '../../_data';
+	import type { ProductSpec } from '../../../_data';
 
 	interface Props {
 		brand: string;
@@ -202,3 +202,4 @@
 		</div>
 	</div>
 {/if}
+

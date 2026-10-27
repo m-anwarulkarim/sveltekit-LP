@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { StoreLayout } from '#lib';
+	import { StoreLayout, Hero } from '#lib';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 </script>
 
 <svelte:head>
-	<title>AURA | Store</title>
+	<title>AURA | Store - Next-Generation Shopping</title>
 	<meta
 		name="description"
 		content="AURA - Next-generation lifestyle and creator essentials store."
@@ -14,5 +14,6 @@
 </svelte:head>
 
 <StoreLayout user={data.user}>
-	<!-- Content will be added here as instructed by the user -->
+	<!-- 1. Hero Auto-Slider Banner & Quick Feature Badges -->
+	<Hero />
 </StoreLayout>

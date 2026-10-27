@@ -1,207 +1,393 @@
 <script lang="ts">
-	import { cart } from '#lib/modules/cart/cart.svelte';
-	import { Play, Pause, ShieldCheck, Truck, RefreshCw, Sliders, Sparkles, CheckCircle2 } from 'lucide-svelte';
+	import { onMount } from 'svelte';
+	import {
+		ChevronLeft,
+		ChevronRight,
+		Truck,
+		ShieldCheck,
+		Sparkles,
+		Percent,
+		Smartphone,
+		Flame,
+		Heart,
+		Home,
+		ShoppingBag,
+		ArrowRight
+	} from 'lucide-svelte';
 
-	let selectedVariant = $state('obsidian');
-	let isDemoPlaying = $state(false);
-	let activeSoundMode = $state<'anc' | 'spatial' | 'planar'>('spatial');
-
-	const variants = [
-		{ id: 'obsidian', name: 'Obsidian Void', colorClass: 'bg-zinc-900 border-violet-500' },
-		{ id: 'silver', name: 'Celestial Silver', colorClass: 'bg-slate-300 border-cyan-400' },
-		{ id: 'sunset', name: 'Cyber Sunset', colorClass: 'bg-gradient-to-r from-amber-500 to-rose-500 border-amber-400' }
-	];
-
-	function toggleAudioDemo() {
-		isDemoPlaying = !isDemoPlaying;
+	// Slide definitions matching e-commerce platforms like Cartup / Daraz
+	interface BannerSlide {
+		id: string;
+		categoryTag: string;
+		title: string;
+		subtitle: string;
+		discountBadge: string;
+		savingBadge: string;
+		deliveryOffer: string;
+		linkUrl: string;
+		theme: {
+			bgGradient: string;
+			accentColor: string;
+			tagColor: string;
+			textColor: string;
+		};
+		imageType: 'grocery' | 'electronics' | 'home-decor' | 'beauty' | 'seeds';
 	}
 
-	function handleHeroAddToCart() {
-		cart.addItem({
-			id: 'aura-spectrum-x',
-			name: `AURA Spectrum X (${variants.find(v => v.id === selectedVariant)?.name})`,
-			price: 34900,
-			originalPrice: 42900,
-			image: '/images/headphones.jpg',
-			category: 'Spatial Audio'
-		});
+	const slides: BannerSlide[] = [
+		{
+			id: 'slide-grocery',
+			categoryTag: 'SUPER DEALS',
+			title: 'Monthly Grocery',
+			subtitle: 'Up to 60% Off',
+			discountBadge: 'Up to 60% Off',
+			savingBadge: 'Up to 15% Pre-payment Savings',
+			deliveryOffer: 'Get Tk. 50 Off on Delivery',
+			linkUrl: '/products',
+			theme: {
+				bgGradient: 'from-[#82e078] via-[#a3f09b] to-[#c7f9c0]',
+				accentColor: '#15803d',
+				tagColor: 'bg-emerald-800 text-white',
+				textColor: 'text-emerald-950'
+			},
+			imageType: 'grocery'
+		},
+		{
+			id: 'slide-gadgets',
+			categoryTag: 'OFFICIAL STORE',
+			title: 'Mega Gadget Fest',
+			subtitle: 'Up to 50% Off',
+			discountBadge: 'Spatial IEMs & Audio',
+			savingBadge: 'Up to 20% Instant Cashback',
+			deliveryOffer: 'Free Express Delivery ৳৬০০+',
+			linkUrl: '/products',
+			theme: {
+				bgGradient: 'from-[#4338ca] via-[#6366f1] to-[#a5b4fc]',
+				accentColor: '#4338ca',
+				tagColor: 'bg-indigo-900 text-white',
+				textColor: 'text-white'
+			},
+			imageType: 'electronics'
+		},
+		{
+			id: 'slide-decor',
+			categoryTag: 'LIFESTYLE',
+			title: 'Home Decor & Living',
+			subtitle: 'Starting from ৳490',
+			discountBadge: '3D Wall Art & Lamps',
+			savingBadge: 'Buy 2 Get 1 Free Promo',
+			deliveryOffer: 'Cash on Delivery Across BD',
+			linkUrl: '/products',
+			theme: {
+				bgGradient: 'from-[#f97316] via-[#fb923c] to-[#fed7aa]',
+				accentColor: '#c2410c',
+				tagColor: 'bg-amber-900 text-white',
+				textColor: 'text-amber-950'
+			},
+			imageType: 'home-decor'
+		},
+		{
+			id: 'slide-beauty',
+			categoryTag: 'PREMIUM CARE',
+			title: 'Glow & Beauty Care',
+			subtitle: '100% Authentic Brands',
+			discountBadge: 'Flat 30% Off',
+			savingBadge: 'Official Guarantee',
+			deliveryOffer: 'Fast 24-48h Delivery',
+			linkUrl: '/products',
+			theme: {
+				bgGradient: 'from-[#db2777] via-[#f472b6] to-[#fbcfe8]',
+				accentColor: '#be185d',
+				tagColor: 'bg-rose-900 text-white',
+				textColor: 'text-rose-950'
+			},
+			imageType: 'beauty'
+		}
+	];
+
+	// Quick feature badges immediately below the banner
+	const FEATURE_BADGES = [
+		{
+			title: 'Lowest Price',
+			subtitle: 'Best Deal Guaranteed',
+			icon: Percent,
+			color: 'text-rose-600 bg-rose-50 border-rose-100',
+			badge: 'DEALS'
+		},
+		{
+			title: '100% Authentic',
+			subtitle: 'Verified Quality',
+			icon: ShieldCheck,
+			color: 'text-blue-600 bg-blue-50 border-blue-100',
+			badge: 'AURA'
+		},
+		{
+			title: 'Mobiles & Tech',
+			subtitle: 'Smart Devices',
+			icon: Smartphone,
+			color: 'text-amber-600 bg-amber-50 border-amber-100',
+			badge: 'HOT'
+		},
+		{
+			title: 'Latest Drops',
+			subtitle: 'New Collections',
+			icon: Flame,
+			color: 'text-orange-600 bg-orange-50 border-orange-100',
+			badge: 'NEW'
+		},
+		{
+			title: 'Glow & Go',
+			subtitle: 'Beauty & Wellness',
+			icon: Sparkles,
+			color: 'text-pink-600 bg-pink-50 border-pink-100',
+			badge: 'CARE'
+		},
+		{
+			title: 'Home Decor',
+			subtitle: 'Modern Essentials',
+			icon: Home,
+			color: 'text-emerald-600 bg-emerald-50 border-emerald-100',
+			badge: 'LIVING'
+		}
+	];
+
+	// Slider State (Svelte 5 Runes)
+	let currentSlide = $state(0);
+	let isHovered = $state(false);
+	let touchStartX = 0;
+	let touchEndX = 0;
+
+	function nextSlide() {
+		currentSlide = (currentSlide + 1) % slides.length;
+	}
+
+	function prevSlide() {
+		currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+	}
+
+	function goToSlide(index: number) {
+		currentSlide = index;
+	}
+
+	// Auto Slider Timer: changes every 4.5 seconds
+	onMount(() => {
+		const interval = setInterval(() => {
+			if (!isHovered) {
+				nextSlide();
+			}
+		}, 4500);
+
+		return () => clearInterval(interval);
+	});
+
+	// Mobile Touch Swipe Handling
+	function handleTouchStart(e: TouchEvent) {
+		touchStartX = e.changedTouches[0].screenX;
+	}
+
+	function handleTouchEnd(e: TouchEvent) {
+		touchEndX = e.changedTouches[0].screenX;
+		if (touchStartX - touchEndX > 50) {
+			nextSlide();
+		} else if (touchEndX - touchStartX > 50) {
+			prevSlide();
+		}
 	}
 </script>
 
-<section class="relative pt-32 pb-20 md:pt-40 md:pb-32 overflow-hidden">
-	<!-- Ambient Background Glows -->
-	<div class="absolute top-10 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-violet-600/15 rounded-full blur-[140px] pointer-events-none -z-10"></div>
-	<div class="absolute top-48 right-10 w-[450px] h-[450px] bg-cyan-500/15 rounded-full blur-[120px] pointer-events-none -z-10"></div>
-
-	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-		<div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
-			
-			<!-- Left Column: Copy & Actions -->
-			<div class="lg:col-span-7 flex flex-col gap-6 text-left">
-				<!-- Top Badge -->
-				<div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/30 w-fit backdrop-blur-md">
-					<span class="flex h-2 w-2 relative">
-						<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-						<span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
-					</span>
-					<span class="text-xs font-semibold uppercase tracking-wider text-cyan-300">
-						Next-Gen Spatial Transducers • 2026 Edition
-					</span>
-				</div>
-
-				<!-- Main H1 SEO Heading -->
-				<h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.1] font-heading">
-					Hyper-Dimensional <br />
-					<span class="bg-gradient-to-r from-violet-400 via-indigo-300 to-cyan-400 bg-clip-text text-transparent">
-						Spatial Acoustics
-					</span>
-				</h1>
-
-				<p class="text-base sm:text-lg text-slate-300 max-w-xl font-normal leading-relaxed">
-					Engineered with 50mm Planar Magnetic drivers, AI-driven Neural Noise Cancellation, and 96kHz/24-bit zero-loss wireless transmission. Hear sound with anatomical precision.
-				</p>
-
-				<!-- Color Variant Switcher -->
-				<div class="flex items-center gap-4 py-1">
-					<span class="text-xs font-semibold tracking-wider uppercase text-slate-400">Finish:</span>
-					<div class="flex items-center gap-2">
-						{#each variants as variant}
-							<button
-								onclick={() => selectedVariant = variant.id}
-								class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 {selectedVariant === variant.id ? 'border-cyan-400 bg-cyan-500/10 text-white shadow-sm shadow-cyan-500/20' : 'border-white/10 bg-white/5 text-slate-400 hover:border-white/20'}"
-							>
-								<span class="w-3 h-3 rounded-full {variant.colorClass} border"></span>
-								<span>{variant.name}</span>
-							</button>
-						{/each}
-					</div>
-				</div>
-
-				<!-- Pricing & Call to Actions -->
-				<div class="flex flex-wrap items-center gap-4 pt-2">
-					<button
-						onclick={handleHeroAddToCart}
-						id="hero-order-btn"
-						class="flex items-center justify-center gap-2.5 px-8 py-4 rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-500 hover:from-violet-500 hover:to-cyan-400 text-white font-semibold text-base shadow-xl shadow-violet-600/30 hover:shadow-cyan-500/30 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-					>
-						<span>Order Spectrum X — $349</span>
-						<span class="text-xs line-through text-slate-300 font-normal">$429</span>
-					</button>
-
-					<a
-						href="#specifications"
-						class="flex items-center gap-2 px-6 py-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-slate-200 font-medium text-sm transition-all hover:border-violet-400/40"
-					>
-						<Sliders class="w-4 h-4 text-violet-400" />
-						<span>Explore Full Specs</span>
-					</a>
-				</div>
-
-				<!-- Trust & Guarantees Bar -->
-				<div class="grid grid-cols-3 gap-3 pt-4 border-t border-white/10 text-xs text-slate-400">
-					<div class="flex items-center gap-2">
-						<Truck class="w-4 h-4 text-cyan-400 shrink-0" />
-						<span>Free Express Shipping</span>
-					</div>
-					<div class="flex items-center gap-2">
-						<RefreshCw class="w-4 h-4 text-violet-400 shrink-0" />
-						<span>30-Day Risk-Free Trial</span>
-					</div>
-					<div class="flex items-center gap-2">
-						<ShieldCheck class="w-4 h-4 text-emerald-400 shrink-0" />
-						<span>2-Year Full Warranty</span>
-					</div>
-				</div>
-			</div>
-
-			<!-- Right Column: Interactive Product Showcase Card -->
-			<div class="lg:col-span-5 relative">
-				<div class="relative rounded-3xl p-6 glass-panel border border-white/10 shadow-2xl group overflow-hidden">
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-6 select-none font-['Hind_Siliguri',sans-serif]">
+	
+	<!-- 1. The Main Hero Banner Slider Container -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="relative w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm border border-slate-200/80 bg-slate-100"
+		onmouseenter={() => (isHovered = true)}
+		onmouseleave={() => (isHovered = false)}
+		ontouchstart={handleTouchStart}
+		ontouchend={handleTouchEnd}
+	>
+		<!-- Slides Track (CSS Transform sliding) -->
+		<div
+			class="flex transition-transform duration-700 ease-out h-[220px] sm:h-[300px] md:h-[350px] lg:h-[380px]"
+			style="transform: translateX(-{currentSlide * 100}%);"
+		>
+			{#each slides as slide, index}
+				<div class="w-full shrink-0 h-full relative overflow-hidden bg-gradient-to-r {slide.theme.bgGradient} flex items-center">
 					
-					<!-- Glow Backdrop -->
-					<div class="absolute -top-20 -right-20 w-64 h-64 bg-violet-600/30 rounded-full blur-3xl group-hover:bg-cyan-500/30 transition-colors duration-700"></div>
+					<!-- Abstract background overlay graphics -->
+					<div class="absolute inset-0 bg-white/20 backdrop-blur-[1px] pointer-events-none"></div>
+					<div class="absolute -top-16 -left-16 w-64 h-64 rounded-full bg-white/30 blur-2xl pointer-events-none"></div>
+					<div class="absolute -bottom-20 right-1/4 w-80 h-80 rounded-full bg-white/40 blur-3xl pointer-events-none"></div>
 
-					<!-- Image Display -->
-					<div class="relative w-full aspect-square rounded-2xl overflow-hidden bg-gradient-to-b from-white/5 to-transparent border border-white/10 flex items-center justify-center p-4">
-						<img
-							src="/images/headphones.jpg"
-							alt="AURA Spectrum X Spatial Headphones in Obsidian Finish"
-							class="w-full h-full object-cover rounded-xl transition-transform duration-700 group-hover:scale-105"
-						/>
+					<!-- Slide Content Grid -->
+					<div class="w-full h-full max-w-6xl mx-auto px-6 sm:px-12 lg:px-16 flex items-center justify-between relative z-10">
 						
-						<!-- Spec Badges -->
-						<div class="absolute top-4 left-4 px-3 py-1.5 rounded-lg bg-[#090a0f]/80 backdrop-blur-md border border-white/10 text-[11px] font-semibold text-cyan-300 flex items-center gap-1.5">
-							<Sparkles class="w-3.5 h-3.5" />
-							<span>50mm Planar Gold</span>
-						</div>
+						<!-- Left Side: Copy & Promo Badges -->
+						<div class="max-w-md sm:max-w-lg space-y-2 sm:space-y-3">
+							
+							<!-- Category Tag -->
+							<div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full {slide.theme.tagColor} text-[10px] sm:text-xs font-black tracking-wider shadow-xs">
+								<Sparkles class="w-3 h-3" />
+								<span>{slide.categoryTag}</span>
+							</div>
 
-						<div class="absolute bottom-4 right-4 px-3 py-1.5 rounded-lg bg-[#090a0f]/80 backdrop-blur-md border border-white/10 text-[11px] font-semibold text-emerald-300 flex items-center gap-1.5">
-							<CheckCircle2 class="w-3.5 h-3.5" />
-							<span>In Stock • Ships Today</span>
-						</div>
-					</div>
+							<!-- Big Promotional Title (3D Stylized) -->
+							<h2 class="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight {slide.theme.textColor} drop-shadow-sm leading-tight">
+								{slide.title}
+							</h2>
 
-					<!-- Interactive Acoustic Engine Simulator Widget -->
-					<div class="mt-5 p-4 rounded-xl bg-black/40 border border-white/5 flex flex-col gap-3">
-						<div class="flex items-center justify-between">
-							<div class="flex items-center gap-2">
-								<button
-									onclick={toggleAudioDemo}
-									id="hero-play-demo-btn"
-									class="w-9 h-9 rounded-full bg-cyan-500 hover:bg-cyan-400 text-black flex items-center justify-center transition-transform active:scale-90 shadow-md shadow-cyan-500/30"
-									aria-label={isDemoPlaying ? "Pause Audio Preview" : "Play Audio Preview"}
-								>
-									{#if isDemoPlaying}
-										<Pause class="w-4 h-4 fill-black" />
-									{:else}
-										<Play class="w-4 h-4 fill-black ml-0.5" />
-									{/if}
-								</button>
-								<div>
-									<div class="text-xs font-semibold text-white">Spatial Acoustic Simulator</div>
-									<div class="text-[10px] text-slate-400">
-										{isDemoPlaying ? 'Transmitting 96kHz Lossless...' : 'Tap to test sound stage'}
-									</div>
+							<!-- Subtitle & Discount Highlight -->
+							<div class="text-base sm:text-xl md:text-2xl font-black {slide.theme.textColor} flex items-center gap-2">
+								<span class="bg-white/80 backdrop-blur-md px-3 py-1 rounded-xl shadow-xs border border-white/60">
+									{slide.subtitle}
+								</span>
+							</div>
+
+							<!-- Pre-payment / Savings Badge -->
+							<div class="flex flex-wrap items-center gap-2 pt-1">
+								<div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0284c7] text-white text-xs sm:text-sm font-bold shadow-md shadow-sky-600/20 border border-sky-400">
+									<Percent class="w-3.5 h-3.5" />
+									<span>{slide.savingBadge}</span>
 								</div>
 							</div>
 
-							<!-- Sound Waves Animation -->
-							<div class="flex items-end gap-1 h-5">
-								{#each [0.4, 0.9, 0.6, 1.0, 0.7, 0.3, 0.8] as height}
-									<span
-										class="w-1 bg-gradient-to-t from-violet-500 to-cyan-400 rounded-full transition-all duration-300"
-										style="height: {isDemoPlaying ? Math.round(height * 20) : 4}px;"
-									></span>
-								{/each}
+							<!-- Delivery Offer Tag -->
+							<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900/90 text-white text-[11px] sm:text-xs font-semibold shadow-xs">
+								<Truck class="w-3.5 h-3.5 text-emerald-400" />
+								<span>{slide.deliveryOffer}</span>
+								<span class="text-[9px] text-slate-400 hidden sm:inline">*T&Cs Apply</span>
 							</div>
+
 						</div>
 
-						<!-- Sound Mode Selectors -->
-						<div class="grid grid-cols-3 gap-2 pt-1">
-							<button
-								onclick={() => activeSoundMode = 'spatial'}
-								class="py-1.5 px-2 rounded-lg text-[11px] font-medium transition-all {activeSoundMode === 'spatial' ? 'bg-violet-600/40 text-violet-200 border border-violet-400/50' : 'bg-white/5 text-slate-400 hover:bg-white/10'}"
-							>
-								360° Spatial
-							</button>
-							<button
-								onclick={() => activeSoundMode = 'anc'}
-								class="py-1.5 px-2 rounded-lg text-[11px] font-medium transition-all {activeSoundMode === 'anc' ? 'bg-cyan-600/40 text-cyan-200 border border-cyan-400/50' : 'bg-white/5 text-slate-400 hover:bg-white/10'}"
-							>
-								AI ANC -48dB
-							</button>
-							<button
-								onclick={() => activeSoundMode = 'planar'}
-								class="py-1.5 px-2 rounded-lg text-[11px] font-medium transition-all {activeSoundMode === 'planar' ? 'bg-amber-600/40 text-amber-200 border border-amber-400/50' : 'bg-white/5 text-slate-400 hover:bg-white/10'}"
-							>
-								Pure Studio
-							</button>
+						<!-- Right Side: Promotional Illustration Graphics -->
+						<div class="hidden sm:flex items-center justify-center shrink-0 w-64 md:w-80 lg:w-96 relative">
+							{#if slide.imageType === 'grocery'}
+								<!-- 3D Grocery Cart Illustration -->
+								<div class="relative transform hover:scale-105 transition-transform duration-300">
+									<div class="w-56 h-56 sm:w-64 sm:h-64 rounded-3xl bg-white/70 backdrop-blur-md border border-white/80 p-4 shadow-xl flex flex-col items-center justify-center text-center space-y-2">
+										<div class="text-6xl drop-shadow-md animate-bounce">🛒</div>
+										<div class="bg-emerald-600 text-white text-xs font-black px-3 py-1 rounded-full shadow-xs">
+											GROCERY COMBO
+										</div>
+										<div class="text-[11px] font-bold text-slate-700 leading-tight">
+											Dettol • Mr. White • Fab • Lizol <br />
+											<span class="text-emerald-700 font-black">সরাসরি হোম ডেলিভারি</span>
+										</div>
+									</div>
+								</div>
+							{:else if slide.imageType === 'electronics'}
+								<!-- Electronics / Tech Graphic -->
+								<div class="relative transform hover:scale-105 transition-transform duration-300">
+									<div class="w-56 h-56 sm:w-64 sm:h-64 rounded-3xl bg-white/20 backdrop-blur-md border border-white/30 p-4 shadow-2xl flex flex-col items-center justify-center text-center space-y-2">
+										<div class="text-6xl drop-shadow-md">🎧</div>
+										<div class="bg-indigo-600 text-white text-xs font-black px-3 py-1 rounded-full shadow-xs">
+											FLAGSHIP AUDIO
+										</div>
+										<div class="text-[11px] font-bold text-white/90 leading-tight">
+											AURA Spatial IEMs & Wireless <br />
+											<span class="text-cyan-200 font-black">Official 2-Year Warranty</span>
+										</div>
+									</div>
+								</div>
+							{:else if slide.imageType === 'home-decor'}
+								<!-- Home Decor Graphic -->
+								<div class="relative transform hover:scale-105 transition-transform duration-300">
+									<div class="w-56 h-56 sm:w-64 sm:h-64 rounded-3xl bg-white/80 backdrop-blur-md border border-white/90 p-4 shadow-xl flex flex-col items-center justify-center text-center space-y-2">
+										<div class="text-6xl drop-shadow-md">🛋️</div>
+										<div class="bg-amber-600 text-white text-xs font-black px-3 py-1 rounded-full shadow-xs">
+											3D WALL STICKER
+										</div>
+										<div class="text-[11px] font-bold text-slate-700 leading-tight">
+											Waterproof Scenic View Decals <br />
+											<span class="text-amber-800 font-black">স্মার্ট হোম অ্যাম্বিয়েন্স</span>
+										</div>
+									</div>
+								</div>
+							{:else}
+								<!-- Beauty & Care Graphic -->
+								<div class="relative transform hover:scale-105 transition-transform duration-300">
+									<div class="w-56 h-56 sm:w-64 sm:h-64 rounded-3xl bg-white/80 backdrop-blur-md border border-white/90 p-4 shadow-xl flex flex-col items-center justify-center text-center space-y-2">
+										<div class="text-6xl drop-shadow-md">✨</div>
+										<div class="bg-rose-600 text-white text-xs font-black px-3 py-1 rounded-full shadow-xs">
+											GLOW ESSENTIALS
+										</div>
+										<div class="text-[11px] font-bold text-slate-700 leading-tight">
+											100% Authentic Imported Care <br />
+											<span class="text-rose-800 font-black">স্পেশাল কম্বো অফার</span>
+										</div>
+									</div>
+								</div>
+							{/if}
 						</div>
+
 					</div>
 
 				</div>
-			</div>
-
+			{/each}
 		</div>
+
+		<!-- Navigation Arrows (Floating at bottom-right matching screenshot) -->
+		<div class="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 flex items-center gap-2 z-20">
+			<button
+				type="button"
+				onclick={prevSlide}
+				class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/90 hover:bg-white text-slate-700 hover:text-slate-900 shadow-md flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer border border-slate-200/60"
+				aria-label="Previous Slide"
+			>
+				<ChevronLeft class="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+			</button>
+			<button
+				type="button"
+				onclick={nextSlide}
+				class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/90 hover:bg-white text-slate-700 hover:text-slate-900 shadow-md flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer border border-slate-200/60"
+				aria-label="Next Slide"
+			>
+				<ChevronRight class="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+			</button>
+		</div>
+
+		<!-- Pagination Indicator Dots (Bottom Center matching screenshot) -->
+		<div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20 bg-slate-900/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20">
+			{#each slides as _, i}
+				<button
+					type="button"
+					onclick={() => goToSlide(i)}
+					class="transition-all duration-300 rounded-full cursor-pointer {currentSlide === i
+						? 'w-6 h-2 bg-[#db2777] shadow-xs'
+						: 'w-2 h-2 bg-white/70 hover:bg-white'}"
+					aria-label="Go to slide {i + 1}"
+				></button>
+			{/each}
+		</div>
+
 	</div>
+
+	<!-- 2. Quick Feature Badges Bar (Immediately below the slider as in screenshot) -->
+	<div class="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
+		{#each FEATURE_BADGES as item}
+			<a
+				href="/products"
+				class="p-2.5 sm:p-3 rounded-2xl bg-white border border-slate-200/80 shadow-2xs hover:shadow-md hover:border-indigo-300 transition-all flex items-center gap-2.5 group cursor-pointer"
+			>
+				<!-- Icon Container -->
+				<div class="w-10 h-10 rounded-xl {item.color} border flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
+					<item.icon class="w-5 h-5 stroke-[2]" />
+				</div>
+
+				<!-- Text Labels -->
+				<div class="min-w-0">
+					<div class="flex items-center gap-1">
+						<h3 class="text-xs sm:text-sm font-bold text-slate-800 truncate leading-snug group-hover:text-[#5845eb] transition-colors">
+							{item.title}
+						</h3>
+					</div>
+					<p class="text-[10px] sm:text-[11px] text-slate-400 font-medium truncate mt-0.5">
+						{item.subtitle}
+					</p>
+				</div>
+			</a>
+		{/each}
+	</div>
+
 </section>

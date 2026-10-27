@@ -3,7 +3,7 @@
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 
-	interface Props extends HTMLAttributes<HTMLTableCaptionElement> {
+	interface Props extends HTMLAttributes<HTMLElement> {
 		class?: string;
 		children?: Snippet;
 	}

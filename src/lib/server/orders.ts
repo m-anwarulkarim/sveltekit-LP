@@ -81,7 +81,7 @@ export async function handleCreateManualOrder(request: Request, platform: any) {
 	}
 
 	const newId = 'AUR-' + Math.floor(10000 + Math.random() * 90000);
-	const items = JSON.stringify([
+	const items = data.get('items')?.toString() || JSON.stringify([
 		{
 			id: 'manual-prod',
 			name: productName,

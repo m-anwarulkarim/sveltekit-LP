@@ -14,7 +14,8 @@
 		AlertCircle,
 		RotateCcw,
 		HelpCircle,
-		Trash2
+		Trash2,
+		FileEdit
 	} from 'lucide-svelte';
 
 	let { data }: { data: any } = $props();
@@ -237,7 +238,13 @@
 
 								<!-- Order ID -->
 								<td class="py-4 px-4 font-mono font-bold text-slate-900">
-									<span class="text-[#5845eb]">#{order.id}</span>
+									<a
+										href="/admin/orders/{order.id}"
+										class="text-[#5845eb] hover:underline hover:text-indigo-800 transition-colors"
+										title="বিস্তারিত দেখুন ও সম্পাদনা করুন"
+									>
+										#{order.id}
+									</a>
 									<span class="text-[10px] text-slate-400 font-sans block mt-0.5">
 										{order.createdAt ? new Date(order.createdAt).toLocaleDateString('bn-BD') : 'আজ'}
 									</span>
@@ -300,18 +307,30 @@
 
 								<!-- Actions -->
 								<td class="py-4 px-4 text-right">
-									<form action="?/deleteOrder" method="POST" use:enhance class="inline">
-										<input type="hidden" name="orderId" value={order.id} />
+									<div class="flex items-center justify-end gap-1">
 										<Button
-											type="submit"
-											variant="ghost"
+											variant="outline"
 											size="icon"
-											class="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-											title="ট্র্যাশে পাঠান"
+											href="/admin/orders/{order.id}"
+											class="h-8 w-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 border-slate-200"
+											title="সম্পাদনা করুন (বিস্তারিত পেজ)"
 										>
-											<Trash2 class="w-3.5 h-3.5" />
+											<FileEdit class="w-3.5 h-3.5" />
 										</Button>
-									</form>
+
+										<form action="?/deleteOrder" method="POST" use:enhance class="inline">
+											<input type="hidden" name="orderId" value={order.id} />
+											<Button
+												type="submit"
+												variant="ghost"
+												size="icon"
+												class="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+												title="ট্র্যাশে পাঠান"
+											>
+												<Trash2 class="w-3.5 h-3.5" />
+											</Button>
+										</form>
+									</div>
 								</td>
 
 							</tr>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { AdminProduct } from '../../_data.ts';
 	import { X, Plus, Trash2, Image as ImageIcon, Sparkles } from 'lucide-svelte';
+	import { MediaPickerModal } from '../gallery';
 
 	interface Props {
 		open: boolean;
@@ -11,6 +12,7 @@
 
 	let { open = $bindable(false), product = null, onClose, onSave }: Props = $props();
 
+	let isGalleryPickerOpen = $state(false);
 	let name = $state('');
 	let category = $state('CAR COLOUR');
 	let subCategory = $state('-');
@@ -239,13 +241,30 @@
 						</select>
 					</div>
 					<div>
-						<label for="prod_image" class="block text-xs font-bold text-slate-700 mb-1.5">ইমেজ URL / পাথ</label>
-						<input
-							id="prod_image"
-							type="text"
-							bind:value={image}
-							class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#5845eb] focus:bg-white transition-all shadow-2xs font-mono"
-						/>
+						<div class="flex items-center justify-between mb-1.5">
+							<label for="prod_image" class="block text-xs font-bold text-slate-700">ইমেজ URL / পাথ</label>
+							<button
+								type="button"
+								onclick={() => (isGalleryPickerOpen = true)}
+								class="text-[11px] font-bold text-[#5845eb] hover:underline flex items-center gap-1 cursor-pointer"
+							>
+								<ImageIcon class="w-3 h-3" />
+								<span>গ্যালারি থেকে নিন</span>
+							</button>
+						</div>
+						<div class="flex items-center gap-2">
+							<input
+								id="prod_image"
+								type="text"
+								bind:value={image}
+								class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#5845eb] focus:bg-white transition-all shadow-2xs font-mono"
+							/>
+							{#if image}
+								<div class="w-9 h-9 rounded-lg border border-slate-200 bg-white p-1 shrink-0 flex items-center justify-center overflow-hidden">
+									<img src={image} alt="Preview" class="max-w-full max-h-full object-contain" />
+								</div>
+							{/if}
+						</div>
 					</div>
 				</div>
 
@@ -347,4 +366,13 @@
 			</form>
 		</div>
 	</div>
+
+	<!-- Reusable Media Picker Modal for Instant Reuse -->
+	<MediaPickerModal
+		bind:open={isGalleryPickerOpen}
+		onSelect={(url) => {
+			image = url;
+		}}
+		title="প্রোডাক্টের জন্য গ্যালারি থেকে ছবি বেছে নিন"
+	/>
 {/if}

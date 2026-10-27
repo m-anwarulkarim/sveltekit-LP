@@ -2,30 +2,58 @@ export interface ProductVariant {
 	name: string;
 	stock: number;
 	openingStock?: number;
+	sku?: string;
+	price?: number;
+	image?: string;
+}
+
+export interface ProductSpec {
+	key: string;
+	value: string;
 }
 
 export interface AdminProduct {
 	id: string;
 	name: string;
 	slug: string;
-	tagline: string;
+	tagline?: string;
 	price: number;
 	originalPrice: number;
-	rating: number;
-	reviewsCount: number;
+	costPrice?: number;
+	stockValue?: number;
+	lowStockQty?: number;
+	rating?: number;
+	reviewsCount?: number;
 	image: string;
+	images?: string[];
 	category: string;
 	subCategory?: string;
-	badge: string | null;
-	inStock: boolean;
-	description: string;
+	childCategory?: string;
+	brand?: string;
+	model?: string;
+	badge?: string | null;
+	inStock?: boolean;
+	description?: string;
 	status: 'published' | 'draft';
-	priority: string;
+	priority?: string;
 	stock?: number;
 	openingStock?: number;
+	sku?: string;
+	isPreOrder?: boolean;
+	isWholesale?: boolean;
+	landingPageLink?: string;
+	urgencyMessage?: string;
+	enableProcessing?: boolean;
+	processingOptions?: string[];
+	specifications?: ProductSpec[];
 	variants?: ProductVariant[];
 	tags?: string[];
 	isLowStock?: boolean;
+	seoTitle?: string;
+	seoDescription?: string;
+	seoKeywords?: string;
+	returnPolicy?: string;
+	sizeChartImage?: string;
 }
 
 // Default initial catalog matching the screenshot reference

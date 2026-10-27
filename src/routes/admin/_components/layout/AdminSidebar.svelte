@@ -115,6 +115,7 @@
 	let isCustomerActive = $derived(currentPath.startsWith('/admin/customers'));
 	let isDatabaseActive = $derived(currentPath.startsWith('/admin/database'));
 	let isIpBlockActive = $derived(currentPath.startsWith('/admin/ip-block'));
+	let isGalleryActive = $derived(currentPath.startsWith('/admin/gallery'));
 	let isProfileActive = $derived(currentPath.startsWith('/admin/profile'));
 	let isSupportActive = $derived(currentPath.startsWith('/admin/support'));
 	let isLandingPagesActive = $derived(currentPath.startsWith('/admin/landing-pages'));
@@ -750,7 +751,36 @@
 				{/if}
 			</a>
 
-			<!-- 8. Customers -->
+			<!-- 8. Gallery (My Gallery) -->
+			<a
+				href="/admin/gallery"
+				onclick={() => {
+					mobileOpen = false;
+					closeAllSubmenus();
+				}}
+				class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isGalleryActive
+					? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+					: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
+				title="Gallery"
+			>
+				<div class="flex items-center gap-3.5">
+					<svg class="w-5 h-5 shrink-0 {isGalleryActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+						<circle cx="9" cy="9" r="2" />
+						<path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+					</svg>
+					{#if !collapsed}
+						<span>Gallery</span>
+					{/if}
+				</div>
+				{#if !collapsed}
+					<span class="text-xs font-bold px-2 py-0.5 rounded-full {isGalleryActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
+						16
+					</span>
+				{/if}
+			</a>
+
+			<!-- 9. Customers -->
 			<a
 				href="/admin/customers"
 				onclick={() => {

@@ -174,7 +174,13 @@
 								<!-- 1. Order ID -->
 								<td class="py-4 px-4 font-mono font-bold text-slate-900">
 									<div class="flex items-center gap-1.5">
-										<span class="text-[#5845eb]">#{order.id}</span>
+										<a
+											href="/admin/orders/{order.id}"
+											class="text-[#5845eb] hover:underline hover:text-indigo-800 transition-colors"
+											title="বিস্তারিত দেখুন ও সম্পাদনা করুন"
+										>
+											#{order.id}
+										</a>
 									</div>
 									<span class="text-[10px] text-slate-400 font-sans block mt-0.5">
 										{order.createdAt ? new Date(order.createdAt).toLocaleDateString('bn-BD') : 'আজ'}
@@ -255,13 +261,13 @@
 											<PhoneCall class="w-3.5 h-3.5" />
 										</Button>
 
-										<!-- Quick Edit Dialog Trigger -->
+										<!-- Go to Dedicated Order Details & Edit Page -->
 										<Button
 											variant="outline"
 											size="icon"
-											onclick={() => openEditModal(order)}
-											class="h-8 w-8"
-											title="সম্পাদনা করুন"
+											href="/admin/orders/{order.id}"
+											class="h-8 w-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 border-slate-200"
+											title="সম্পাদনা করুন (বিস্তারিত পেজ)"
 										>
 											<FileEdit class="w-3.5 h-3.5" />
 										</Button>

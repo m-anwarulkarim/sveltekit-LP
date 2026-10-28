@@ -14,28 +14,35 @@
 		Eye,
 		X,
 		CheckCircle2,
-		FileText
+		Loader2,
+		AlertCircle,
+		FileText,
+		FolderTree
 	} from 'lucide-svelte';
+	import { invalidateAll } from '$app/navigation';
 	import { CatalogFilterTabs } from '../../_components/catalog';
-	import {
-		INITIAL_CHILD_CATEGORIES,
-		INITIAL_CATEGORIES,
-		INITIAL_SUB_CATEGORIES,
-		type CatalogChildCategory
-	} from '../../_data.ts';
+	import type { CatalogChildCategory } from '../../_data.ts';
+	import { confirmModal } from '#lib/stores/confirm.svelte';
+	import { toast } from 'svelte-sonner';
 
-	let childCategories = $state<CatalogChildCategory[]>([...INITIAL_CHILD_CATEGORIES]);
+	let { data }: { data?: any } = $props();
+
+	let childCategories = $state<any[]>(data?.childCategories || []);
+
+	// Synchronize when server data updates
+	$effect(() => {
+		childCategories = data?.childCategories ? [...data.childCategories] : [];
+	});
+
 	let searchQuery = $state('');
 	let activeTab = $state<'all' | 'publish' | 'draft' | 'low_stock' | 'trash'>('all');
 	let selectedIds = $state<string[]>([]);
 	let currentPage = $state(1);
 	let itemsPerPage = 10;
+	let isSaving = $state(false);
 
-	// Toast notification
-	let toastMessage = $state<string | null>(null);
 	function showToast(msg: string) {
-		toastMessage = msg;
-		setTimeout(() => (toastMessage = null), 3000);
+		toast.success(msg);
 	}
 
 	// Modal state
@@ -43,13 +50,20 @@
 	let isEditing = $state(false);
 	let editingId = $state<string | null>(null);
 	let formName = $state('');
-	let formCategory = $state('kitchen product');
-	let formSubCategory = $state('Purifeir');
+	let formCategoryId = $state('');
+	let formSubCategoryId = $state('');
 	let formImage = $state('');
-	let formPriority = $state<string | number>('-');
+	let formPriority = $state<number>(0);
 	let formStatus = $state<'publish' | 'draft'>('publish');
 
 	let openActionMenuId = $state<string | null>(null);
+
+	// Filtered sub-categories based on selected parent category in modal
+	let availableSubCategories = $derived.by(() => {
+		if (!data?.subCategories) return [];
+		if (!formCategoryId) return data.subCategories;
+		return data.subCategories.filter((s: any) => s.categoryId === formCategoryId);
+	});
 
 	// Derived counts
 	let allCount = $derived(childCategories.filter((c) => !c.isTrash).length);
@@ -74,8 +88,8 @@
 			list = list.filter(
 				(c) =>
 					c.name.toLowerCase().includes(q) ||
-					c.category.toLowerCase().includes(q) ||
-					c.subCategory.toLowerCase().includes(q)
+					(c.category && c.category.toLowerCase().includes(q)) ||
+					(c.subCategory && c.subCategory.toLowerCase().includes(q))
 			);
 		}
 
@@ -109,76 +123,105 @@
 		isEditing = false;
 		editingId = null;
 		formName = '';
-		formCategory = INITIAL_CATEGORIES[0]?.name || 'kitchen product';
-		formSubCategory = INITIAL_SUB_CATEGORIES[0]?.name || 'Purifeir';
+		formCategoryId = data?.parentCategories?.[0]?.id || '';
+		formSubCategoryId = availableSubCategories[0]?.id || data?.subCategories?.[0]?.id || '';
 		formImage = '';
-		formPriority = '-';
+		formPriority = 0;
 		formStatus = 'publish';
 		isModalOpen = true;
 	}
 
-	function openEditModal(child: CatalogChildCategory) {
+	function openEditModal(child: any) {
 		isEditing = true;
 		editingId = child.id;
 		formName = child.name;
-		formCategory = child.category;
-		formSubCategory = child.subCategory;
+		formCategoryId = child.categoryId || '';
+		formSubCategoryId = child.subCategoryId || '';
 		formImage = child.image || '';
-		formPriority = child.priority;
-		formStatus = child.status;
+		formPriority = typeof child.priority === 'number' ? child.priority : 0;
+		formStatus = child.status || 'publish';
 		openActionMenuId = null;
 		isModalOpen = true;
 	}
 
-	function handleSave() {
+	async function handleSave() {
 		if (!formName.trim()) {
-			alert('Child Category Name required');
+			showToast('চাইল্ড ক্যাটাগরির নাম দেওয়া বাধ্যতামূলক!');
+			return;
+		}
+		if (!formSubCategoryId) {
+			showToast('প্যারেন্ট সাব-ক্যাটাগরি নির্বাচন করুন!');
 			return;
 		}
 
-		if (isEditing && editingId) {
-			childCategories = childCategories.map((c) =>
-				c.id === editingId
-					? {
-							...c,
-							name: formName.trim(),
-							category: formCategory,
-							subCategory: formSubCategory,
-							image: formImage.trim(),
-							priority: formPriority,
-							status: formStatus
-						}
-					: c
-			);
-			showToast('চাইল্ড ক্যাটাগরি সফলভাবে আপডেট করা হয়েছে!');
-		} else {
-			const newChild: CatalogChildCategory = {
-				id: 'child-' + Date.now(),
-				name: formName.trim(),
-				category: formCategory,
-				subCategory: formSubCategory,
-				image: formImage.trim(),
-				status: formStatus,
-				priority: formPriority
-			};
-			childCategories = [newChild, ...childCategories];
-			showToast('নতুন চাইল্ড ক্যাটাগরি তৈরি করা হয়েছে!');
-		}
+		isSaving = true;
+		const formData = new FormData();
+		formData.append('name', formName.trim());
+		formData.append('subCategoryId', formSubCategoryId);
+		formData.append('image', formImage.trim());
+		formData.append('priority', String(formPriority));
+		formData.append('status', formStatus);
 
-		isModalOpen = false;
+		try {
+			if (isEditing && editingId) {
+				formData.append('id', editingId);
+				await fetch('?/updateChildCategory', {
+					method: 'POST',
+					body: formData
+				});
+				showToast('চাইল্ড ক্যাটাগরি সফলভাবে আপডেট করা হয়েছে!');
+			} else {
+				await fetch('?/createChildCategory', {
+					method: 'POST',
+					body: formData
+				});
+				showToast('নতুন চাইল্ড ক্যাটাগরি তৈরি করা হয়েছে!');
+			}
+			isModalOpen = false;
+			await invalidateAll();
+		} catch (error) {
+			console.error('Error saving child-category:', error);
+			showToast('চাইল্ড ক্যাটাগরি সংরক্ষণে ত্রুটি হয়েছে');
+		} finally {
+			isSaving = false;
+		}
 	}
 
-	function toggleStatus(child: CatalogChildCategory) {
+	async function toggleStatus(child: any) {
 		const newStatus = child.status === 'publish' ? 'draft' : 'publish';
 		childCategories = childCategories.map((c) => (c.id === child.id ? { ...c, status: newStatus } : c));
 		openActionMenuId = null;
 		showToast(`স্ট্যাটাস ${newStatus === 'publish' ? 'Publish' : 'Draft'}-এ পরিবর্তিত হয়েছে`);
+
+		try {
+			const fd = new FormData();
+			fd.append('id', child.id);
+			await fetch('?/toggleStatus', {
+				method: 'POST',
+				body: fd
+			});
+			await invalidateAll();
+		} catch (e) {
+			console.error('Error toggling child-category status:', e);
+		}
 	}
 
-	function moveToTrash(id: string) {
+	async function moveToTrash(id: string) {
 		childCategories = childCategories.map((c) => (c.id === id ? { ...c, isTrash: true } : c));
 		openActionMenuId = null;
-		showToast('চাইল্ড ক্যাটাগরি ট্র্যাশে পাঠানো হয়েছে');
+		showToast('চাইল্ড ক্যাটাগরি মুছে ফেলা হয়েছে');
+
+		try {
+			const fd = new FormData();
+			fd.append('id', id);
+			await fetch('?/deleteChildCategory', {
+				method: 'POST',
+				body: fd
+			});
+			await invalidateAll();
+		} catch (e) {
+			console.error('Error deleting child-category:', e);
+		}
 	}
 
 	function restoreFromTrash(id: string) {
@@ -186,19 +229,43 @@
 		openActionMenuId = null;
 		showToast('চাইল্ড ক্যাটাগরি রিস্টোর করা হয়েছে');
 	}
+
+	async function handleBulkDelete() {
+		if (selectedIds.length === 0) return;
+		const confirmed = await confirmModal({
+			title: 'চাইল্ড ক্যাটাগরি মুছে ফেলা',
+			message: `আপনি কি নিশ্চিতভাবে নির্বাচিত ${selectedIds.length}টি চাইল্ড ক্যাটাগরি মুছে ফেলতে চান?`,
+			confirmText: 'হ্যাঁ, মুছে ফেলুন',
+			variant: 'destructive',
+			icon: 'trash'
+		});
+		if (!confirmed) {
+			return;
+		}
+
+		const count = selectedIds.length;
+		const toDelete = [...selectedIds];
+		childCategories = childCategories.filter((c) => !toDelete.includes(c.id));
+		selectedIds = [];
+		showToast(`${count}টি চাইল্ড ক্যাটাগরি মুছে ফেলা হয়েছে`);
+
+		try {
+			const fd = new FormData();
+			fd.append('ids', JSON.stringify(toDelete));
+			await fetch('?/bulkDelete', {
+				method: 'POST',
+				body: fd
+			});
+			await invalidateAll();
+		} catch (e) {
+			console.error('Error bulk deleting child categories:', e);
+		}
+	}
 </script>
 
 <svelte:head>
 	<title>Child Category | AURA Admin</title>
 </svelte:head>
-
-<!-- Toast Notification -->
-{#if toastMessage}
-	<div class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 border border-slate-800 animate-in fade-in slide-in-from-bottom-2">
-		<CheckCircle2 class="w-4 h-4 text-emerald-400 shrink-0" />
-		<span>{toastMessage}</span>
-	</div>
-{/if}
 
 <div class="space-y-6 max-w-[1400px] mx-auto pb-12">
 	<!-- Top Bar: Title & Support Button -->
@@ -253,7 +320,7 @@
 	/>
 
 	<!-- Data Table Card with exact Empty State matching Screenshot 3 -->
-	<div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
+	<div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden min-h-[260px]">
 		<div class="overflow-x-auto">
 			<table class="w-full text-left text-xs border-collapse">
 				<thead>
@@ -310,10 +377,10 @@
 									</div>
 
 									<h3 class="text-sm font-bold text-slate-800 mt-2">
-										No reviews found
+										কোনো চাইল্ড-ক্যাটাগরি পাওয়া যায়নি
 									</h3>
 									<p class="text-xs text-slate-400 max-w-sm">
-										Customer reviews will appear here once available.
+										নতুন চাইল্ড-ক্যাটাগরি তৈরি করতে নিচের বাটনে ক্লিক করুন।
 									</p>
 
 									<button
@@ -327,7 +394,7 @@
 							</td>
 						</tr>
 					{:else}
-						{#each paginatedItems as child (child.id)}
+						{#each paginatedItems as child, index (child.id)}
 							<tr class="hover:bg-slate-50/60 transition-colors">
 								<td class="py-3.5 px-4">
 									<input
@@ -386,7 +453,7 @@
 									</button>
 
 									{#if openActionMenuId === child.id}
-										<div class="absolute right-4 top-10 w-36 bg-white border border-slate-200 rounded-xl shadow-lg z-30 py-1 text-left text-xs">
+										<div class="absolute right-4 {index >= paginatedItems.length - 2 && paginatedItems.length > 2 ? 'bottom-10 top-auto origin-bottom-right' : 'top-10'} w-36 bg-white border border-slate-200 rounded-xl shadow-lg z-30 py-1 text-left text-xs">
 											<button
 												type="button"
 												onclick={() => openEditModal(child)}
@@ -493,17 +560,16 @@
 				</div>
 
 				<div class="space-y-1.5">
-					<label for="child-cat" class="font-bold text-slate-700 block">Parent Category *</label>
+					<label for="child-cat" class="font-bold text-slate-700 block">Parent Category</label>
 					<select
 						id="child-cat"
-						bind:value={formCategory}
+						bind:value={formCategoryId}
 						class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb] bg-white"
 					>
-						{#each INITIAL_CATEGORIES as cat}
-							<option value={cat.name}>{cat.name}</option>
+						<option value="">-- সকল ক্যাটাগরি --</option>
+						{#each (data?.parentCategories || []) as cat}
+							<option value={cat.id}>{cat.name}</option>
 						{/each}
-						<option value="kitchen product">kitchen product</option>
-						<option value="Home Cleaning">Home Cleaning</option>
 					</select>
 				</div>
 
@@ -511,11 +577,12 @@
 					<label for="child-subcat" class="font-bold text-slate-700 block">Sub Category *</label>
 					<select
 						id="child-subcat"
-						bind:value={formSubCategory}
+						bind:value={formSubCategoryId}
 						class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb] bg-white"
 					>
-						{#each INITIAL_SUB_CATEGORIES as sub}
-							<option value={sub.name}>{sub.name}</option>
+						<option value="" disabled>-- সাব-ক্যাটাগরি বেছে নিন --</option>
+						{#each (availableSubCategories || []) as sub}
+							<option value={sub.id}>{sub.name} {sub.category ? `(${sub.category})` : ''}</option>
 						{/each}
 					</select>
 				</div>
@@ -568,9 +635,15 @@
 				<button
 					type="button"
 					onclick={handleSave}
-					class="px-4 py-2 rounded-xl text-xs font-bold bg-[#5845eb] text-white hover:bg-[#4a39cf] shadow-sm shadow-indigo-600/20 cursor-pointer"
+					disabled={isSaving}
+					class="px-4 py-2 rounded-xl text-xs font-bold bg-[#5845eb] text-white hover:bg-[#4a39cf] shadow-sm shadow-indigo-600/20 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
 				>
-					{isEditing ? 'Save Changes' : 'Create Child Category'}
+					{#if isSaving}
+						<Loader2 class="w-3.5 h-3.5 animate-spin" />
+						<span>সংরক্ষণ হচ্ছে...</span>
+					{:else}
+						<span>{isEditing ? 'Save Changes' : 'Create Child Category'}</span>
+					{/if}
 				</button>
 			</div>
 		</div>

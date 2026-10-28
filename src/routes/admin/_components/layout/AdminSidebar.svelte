@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { confirmModal } from '#lib/stores/confirm.svelte';
+	import { adminSearch } from '#lib/components/ui';
+	import { toast } from 'svelte-sonner';
 	import {
 		Flame,
 		Search,
@@ -15,8 +18,10 @@
 		Target,
 		Package,
 		SlidersHorizontal,
-		Activity
+		Activity,
+		ShieldCheck
 	} from 'lucide-svelte';
+	import { hasMenuAccess } from '#lib/constants/admin-permissions';
 
 	interface Props {
 		collapsed?: boolean;
@@ -33,6 +38,24 @@
 	type SubmenuType = 'dashboard' | 'orders' | 'customization' | 'catalog' | 'reports';
 	let openSubmenu = $state<SubmenuType | null>(null);
 	let orderSearchQuery = $state('');
+
+	// Active admin permissions and details
+	let currentPermissions = $derived(data?.currentAdmin?.permissions || ['*']);
+	let currentAdminUser = $derived(data?.currentAdmin || null);
+	let allAdminsList = $derived(data?.allAdminUsers || []);
+
+	async function switchAdminView(adminId: string) {
+		try {
+			await fetch('/api/admin/auth/switch', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ adminId })
+			});
+			window.location.reload();
+		} catch (e) {
+			console.error('Failed to switch admin view:', e);
+		}
+	}
 
 	// Synchronize open submenu with current active route
 	$effect(() => {
@@ -206,15 +229,26 @@
 		<!-- Quick Global Search (Visible when expanded) -->
 		{#if !collapsed}
 			<div class="p-3 pb-2 border-b border-slate-100/60 bg-white">
-				<div class="relative">
-					<Search class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+				<button
+					type="button"
+					onclick={() => adminSearch.open(orderSearchQuery)}
+					class="w-full relative text-left cursor-pointer group block"
+					title="গ্লোবাল সার্চ খুলুন (Ctrl + K)"
+				>
+					<Search class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-[#5845eb] transition-colors" />
 					<input
 						type="text"
+						readonly
 						placeholder="অর্ডার বা কাস্টমার খুঁজুন..."
 						bind:value={orderSearchQuery}
-						class="w-full bg-slate-50 border border-slate-200/90 rounded-2xl pl-10 pr-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#5845eb] focus:bg-white transition-all shadow-2xs"
+						tabindex="-1"
+						class="w-full bg-slate-50 group-hover:bg-slate-100/90 border border-slate-200/90 rounded-2xl pl-10 pr-14 py-2 text-xs text-slate-800 placeholder-slate-400 cursor-pointer focus:outline-none focus:border-[#5845eb] transition-all shadow-2xs pointer-events-none"
 					/>
-				</div>
+					<div class="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5 pointer-events-none">
+						<kbd class="px-1.5 py-0.5 text-[9px] font-mono font-bold bg-white border border-slate-200 text-slate-400 rounded-md shadow-2xs">Ctrl</kbd>
+						<kbd class="px-1 py-0.5 text-[9px] font-mono font-bold bg-white border border-slate-200 text-slate-400 rounded-md shadow-2xs">K</kbd>
+					</div>
+				</button>
 			</div>
 		{/if}
 	</div>
@@ -224,763 +258,791 @@
 		<nav class="p-3 space-y-1.5 font-['Plus_Jakarta_Sans',sans-serif]">
 			
 			<!-- 1. Dashboard Dropdown (With Overview, My Activity, Bot Activity) -->
-			<div class="space-y-1 relative">
-				<div
-					class="w-full flex items-center {collapsed ? 'justify-center' : 'justify-between'} rounded-2xl transition-all font-semibold text-[15px] {isDashboardGroupActive
-						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
-						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
-				>
-					<button
-						type="button"
-						onclick={() => handleParentClick('dashboard', '/admin')}
-						class="flex-1 flex items-center gap-3.5 {collapsed ? 'p-3 justify-center' : 'px-4 py-3.5'} text-left cursor-pointer transition-colors"
-						title="Dashboard"
+			{#if hasMenuAccess(currentPermissions, 'dashboard')}
+				<div class="space-y-1 relative">
+					<div
+						class="w-full flex items-center {collapsed ? 'justify-center' : 'justify-between'} rounded-2xl transition-all font-semibold text-[15px] {isDashboardGroupActive
+							? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+							: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
 					>
-						<svg class="w-5 h-5 shrink-0 {isDashboardGroupActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="currentColor">
-							<rect x="3" y="3" width="7.5" height="7.5" rx="2" />
-							<rect x="13.5" y="3" width="7.5" height="7.5" rx="2" />
-							<rect x="3" y="13.5" width="7.5" height="7.5" rx="2" />
-							<rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2" />
-						</svg>
-						{#if !collapsed}
-							<span>Dashboard</span>
-						{/if}
-					</button>
-					{#if !collapsed}
 						<button
 							type="button"
-							onclick={(e) => {
-								e.stopPropagation();
-								toggleSubmenu('dashboard');
-							}}
-							class="px-3.5 py-3.5 flex items-center justify-center cursor-pointer rounded-r-2xl transition-colors {isDashboardGroupActive ? 'hover:bg-white/10' : 'hover:bg-slate-200/50'}"
-							aria-label="Toggle Dashboard submenu"
-							title="টগল সাবমেনু"
+							onclick={() => handleParentClick('dashboard', '/admin')}
+							class="flex-1 flex items-center gap-3.5 {collapsed ? 'p-3 justify-center' : 'px-4 py-3.5'} text-left cursor-pointer transition-colors"
+							title="Dashboard"
 						>
-							<ChevronDown class="w-4 h-4 transition-transform duration-200 {isDashboardOpen ? 'rotate-180' : ''} {isDashboardGroupActive ? 'text-white' : 'text-slate-400'}" />
+							<svg class="w-5 h-5 shrink-0 {isDashboardGroupActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="currentColor">
+								<rect x="3" y="3" width="7.5" height="7.5" rx="2" />
+								<rect x="13.5" y="3" width="7.5" height="7.5" rx="2" />
+								<rect x="3" y="13.5" width="7.5" height="7.5" rx="2" />
+								<rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2" />
+							</svg>
+							{#if !collapsed}
+								<span>Dashboard</span>
+							{/if}
 						</button>
-					{/if}
-				</div>
-
-				<!-- Dashboard Submenu -->
-				{#if !collapsed && isDashboardOpen}
-					<div class="pl-4 pr-1 py-1 space-y-1 ml-4 my-1 animate-in fade-in duration-150 text-sm">
-						<!-- 1. Overview -->
-						<a
-							href="/admin"
-							onclick={() => (mobileOpen = false)}
-							class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath === '/admin'
-								? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
-								: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-						>
-							<span class="w-1.5 h-1.5 rounded-full {currentPath === '/admin' ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
-							<span>Overview</span>
-						</a>
-
-						<!-- 2. My Activity -->
-						<a
-							href="/admin/my-activity"
-							onclick={() => (mobileOpen = false)}
-							class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath === '/admin/my-activity'
-								? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
-								: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-						>
-							<span class="w-1.5 h-1.5 rounded-full {currentPath === '/admin/my-activity' ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
-							<span>My Activity</span>
-						</a>
-
-						<!-- 3. Bot Activity -->
-						<a
-							href="/admin/bot-activity"
-							onclick={() => (mobileOpen = false)}
-							class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath === '/admin/bot-activity'
-								? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
-								: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-						>
-							<span class="w-1.5 h-1.5 rounded-full {currentPath === '/admin/bot-activity' ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
-							<span>Bot Activity</span>
-						</a>
-					</div>
-				{/if}
-			</div>
-
-			<!-- 2. Orders Dropdown -->
-			<div class="space-y-1 relative">
-				<div
-					class="w-full flex items-center {collapsed ? 'justify-center' : 'justify-between'} rounded-2xl transition-all font-semibold text-[15px] {isOrdersActive
-						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
-						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
-				>
-					<button
-						type="button"
-						onclick={() => handleParentClick('orders', '/admin/orders')}
-						class="flex-1 flex items-center gap-3.5 {collapsed ? 'p-3 justify-center' : 'px-4 py-3.5'} text-left cursor-pointer transition-colors"
-						title="Orders"
-					>
-						<svg class="w-5 h-5 shrink-0 {isOrdersActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="currentColor">
-							<path fill-rule="evenodd" clip-rule="evenodd" d="M6 5C4.89543 5 4 5.89543 4 7L3.1 17C2.98 18.3 3.99 19.5 5.3 19.5H18.7C20.01 19.5 21.02 18.3 20.9 17L20 7C20 5.89543 19.1046 5 18 5H6ZM8 8C8 7.44772 8.44772 7 9 7H15C15.5523 7 16 7.44772 16 8C16 10.2091 14.2091 12 12 12C9.79086 12 8 10.2091 8 8Z" />
-						</svg>
 						{#if !collapsed}
-							<span>Orders</span>
-						{/if}
-					</button>
-					{#if !collapsed}
-						<div class="flex items-center gap-1 pr-2">
-							<span class="text-xs font-bold px-2 py-0.5 rounded-full {isOrdersActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
-								{webOrders.length + orderListOrders.length + incompleteOrders.length}
-							</span>
 							<button
 								type="button"
 								onclick={(e) => {
 									e.stopPropagation();
-									toggleSubmenu('orders');
+									toggleSubmenu('dashboard');
 								}}
-								class="p-1.5 flex items-center justify-center cursor-pointer rounded-lg transition-colors {isOrdersActive ? 'hover:bg-white/10' : 'hover:bg-slate-200/50'}"
-								aria-label="Toggle Orders submenu"
+								class="px-3.5 py-3.5 flex items-center justify-center cursor-pointer rounded-r-2xl transition-colors {isDashboardGroupActive ? 'hover:bg-white/10' : 'hover:bg-slate-200/50'}"
+								aria-label="Toggle Dashboard submenu"
 								title="টগল সাবমেনু"
 							>
-								<ChevronDown class="w-4 h-4 transition-transform duration-200 {isOrdersOpen ? 'rotate-180' : ''} {isOrdersActive ? 'text-white' : 'text-slate-400'}" />
+								<ChevronDown class="w-4 h-4 transition-transform duration-200 {isDashboardOpen ? 'rotate-180' : ''} {isDashboardGroupActive ? 'text-white' : 'text-slate-400'}" />
 							</button>
+						{/if}
+					</div>
+
+					<!-- Dashboard Submenu -->
+					{#if !collapsed && isDashboardOpen}
+						<div class="pl-4 pr-1 py-1 space-y-1 ml-4 my-1 animate-in fade-in duration-150 text-sm">
+							<!-- 1. Overview -->
+							<a
+								href="/admin"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath === '/admin'
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span class="w-1.5 h-1.5 rounded-full {currentPath === '/admin' ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span>Overview</span>
+							</a>
+
+							<!-- 2. My Activity -->
+							<a
+								href="/admin/my-activity"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath === '/admin/my-activity'
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span class="w-1.5 h-1.5 rounded-full {currentPath === '/admin/my-activity' ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span>My Activity</span>
+							</a>
+
+							<!-- 3. Bot Activity -->
+							<a
+								href="/admin/bot-activity"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath === '/admin/bot-activity'
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span class="w-1.5 h-1.5 rounded-full {currentPath === '/admin/bot-activity' ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span>Bot Activity</span>
+							</a>
 						</div>
 					{/if}
 				</div>
+			{/if}
 
-				<!-- Orders Submenu -->
-				{#if !collapsed && isOrdersOpen}
-					<div class="pl-3 pr-1 py-1 space-y-1 border-l-2 border-slate-100 ml-6 my-1 animate-in fade-in duration-150">
-						<!-- 1. New Order (Manual) -->
-						<a
-							href="/admin/orders/new"
-							onclick={() => (mobileOpen = false)}
-							class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {currentPath === '/admin/orders/new'
-								? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
-								: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+			<!-- 2. Orders Dropdown -->
+			{#if hasMenuAccess(currentPermissions, 'orders')}
+				<div class="space-y-1 relative">
+					<div
+						class="w-full flex items-center {collapsed ? 'justify-center' : 'justify-between'} rounded-2xl transition-all font-semibold text-[15px] {isOrdersActive
+							? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+							: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
+					>
+						<button
+							type="button"
+							onclick={() => handleParentClick('orders', '/admin/orders')}
+							class="flex-1 flex items-center gap-3.5 {collapsed ? 'p-3 justify-center' : 'px-4 py-3.5'} text-left cursor-pointer transition-colors"
+							title="Orders"
 						>
-							<span>New Order</span>
-							<span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-								Manual
-							</span>
-						</a>
-
-						<!-- 2. Web Orders -->
-						<a
-							href="/admin/orders"
-							onclick={() => (mobileOpen = false)}
-							class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {currentPath === '/admin/orders'
-								? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
-								: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-						>
-							<span>Web Orders</span>
-							<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-								{webOrders.length}
-							</span>
-						</a>
-
-						<!-- 3. Incomplete Orders (NEW) -->
-						<a
-							href="/admin/orders/incomplete"
-							onclick={() => (mobileOpen = false)}
-							class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {currentPath === '/admin/orders/incomplete'
-								? 'bg-amber-50 text-amber-800 font-bold border border-amber-200/80 shadow-2xs'
-								: 'text-slate-600 hover:text-amber-800 hover:bg-amber-50/50'}"
-						>
-							<div class="flex items-center gap-1.5">
-								<span>Incomplete Orders</span>
+							<svg class="w-5 h-5 shrink-0 {isOrdersActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="currentColor">
+								<path fill-rule="evenodd" clip-rule="evenodd" d="M6 5C4.89543 5 4 5.89543 4 7L3.1 17C2.98 18.3 3.99 19.5 5.3 19.5H18.7C20.01 19.5 21.02 18.3 20.9 17L20 7C20 5.89543 19.1046 5 18 5H6ZM8 8C8 7.44772 8.44772 7 9 7H15C15.5523 7 16 7.44772 16 8C16 10.2091 14.2091 12 12 12C9.79086 12 8 10.2091 8 8Z" />
+							</svg>
+							{#if !collapsed}
+								<span>Orders</span>
+							{/if}
+						</button>
+						{#if !collapsed}
+							<div class="flex items-center gap-1 pr-2">
+								<span class="text-xs font-bold px-2 py-0.5 rounded-full {isOrdersActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
+									{webOrders.length + orderListOrders.length + incompleteOrders.length}
+								</span>
+								<button
+									type="button"
+									onclick={(e) => {
+										e.stopPropagation();
+										toggleSubmenu('orders');
+									}}
+									class="p-1.5 flex items-center justify-center cursor-pointer rounded-lg transition-colors {isOrdersActive ? 'hover:bg-white/10' : 'hover:bg-slate-200/50'}"
+									aria-label="Toggle Orders submenu"
+									title="টগল সাবমেনু"
+								>
+									<ChevronDown class="w-4 h-4 transition-transform duration-200 {isOrdersOpen ? 'rotate-180' : ''} {isOrdersActive ? 'text-white' : 'text-slate-400'}" />
+								</button>
 							</div>
-							{#if incompleteOrders.length > 0}
-								<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200/90">
-									{incompleteOrders.length}
-								</span>
-							{/if}
-						</a>
-
-						<!-- 4. Order List -->
-						<a
-							href="/admin/orders/list"
-							onclick={() => (mobileOpen = false)}
-							class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {currentPath === '/admin/orders/list'
-								? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
-								: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-						>
-							<span>Order List</span>
-							<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-								{orderListOrders.length}
-							</span>
-						</a>
-
-						<!-- 4. Pre-Orders -->
-						<a
-							href="/admin/orders/pre"
-							onclick={() => (mobileOpen = false)}
-							class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {currentPath === '/admin/orders/pre'
-								? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
-								: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-						>
-							<span>Pre-Orders</span>
-							{#if preOrders.length > 0}
-								<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-									{preOrders.length}
-								</span>
-							{/if}
-						</a>
-
-						<!-- 5. Trash -->
-						<a
-							href="/admin/orders/trash"
-							onclick={() => (mobileOpen = false)}
-							class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {currentPath === '/admin/orders/trash'
-								? 'bg-rose-50 text-rose-700 font-bold border border-rose-200 shadow-2xs'
-								: 'text-slate-600 hover:text-rose-600 hover:bg-rose-50/60'}"
-						>
-							<span>Trash</span>
-							{#if trashedOrders.length > 0}
-								<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">
-									{trashedOrders.length}
-								</span>
-							{/if}
-						</a>
+						{/if}
 					</div>
-				{/if}
-			</div>
+
+					<!-- Orders Submenu -->
+					{#if !collapsed && isOrdersOpen}
+						<div class="pl-3 pr-1 py-1 space-y-1 border-l-2 border-slate-100 ml-6 my-1 animate-in fade-in duration-150">
+							<!-- 1. New Order (Manual) -->
+							<a
+								href="/admin/orders/new"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {currentPath === '/admin/orders/new'
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span>New Order</span>
+								<span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+									Manual
+								</span>
+							</a>
+
+							<!-- 2. Web Orders -->
+							<a
+								href="/admin/orders"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {currentPath === '/admin/orders'
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span>Web Orders</span>
+								<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+									{webOrders.length}
+								</span>
+							</a>
+
+							<!-- 3. Incomplete Orders (NEW) -->
+							<a
+								href="/admin/orders/incomplete"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {currentPath === '/admin/orders/incomplete'
+									? 'bg-amber-50 text-amber-800 font-bold border border-amber-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-amber-800 hover:bg-amber-50/50'}"
+							>
+								<div class="flex items-center gap-1.5">
+									<span>Incomplete Orders</span>
+								</div>
+								{#if incompleteOrders.length > 0}
+									<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200/90">
+										{incompleteOrders.length}
+									</span>
+								{/if}
+							</a>
+
+							<!-- 4. Order List -->
+							<a
+								href="/admin/orders/list"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {currentPath === '/admin/orders/list'
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span>Order List</span>
+								<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+									{orderListOrders.length}
+								</span>
+							</a>
+
+							<!-- 4. Pre-Orders -->
+							<a
+								href="/admin/orders/pre"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {currentPath === '/admin/orders/pre'
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span>Pre-Orders</span>
+								{#if preOrders.length > 0}
+									<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+										{preOrders.length}
+									</span>
+								{/if}
+							</a>
+
+							<!-- 5. Trash -->
+							<a
+								href="/admin/orders/trash"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {currentPath === '/admin/orders/trash'
+									? 'bg-rose-50 text-rose-700 font-bold border border-rose-200 shadow-2xs'
+									: 'text-slate-600 hover:text-rose-600 hover:bg-rose-50/60'}"
+							>
+								<span>Trash</span>
+								{#if trashedOrders.length > 0}
+									<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">
+										{trashedOrders.length}
+									</span>
+								{/if}
+							</a>
+						</div>
+					{/if}
+				</div>
+			{/if}
 
 			<!-- 3. Products -->
-			<a
-				href="/admin/products"
-				onclick={() => {
-					mobileOpen = false;
-					closeAllSubmenus();
-				}}
-				class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isProductsActive
-					? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
-					: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
-				title="Products"
-			>
-				<div class="flex items-center gap-3.5">
-					<Package class="w-5 h-5 shrink-0 {isProductsActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" />
+			{#if hasMenuAccess(currentPermissions, 'products')}
+				<a
+					href="/admin/products"
+					onclick={() => {
+						mobileOpen = false;
+						closeAllSubmenus();
+					}}
+					class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isProductsActive
+						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
+					title="Products"
+				>
+					<div class="flex items-center gap-3.5">
+						<Package class="w-5 h-5 shrink-0 {isProductsActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" />
+						{#if !collapsed}
+							<span>Products</span>
+						{/if}
+					</div>
 					{#if !collapsed}
-						<span>Products</span>
+						<span class="text-xs font-bold px-2 py-0.5 rounded-full {isProductsActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
+							{(data?.products || []).length || 83}
+						</span>
 					{/if}
-				</div>
-				{#if !collapsed}
-					<span class="text-xs font-bold px-2 py-0.5 rounded-full {isProductsActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
-						{(data?.products || []).length || 83}
-					</span>
-				{/if}
-			</a>
+				</a>
+			{/if}
 
 			<!-- 4. Customization Dropdown -->
-			<div class="space-y-1 relative">
-				<div
-					class="w-full flex items-center {collapsed ? 'justify-center' : 'justify-between'} rounded-2xl transition-all font-semibold text-[15px] {isCustomizationActive
-						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
-						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
-				>
-					<button
-						type="button"
-						onclick={() => handleParentClick('customization', '/admin/customization/carousel')}
-						class="flex-1 flex items-center gap-3.5 {collapsed ? 'p-3 justify-center' : 'px-4 py-3.5'} text-left cursor-pointer transition-colors"
-						title="Customization"
+			{#if hasMenuAccess(currentPermissions, 'customization')}
+				<div class="space-y-1 relative">
+					<div
+						class="w-full flex items-center {collapsed ? 'justify-center' : 'justify-between'} rounded-2xl transition-all font-semibold text-[15px] {isCustomizationActive
+							? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+							: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
 					>
-						<SlidersHorizontal class="w-5 h-5 shrink-0 {isCustomizationActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" />
-						{#if !collapsed}
-							<span>Customization</span>
-						{/if}
-					</button>
-					{#if !collapsed}
 						<button
 							type="button"
-							onclick={(e) => {
-								e.stopPropagation();
-								toggleSubmenu('customization');
-							}}
-							class="px-3.5 py-3.5 flex items-center justify-center cursor-pointer rounded-r-2xl transition-colors {isCustomizationActive ? 'hover:bg-white/10' : 'hover:bg-slate-200/50'}"
-							aria-label="Toggle Customization submenu"
-							title="টগল সাবমেনু"
+							onclick={() => handleParentClick('customization', '/admin/customization/carousel')}
+							class="flex-1 flex items-center gap-3.5 {collapsed ? 'p-3 justify-center' : 'px-4 py-3.5'} text-left cursor-pointer transition-colors"
+							title="Customization"
 						>
-							<ChevronDown class="w-4 h-4 transition-transform duration-200 {isCustomizationOpen ? 'rotate-180' : ''} {isCustomizationActive ? 'text-white' : 'text-slate-400'}" />
+							<SlidersHorizontal class="w-5 h-5 shrink-0 {isCustomizationActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" />
+							{#if !collapsed}
+								<span>Customization</span>
+							{/if}
 						</button>
+						{#if !collapsed}
+							<button
+								type="button"
+								onclick={(e) => {
+									e.stopPropagation();
+									toggleSubmenu('customization');
+								}}
+								class="px-3.5 py-3.5 flex items-center justify-center cursor-pointer rounded-r-2xl transition-colors {isCustomizationActive ? 'hover:bg-white/10' : 'hover:bg-slate-200/50'}"
+								aria-label="Toggle Customization submenu"
+								title="টগল সাবমেনু"
+							>
+								<ChevronDown class="w-4 h-4 transition-transform duration-200 {isCustomizationOpen ? 'rotate-180' : ''} {isCustomizationActive ? 'text-white' : 'text-slate-400'}" />
+							</button>
+						{/if}
+					</div>
+
+					<!-- Customization Submenu -->
+					{#if !collapsed && isCustomizationOpen}
+						<div class="pl-4 pr-1 py-1 space-y-1 ml-4 my-1 animate-in fade-in duration-150 text-sm">
+							<!-- 1. Carousel -->
+							<a
+								href="/admin/customization/carousel"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath === '/admin/customization/carousel'
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span class="w-1.5 h-1.5 rounded-full {currentPath === '/admin/customization/carousel' ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span>Carousel</span>
+							</a>
+
+							<!-- 2. Banner -->
+							<a
+								href="/admin/customization/banner"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath === '/admin/customization/banner'
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span class="w-1.5 h-1.5 rounded-full {currentPath === '/admin/customization/banner' ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span>Banner</span>
+							</a>
+
+							<!-- 3. PopUp -->
+							<a
+								href="/admin/customization/popup"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath.startsWith('/admin/customization/popup') || currentPath.startsWith('/admin/customization/all-popup')
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span class="w-1.5 h-1.5 rounded-full {currentPath.startsWith('/admin/customization/popup') || currentPath.startsWith('/admin/customization/all-popup') ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span>PopUp</span>
+							</a>
+
+							<!-- 4. Website Information -->
+							<a
+								href="/admin/customization/website-information"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath === '/admin/customization/website-information'
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span class="w-1.5 h-1.5 rounded-full {currentPath === '/admin/customization/website-information' ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span>Website Information</span>
+							</a>
+
+							<!-- 5. Navbar & Header -->
+							<a
+								href="/admin/customization/navbar"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath === '/admin/customization/navbar'
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span class="w-1.5 h-1.5 rounded-full {currentPath === '/admin/customization/navbar' ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span>Navbar & Header</span>
+							</a>
+
+							<!-- 6. Footer -->
+							<a
+								href="/admin/customization/footer"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath === '/admin/customization/footer'
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span class="w-1.5 h-1.5 rounded-full {currentPath === '/admin/customization/footer' ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span>Footer</span>
+							</a>
+
+							<!-- 7. Theme View -->
+							<a
+								href="/admin/customization/theme-view"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath === '/admin/customization/theme-view'
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span class="w-1.5 h-1.5 rounded-full {currentPath === '/admin/customization/theme-view' ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span>Theme View</span>
+							</a>
+						</div>
 					{/if}
 				</div>
-
-				<!-- Customization Submenu -->
-				{#if !collapsed && isCustomizationOpen}
-					<div class="pl-4 pr-1 py-1 space-y-1 ml-4 my-1 animate-in fade-in duration-150 text-sm">
-						<!-- 1. Carousel -->
-						<a
-							href="/admin/customization/carousel"
-							onclick={() => (mobileOpen = false)}
-							class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath === '/admin/customization/carousel'
-								? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
-								: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-						>
-							<span class="w-1.5 h-1.5 rounded-full {currentPath === '/admin/customization/carousel' ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
-							<span>Carousel</span>
-						</a>
-
-						<!-- 2. Banner -->
-						<a
-							href="/admin/customization/banner"
-							onclick={() => (mobileOpen = false)}
-							class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath === '/admin/customization/banner'
-								? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
-								: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-						>
-							<span class="w-1.5 h-1.5 rounded-full {currentPath === '/admin/customization/banner' ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
-							<span>Banner</span>
-						</a>
-
-						<!-- 3. PopUp -->
-						<a
-							href="/admin/customization/popup"
-							onclick={() => (mobileOpen = false)}
-							class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath.startsWith('/admin/customization/popup') || currentPath.startsWith('/admin/customization/all-popup')
-								? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
-								: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-						>
-							<span class="w-1.5 h-1.5 rounded-full {currentPath.startsWith('/admin/customization/popup') || currentPath.startsWith('/admin/customization/all-popup') ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
-							<span>PopUp</span>
-						</a>
-
-						<!-- 4. Website Information -->
-						<a
-							href="/admin/customization/website-information"
-							onclick={() => (mobileOpen = false)}
-							class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath === '/admin/customization/website-information'
-								? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
-								: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-						>
-							<span class="w-1.5 h-1.5 rounded-full {currentPath === '/admin/customization/website-information' ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
-							<span>Website Information</span>
-						</a>
-
-						<!-- 5. Navbar & Header -->
-						<a
-							href="/admin/customization/navbar"
-							onclick={() => (mobileOpen = false)}
-							class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath === '/admin/customization/navbar'
-								? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
-								: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-						>
-							<span class="w-1.5 h-1.5 rounded-full {currentPath === '/admin/customization/navbar' ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
-							<span>Navbar & Header</span>
-						</a>
-
-						<!-- 6. Footer -->
-						<a
-							href="/admin/customization/footer"
-							onclick={() => (mobileOpen = false)}
-							class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath === '/admin/customization/footer'
-								? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
-								: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-						>
-							<span class="w-1.5 h-1.5 rounded-full {currentPath === '/admin/customization/footer' ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
-							<span>Footer</span>
-						</a>
-
-						<!-- 7. Theme View -->
-						<a
-							href="/admin/customization/theme-view"
-							onclick={() => (mobileOpen = false)}
-							class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath === '/admin/customization/theme-view'
-								? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
-								: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-						>
-							<span class="w-1.5 h-1.5 rounded-full {currentPath === '/admin/customization/theme-view' ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
-							<span>Theme View</span>
-						</a>
-					</div>
-				{/if}
-			</div>
+			{/if}
 
 			<!-- 5. Settings -->
-			<a
-				href="/admin/settings"
-				onclick={() => {
-					mobileOpen = false;
-					closeAllSubmenus();
-				}}
-				class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isSettingsActive
-					? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
-					: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
-				title="Settings"
-			>
-				<div class="flex items-center gap-3.5">
-					<svg class="w-5 h-5 shrink-0 {isSettingsActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="currentColor">
-						<path fill-rule="evenodd" clip-rule="evenodd" d="M12 2.5a2.25 2.25 0 0 0-2.228 1.93l-.11.758a1.25 1.25 0 0 1-1.385.992l-.75-.12a2.25 2.25 0 0 0-2.476 1.155l-.65 1.126a2.25 2.25 0 0 0 .428 2.7l.557.53a1.25 1.25 0 0 1 0 1.706l-.557.53a2.25 2.25 0 0 0-.428 2.7l.65 1.126a2.25 2.25 0 0 0 2.476 1.155l.75-.12a1.25 1.25 0 0 1 1.385.992l.11.758a2.25 2.25 0 0 0 2.228 1.93h1.3a2.25 2.25 0 0 0 2.228-1.93l.11-.758a1.25 1.25 0 0 1 1.385-.992l.75.12a2.25 2.25 0 0 0 2.476-1.155l.65-1.126a2.25 2.25 0 0 0-.428-2.7l-.557-.53a1.25 1.25 0 0 1 0-1.706l.557-.53a2.25 2.25 0 0 0 .428-2.7l-.65-1.126a2.25 2.25 0 0 0-2.476-1.155l-.75.12a1.25 1.25 0 0 1-1.385-.992l-.11-.758A2.25 2.25 0 0 0 13.3 2.5h-1.3ZM12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" />
-					</svg>
-					{#if !collapsed}
-						<span>Settings</span>
-					{/if}
-				</div>
-			</a>
-
-			<!-- 6. Catalog Dropdown -->
-			<div class="space-y-1 relative">
-				<div
-					class="w-full flex items-center {collapsed ? 'justify-center' : 'justify-between'} rounded-2xl transition-all font-semibold text-[15px] {isCatalogActive
+			{#if hasMenuAccess(currentPermissions, 'settings')}
+				<a
+					href="/admin/settings"
+					onclick={() => {
+						mobileOpen = false;
+						closeAllSubmenus();
+					}}
+					class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isSettingsActive
 						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
 						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
+					title="Settings"
 				>
-					<button
-						type="button"
-						onclick={() => handleParentClick('catalog', '/admin/catalog/categories')}
-						class="flex-1 flex items-center gap-3.5 {collapsed ? 'p-3 justify-center' : 'px-4 py-3.5'} text-left cursor-pointer transition-colors"
-						title="Catalog"
-					>
-						<!-- Catalog Icon matching screenshot -->
-						<div class="w-5 h-5 flex items-center justify-center {isCatalogActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}">
-							<svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
-								<rect x="3" y="3" width="7" height="18" rx="2" />
-								<rect x="14" y="3" width="7" height="18" rx="2" />
-							</svg>
-						</div>
-						{#if !collapsed}
-							<span>Catalog</span>
-						{/if}
-					</button>
-
-					{#if !collapsed}
-						<button
-							type="button"
-							onclick={(e) => {
-								e.stopPropagation();
-								toggleSubmenu('catalog');
-							}}
-							class="px-3.5 py-3.5 flex items-center justify-center cursor-pointer rounded-r-2xl transition-colors {isCatalogActive ? 'hover:bg-white/10' : 'hover:bg-slate-200/50'}"
-							aria-label="Toggle Catalog submenu"
-							title="টগল সাবমেনু"
-						>
-							<ChevronDown
-								class="w-4 h-4 transition-transform duration-200 {isCatalogOpen ? 'rotate-180' : ''} {isCatalogActive ? 'text-white' : 'text-slate-400'}"
-							/>
-						</button>
-					{/if}
-				</div>
-
-				{#if isCatalogOpen && !collapsed}
-					<div class="pl-4 pr-1 py-1 space-y-1 text-xs transition-all">
-						<!-- 1. Categories -->
-						<a
-							href="/admin/catalog/categories"
-							onclick={() => (mobileOpen = false)}
-							class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath.startsWith('/admin/catalog/categories') || currentPath.startsWith('/admin/catalog/all-category')
-								? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
-								: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-						>
-							<span class="w-1.5 h-1.5 rounded-full {currentPath.startsWith('/admin/catalog/categories') || currentPath.startsWith('/admin/catalog/all-category') ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
-							<span>Categories</span>
-						</a>
-
-						<!-- 2. Sub Categories -->
-						<a
-							href="/admin/catalog/sub-categories"
-							onclick={() => (mobileOpen = false)}
-							class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath.startsWith('/admin/catalog/sub-categories') || currentPath.startsWith('/admin/catalog/all-sub-category')
-								? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
-								: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-						>
-							<span class="w-1.5 h-1.5 rounded-full {currentPath.startsWith('/admin/catalog/sub-categories') || currentPath.startsWith('/admin/catalog/all-sub-category') ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
-							<span>Sub Categories</span>
-						</a>
-
-						<!-- 3. Child Categories -->
-						<a
-							href="/admin/catalog/child-categories"
-							onclick={() => (mobileOpen = false)}
-							class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath.startsWith('/admin/catalog/child-categories') || currentPath.startsWith('/admin/catalog/all-child-category') || currentPath.startsWith('/admin/catalog/all_child_category')
-								? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
-								: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-						>
-							<span class="w-1.5 h-1.5 rounded-full {currentPath.startsWith('/admin/catalog/child-categories') || currentPath.startsWith('/admin/catalog/all-child-category') || currentPath.startsWith('/admin/catalog/all_child_category') ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
-							<span>Child Categories</span>
-						</a>
-
-						<!-- 4. Brand -->
-						<a
-							href="/admin/catalog/brands"
-							onclick={() => (mobileOpen = false)}
-							class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath.startsWith('/admin/catalog/brands') || currentPath.startsWith('/admin/catalog/all-brand')
-								? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
-								: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-						>
-							<span class="w-1.5 h-1.5 rounded-full {currentPath.startsWith('/admin/catalog/brands') || currentPath.startsWith('/admin/catalog/all-brand') ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
-							<span>Brand</span>
-						</a>
-
-						<!-- 5. Tags -->
-						<a
-							href="/admin/catalog/tags"
-							onclick={() => (mobileOpen = false)}
-							class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath.startsWith('/admin/catalog/tags') || currentPath.startsWith('/admin/catalog/all-tag') || currentPath.startsWith('/admin/catalog/tag')
-								? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
-								: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-						>
-							<span class="w-1.5 h-1.5 rounded-full {currentPath.startsWith('/admin/catalog/tags') || currentPath.startsWith('/admin/catalog/all-tag') || currentPath.startsWith('/admin/catalog/tag') ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
-							<span>Tags</span>
-						</a>
-					</div>
-				{/if}
-			</div>
-
-			<!-- 7. IP Block -->
-			<a
-				href="/admin/ip-block"
-				onclick={() => {
-					mobileOpen = false;
-					closeAllSubmenus();
-				}}
-				class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isIpBlockActive
-					? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
-					: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
-				title="IP Block"
-			>
-				<div class="flex items-center gap-3.5">
-					<svg class="w-5 h-5 shrink-0 {isIpBlockActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<rect x="2" y="3" width="20" height="14" rx="2" />
-						<circle cx="12" cy="10" r="2.5" fill="currentColor" />
-						<path d="M8 21h8M12 17v4" stroke-width="2" stroke-linecap="round" />
-					</svg>
-					{#if !collapsed}
-						<span>IP Block</span>
-					{/if}
-				</div>
-				{#if !collapsed}
-					<span class="text-xs font-bold px-2 py-0.5 rounded-full {isIpBlockActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
-						44.9k
-					</span>
-				{/if}
-			</a>
-
-			<!-- 8. Gallery (My Gallery) -->
-			<a
-				href="/admin/gallery"
-				onclick={() => {
-					mobileOpen = false;
-					closeAllSubmenus();
-				}}
-				class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isGalleryActive
-					? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
-					: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
-				title="Gallery"
-			>
-				<div class="flex items-center gap-3.5">
-					<svg class="w-5 h-5 shrink-0 {isGalleryActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-						<circle cx="9" cy="9" r="2" />
-						<path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-					</svg>
-					{#if !collapsed}
-						<span>Gallery</span>
-					{/if}
-				</div>
-				{#if !collapsed}
-					<span class="text-xs font-bold px-2 py-0.5 rounded-full {isGalleryActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
-						16
-					</span>
-				{/if}
-			</a>
-
-			<!-- 9. Customers -->
-			<a
-				href="/admin/customers"
-				onclick={() => {
-					mobileOpen = false;
-					closeAllSubmenus();
-				}}
-				class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isCustomerActive
-					? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
-					: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
-				title="Customer"
-			>
-				<div class="flex items-center gap-3.5">
-					<svg class="w-5 h-5 shrink-0 {isCustomerActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="currentColor">
-						<path d="M12 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm-5.5 8c0-2.5 3-4 5.5-4s5.5 1.5 5.5 4v1h-11v-1Z" />
-						<path d="M5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm-3 10c0-1.8 1.8-3 3.8-3.4-.5.8-.8 1.8-.8 2.9v1.5H2V18Z" opacity="0.8" />
-						<path d="M19 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm-1 9.5c0-1.1-.3-2.1-.8-2.9 2 .4 3.8 1.6 3.8 3.4v1H18v-1.5Z" opacity="0.8" />
-					</svg>
-					{#if !collapsed}
-						<span>Customer</span>
-					{/if}
-				</div>
-				{#if !collapsed}
-					<span class="text-xs font-bold px-2 py-0.5 rounded-full {isCustomerActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
-						{(data?.newsletter || []).length}
-					</span>
-				{/if}
-			</a>
-
-			<!-- 9. Database -->
-			<a
-				href="/admin/database"
-				onclick={() => {
-					mobileOpen = false;
-					closeAllSubmenus();
-				}}
-				class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isDatabaseActive
-					? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
-					: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
-				title="Database"
-			>
-				<div class="flex items-center gap-3.5">
-					<svg class="w-5 h-5 shrink-0 {isDatabaseActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="currentColor">
-						<rect x="4" y="3" width="16" height="18" rx="3.5" />
-						<rect x="8" y="7" width="8" height="2" rx="1" fill="white" />
-						<rect x="8" y="11" width="8" height="2" rx="1" fill="white" />
-						<rect x="8" y="15" width="5" height="2" rx="1" fill="white" />
-					</svg>
-					{#if !collapsed}
-						<span>Database</span>
-					{/if}
-				</div>
-				{#if !collapsed}
-					<span class="w-2.5 h-2.5 rounded-full {data?.isD1Connected ? 'bg-emerald-400' : 'bg-amber-400'} ring-4 ring-white/20"></span>
-				{/if}
-			</a>
-
-			<!-- 10. Landing page -->
-			<a
-				href="/admin/landing-pages"
-				onclick={() => {
-					mobileOpen = false;
-					closeAllSubmenus();
-				}}
-				class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isLandingPagesActive
-					? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
-					: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
-				title="Landing page"
-			>
-				<div class="flex items-center gap-3.5">
-					<svg class="w-5 h-5 {isLandingPagesActive ? 'text-white' : 'text-slate-800 group-hover:text-black'} shrink-0" viewBox="0 0 24 24" fill="currentColor">
-						<rect x="4" y="4" width="16" height="12" rx="2" />
-						<path d="M2 19h20c0 .6-.4 1-1 1H3c-.6 0-1-.4-1-1z" />
-						<rect x="10" y="13" width="4" height="1.5" rx="0.5" fill="white" />
-					</svg>
-					{#if !collapsed}
-						<span>Landing page</span>
-					{/if}
-				</div>
-				{#if !collapsed}
-					<span class="text-xs font-bold px-2 py-0.5 rounded-full {isLandingPagesActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
-						3
-					</span>
-				{/if}
-			</a>
-
-			<!-- 11. Daily Target -->
-			<a
-				href="/admin/daily-target"
-				onclick={() => {
-					mobileOpen = false;
-					closeAllSubmenus();
-				}}
-				class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isDailyTargetActive
-					? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
-					: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
-				title="Daily Target"
-			>
-				<div class="flex items-center gap-3.5">
-					<Target class="w-5 h-5 shrink-0 {isDailyTargetActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" />
-					{#if !collapsed}
-						<span>Daily Target</span>
-					{/if}
-				</div>
-			</a>
-
-			<!-- 12. Reports Dropdown -->
-			<div class="space-y-1 relative">
-				<div
-					class="w-full flex items-center {collapsed ? 'justify-center' : 'justify-between'} rounded-2xl transition-all font-semibold text-[15px] {isReportsActive
-						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
-						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
-				>
-					<button
-						type="button"
-						onclick={() => handleParentClick('reports', '/admin/reports/daily-business-summary')}
-						class="flex-1 flex items-center gap-3.5 {collapsed ? 'p-3 justify-center' : 'px-4 py-3.5'} text-left cursor-pointer transition-colors"
-						title="Reports"
-					>
-						<svg class="w-5 h-5 shrink-0 {isReportsActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-							<polyline points="14 2 14 8 20 8" />
-							<line x1="16" y1="13" x2="8" y2="13" />
-							<line x1="16" y1="17" x2="8" y2="17" />
-							<line x1="10" y1="9" x2="8" y2="9" />
+					<div class="flex items-center gap-3.5">
+						<svg class="w-5 h-5 shrink-0 {isSettingsActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="currentColor">
+							<path fill-rule="evenodd" clip-rule="evenodd" d="M12 2.5a2.25 2.25 0 0 0-2.228 1.93l-.11.758a1.25 1.25 0 0 1-1.385.992l-.75-.12a2.25 2.25 0 0 0-2.476 1.155l-.65 1.126a2.25 2.25 0 0 0 .428 2.7l.557.53a1.25 1.25 0 0 1 0 1.706l-.557.53a2.25 2.25 0 0 0-.428 2.7l.65 1.126a2.25 2.25 0 0 0 2.476 1.155l.75-.12a1.25 1.25 0 0 1 1.385.992l.11.758a2.25 2.25 0 0 0 2.228 1.93h1.3a2.25 2.25 0 0 0 2.228-1.93l.11-.758a1.25 1.25 0 0 1 1.385-.992l.75.12a2.25 2.25 0 0 0 2.476-1.155l.65-1.126a2.25 2.25 0 0 0-.428-2.7l-.557-.53a1.25 1.25 0 0 1 0-1.706l.557-.53a2.25 2.25 0 0 0 .428-2.7l-.65-1.126a2.25 2.25 0 0 0-2.476-1.155l-.75.12a1.25 1.25 0 0 1-1.385-.992l-.11-.758A2.25 2.25 0 0 0 13.3 2.5h-1.3ZM12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" />
 						</svg>
 						{#if !collapsed}
-							<span>Reports</span>
+							<span>Settings</span>
 						{/if}
-					</button>
+					</div>
+				</a>
+			{/if}
 
-					{#if !collapsed}
+			<!-- 6. Catalog Dropdown -->
+			{#if hasMenuAccess(currentPermissions, 'catalog')}
+				<div class="space-y-1 relative">
+					<div
+						class="w-full flex items-center {collapsed ? 'justify-center' : 'justify-between'} rounded-2xl transition-all font-semibold text-[15px] {isCatalogActive
+							? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+							: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
+					>
 						<button
 							type="button"
-							onclick={(e) => {
-								e.stopPropagation();
-								toggleSubmenu('reports');
-							}}
-							class="px-3.5 py-3.5 flex items-center justify-center cursor-pointer rounded-r-2xl transition-colors {isReportsActive ? 'hover:bg-white/10' : 'hover:bg-slate-200/50'}"
-							aria-label="Toggle Reports submenu"
-							title="টগল সাবমেনু"
+							onclick={() => handleParentClick('catalog', '/admin/catalog/categories')}
+							class="flex-1 flex items-center gap-3.5 {collapsed ? 'p-3 justify-center' : 'px-4 py-3.5'} text-left cursor-pointer transition-colors"
+							title="Catalog"
 						>
-							<ChevronDown class="w-4 h-4 transition-transform duration-200 {isReportsOpen ? 'rotate-180' : ''} {isReportsActive ? 'text-white' : 'text-slate-400'}" />
+							<!-- Catalog Icon matching screenshot -->
+							<div class="w-5 h-5 flex items-center justify-center {isCatalogActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}">
+								<svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+									<rect x="3" y="3" width="7" height="18" rx="2" />
+									<rect x="14" y="3" width="7" height="18" rx="2" />
+								</svg>
+							</div>
+							{#if !collapsed}
+								<span>Catalog</span>
+							{/if}
 						</button>
-					{/if}
-				</div>
 
-				<!-- Reports Submenu -->
-				{#if !collapsed && isReportsOpen}
-					<div class="pl-3 pr-1 py-1 space-y-1 border-l-2 border-slate-100 ml-6 my-1 animate-in fade-in duration-150 text-xs">
-						<a
-							href="/admin/reports/daily-business-summary"
-							onclick={() => (mobileOpen = false)}
-							class="w-full flex items-center gap-2 px-3 py-2 rounded-xl font-medium transition-all {isDailySummaryActive
-								? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
-								: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-						>
-							<span class="w-1.5 h-1.5 rounded-full {isDailySummaryActive ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
-							<span>Daily Business Summary</span>
-						</a>
-
-						<a
-							href="/admin/reports/asset-valuation"
-							onclick={() => (mobileOpen = false)}
-							class="w-full flex items-center gap-2 px-3 py-2 rounded-xl font-medium transition-all {isAssetValuationActive
-								? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
-								: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-						>
-							<span class="w-1.5 h-1.5 rounded-full {isAssetValuationActive ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
-							<span>Asset Valuation</span>
-						</a>
+						{#if !collapsed}
+							<button
+								type="button"
+								onclick={(e) => {
+									e.stopPropagation();
+									toggleSubmenu('catalog');
+								}}
+								class="px-3.5 py-3.5 flex items-center justify-center cursor-pointer rounded-r-2xl transition-colors {isCatalogActive ? 'hover:bg-white/10' : 'hover:bg-slate-200/50'}"
+								aria-label="Toggle Catalog submenu"
+								title="টগল সাবমেনু"
+							>
+								<ChevronDown
+									class="w-4 h-4 transition-transform duration-200 {isCatalogOpen ? 'rotate-180' : ''} {isCatalogActive ? 'text-white' : 'text-slate-400'}"
+								/>
+							</button>
+						{/if}
 					</div>
-				{/if}
-			</div>
 
-			<!-- 13. Admin Control -->
-			<a
-				href="/admin/admin-control"
-				onclick={() => {
-					mobileOpen = false;
-					closeAllSubmenus();
-				}}
-				class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isAdminControlActive
-					? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
-					: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
-				title="Admin Control"
-			>
-				<div class="flex items-center gap-3.5">
-					<svg class="w-5 h-5 shrink-0 {isAdminControlActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<rect x="2" y="5" width="20" height="14" rx="2" />
-						<line x1="2" y1="10" x2="22" y2="10" />
-						<line x1="6" y1="15" x2="6.01" y2="15" stroke-width="3" />
-						<line x1="10" y1="15" x2="10.01" y2="15" stroke-width="3" />
-						<line x1="14" y1="15" x2="14.01" y2="15" stroke-width="3" />
-						<line x1="18" y1="15" x2="18.01" y2="15" stroke-width="3" />
-					</svg>
-					{#if !collapsed}
-						<span>Admin Control</span>
+					{#if isCatalogOpen && !collapsed}
+						<div class="pl-4 pr-1 py-1 space-y-1 text-xs transition-all">
+							<!-- 1. Categories -->
+							<a
+								href="/admin/catalog/categories"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath.startsWith('/admin/catalog/categories') || currentPath.startsWith('/admin/catalog/all-category')
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span class="w-1.5 h-1.5 rounded-full {currentPath.startsWith('/admin/catalog/categories') || currentPath.startsWith('/admin/catalog/all-category') ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span>Categories</span>
+							</a>
+
+							<!-- 2. Sub Categories -->
+							<a
+								href="/admin/catalog/sub-categories"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath.startsWith('/admin/catalog/sub-categories') || currentPath.startsWith('/admin/catalog/all-sub-category')
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span class="w-1.5 h-1.5 rounded-full {currentPath.startsWith('/admin/catalog/sub-categories') || currentPath.startsWith('/admin/catalog/all-sub-category') ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span>Sub Categories</span>
+							</a>
+
+							<!-- 3. Child Categories -->
+							<a
+								href="/admin/catalog/child-categories"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath.startsWith('/admin/catalog/child-categories') || currentPath.startsWith('/admin/catalog/all-child-category') || currentPath.startsWith('/admin/catalog/all_child_category')
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span class="w-1.5 h-1.5 rounded-full {currentPath.startsWith('/admin/catalog/child-categories') || currentPath.startsWith('/admin/catalog/all-child-category') || currentPath.startsWith('/admin/catalog/all_child_category') ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span>Child Categories</span>
+							</a>
+
+							<!-- 4. Brand -->
+							<a
+								href="/admin/catalog/brands"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath.startsWith('/admin/catalog/brands') || currentPath.startsWith('/admin/catalog/all-brand')
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span class="w-1.5 h-1.5 rounded-full {currentPath.startsWith('/admin/catalog/brands') || currentPath.startsWith('/admin/catalog/all-brand') ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span>Brand</span>
+							</a>
+
+							<!-- 5. Tags -->
+							<a
+								href="/admin/catalog/tags"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath.startsWith('/admin/catalog/tags') || currentPath.startsWith('/admin/catalog/all-tag') || currentPath.startsWith('/admin/catalog/tag')
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span class="w-1.5 h-1.5 rounded-full {currentPath.startsWith('/admin/catalog/tags') || currentPath.startsWith('/admin/catalog/all-tag') || currentPath.startsWith('/admin/catalog/tag') ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span>Tags</span>
+							</a>
+						</div>
 					{/if}
 				</div>
-			</a>
+			{/if}
+
+			<!-- 7. IP Block -->
+			{#if hasMenuAccess(currentPermissions, 'ip-block')}
+				<a
+					href="/admin/ip-block"
+					onclick={() => {
+						mobileOpen = false;
+						closeAllSubmenus();
+					}}
+					class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isIpBlockActive
+						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
+					title="IP Block"
+				>
+					<div class="flex items-center gap-3.5">
+						<svg class="w-5 h-5 shrink-0 {isIpBlockActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<rect x="2" y="3" width="20" height="14" rx="2" />
+							<circle cx="12" cy="10" r="2.5" fill="currentColor" />
+							<path d="M8 21h8M12 17v4" stroke-width="2" stroke-linecap="round" />
+						</svg>
+						{#if !collapsed}
+							<span>IP Block</span>
+						{/if}
+					</div>
+					{#if !collapsed}
+						<span class="text-xs font-bold px-2 py-0.5 rounded-full {isIpBlockActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
+							44.9k
+						</span>
+					{/if}
+				</a>
+			{/if}
+
+			<!-- 8. Gallery (My Gallery) -->
+			{#if hasMenuAccess(currentPermissions, 'gallery')}
+				<a
+					href="/admin/gallery"
+					onclick={() => {
+						mobileOpen = false;
+						closeAllSubmenus();
+					}}
+					class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isGalleryActive
+						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
+					title="Gallery"
+				>
+					<div class="flex items-center gap-3.5">
+						<svg class="w-5 h-5 shrink-0 {isGalleryActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+							<circle cx="9" cy="9" r="2" />
+							<path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+						</svg>
+						{#if !collapsed}
+							<span>Gallery</span>
+						{/if}
+					</div>
+					{#if !collapsed}
+						<span class="text-xs font-bold px-2 py-0.5 rounded-full {isGalleryActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
+							16
+						</span>
+					{/if}
+				</a>
+			{/if}
+
+			<!-- 9. Customers -->
+			{#if hasMenuAccess(currentPermissions, 'customers')}
+				<a
+					href="/admin/customers"
+					onclick={() => {
+						mobileOpen = false;
+						closeAllSubmenus();
+					}}
+					class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isCustomerActive
+						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
+					title="Customer"
+				>
+					<div class="flex items-center gap-3.5">
+						<svg class="w-5 h-5 shrink-0 {isCustomerActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="currentColor">
+							<path d="M12 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm-5.5 8c0-2.5 3-4 5.5-4s5.5 1.5 5.5 4v1h-11v-1Z" />
+							<path d="M5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm-3 10c0-1.8 1.8-3 3.8-3.4-.5.8-.8 1.8-.8 2.9v1.5H2V18Z" opacity="0.8" />
+							<path d="M19 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm-1 9.5c0-1.1-.3-2.1-.8-2.9 2 .4 3.8 1.6 3.8 3.4v1H18v-1.5Z" opacity="0.8" />
+						</svg>
+						{#if !collapsed}
+							<span>Customer</span>
+						{/if}
+					</div>
+					{#if !collapsed}
+						<span class="text-xs font-bold px-2 py-0.5 rounded-full {isCustomerActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
+							{(data?.newsletter || []).length}
+						</span>
+					{/if}
+				</a>
+			{/if}
+
+			<!-- 9. Database -->
+			{#if hasMenuAccess(currentPermissions, 'database')}
+				<a
+					href="/admin/database"
+					onclick={() => {
+						mobileOpen = false;
+						closeAllSubmenus();
+					}}
+					class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isDatabaseActive
+						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
+					title="Database"
+				>
+					<div class="flex items-center gap-3.5">
+						<svg class="w-5 h-5 shrink-0 {isDatabaseActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="currentColor">
+							<rect x="4" y="3" width="16" height="18" rx="3.5" />
+							<rect x="8" y="7" width="8" height="2" rx="1" fill="white" />
+							<rect x="8" y="11" width="8" height="2" rx="1" fill="white" />
+							<rect x="8" y="15" width="5" height="2" rx="1" fill="white" />
+						</svg>
+						{#if !collapsed}
+							<span>Database</span>
+						{/if}
+					</div>
+					{#if !collapsed}
+						<span class="w-2.5 h-2.5 rounded-full {data?.isD1Connected ? 'bg-emerald-400' : 'bg-amber-400'} ring-4 ring-white/20"></span>
+					{/if}
+				</a>
+			{/if}
+
+			<!-- 10. Landing page -->
+			{#if hasMenuAccess(currentPermissions, 'landing-pages')}
+				<a
+					href="/admin/landing-pages"
+					onclick={() => {
+						mobileOpen = false;
+						closeAllSubmenus();
+					}}
+					class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isLandingPagesActive
+						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
+					title="Landing page"
+				>
+					<div class="flex items-center gap-3.5">
+						<svg class="w-5 h-5 {isLandingPagesActive ? 'text-white' : 'text-slate-800 group-hover:text-black'} shrink-0" viewBox="0 0 24 24" fill="currentColor">
+							<rect x="4" y="4" width="16" height="12" rx="2" />
+							<path d="M2 19h20c0 .6-.4 1-1 1H3c-.6 0-1-.4-1-1z" />
+							<rect x="10" y="13" width="4" height="1.5" rx="0.5" fill="white" />
+						</svg>
+						{#if !collapsed}
+							<span>Landing page</span>
+						{/if}
+					</div>
+					{#if !collapsed}
+						<span class="text-xs font-bold px-2 py-0.5 rounded-full {isLandingPagesActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
+							3
+						</span>
+					{/if}
+				</a>
+			{/if}
+
+			<!-- 11. Daily Target -->
+			{#if hasMenuAccess(currentPermissions, 'daily-target')}
+				<a
+					href="/admin/daily-target"
+					onclick={() => {
+						mobileOpen = false;
+						closeAllSubmenus();
+					}}
+					class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isDailyTargetActive
+						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
+					title="Daily Target"
+				>
+					<div class="flex items-center gap-3.5">
+						<Target class="w-5 h-5 shrink-0 {isDailyTargetActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" />
+						{#if !collapsed}
+							<span>Daily Target</span>
+						{/if}
+					</div>
+				</a>
+			{/if}
+
+			<!-- 12. Reports Dropdown -->
+			{#if hasMenuAccess(currentPermissions, 'reports')}
+				<div class="space-y-1 relative">
+					<div
+						class="w-full flex items-center {collapsed ? 'justify-center' : 'justify-between'} rounded-2xl transition-all font-semibold text-[15px] {isReportsActive
+							? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+							: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
+					>
+						<button
+							type="button"
+							onclick={() => handleParentClick('reports', '/admin/reports/daily-business-summary')}
+							class="flex-1 flex items-center gap-3.5 {collapsed ? 'p-3 justify-center' : 'px-4 py-3.5'} text-left cursor-pointer transition-colors"
+							title="Reports"
+						>
+							<svg class="w-5 h-5 shrink-0 {isReportsActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+								<polyline points="14 2 14 8 20 8" />
+								<line x1="16" y1="13" x2="8" y2="13" />
+								<line x1="16" y1="17" x2="8" y2="17" />
+								<line x1="10" y1="9" x2="8" y2="9" />
+							</svg>
+							{#if !collapsed}
+								<span>Reports</span>
+							{/if}
+						</button>
+
+						{#if !collapsed}
+							<button
+								type="button"
+								onclick={(e) => {
+									e.stopPropagation();
+									toggleSubmenu('reports');
+								}}
+								class="px-3.5 py-3.5 flex items-center justify-center cursor-pointer rounded-r-2xl transition-colors {isReportsActive ? 'hover:bg-white/10' : 'hover:bg-slate-200/50'}"
+								aria-label="Toggle Reports submenu"
+								title="টগল সাবমেনু"
+							>
+								<ChevronDown class="w-4 h-4 transition-transform duration-200 {isReportsOpen ? 'rotate-180' : ''} {isReportsActive ? 'text-white' : 'text-slate-400'}" />
+							</button>
+						{/if}
+					</div>
+
+					<!-- Reports Submenu -->
+					{#if !collapsed && isReportsOpen}
+						<div class="pl-3 pr-1 py-1 space-y-1 border-l-2 border-slate-100 ml-6 my-1 animate-in fade-in duration-150 text-xs">
+							<a
+								href="/admin/reports/daily-business-summary"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center gap-2 px-3 py-2 rounded-xl font-medium transition-all {isDailySummaryActive
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span class="w-1.5 h-1.5 rounded-full {isDailySummaryActive ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span>Daily Business Summary</span>
+							</a>
+
+							<a
+								href="/admin/reports/asset-valuation"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center gap-2 px-3 py-2 rounded-xl font-medium transition-all {isAssetValuationActive
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<span class="w-1.5 h-1.5 rounded-full {isAssetValuationActive ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span>Asset Valuation</span>
+							</a>
+						</div>
+					{/if}
+				</div>
+			{/if}
+
+			<!-- 13. Admin Control (Owner / Permitted Only) -->
+			{#if hasMenuAccess(currentPermissions, 'admin-control')}
+				<a
+					href="/admin/admin-control"
+					onclick={() => {
+						mobileOpen = false;
+						closeAllSubmenus();
+					}}
+					class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isAdminControlActive
+						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
+					title="Admin Control"
+				>
+					<div class="flex items-center gap-3.5">
+						<svg class="w-5 h-5 shrink-0 {isAdminControlActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<rect x="2" y="5" width="20" height="14" rx="2" />
+							<line x1="2" y1="10" x2="22" y2="10" />
+							<line x1="6" y1="15" x2="6.01" y2="15" stroke-width="3" />
+							<line x1="10" y1="15" x2="10.01" y2="15" stroke-width="3" />
+							<line x1="14" y1="15" x2="14.01" y2="15" stroke-width="3" />
+							<line x1="18" y1="15" x2="18.01" y2="15" stroke-width="3" />
+						</svg>
+						{#if !collapsed}
+							<span>Admin Control</span>
+						{/if}
+					</div>
+				</a>
+			{/if}
 
 			<!-- 14. Support -->
 			<a
@@ -1071,9 +1133,19 @@
 			<!-- 18. Logout -->
 			<button
 				type="button"
-				onclick={() => {
+				onclick={async () => {
 					closeAllSubmenus();
-					alert('লগআউট করা হচ্ছে...');
+					const confirmed = await confirmModal({
+						title: 'লগআউট নিশ্চিতকরণ',
+						message: 'আপনি কি নিশ্চিত যে আপনার অ্যাডমিন সেশন থেকে লগআউট করতে চান?',
+						confirmText: 'হ্যাঁ, লগআউট করুন',
+						variant: 'destructive',
+						icon: 'alert'
+					});
+					if (confirmed) {
+						toast.success('সফলভাবে লগআউট করা হয়েছে');
+						window.location.href = '/';
+					}
 				}}
 				class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] text-slate-800 hover:text-rose-600 hover:bg-rose-50/60 group cursor-pointer text-left"
 				title="Logout"
@@ -1088,6 +1160,32 @@
 
 		</nav>
 	</div>
+
+	<!-- Active Admin Perspective Switcher -->
+	{#if !collapsed && currentAdminUser}
+		<div class="p-3 border-t border-slate-100 bg-slate-50/70">
+			<div class="flex items-center justify-between gap-2">
+				<div class="min-w-0">
+					<div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">বর্তমান অ্যাডমিন ভিউ</div>
+					<div class="text-xs font-black text-slate-800 truncate">{currentAdminUser.name}</div>
+					<div class="text-[10px] text-[#5845eb] font-bold">{currentAdminUser.role}</div>
+				</div>
+				{#if allAdminsList.length > 0}
+					<select
+						value={currentAdminUser.id}
+						onchange={(e) => switchAdminView(e.currentTarget.value)}
+						class="bg-white border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-semibold text-slate-700 focus:outline-none focus:border-[#5845eb] cursor-pointer shadow-2xs max-w-[120px] truncate"
+						title="অ্যাডমিন ভিউ পরিবর্তন করুন"
+					>
+						<option value="owner">👑 Owner (Full)</option>
+						{#each allAdminsList.filter((a: any) => a.role !== 'Owner') as adm}
+							<option value={adm.id}>👤 {adm.name} ({adm.role})</option>
+						{/each}
+					</select>
+				{/if}
+			</div>
+		</div>
+	{/if}
 
 	<!-- Admin Panel Info Card -->
 	<div class="p-3 border-t border-slate-100 bg-white">

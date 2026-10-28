@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Card, Badge, Input, Dialog } from '#lib/components/ui';
+	import { Button, Card, Badge, Input, Dialog, confirmSubmit } from '#lib/components/ui';
+	import { toast } from 'svelte-sonner';
 	import {
 		Search,
 		PhoneCall,
@@ -496,17 +497,30 @@
 										</button>
 
 										<!-- Discard / Trash -->
-										<form method="POST" action="?/deleteOrder" use:enhance>
+										<form
+											method="POST"
+											action="?/deleteOrder"
+											use:enhance={() => {
+												return async ({ result, update }) => {
+													if (result.type === 'success') {
+														toast.success('ইনকমপ্লিট অর্ডারটি ট্র্যাশে সরানো হয়েছে!');
+													}
+													await update();
+												};
+											}}
+											use:confirmSubmit={{
+												title: 'অর্ডার ট্র্যাশে পাঠান',
+												message: 'আপনি কি এই ইনকমপ্লিট অর্ডারটি ট্র্যাশে পাঠাতে চান?',
+												confirmText: 'হ্যাঁ, ট্র্যাশে পাঠান',
+												variant: 'destructive',
+												icon: 'trash'
+											}}
+										>
 											<input type="hidden" name="orderId" value={order.id} />
 											<button
 												type="submit"
 												class="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors cursor-pointer"
 												title="ড্রপ-অফ বাতিল বা ট্র্যাশে পাঠান"
-												onclick={(e) => {
-													if (!confirm('আপনি কি এই ইনকমপ্লিট অর্ডারটি ট্র্যাশে পাঠাতে চান?')) {
-														e.preventDefault();
-													}
-												}}
 											>
 												<Trash2 class="w-4 h-4" />
 											</button>

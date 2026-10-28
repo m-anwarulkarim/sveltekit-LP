@@ -94,11 +94,12 @@ let cachedHttpDb: AppDatabase | null = null;
  * Guarantees 100% real remote database access everywhere!
  */
 export const getDb = (d1OrPlatform?: any): AppDatabase => {
-	// 1. Native Cloudflare D1 binding (Local Wrangler Proxy in Dev or Native Binding in Production)
+	// 1. Native Cloudflare D1 binding (Local Wrangler Proxy in Dev, cached proxy, or Native Binding in Production)
 	const nativeD1 =
 		d1OrPlatform?.env?.DB ||
 		d1OrPlatform?.DB ||
-		(d1OrPlatform?.prepare ? d1OrPlatform : null);
+		(d1OrPlatform?.prepare ? d1OrPlatform : null) ||
+		(typeof globalThis !== 'undefined' ? (globalThis as any).__DEV_D1__ : null);
 
 	if (nativeD1) {
 		return drizzle(nativeD1, { schema });

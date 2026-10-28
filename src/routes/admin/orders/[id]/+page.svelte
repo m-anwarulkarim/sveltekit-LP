@@ -227,28 +227,48 @@
 		/>
 	</div>
 
-	<!-- 3. Three-Column Main Grid -->
-	<div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch print:hidden">
+	<!-- 3. Master Grid (Left 8 cols: Products & Financials | Right 4 cols: Customer Info) -->
+	<div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start print:hidden">
 		
-		<!-- Column 1: Ordered Items (4 cols) -->
-		<div class="lg:col-span-4 flex flex-col">
-			<OrderedItemsTable
-				bind:items
-				onUpdateQuantity={handleUpdateQuantity}
-				onRemoveItem={handleRemoveItem}
-			/>
+		<!-- Left Section: Products & Financials (8 cols) -->
+		<div class="lg:col-span-8 space-y-4 flex flex-col">
+			<!-- Row 1: Ordered Items (Left) + Product Upsell (Middle) -->
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+				<!-- Scope 1: Ordered Items (Left side, scrollable if many items, zero white gap) -->
+				<div>
+					<OrderedItemsTable
+						bind:items
+						onUpdateQuantity={handleUpdateQuantity}
+						onRemoveItem={handleRemoveItem}
+					/>
+				</div>
+
+				<!-- Scope 2: Product Search / Upsell (Middle, scrollable catalog, zero white gap) -->
+				<div>
+					<ProductUpsellSelector
+						catalogProducts={data.availableProducts || data.products || []}
+						orderedItems={items}
+						onAddProduct={handleAddProduct}
+					/>
+				</div>
+			</div>
+
+			<!-- Row 2: Financial Summary Footer Bar (Placed cleanly below products) -->
+			<div>
+				<OrderFinancialFooter
+					{subtotal}
+					bind:discount
+					bind:deliveryFee
+					bind:advancePaid
+					{isSaving}
+					onSave={handleSave}
+					onConfirm={handleConfirm}
+					onPrint={handlePrint}
+				/>
+			</div>
 		</div>
 
-		<!-- Column 2: Product Search / Upsell (4 cols) -->
-		<div class="lg:col-span-4 flex flex-col">
-			<ProductUpsellSelector
-				catalogProducts={data.availableProducts || data.products || []}
-				orderedItems={items}
-				onAddProduct={handleAddProduct}
-			/>
-		</div>
-
-		<!-- Column 3: Intelligence & Customer History (4 cols) -->
+		<!-- Right Section: Intelligence & Customer History (4 cols - Intact) -->
 		<div class="lg:col-span-4 space-y-4 flex flex-col">
 			<!-- Courier & Fraud Check -->
 			<CourierFraudCard
@@ -279,20 +299,6 @@
 			/>
 		</div>
 
-	</div>
-
-	<!-- 4. Financial Summary Footer Bar -->
-	<div class="print:hidden">
-		<OrderFinancialFooter
-			{subtotal}
-			bind:discount
-			bind:deliveryFee
-			bind:advancePaid
-			{isSaving}
-			onSave={handleSave}
-			onConfirm={handleConfirm}
-			onPrint={handlePrint}
-		/>
 	</div>
 
 </div>

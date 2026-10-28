@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Card, Badge, Input } from '#lib/components/ui';
+	import { Button, Card, Badge, Input, confirmSubmit } from '#lib/components/ui';
+	import { toast } from 'svelte-sonner';
 	import {
 		Search,
 		Printer,
@@ -19,6 +20,8 @@
 		Copy,
 		ExternalLink
 	} from 'lucide-svelte';
+	import OrderStatusDropdown from '../../_components/orders/OrderStatusDropdown.svelte';
+	import ScrollableStatusTabs from '../../_components/orders/ScrollableStatusTabs.svelte';
 
 	let { data, form }: { data: any; form: any } = $props();
 
@@ -28,22 +31,20 @@
 	let selectedOrderIds = $state<string[]>([]);
 	let isBooking = $state(false);
 	let selectedBulkStatus = $state('processing');
-	let toastMessage = $state<string | null>(null);
 
-	// Display form action message if returned
+	// Display form action message via Sonner toast if returned
 	$effect(() => {
 		if (form?.message) {
-			toastMessage = form.message;
-			const timer = setTimeout(() => (toastMessage = null), 4000);
-			return () => clearTimeout(timer);
+			if (form.success) {
+				toast.success(form.message);
+			} else {
+				toast.error(form.message);
+			}
 		}
 	});
 
 	function showToast(msg: string) {
-		toastMessage = msg;
-		setTimeout(() => {
-			if (toastMessage === msg) toastMessage = null;
-		}, 3500);
+		toast.success(msg);
 	}
 
 	// 1. Tab sequence: confirmed -> processing -> ... -> all (last)
@@ -62,9 +63,10 @@
 		{ id: 'all', label: 'সব', icon: Clock }
 	];
 
-	// Real confirmed pipeline orders
+	// Real confirmed pipeline orders (excluding soft-deleted / trashed orders)
 	let orderListOrders = $derived(
 		(data.orders || []).filter((o: any) =>
+			!o.isTrashed &&
 			[
 				'confirmed',
 				'processing',
@@ -100,6 +102,17 @@
 			return matchesStatus && matchesSearch;
 		})
 	);
+
+	let statusCounts = $derived.by(() => {
+		const map: Record<string, number> = {
+			all: orderListOrders.length
+		};
+		ORDER_LIST_STATUS_TABS.forEach((tab) => {
+			if (tab.id === 'all') return;
+			map[tab.id] = orderListOrders.filter((o: any) => o.status === tab.id).length;
+		});
+		return map;
+	});
 
 	function toggleSelectAll() {
 		if (selectedOrderIds.length === filteredOrders.length) {
@@ -182,46 +195,13 @@
 			</div>
 		</div>
 
-		<!-- Toast Feedback Alert -->
-		{#if toastMessage}
-			<div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800 flex items-center justify-between gap-2 shadow-xs animate-in fade-in">
-				<div class="flex items-center gap-2">
-					<CheckCircle2 class="w-4 h-4 text-emerald-600 shrink-0" />
-					<span>{toastMessage}</span>
-				</div>
-				<button
-					type="button"
-					onclick={() => (toastMessage = null)}
-					class="text-emerald-700 hover:text-emerald-900 text-sm font-black px-1"
-				>
-					✕
-				</button>
-			</div>
-		{/if}
-
-		<!-- Status Tabs (1st: confirmed, 2nd: processing, ..., Last: all) -->
-		<Card class="p-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar shadow-xs border-slate-200/90">
-			{#each ORDER_LIST_STATUS_TABS as tab}
-				{@const count = tab.id === 'all'
-					? orderListOrders.length
-					: orderListOrders.filter((o: any) => o.status === tab.id).length}
-				<button
-					type="button"
-					onclick={() => (orderListStatusFilter = tab.id)}
-					class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer {orderListStatusFilter === tab.id
-						? 'bg-[#5845eb] text-white shadow-xs'
-						: 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'}"
-				>
-					<tab.icon class="w-3.5 h-3.5" />
-					<span>{tab.label}</span>
-					{#if count > 0}
-						<span class="text-[10px] px-1.5 py-0.2 rounded-full {orderListStatusFilter === tab.id ? 'bg-white/20 text-white font-mono' : 'bg-slate-200 text-slate-700 font-mono'}">
-							{count}
-						</span>
-					{/if}
-				</button>
-			{/each}
-		</Card>
+		<!-- Scrollable Status Tabs with Wheel & Button Navigation -->
+		<ScrollableStatusTabs
+			tabs={ORDER_LIST_STATUS_TABS}
+			activeTab={orderListStatusFilter}
+			counts={statusCounts}
+			onSelectTab={(newTab) => (orderListStatusFilter = newTab)}
+		/>
 
 		<!-- Bulk Selection Toolbar (Appears when items are checked) -->
 		{#if selectedOrderIds.length > 0}
@@ -268,9 +248,29 @@
 					</form>
 
 					<!-- Bulk Delete to Trash -->
-					<form action="?/bulkDeleteOrders" method="POST" use:enhance class="inline">
+					<form
+						action="?/bulkDeleteOrders"
+						method="POST"
+						use:enhance={() => {
+							return async ({ result, update }) => {
+								if (result.type === 'success') {
+									toast.success(`${selectedOrderIds.length} টি অর্ডার ট্র্যাশে সরানো হয়েছে!`);
+									selectedOrderIds = [];
+								}
+								await update();
+							};
+						}}
+						use:confirmSubmit={() => ({
+							title: 'নির্বাচিত অর্ডার ট্র্যাশে পাঠান',
+							message: `আপনি কি নির্বাচিত ${selectedOrderIds.length} টি অর্ডার ট্র্যাশে পাঠাতে চান?`,
+							confirmText: 'হ্যাঁ, ট্র্যাশে পাঠান',
+							variant: 'destructive',
+							icon: 'trash'
+						})}
+						class="inline"
+					>
 						<input type="hidden" name="orderIds" value={JSON.stringify(selectedOrderIds)} />
-						<Button type="submit" size="sm" variant="ghost" class="text-rose-600 hover:bg-rose-100 text-xs font-bold gap-1">
+						<Button type="submit" size="sm" variant="ghost" class="text-rose-600 hover:bg-rose-100 text-xs font-bold gap-1 cursor-pointer">
 							<Trash2 class="w-3.5 h-3.5" />
 							<span>ট্র্যাশে পাঠান</span>
 						</Button>
@@ -307,7 +307,7 @@
 			</div>
 
 			<!-- Orders Table -->
-			<div class="overflow-x-auto">
+			<div class="overflow-x-auto min-h-[240px]">
 				<table class="w-full text-left text-xs text-slate-700">
 					<thead class="bg-slate-50/80 border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-500">
 						<tr>
@@ -437,27 +437,12 @@
 
 									<!-- Status Dropdown (Real D1 Update) -->
 									<td class="py-4 px-4">
-										<form action="?/updateOrderStatus" method="POST" use:enhance class="inline-block">
-											<input type="hidden" name="orderId" value={order.id} />
-											<select
-												name="status"
-												value={order.status}
-												onchange={(e: Event) => (e.target as HTMLSelectElement).form?.requestSubmit()}
-												class="text-xs font-bold rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-slate-800 focus:outline-none focus:border-[#5845eb] shadow-2xs cursor-pointer"
-											>
-												<option value="confirmed">কনফার্মড</option>
-												<option value="processing">প্রসেসিং</option>
-												<option value="printed">প্রিন্টেড</option>
-												<option value="entry_done">এন্ট্রি ডান</option>
-												<option value="shipped">শিপড</option>
-												<option value="delivered">ডেলিভারড</option>
-												<option value="partial_delivered">পার্শিয়াল</option>
-												<option value="pending_return">পেন্ডিং রিটার্ন</option>
-												<option value="returned">রিটার্ন</option>
-												<option value="cancelled">বাতিল</option>
-												<option value="missing">মিসিং</option>
-											</select>
-										</form>
+										<OrderStatusDropdown
+											orderId={order.id}
+											status={order.status}
+											mode="list"
+											onStatusUpdated={(newSt) => showToast(`স্ট্যাটাস পরিবর্তন করে '${newSt}' করা হয়েছে!`)}
+										/>
 									</td>
 
 									<!-- Actions -->
@@ -475,13 +460,32 @@
 											</Button>
 
 											<!-- Trash / Delete -->
-											<form action="?/deleteOrder" method="POST" use:enhance class="inline">
+											<form
+												action="?/deleteOrder"
+												method="POST"
+												use:enhance={() => {
+													return async ({ result, update }) => {
+														if (result.type === 'success') {
+															toast.success('অর্ডারটি সফলভাবে ট্র্যাশে সরানো হয়েছে!');
+														}
+														await update();
+													};
+												}}
+												use:confirmSubmit={{
+													title: 'অর্ডার ট্র্যাশে পাঠান',
+													message: 'আপনি কি এই অর্ডারটি ট্র্যাশে পাঠাতে চান?',
+													confirmText: 'হ্যাঁ, ট্র্যাশে পাঠান',
+													variant: 'destructive',
+													icon: 'trash'
+												}}
+												class="inline"
+											>
 												<input type="hidden" name="orderId" value={order.id} />
 												<Button
 													type="submit"
 													variant="ghost"
 													size="icon"
-													class="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+													class="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg cursor-pointer"
 													title="ট্র্যাশে পাঠান"
 												>
 													<Trash2 class="w-3.5 h-3.5" />

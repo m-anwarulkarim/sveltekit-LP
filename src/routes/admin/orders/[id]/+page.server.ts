@@ -6,6 +6,7 @@ import { error, fail } from '@sveltejs/kit';
 import { INITIAL_PRODUCTS } from '../../_data';
 import { OrderService } from '#lib/server/services/order.service';
 import { FraudService } from '#lib/server/services/fraud.service';
+import { CourierService } from '#lib/server/services/courier.service';
 
 export const load: PageServerLoad = async ({ params, parent, platform }) => {
 	const parentData = await parent();
@@ -199,6 +200,26 @@ export const actions: Actions = {
 			return { success: true, newStatus: 'cancelled', message: 'অর্ডার বাতিল করা হয়েছে!' };
 		} catch (err: any) {
 			return fail(500, { message: err?.message });
+		}
+	},
+
+	bookToCourier: async ({ request, platform }) => {
+		const formData = await request.formData();
+		const orderId = formData.get('orderId')?.toString();
+		const provider = formData.get('provider')?.toString() as any;
+
+		if (!orderId) return fail(400, { message: 'Order ID required' });
+
+		try {
+			const db = getDb(platform);
+			const result = await CourierService.bookConsignment(db, orderId, provider);
+			if (result.success) {
+				return { success: true, trackingCode: result.trackingCode, message: result.message };
+			} else {
+				return fail(400, { message: result.error || 'বুকিং ব্যর্থ হয়েছে' });
+			}
+		} catch (err: any) {
+			return fail(500, { message: err?.message || 'কুরিয়ার এন্ট্রিতে ত্রুটি' });
 		}
 	}
 };

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Card, Badge, Input } from '#lib/components/ui';
+	import { Button, Card, Badge, Input, confirmSubmit } from '#lib/components/ui';
+	import { toast } from 'svelte-sonner';
 	import {
 		Search,
 		Trash2,
@@ -14,7 +15,7 @@
 	let searchQuery = $state('');
 
 	let trashedOrders = $derived(
-		(data.orders || []).filter((o: any) => o.status === 'cancelled')
+		(data.orders || []).filter((o: any) => o.isTrashed || o.status === 'cancelled')
 	);
 
 	let filteredOrders = $derived(
@@ -53,17 +54,30 @@
 
 		{#if trashedOrders.length > 0}
 			<div class="flex items-center gap-2">
-				<form method="POST" action="?/emptyTrash" use:enhance>
+				<form
+					method="POST"
+					action="?/emptyTrash"
+					use:enhance={() => {
+						return async ({ result, update }) => {
+							if (result.type === 'success') {
+								toast.success('ট্র্যাশ সম্পূর্ণ খালি করা হয়েছে!');
+							}
+							await update();
+						};
+					}}
+					use:confirmSubmit={{
+						title: 'ট্র্যাশ খালি নিশ্চিতকরণ',
+						message: 'আপনি কি নিশ্চিত যে সমস্ত ট্র্যাশ অর্ডার স্থায়ীভাবে মুছে ফেলতে চান? এটি আর ফিরিয়ে আনা যাবে না!',
+						confirmText: 'হ্যাঁ, সম্পূর্ণ খালি করুন',
+						variant: 'destructive',
+						icon: 'trash'
+					}}
+				>
 					<Button
 						type="submit"
 						variant="destructive"
 						size="sm"
-						class="gap-1.5 shadow-2xs text-xs"
-						onclick={(e: MouseEvent) => {
-							if (!confirm('আপনি কি নিশ্চিত যে সমস্ত ট্র্যাশ অর্ডার স্থায়ীভাবে মুছে ফেলতে চান? এটি আর ফিরিয়ে আনা যাবে না!')) {
-								e.preventDefault();
-							}
-						}}
+						class="gap-1.5 shadow-2xs text-xs cursor-pointer"
 					>
 						<Trash2 class="w-4 h-4" />
 						<span>ট্র্যাশ খালি করুন</span>
@@ -195,19 +209,32 @@
 										</form>
 
 										<!-- Permanent Delete Action -->
-										<form method="POST" action="?/permanentDeleteOrder" use:enhance>
+										<form
+											method="POST"
+											action="?/permanentDeleteOrder"
+											use:enhance={() => {
+												return async ({ result, update }) => {
+													if (result.type === 'success') {
+														toast.success('অর্ডারটি স্থায়ীভাবে মুছে ফেলা হয়েছে!');
+													}
+													await update();
+												};
+											}}
+											use:confirmSubmit={{
+												title: 'স্থায়ীভাবে মুছুন',
+												message: 'অর্ডারটি কি স্থায়ীভাবে মুছে ফেলতে চান? এটি আর ফিরিয়ে আনা যাবে না!',
+												confirmText: 'হ্যাঁ, স্থায়ীভাবে মুছুন',
+												variant: 'destructive',
+												icon: 'trash'
+											}}
+										>
 											<input type="hidden" name="orderId" value={order.id} />
 											<Button
 												type="submit"
 												size="sm"
 												variant="ghost"
-												class="h-8 px-2 text-xs text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+												class="h-8 px-2 text-xs text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
 												title="স্থায়ীভাবে মুছুন"
-												onclick={(e: MouseEvent) => {
-													if (!confirm('অর্ডারটি কি স্থায়ীভাবে মুছে ফেলতে চান?')) {
-														e.preventDefault();
-													}
-												}}
 											>
 												<Trash2 class="w-4 h-4" />
 											</Button>

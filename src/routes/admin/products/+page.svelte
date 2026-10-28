@@ -4,6 +4,8 @@
 	import type { AdminProduct } from '../_data';
 	import { ProductHeader, ProductTable, ProductModal } from '../_components/products';
 	import { ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-svelte';
+	import { confirmModal } from '#lib/stores/confirm.svelte';
+	import { toast } from 'svelte-sonner';
 
 	let { data }: { data: PageData } = $props();
 
@@ -47,14 +49,8 @@
 	let isModalOpen = $state(false);
 	let currentEditingProduct = $state<AdminProduct | null>(null);
 
-	// Toast notification
-	let toastMessage = $state<string | null>(null);
-
 	function showToast(msg: string) {
-		toastMessage = msg;
-		setTimeout(() => {
-			toastMessage = null;
-		}, 3000);
+		toast.success(msg);
 	}
 
 	// Filtered products derived
@@ -147,34 +143,41 @@
 			selectedIds = filteredProducts.map((p) => p.id);
 			showToast(`সমস্ত ${selectedIds.length} টি প্রোডাক্ট নির্বাচন করা হয়েছে`);
 		} else if (action === 'publish') {
-			if (selectedIds.length === 0) return alert('অনুগ্রহ করে অন্তত একটি প্রোডাক্ট নির্বাচন করুন');
+			if (selectedIds.length === 0) return toast.warning('অনুগ্রহ করে অন্তত একটি প্রোডাক্ট নির্বাচন করুন');
 			productItems = productItems.map((p) =>
 				selectedIds.includes(p.id) ? { ...p, status: 'published', badge: 'Published' } : p
 			);
 			showToast(`${selectedIds.length} টি প্রোডাক্ট পাবলিশ করা হয়েছে`);
 			selectedIds = [];
 		} else if (action === 'draft') {
-			if (selectedIds.length === 0) return alert('অনুগ্রহ করে অন্তত একটি প্রোডাক্ট নির্বাচন করুন');
+			if (selectedIds.length === 0) return toast.warning('অনুগ্রহ করে অন্তত একটি প্রোডাক্ট নির্বাচন করুন');
 			productItems = productItems.map((p) =>
 				selectedIds.includes(p.id) ? { ...p, status: 'draft', badge: 'Draft' } : p
 			);
 			showToast(`${selectedIds.length} টি প্রোডাক্ট ড্রাফট করা হয়েছে`);
 			selectedIds = [];
 		} else if (action === 'delete') {
-			if (selectedIds.length === 0) return alert('অনুগ্রহ করে অন্তত একটি প্রোডাক্ট নির্বাচন করুন');
-			if (confirm(`আপনি কি নির্বাচিত ${selectedIds.length} টি প্রোডাক্ট মুছতে চান?`)) {
-				const idsToDelete = [...selectedIds];
-				productItems = productItems.filter((p) => !idsToDelete.includes(p.id));
-				selectedIds = [];
-				showToast(`${idsToDelete.length} টি প্রোডাক্ট মুছে ফেলা হয়েছে`);
+			if (selectedIds.length === 0) return toast.warning('অনুগ্রহ করে অন্তত একটি প্রোডাক্ট নির্বাচন করুন');
+			const confirmed = await confirmModal({
+				title: 'প্রোডাক্ট মুছে ফেলা',
+				message: `আপনি কি নির্বাচিত ${selectedIds.length} টি প্রোডাক্ট মুছতে চান? এটি ডাটাবেজ থেকে মুছে যাবে।`,
+				confirmText: 'হ্যাঁ, মুছে ফেলুন',
+				variant: 'destructive',
+				icon: 'trash'
+			});
+			if (!confirmed) return;
 
-				try {
-					const fd = new FormData();
-					fd.append('productIds', JSON.stringify(idsToDelete));
-					await fetch('?/bulkDelete', { method: 'POST', body: fd });
-				} catch (e) {
-					console.error('Bulk delete failed:', e);
-				}
+			const idsToDelete = [...selectedIds];
+			productItems = productItems.filter((p) => !idsToDelete.includes(p.id));
+			selectedIds = [];
+			showToast(`${idsToDelete.length} টি প্রোডাক্ট মুছে ফেলা হয়েছে`);
+
+			try {
+				const fd = new FormData();
+				fd.append('productIds', JSON.stringify(idsToDelete));
+				await fetch('?/bulkDelete', { method: 'POST', body: fd });
+			} catch (e) {
+				console.error('Bulk delete failed:', e);
 			}
 		} else if (action === 'export') {
 			showToast('CSV ফাইল ডাউনলোড সফল হয়েছে!');
@@ -205,18 +208,25 @@
 	}
 
 	async function handleDeleteProduct(product: AdminProduct) {
-		if (confirm(`আপনি কি "${product.name}" মুছে ফেলতে চান?`)) {
-			productItems = productItems.filter((p) => p.id !== product.id);
-			selectedIds = selectedIds.filter((id) => id !== product.id);
-			showToast(`"${product.name}" মুছে ফেলা হয়েছে`);
+		const confirmed = await confirmModal({
+			title: 'পণ্য মুছে ফেলা',
+			message: `আপনি কি "${product.name}" মুছে ফেলতে চান? এটি ডাটাবেজ থেকে মুছে যাবে।`,
+			confirmText: 'হ্যাঁ, মুছে ফেলুন',
+			variant: 'destructive',
+			icon: 'trash'
+		});
+		if (!confirmed) return;
 
-			try {
-				const fd = new FormData();
-				fd.append('productId', product.id);
-				await fetch('?/deleteProduct', { method: 'POST', body: fd });
-			} catch (e) {
-				console.error('Delete action failed:', e);
-			}
+		productItems = productItems.filter((p) => p.id !== product.id);
+		selectedIds = selectedIds.filter((id) => id !== product.id);
+		showToast(`"${product.name}" মুছে ফেলা হয়েছে`);
+
+		try {
+			const fd = new FormData();
+			fd.append('productId', product.id);
+			await fetch('?/deleteProduct', { method: 'POST', body: fd });
+		} catch (e) {
+			console.error('Delete action failed:', e);
 		}
 	}
 
@@ -277,14 +287,6 @@
 	<title>Product - AURA Admin</title>
 </svelte:head>
 
-<!-- Notification Toast -->
-{#if toastMessage}
-	<div class="fixed top-20 right-6 z-50 flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-2xl shadow-xl text-xs font-semibold animate-in slide-in-from-top-2 duration-200">
-		<CheckCircle2 class="w-4 h-4 text-emerald-400" />
-		<span>{toastMessage}</span>
-	</div>
-{/if}
-
 <div class="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
 	<!-- 1. Header with Controls & Filter Tabs -->
 	<ProductHeader
@@ -326,7 +328,7 @@
 			দেখানো হচ্ছে
 		</div>
 
-		<div class="flex items-center gap-1.5">
+		<div class="flex items-center gap-1.5 flex-wrap justify-center">
 			<button
 				type="button"
 				disabled={currentPage === 1}
@@ -337,7 +339,7 @@
 				<ChevronLeft class="w-4 h-4" />
 			</button>
 
-			<div class="flex items-center gap-1">
+			<div class="flex items-center gap-1 flex-wrap justify-center">
 				{#each Array(totalPages) as _, i}
 					<button
 						type="button"

@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { fail } from '@sveltejs/kit';
 import { OrderService } from './services/order.service';
 import { CustomerService } from './services/customer.service';
+import { NotificationService } from './services/notification.service';
 import {
 	updateLiveOrderStatus,
 	trashLiveOrder,
@@ -195,6 +196,14 @@ export async function handleCreateManualOrder(request: Request, platform: any) {
 			note: `ম্যানুয়াল অর্ডার তৈরি করা হয়েছে। পণ্য: ${productName}`,
 			callStatus: 'call_received'
 		});
+
+		// Trigger real admin notification
+		await NotificationService.createNotification(db, {
+			title: `নতুন ম্যানুয়াল অর্ডার #${orderNumber} তৈরি হয়েছে`,
+			description: `কাস্টমার ${customerName} (${customerPhone})-এর জন্য নতুন অর্ডার #${orderNumber} তৈরি হয়েছে। মোট বিল: ৳${total}।`,
+			category: 'order',
+			link: `/admin/orders/${newId}`
+		}).catch((e) => console.error('Failed to trigger manual order notification:', e));
 
 		addLiveOrder({
 			id: newId,

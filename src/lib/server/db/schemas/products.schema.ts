@@ -75,6 +75,8 @@ export const products = sqliteTable(
 	(table) => [
 		uniqueIndex('products_slug_uidx').on(table.slug),
 		index('products_cat_status_idx').on(table.categoryId, table.status),
+		index('products_sub_cat_idx').on(table.subCategoryId),
+		index('products_child_cat_idx').on(table.childCategoryId),
 		index('products_status_created_idx').on(table.status, table.createdAt),
 		index('products_stock_alert_idx').on(table.inStock, table.totalStock, table.lowStockAlert),
 		index('products_price_idx').on(table.price)

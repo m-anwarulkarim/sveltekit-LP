@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { toast } from 'svelte-sonner';
+	import { adminSearch } from '#lib/components/ui';
 	import {
 		Search,
 		X,
@@ -16,29 +18,24 @@
 		onOpenTutorial?: () => void;
 		onOpenPackage?: () => void;
 		searchQuery?: string;
+		unreadCount?: number;
 	}
 
 	let {
 		onOpenTutorial,
 		onOpenPackage,
-		searchQuery = $bindable('')
+		unreadCount = 0
 	}: Props = $props();
-
-	let isMobileSearchOpen = $state(false);
 
 	// Courier API Sync Telemetry
 	let isCourierSyncing = $state(false);
-	let courierSyncMessage = $state<string | null>(null);
 
 	function triggerCourierSync() {
 		isCourierSyncing = true;
-		courierSyncMessage = 'Steadfast ও Pathao এপিআই-এর সাথে ডেটা সিঙ্ক হচ্ছে...';
+		toast.info('Steadfast ও Pathao এপিআই-এর সাথে ডেটা সিঙ্ক হচ্ছে...');
 		setTimeout(() => {
 			isCourierSyncing = false;
-			courierSyncMessage = 'কুরিয়ার ট্র্যাকিং সফলভাবে সিঙ্ক সম্পন্ন হয়েছে!';
-			setTimeout(() => {
-				courierSyncMessage = null;
-			}, 3500);
+			toast.success('কুরিয়ার ট্র্যাকিং সফলভাবে সিঙ্ক সম্পন্ন হয়েছে!');
 		}, 1200);
 	}
 
@@ -216,19 +213,20 @@
 		<!-- 3. Language Switcher -->
 		<button
 			type="button"
-			onclick={() => alert('ভাষা: বাংলা এবং English উভয়ই সক্রিয়')}
+			onclick={() => toast.info('ভাষা: বাংলা এবং English উভয়ই সক্রিয়')}
 			class="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-slate-200/90 bg-white flex items-center justify-center text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer shrink-0"
 			title="ভাষা পরিবর্তন (Bangla / English)"
 		>
 			<Languages class="w-4 h-4" />
 		</button>
 
-		<!-- 4. Search Icon Button -->
+		<!-- 4. Search Icon Button (Global Command Palette Trigger) -->
 		<button
 			type="button"
-			onclick={() => (isMobileSearchOpen = !isMobileSearchOpen)}
-			class="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-slate-200/90 bg-white flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer shrink-0"
-			title="সার্চ করুন"
+			onclick={() => adminSearch.open()}
+			class="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-slate-200/90 bg-white flex items-center justify-center text-slate-600 hover:text-[#5845eb] hover:border-[#5845eb]/40 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer shrink-0"
+			title="সার্চ করুন (Ctrl + K)"
+			aria-label="গ্লোবাল সার্চ"
 		>
 			<Search class="w-4 h-4" />
 		</button>
@@ -238,10 +236,14 @@
 			<a
 				href="/admin/notifications"
 				class="w-9 h-9 rounded-full border border-slate-200/90 bg-white flex items-center justify-center {isNotificationsActive ? 'text-[#5845eb] border-[#5845eb]' : 'text-slate-600 hover:text-slate-900'} hover:bg-slate-50 transition-colors shadow-2xs relative"
-				title="নোটিফিকেশন সেন্টার"
+				title="নোটিফিকেশন সেন্টার ({unreadCount} টি অপঠিত)"
 			>
 				<Bell class="w-4 h-4" />
-				<span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white"></span>
+				{#if unreadCount > 0}
+					<span class="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9.5px] font-black flex items-center justify-center leading-none ring-2 ring-white">
+						{unreadCount > 99 ? '99+' : unreadCount}
+					</span>
+				{/if}
 			</a>
 		</div>
 
@@ -251,9 +253,17 @@
 			class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-950 border border-slate-200 flex items-center justify-center text-white overflow-hidden shadow-2xs hover:ring-2 hover:ring-[#5845eb]/30 transition-all cursor-pointer shrink-0"
 			title="প্রোফাইল সেটিংস"
 		>
-			<div class="text-[7px] sm:text-[7.5px] font-black uppercase tracking-tighter text-center leading-[1.05] bg-gradient-to-tr from-pink-400 to-indigo-400 bg-clip-text text-transparent">
-				COLOR<br/>LIGHT
-			</div>
+			{#if page.data?.ownerProfile?.avatarUrl}
+				<img
+					src={page.data.ownerProfile.avatarUrl}
+					alt={page.data.ownerProfile.name || 'Owner'}
+					class="w-full h-full object-cover"
+				/>
+			{:else}
+				<div class="text-[7px] sm:text-[7.5px] font-black uppercase tracking-tighter text-center leading-[1.05] bg-gradient-to-tr from-pink-400 to-indigo-400 bg-clip-text text-transparent">
+					COLOR<br/>LIGHT
+				</div>
+			{/if}
 		</a>
 
 		<!-- 7. Golden "Premium Package" Pill (Desktop Only) -->
@@ -273,39 +283,3 @@
 		</button>
 	</div>
 </header>
-
-<!-- Mobile Slide-down Search Bar -->
-{#if isMobileSearchOpen}
-	<div class="md:hidden bg-white border-b border-slate-200 px-4 py-2.5 flex items-center gap-2 animate-in slide-in-from-top-2 duration-200 shadow-xs">
-		<div class="relative flex-1">
-			<Search class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-			<input
-				type="text"
-				placeholder="অর্ডার, কাস্টমার বা সেটিংস খুঁজুন..."
-				bind:value={searchQuery}
-				class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#5845eb]"
-			/>
-		</div>
-		<button
-			type="button"
-			onclick={() => (isMobileSearchOpen = false)}
-			class="p-2 text-slate-400 hover:text-slate-700 cursor-pointer"
-			aria-label="Close search"
-		>
-			<X class="w-4 h-4" />
-		</button>
-	</div>
-{/if}
-
-<!-- Courier Sync Alert Banner -->
-{#if courierSyncMessage}
-	<div class="bg-indigo-50 border-b border-indigo-200 px-4 md:px-8 py-2.5 flex items-center justify-between text-xs text-indigo-900 font-semibold animate-in fade-in duration-200">
-		<div class="flex items-center gap-2">
-			<RefreshCw class="w-4 h-4 animate-spin text-indigo-600" />
-			<span>{courierSyncMessage}</span>
-		</div>
-		<button onclick={() => (courierSyncMessage = null)} class="text-indigo-500 hover:text-indigo-800 cursor-pointer">
-			<X class="w-4 h-4" />
-		</button>
-	</div>
-{/if}

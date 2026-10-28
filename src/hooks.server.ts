@@ -1,5 +1,5 @@
 import type { Handle } from '@sveltejs/kit/hooks';
-import { dev } from '$app/env';
+import { DEV as dev } from 'esm-env';
 import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
 import { eq } from 'drizzle-orm';
@@ -10,7 +10,11 @@ if (dev) {
 	platformProxyPromise = (async () => {
 		try {
 			const { getPlatformProxy } = await import('wrangler');
-			return await getPlatformProxy({ configPath: './wrangler.jsonc' });
+			const proxy = await getPlatformProxy({ configPath: './wrangler.jsonc' });
+			if (proxy?.env?.DB) {
+				(globalThis as any).__DEV_D1__ = proxy.env.DB;
+			}
+			return proxy;
 		} catch (e) {
 			console.error('Failed to initialize local wrangler platform proxy:', e);
 			return null;
@@ -27,6 +31,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (dev && platformProxyPromise) {
 		const localPlatform = await platformProxyPromise;
 		if (localPlatform) {
+			if (localPlatform.env?.DB) {
+				(globalThis as any).__DEV_D1__ = localPlatform.env.DB;
+			}
 			(event as any).platform = {
 				...event.platform,
 				...localPlatform,
@@ -88,8 +95,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 		threatLevel = 'critical';
 	}
 
-	// 3. Asynchronously Record Real Bot Telemetry to D1
-	if (botCategory && platform?.env?.DB) {
+	// 3. Asynchronously Record Real Bot Telemetry to D1 (Exclude localhost to prevent dev test noise)
+	const isLocalDev =
+		dev ||
+		clientIp === '127.0.0.1' ||
+		clientIp === '::1' ||
+		event.url.hostname === 'localhost' ||
+		event.url.hostname === '127.0.0.1';
+
+	if (botCategory && platform?.env?.DB && !isLocalDev) {
 		const db = getDb(platform.env.DB);
 		const logPromise = db
 			.insert(schema.botLogs)

@@ -13,23 +13,34 @@
 		Edit3,
 		Eye,
 		X,
-		CheckCircle2
+		CheckCircle2,
+		Loader2,
+		AlertCircle
 	} from 'lucide-svelte';
+	import { invalidateAll } from '$app/navigation';
 	import { CatalogFilterTabs } from '../../_components/catalog';
-	import { INITIAL_SUB_CATEGORIES, INITIAL_CATEGORIES, type CatalogSubCategory } from '../../_data.ts';
+	import type { CatalogSubCategory } from '../../_data.ts';
+	import { confirmModal } from '#lib/stores/confirm.svelte';
+	import { toast } from 'svelte-sonner';
 
-	let subCategories = $state<CatalogSubCategory[]>([...INITIAL_SUB_CATEGORIES]);
+	let { data }: { data?: any } = $props();
+
+	let subCategories = $state<any[]>(data?.subCategories || []);
+
+	// Synchronize when server data updates
+	$effect(() => {
+		subCategories = data?.subCategories ? [...data.subCategories] : [];
+	});
+
 	let searchQuery = $state('');
 	let activeTab = $state<'all' | 'publish' | 'draft' | 'low_stock' | 'trash'>('all');
 	let selectedIds = $state<string[]>([]);
 	let currentPage = $state(1);
 	let itemsPerPage = 10;
+	let isSaving = $state(false);
 
-	// Toast notification
-	let toastMessage = $state<string | null>(null);
 	function showToast(msg: string) {
-		toastMessage = msg;
-		setTimeout(() => (toastMessage = null), 3000);
+		toast.success(msg);
 	}
 
 	// Modal state
@@ -37,9 +48,9 @@
 	let isEditing = $state(false);
 	let editingId = $state<string | null>(null);
 	let formName = $state('');
-	let formCategory = $state('kitchen product');
+	let formCategoryId = $state('');
 	let formImage = $state('');
-	let formPriority = $state<string | number>('-');
+	let formPriority = $state<number>(0);
 	let formStatus = $state<'publish' | 'draft'>('publish');
 
 	let openActionMenuId = $state<string | null>(null);
@@ -64,7 +75,7 @@
 
 		if (searchQuery.trim()) {
 			const q = searchQuery.toLowerCase();
-			list = list.filter((c) => c.name.toLowerCase().includes(q) || c.category.toLowerCase().includes(q));
+			list = list.filter((c) => c.name.toLowerCase().includes(q) || (c.category && c.category.toLowerCase().includes(q)));
 		}
 
 		return list;
@@ -97,72 +108,103 @@
 		isEditing = false;
 		editingId = null;
 		formName = '';
-		formCategory = INITIAL_CATEGORIES[0]?.name || 'kitchen product';
+		formCategoryId = data?.parentCategories?.[0]?.id || '';
 		formImage = '';
-		formPriority = '-';
+		formPriority = 0;
 		formStatus = 'publish';
 		isModalOpen = true;
 	}
 
-	function openEditModal(sub: CatalogSubCategory) {
+	function openEditModal(sub: any) {
 		isEditing = true;
 		editingId = sub.id;
 		formName = sub.name;
-		formCategory = sub.category;
+		formCategoryId = sub.categoryId || '';
 		formImage = sub.image || '';
-		formPriority = sub.priority;
-		formStatus = sub.status;
+		formPriority = typeof sub.priority === 'number' ? sub.priority : 0;
+		formStatus = sub.status || 'publish';
 		openActionMenuId = null;
 		isModalOpen = true;
 	}
 
-	function handleSave() {
+	async function handleSave() {
 		if (!formName.trim()) {
-			alert('Sub Category Name required');
+			showToast('সাব ক্যাটাগরির নাম দেওয়া বাধ্যতামূলক!');
+			return;
+		}
+		if (!formCategoryId) {
+			showToast('প্যারেন্ট ক্যাটাগরি নির্বাচন করুন!');
 			return;
 		}
 
-		if (isEditing && editingId) {
-			subCategories = subCategories.map((c) =>
-				c.id === editingId
-					? {
-							...c,
-							name: formName.trim(),
-							category: formCategory,
-							image: formImage.trim(),
-							priority: formPriority,
-							status: formStatus
-						}
-					: c
-			);
-			showToast('সাব ক্যাটাগরি সফলভাবে আপডেট করা হয়েছে!');
-		} else {
-			const newSub: CatalogSubCategory = {
-				id: 'sub-' + Date.now(),
-				name: formName.trim(),
-				category: formCategory,
-				image: formImage.trim(),
-				status: formStatus,
-				priority: formPriority
-			};
-			subCategories = [newSub, ...subCategories];
-			showToast('নতুন সাব ক্যাটাগরি তৈরি করা হয়েছে!');
-		}
+		isSaving = true;
+		const formData = new FormData();
+		formData.append('name', formName.trim());
+		formData.append('categoryId', formCategoryId);
+		formData.append('image', formImage.trim());
+		formData.append('priority', String(formPriority));
+		formData.append('status', formStatus);
 
-		isModalOpen = false;
+		try {
+			if (isEditing && editingId) {
+				formData.append('id', editingId);
+				await fetch('?/updateSubCategory', {
+					method: 'POST',
+					body: formData
+				});
+				showToast('সাব ক্যাটাগরি সফলভাবে আপডেট করা হয়েছে!');
+			} else {
+				await fetch('?/createSubCategory', {
+					method: 'POST',
+					body: formData
+				});
+				showToast('নতুন সাব ক্যাটাগরি তৈরি করা হয়েছে!');
+			}
+			isModalOpen = false;
+			await invalidateAll();
+		} catch (error) {
+			console.error('Error saving sub-category:', error);
+			showToast('সাব ক্যাটাগরি সংরক্ষণে ত্রুটি হয়েছে');
+		} finally {
+			isSaving = false;
+		}
 	}
 
-	function toggleStatus(sub: CatalogSubCategory) {
+	async function toggleStatus(sub: any) {
 		const newStatus = sub.status === 'publish' ? 'draft' : 'publish';
 		subCategories = subCategories.map((c) => (c.id === sub.id ? { ...c, status: newStatus } : c));
 		openActionMenuId = null;
 		showToast(`স্ট্যাটাস ${newStatus === 'publish' ? 'Publish' : 'Draft'}-এ পরিবর্তিত হয়েছে`);
+
+		try {
+			const fd = new FormData();
+			fd.append('id', sub.id);
+			await fetch('?/toggleStatus', {
+				method: 'POST',
+				body: fd
+			});
+			await invalidateAll();
+		} catch (e) {
+			console.error('Error toggling subcategory status:', e);
+		}
 	}
 
-	function moveToTrash(id: string) {
+	async function moveToTrash(id: string) {
 		subCategories = subCategories.map((c) => (c.id === id ? { ...c, isTrash: true } : c));
 		openActionMenuId = null;
-		showToast('সাব ক্যাটাগরি ট্র্যাশে পাঠানো হয়েছে');
+		showToast('সাব ক্যাটাগরি মুছে ফেলা হয়েছে');
+
+		try {
+			const fd = new FormData();
+			fd.append('id', id);
+			await fetch('?/deleteSubCategory', {
+				method: 'POST',
+				body: fd
+			});
+			await invalidateAll();
+		} catch (e) {
+			console.error('Error deleting sub-category:', e);
+		}
 	}
 
 	function restoreFromTrash(id: string) {
@@ -170,19 +212,43 @@
 		openActionMenuId = null;
 		showToast('সাব ক্যাটাগরি রিস্টোর করা হয়েছে');
 	}
+
+	async function handleBulkDelete() {
+		if (selectedIds.length === 0) return;
+		const confirmed = await confirmModal({
+			title: 'সাব ক্যাটাগরি মুছে ফেলা',
+			message: `আপনি কি নিশ্চিতভাবে নির্বাচিত ${selectedIds.length}টি সাব ক্যাটাগরি মুছে ফেলতে চান?`,
+			confirmText: 'হ্যাঁ, মুছে ফেলুন',
+			variant: 'destructive',
+			icon: 'trash'
+		});
+		if (!confirmed) {
+			return;
+		}
+
+		const count = selectedIds.length;
+		const toDelete = [...selectedIds];
+		subCategories = subCategories.filter((c) => !toDelete.includes(c.id));
+		selectedIds = [];
+		showToast(`${count}টি সাব ক্যাটাগরি মুছে ফেলা হয়েছে`);
+
+		try {
+			const fd = new FormData();
+			fd.append('ids', JSON.stringify(toDelete));
+			await fetch('?/bulkDelete', {
+				method: 'POST',
+				body: fd
+			});
+			await invalidateAll();
+		} catch (e) {
+			console.error('Error bulk deleting subcategories:', e);
+		}
+	}
 </script>
 
 <svelte:head>
 	<title>Sub Category | AURA Admin</title>
 </svelte:head>
-
-<!-- Toast Notification -->
-{#if toastMessage}
-	<div class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 border border-slate-800 animate-in fade-in slide-in-from-bottom-2">
-		<CheckCircle2 class="w-4 h-4 text-emerald-400 shrink-0" />
-		<span>{toastMessage}</span>
-	</div>
-{/if}
 
 <div class="space-y-6 max-w-[1400px] mx-auto pb-12">
 	<!-- Top Bar: Title & Support Button -->
@@ -237,7 +303,7 @@
 	/>
 
 	<!-- Data Table Card -->
-	<div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
+	<div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden min-h-[260px]">
 		<div class="overflow-x-auto">
 			<table class="w-full text-left text-xs border-collapse">
 				<thead>
@@ -282,7 +348,7 @@
 							</td>
 						</tr>
 					{:else}
-						{#each paginatedItems as sub (sub.id)}
+						{#each paginatedItems as sub, index (sub.id)}
 							<tr class="hover:bg-slate-50/60 transition-colors">
 								<!-- Checkbox -->
 								<td class="py-3.5 px-4">
@@ -344,7 +410,7 @@
 									</button>
 
 									{#if openActionMenuId === sub.id}
-										<div class="absolute right-4 top-10 w-36 bg-white border border-slate-200 rounded-xl shadow-lg z-30 py-1 text-left text-xs">
+										<div class="absolute right-4 {index >= paginatedItems.length - 2 && paginatedItems.length > 2 ? 'bottom-10 top-auto origin-bottom-right' : 'top-10'} w-36 bg-white border border-slate-200 rounded-xl shadow-lg z-30 py-1 text-left text-xs">
 											<button
 												type="button"
 												onclick={() => openEditModal(sub)}
@@ -460,14 +526,13 @@
 					<label for="sub-parent" class="font-bold text-slate-700 block">Parent Category *</label>
 					<select
 						id="sub-parent"
-						bind:value={formCategory}
+						bind:value={formCategoryId}
 						class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb] bg-white"
 					>
-						{#each INITIAL_CATEGORIES as cat}
-							<option value={cat.name}>{cat.name}</option>
+						<option value="" disabled>-- ক্যাটাগরি বেছে নিন --</option>
+						{#each (data?.parentCategories || []) as cat}
+							<option value={cat.id}>{cat.name}</option>
 						{/each}
-						<option value="kitchen product">kitchen product</option>
-						<option value="Home Cleaning">Home Cleaning</option>
 					</select>
 				</div>
 
@@ -519,9 +584,15 @@
 				<button
 					type="button"
 					onclick={handleSave}
-					class="px-4 py-2 rounded-xl text-xs font-bold bg-[#5845eb] text-white hover:bg-[#4a39cf] shadow-sm shadow-indigo-600/20 cursor-pointer"
+					disabled={isSaving}
+					class="px-4 py-2 rounded-xl text-xs font-bold bg-[#5845eb] text-white hover:bg-[#4a39cf] shadow-sm shadow-indigo-600/20 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
 				>
-					{isEditing ? 'Save Changes' : 'Create Sub Category'}
+					{#if isSaving}
+						<Loader2 class="w-3.5 h-3.5 animate-spin" />
+						<span>সংরক্ষণ হচ্ছে...</span>
+					{:else}
+						<span>{isEditing ? 'Save Changes' : 'Create Sub Category'}</span>
+					{/if}
 				</button>
 			</div>
 		</div>

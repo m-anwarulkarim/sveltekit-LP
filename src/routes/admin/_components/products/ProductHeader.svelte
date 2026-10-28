@@ -258,8 +258,8 @@
 	</div>
 
 	<!-- Bottom Row: Filter Tabs Capsule Bar (Matches Reference Design) -->
-	<div class="flex items-center">
-		<div class="inline-flex items-center p-1 bg-slate-100/90 rounded-2xl border border-slate-200/70 shadow-2xs gap-1">
+	<div class="flex items-center overflow-x-auto no-scrollbar py-1">
+		<div class="inline-flex items-center p-1 bg-slate-100/90 rounded-2xl border border-slate-200/70 shadow-2xs gap-1 shrink-0">
 			<!-- 1. All -->
 			<button
 				type="button"

@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
 	import type { PageData } from './$types';
 	import { Badge } from '#lib/components/ui';
@@ -6,7 +6,7 @@
 
 	let { data }: { data: PageData } = $props();
 
-	const allCategories = [
+	const defaultFallbackCategories = [
 		{ name: 'বই (Books)', slug: 'books', count: 120, icon: '📚', desc: 'সাহিত্য, উপন্যাস, ধর্মীয় ও সমকালীন বই', color: 'from-amber-50 to-orange-50' },
 		{ name: 'Electronics', slug: 'electronics', count: 48, icon: '🎧', desc: 'অডিও গিয়ার, হেডফোন, স্পিকার ও স্মার্ট গ্যাজেট', color: 'from-blue-50 to-cyan-50' },
 		{ name: 'Ebook', slug: 'ebook', count: 210, icon: '📱', desc: 'ডিজিটাল ই-বুক ও পিডিএফ সংগ্রহ', color: 'from-slate-50 to-indigo-50' },
@@ -20,6 +20,36 @@
 		{ name: 'Smart Gadgets', slug: 'smart-gadgets', count: 52, icon: '⌚', desc: 'স্মার্টওয়াচ, চার্জার, কেবল ও ব্লুটুথ ডিভাইস', color: 'from-sky-50 to-blue-50' },
 		{ name: 'Home & Living', slug: 'home-living', count: 40, icon: '🛋️', desc: 'হোম ডেকর, ফার্নিচার ও লাইফস্টাইল উপাদান', color: 'from-emerald-50 to-teal-50' }
 	];
+
+	const colorPalette = [
+		'from-blue-50 to-cyan-50',
+		'from-amber-50 to-orange-50',
+		'from-emerald-50 to-teal-50',
+		'from-purple-50 to-pink-50',
+		'from-indigo-50 to-blue-50',
+		'from-rose-50 to-pink-50'
+	];
+
+	let allCategories = $derived.by(() => {
+		if (data?.categories && data.categories.length > 0) {
+			return data.categories.map((c: any, index: number) => {
+				const fallback = defaultFallbackCategories.find(
+					(f) => f.slug === c.slug || f.name.toLowerCase().includes(c.name.toLowerCase())
+				);
+				return {
+					id: c.id,
+					name: c.name,
+					slug: c.slug,
+					count: c.productsCount ?? 0,
+					icon: fallback?.icon || '📦',
+					desc: c.description || fallback?.desc || `${c.name} ক্যাটাগরির প্রিমিয়াম কালেকশন`,
+					color: fallback?.color || colorPalette[index % colorPalette.length],
+					image: c.image
+				};
+			});
+		}
+		return defaultFallbackCategories;
+	});
 </script>
 
 <svelte:head>

@@ -10,6 +10,11 @@ export const adminUsers = sqliteTable(
 		name: text('name').notNull(),
 		username: text('username').notNull(),
 		email: text('email').notNull(),
+		phone: text('phone'),
+		passwordHash: text('password_hash'),
+		plainPasswordHint: text('plain_password_hint'),
+		permissions: text('permissions').default('["*"]'), // JSON array of allowed menu IDs e.g. ["orders", "products"] or ["*"] for all
+		avatarUrl: text('avatar_url'),
 		role: text('role').notNull().default('Admin'), // 'Owner' | 'Super Admin' | 'Manager' | 'Staff'
 		access: text('access').notNull().default('Allowed'), // 'Allowed' | 'Restricted' | 'Suspended'
 		isTrashed: integer('is_trashed', { mode: 'boolean' }).notNull().default(false),

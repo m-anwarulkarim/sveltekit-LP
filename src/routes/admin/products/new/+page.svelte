@@ -10,6 +10,10 @@
 </svelte:head>
 
 <div class="p-4 sm:p-6 lg:p-8">
-	<ProductFormLayout isEditMode={false} existingGallery={data.galleryImages || []} />
+	<ProductFormLayout
+		isEditMode={false}
+		existingGallery={data.galleryImages || []}
+		taxonomyTree={data.taxonomyTree || []}
+	/>
 </div>
 

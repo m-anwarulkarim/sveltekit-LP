@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Dialog, Button } from '#lib/components/ui';
 	import { Crown, CheckCircle2 } from 'lucide-svelte';
+	import { toast } from 'svelte-sonner';
 
 	interface Props {
 		open?: boolean;
@@ -49,7 +50,7 @@
 			<Button
 				type="button"
 				onclick={() => {
-					alert('রিনিউয়াল রিকোয়েস্ট পাঠানো হয়েছে। আমাদের টিম খুব দ্রুত আপনার সাথে যোগাযোগ করবে।');
+					toast.success('রিনিউয়াল রিকোয়েস্ট পাঠানো হয়েছে। আমাদের টিম খুব দ্রুত আপনার সাথে যোগাযোগ করবে।');
 					open = false;
 				}}
 				class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold"

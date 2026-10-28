@@ -18,6 +18,8 @@
 	} from 'lucide-svelte';
 	import { CatalogFilterTabs } from '../../_components/catalog';
 	import type { CatalogTag } from '../../_data.ts';
+	import { confirmModal } from '#lib/stores/confirm.svelte';
+	import { toast } from 'svelte-sonner';
 
 	let { data }: { data?: any } = $props();
 
@@ -36,11 +38,8 @@
 	let itemsPerPage = 10;
 	let isSaving = $state(false);
 
-	// Toast notification
-	let toastMessage = $state<string | null>(null);
 	function showToast(msg: string) {
-		toastMessage = msg;
-		setTimeout(() => (toastMessage = null), 3000);
+		toast.success(msg);
 	}
 
 	// Modal state
@@ -234,7 +233,14 @@
 
 	async function handleBulkDelete() {
 		if (selectedIds.length === 0) return;
-		if (!confirm(`আপনি কি নিশ্চিতভাবে নির্বাচিত ${selectedIds.length}টি ট্যাগ মুছে ফেলতে চান?`)) {
+		const confirmed = await confirmModal({
+			title: 'ট্যাগ মুছে ফেলা',
+			message: `আপনি কি নিশ্চিতভাবে নির্বাচিত ${selectedIds.length}টি ট্যাগ মুছে ফেলতে চান?`,
+			confirmText: 'হ্যাঁ, মুছে ফেলুন',
+			variant: 'destructive',
+			icon: 'trash'
+		});
+		if (!confirmed) {
 			return;
 		}
 
@@ -260,14 +266,6 @@
 <svelte:head>
 	<title>Tags | AURA Admin</title>
 </svelte:head>
-
-<!-- Toast Notification -->
-{#if toastMessage}
-	<div class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 border border-slate-800 animate-in fade-in slide-in-from-bottom-2">
-		<CheckCircle2 class="w-4 h-4 text-emerald-400 shrink-0" />
-		<span>{toastMessage}</span>
-	</div>
-{/if}
 
 <div class="space-y-6 max-w-[1400px] mx-auto pb-12 font-['Plus_Jakarta_Sans',sans-serif]">
 	<!-- Top Bar: Title & Support Button -->
@@ -339,7 +337,7 @@
 	/>
 
 	<!-- Data Table Card -->
-	<div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
+	<div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden min-h-[260px]">
 		<div class="overflow-x-auto">
 			<table class="w-full text-left text-xs border-collapse">
 				<thead>
@@ -455,7 +453,7 @@
 									</button>
 
 									{#if openActionMenuId === tag.id}
-										<div class="absolute right-4 top-10 w-36 bg-white border border-slate-200 rounded-xl shadow-lg z-30 py-1 text-left text-xs animate-in fade-in duration-100">
+										<div class="absolute right-4 {idx >= paginatedItems.length - 2 && paginatedItems.length > 2 ? 'bottom-10 top-auto origin-bottom-right' : 'top-10'} w-36 bg-white border border-slate-200 rounded-xl shadow-lg z-30 py-1 text-left text-xs animate-in fade-in duration-100">
 											<button
 												type="button"
 												onclick={() => openEditModal(tag)}

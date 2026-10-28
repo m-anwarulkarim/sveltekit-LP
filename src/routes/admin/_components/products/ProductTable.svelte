@@ -62,8 +62,10 @@
 	let expandedVariants = $state<Record<string, boolean>>({});
 	let expandedTags = $state<Record<string, boolean>>({});
 
-	// Active row actions dropdown
+	// Active row actions dropdown with viewport-fixed positioning
 	let activeActionId = $state<string | null>(null);
+	let activeProduct = $state<AdminProduct | null>(null);
+	let menuCoords = $state<{ top: number; right: number; openUpwards: boolean } | null>(null);
 
 	function toggleVariantExpand(id: string) {
 		expandedVariants[id] = !expandedVariants[id];
@@ -73,13 +75,33 @@
 		expandedTags[id] = !expandedTags[id];
 	}
 
-	function handleActionClick(id: string, e: MouseEvent) {
+	function handleActionClick(product: AdminProduct, e: MouseEvent) {
 		e.stopPropagation();
-		activeActionId = activeActionId === id ? null : id;
+		if (activeActionId === product.id) {
+			activeActionId = null;
+			activeProduct = null;
+			menuCoords = null;
+			return;
+		}
+
+		const btn = e.currentTarget as HTMLElement;
+		const rect = btn.getBoundingClientRect();
+		const spaceBelow = window.innerHeight - rect.bottom;
+		const openUpwards = spaceBelow < 210;
+
+		menuCoords = {
+			top: openUpwards ? Math.max(10, rect.top - 175) : rect.bottom + 6,
+			right: Math.max(16, window.innerWidth - rect.right),
+			openUpwards
+		};
+		activeActionId = product.id;
+		activeProduct = product;
 	}
 
 	function handleWindowClick() {
 		activeActionId = null;
+		activeProduct = null;
+		menuCoords = null;
 	}
 
 	let isAllSelected = $derived(
@@ -90,11 +112,11 @@
 	);
 </script>
 
-<svelte:window onclick={handleWindowClick} />
+<svelte:window onclick={handleWindowClick} onscroll={handleWindowClick} onresize={handleWindowClick} />
 
-<div class="bg-white border border-slate-200/90 rounded-3xl shadow-xs overflow-hidden">
+<div class="bg-white border border-slate-200/90 rounded-3xl shadow-xs overflow-hidden min-h-[280px]">
 	<div class="overflow-x-auto no-scrollbar">
-		<table class="w-full text-left border-collapse">
+		<table class="w-full min-w-[850px] text-left border-collapse">
 			<!-- Table Header (Exact Match to Screenshot) -->
 			<thead>
 				<tr class="border-b border-slate-200/80 bg-slate-50/50 text-[11px] font-bold tracking-wider text-slate-500 uppercase select-none">
@@ -434,74 +456,18 @@
 								</td>
 							{/if}
 
-							<!-- ACTIONS (Vertical 3-dots Dropdown) -->
+							<!-- ACTIONS (Vertical 3-dots Button) -->
 							{#if columns.actions}
-								<td class="py-4 pr-6 pl-3 text-right relative">
+								<td class="py-4 pr-6 pl-3 text-right">
 									<button
 										type="button"
-										onclick={(e) => handleActionClick(product.id, e)}
-										class="w-8 h-8 rounded-xl border border-slate-200/80 hover:bg-slate-100 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-colors ml-auto shadow-2xs cursor-pointer"
+										onclick={(e) => handleActionClick(product, e)}
+										class="w-8 h-8 rounded-xl border border-slate-200/80 hover:bg-slate-100 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-colors ml-auto shadow-2xs cursor-pointer {activeActionId === product.id ? 'bg-slate-100 ring-2 ring-[#5845eb]/30' : ''}"
 										title="অ্যাকশন মেনু"
 										aria-label="Actions for {product.name}"
 									>
 										<MoreVertical class="w-4 h-4" />
 									</button>
-
-									<!-- Dropdown Menu -->
-									{#if activeActionId === product.id}
-										<div class="absolute right-6 top-12 w-44 bg-white border border-slate-200/90 rounded-2xl shadow-xl py-1.5 z-50 text-xs font-medium text-left animate-in fade-in zoom-in-95 duration-100">
-											<button
-												type="button"
-												onclick={() => {
-													onEdit(product);
-													activeActionId = null;
-												}}
-												class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer"
-											>
-												<Edit3 class="w-3.5 h-3.5 text-slate-400" />
-												<span>Edit Product</span>
-											</button>
-											<button
-												type="button"
-												onclick={() => {
-													onDuplicate(product);
-													activeActionId = null;
-												}}
-												class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer"
-											>
-												<Copy class="w-3.5 h-3.5 text-slate-400" />
-												<span>Duplicate</span>
-											</button>
-											<button
-												type="button"
-												onclick={() => {
-													onToggleStatus(product);
-													activeActionId = null;
-												}}
-												class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer"
-											>
-												{#if product.status === 'published'}
-													<ToggleLeft class="w-3.5 h-3.5 text-amber-500" />
-													<span>Set as Draft</span>
-												{:else}
-													<ToggleRight class="w-3.5 h-3.5 text-emerald-500" />
-													<span>Publish Product</span>
-												{/if}
-											</button>
-											<div class="h-px bg-slate-100 my-1"></div>
-											<button
-												type="button"
-												onclick={() => {
-													onDelete(product);
-													activeActionId = null;
-												}}
-												class="w-full text-left px-3.5 py-2 hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer"
-											>
-												<Trash2 class="w-3.5 h-3.5 text-rose-500" />
-												<span>Delete</span>
-											</button>
-										</div>
-									{/if}
 								</td>
 							{/if}
 						</tr>
@@ -511,3 +477,72 @@
 		</table>
 	</div>
 </div>
+
+<!-- Global Fixed Floating Dropdown Menu (100% immune to Table Overflow & Clipping) -->
+{#if activeProduct && menuCoords}
+	<!-- Transparent backdrop to dismiss on click/touch outside -->
+	<button
+		type="button"
+		class="fixed inset-0 z-[9998] cursor-default bg-transparent"
+		tabindex="-1"
+		aria-hidden="true"
+		onclick={handleWindowClick}
+	></button>
+
+	<div
+		class="fixed z-[9999] w-44 bg-white border border-slate-200/90 rounded-2xl shadow-2xl py-1.5 text-xs font-medium text-left animate-in fade-in zoom-in-95 duration-100 font-['Anek_Bangla',sans-serif]"
+		style="top: {menuCoords.top}px; right: {menuCoords.right}px;"
+		onclick={(e) => e.stopPropagation()}
+	>
+		<button
+			type="button"
+			onclick={() => {
+				onEdit(activeProduct!);
+				handleWindowClick();
+			}}
+			class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer font-semibold transition-colors"
+		>
+			<Edit3 class="w-3.5 h-3.5 text-slate-400" />
+			<span>Edit Product</span>
+		</button>
+		<button
+			type="button"
+			onclick={() => {
+				onDuplicate(activeProduct!);
+				handleWindowClick();
+			}}
+			class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer font-semibold transition-colors"
+		>
+			<Copy class="w-3.5 h-3.5 text-slate-400" />
+			<span>Duplicate</span>
+		</button>
+		<button
+			type="button"
+			onclick={() => {
+				onToggleStatus(activeProduct!);
+				handleWindowClick();
+			}}
+			class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer font-semibold transition-colors"
+		>
+			{#if activeProduct.status === 'published'}
+				<ToggleLeft class="w-3.5 h-3.5 text-amber-500" />
+				<span>Set as Draft</span>
+			{:else}
+				<ToggleRight class="w-3.5 h-3.5 text-emerald-500" />
+				<span>Publish Product</span>
+			{/if}
+		</button>
+		<div class="h-px bg-slate-100 my-1"></div>
+		<button
+			type="button"
+			onclick={() => {
+				onDelete(activeProduct!);
+				handleWindowClick();
+			}}
+			class="w-full text-left px-3.5 py-2 hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer font-bold transition-colors"
+		>
+			<Trash2 class="w-3.5 h-3.5 text-rose-500" />
+			<span>Delete</span>
+		</button>
+	</div>
+{/if}

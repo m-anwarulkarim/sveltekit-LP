@@ -2,24 +2,30 @@ import type { PageServerLoad, Actions } from './$types';
 import { getDb } from '#lib/server/db/index';
 import { ProductService } from '#lib/server/services/product.service';
 import { MediaService } from '#lib/server/services/media.service';
+import { CategoryService } from '#lib/server/services/category.service';
 import { fail } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ parent, platform }) => {
 	const parentData = await parent();
 	let galleryImages: any[] = [];
+	let taxonomyTree: any[] = [];
 
-	if (platform?.env?.DB) {
-		try {
-			const db = getDb(platform.env.DB);
-			galleryImages = await MediaService.listMedia(db, { limit: 60 });
-		} catch (e) {
-			console.error('Failed to query gallery in product new:', e);
-		}
+	try {
+		const db = getDb(platform);
+		const [mediaList, tree] = await Promise.all([
+			MediaService.listMedia(db, { limit: 60 }),
+			CategoryService.getTaxonomyTree(db)
+		]);
+		galleryImages = mediaList || [];
+		taxonomyTree = tree || [];
+	} catch (e) {
+		console.error('Failed to query data in product new:', e);
 	}
 
 	return {
 		...parentData,
-		galleryImages
+		galleryImages,
+		taxonomyTree
 	};
 };
 

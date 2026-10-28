@@ -14,8 +14,16 @@ export interface BlockIpInput {
 
 export interface ListBlockedOptions {
 	search?: string;
+	filterType?: 'all' | 'permanent' | 'auto' | 'manual';
 	limit?: number;
 	offset?: number;
+}
+
+export interface BlockedStats {
+	total: number;
+	permanent: number;
+	auto: number;
+	manual: number;
 }
 
 /**
@@ -30,17 +38,6 @@ export class SecurityService {
 		options: ListBlockedOptions = {}
 	) {
 		try {
-			// Auto-seed initial blocked items if table is empty
-			const countRes = await db
-				.select({ count: sql<number>`count(*)` })
-				.from(schema.ipBlocks)
-				.all();
-			const totalInDb = countRes[0]?.count ?? 0;
-
-			if (totalInDb === 0) {
-				await this.seedInitialBlocked(db);
-			}
-
 			const conditions: any[] = [];
 
 			if (options.search && options.search.trim()) {
@@ -48,9 +45,21 @@ export class SecurityService {
 				conditions.push(
 					or(
 						like(schema.ipBlocks.ipAddress, term),
-						like(schema.ipBlocks.phoneNo, term)
+						like(schema.ipBlocks.phoneNo, term),
+						like(schema.ipBlocks.reason, term),
+						like(schema.ipBlocks.type, term)
 					)
 				);
+			}
+
+			if (options.filterType && options.filterType !== 'all') {
+				if (options.filterType === 'permanent') {
+					conditions.push(eq(schema.ipBlocks.isPermanent, true));
+				} else if (options.filterType === 'auto') {
+					conditions.push(like(schema.ipBlocks.type, '%Auto%'));
+				} else if (options.filterType === 'manual') {
+					conditions.push(like(schema.ipBlocks.type, '%Manual%'));
+				}
 			}
 
 			let query = db.select().from(schema.ipBlocks);
@@ -70,7 +79,31 @@ export class SecurityService {
 			}
 
 			const rows = await query.all();
-			const totalCount = await this.countBlocked(db);
+
+			// Count total matching filtered rows
+			let countQuery = db.select({ count: sql<number>`count(*)` }).from(schema.ipBlocks);
+			if (conditions.length > 0) {
+				countQuery = countQuery.where(and(...conditions)) as any;
+			}
+			const countResult = await countQuery.all();
+			const totalCount = countResult[0]?.count || 0;
+
+			// Summary counts across all blocks
+			const allRows = await db
+				.select({
+					id: schema.ipBlocks.id,
+					type: schema.ipBlocks.type,
+					isPermanent: schema.ipBlocks.isPermanent
+				})
+				.from(schema.ipBlocks)
+				.all();
+
+			const stats: BlockedStats = {
+				total: allRows.length,
+				permanent: allRows.filter((r) => r.isPermanent).length,
+				auto: allRows.filter((r) => r.type?.toLowerCase().includes('auto')).length,
+				manual: allRows.filter((r) => r.type?.toLowerCase().includes('manual')).length
+			};
 
 			const formatted = rows.map((r, idx) => ({
 				id: r.id,
@@ -78,30 +111,38 @@ export class SecurityService {
 				ipAddress: r.ipAddress,
 				deviceId: r.deviceId || '-',
 				phoneNo: r.phoneNo || '-',
-				type: r.type || 'Manual Block',
+				type: r.type || 'Manual Admin Block',
+				reason: r.reason || 'Restricted Activity',
+				isPermanent: Boolean(r.isPermanent),
+				rawBlockUntil: r.blockUntil ? new Date(r.blockUntil).toISOString() : null,
 				blockUntil: r.isPermanent
 					? 'Permanent'
 					: r.blockUntil
 						? new Date(r.blockUntil).toLocaleString('en-US', {
 								dateStyle: 'medium',
-								timeStyle: 'medium'
+								timeStyle: 'short'
 							})
 						: 'Permanent',
 				date: r.createdAt
 					? new Date(r.createdAt).toLocaleString('en-US', {
 							dateStyle: 'medium',
-							timeStyle: 'medium'
+							timeStyle: 'short'
 						})
-					: 'Oct 28, 2026'
+					: 'Just Now'
 			}));
 
 			return {
 				items: formatted,
-				totalCount
+				totalCount,
+				stats
 			};
 		} catch (error) {
 			console.error('Error in SecurityService.listBlockedIps:', error);
-			return { items: [], totalCount: 0 };
+			return {
+				items: [],
+				totalCount: 0,
+				stats: { total: 0, permanent: 0, auto: 0, manual: 0 }
+			};
 		}
 	}
 
@@ -139,7 +180,27 @@ export class SecurityService {
 			createdAt: now
 		});
 
-		return { id, ipAddress: input.ipAddress, success: true };
+		return { id, ipAddress: input.ipAddress, phoneNo: input.phoneNo, success: true };
+	}
+
+	/**
+	 * Update an existing block
+	 */
+	static async updateBlock(
+		db: DrizzleD1Database<typeof schema>,
+		id: string,
+		updates: Partial<BlockIpInput>
+	) {
+		const updateData: Record<string, any> = {};
+		if (updates.ipAddress !== undefined) updateData.ipAddress = updates.ipAddress.trim();
+		if (updates.phoneNo !== undefined) updateData.phoneNo = updates.phoneNo.trim() || null;
+		if (updates.reason !== undefined) updateData.reason = updates.reason.trim();
+		if (updates.type !== undefined) updateData.type = updates.type;
+		if (updates.isPermanent !== undefined) updateData.isPermanent = updates.isPermanent;
+		if (updates.blockUntil !== undefined) updateData.blockUntil = updates.blockUntil;
+
+		await db.update(schema.ipBlocks).set(updateData).where(eq(schema.ipBlocks.id, id));
+		return { success: true };
 	}
 
 	/**
@@ -148,12 +209,7 @@ export class SecurityService {
 	static async unblockIp(db: DrizzleD1Database<typeof schema>, idOrIp: string) {
 		await db
 			.delete(schema.ipBlocks)
-			.where(
-				or(
-					eq(schema.ipBlocks.id, idOrIp),
-					eq(schema.ipBlocks.ipAddress, idOrIp)
-				)
-			);
+			.where(or(eq(schema.ipBlocks.id, idOrIp), eq(schema.ipBlocks.ipAddress, idOrIp)));
 		return { success: true };
 	}
 
@@ -167,94 +223,39 @@ export class SecurityService {
 	}
 
 	/**
-	 * Check if an IP is currently blocked
+	 * Check if an IP address or phone number is currently blocked
 	 */
-	static async isIpBlocked(db: DrizzleD1Database<typeof schema>, ipAddress: string): Promise<boolean> {
+	static async isBlocked(
+		db: DrizzleD1Database<typeof schema>,
+		ipAddress: string,
+		phoneNo?: string
+	): Promise<{ blocked: boolean; reason?: string }> {
 		try {
+			const conditions = [eq(schema.ipBlocks.ipAddress, ipAddress)];
+			if (phoneNo && phoneNo.trim()) {
+				conditions.push(eq(schema.ipBlocks.phoneNo, phoneNo.trim()));
+			}
+
 			const rows = await db
 				.select()
 				.from(schema.ipBlocks)
-				.where(eq(schema.ipBlocks.ipAddress, ipAddress))
-				.limit(1)
+				.where(or(...conditions))
 				.all();
-			return rows.length > 0;
+
+			if (rows.length === 0) return { blocked: false };
+
+			const now = new Date();
+			const activeBlock = rows.find(
+				(r) => r.isPermanent || (r.blockUntil && new Date(r.blockUntil) > now)
+			);
+
+			if (activeBlock) {
+				return { blocked: true, reason: activeBlock.reason };
+			}
+
+			return { blocked: false };
 		} catch {
-			return false;
-		}
-	}
-
-	/**
-	 * Auto-seed initial blocked items
-	 */
-	static async seedInitialBlocked(db: DrizzleD1Database<typeof schema>) {
-		const seedData = [
-			{
-				ip: '2404:1c40:45b:9e22:18dd:246a:9f7c:92a2',
-				phone: '01811174567',
-				type: 'Auto Block After 1 Orders',
-				reason: 'Multiple failed checkout attempts'
-			},
-			{
-				ip: '103.217.111.246',
-				phone: '01974142304',
-				type: 'Auto Block After 1 Orders',
-				reason: 'Fake order address detected'
-			},
-			{
-				ip: '103.75.138.13',
-				phone: '01856996410',
-				type: 'Auto Block After 1 Orders',
-				reason: 'High cancellation rate courier risk'
-			},
-			{
-				ip: '103.167.17.53',
-				phone: '+8801763172390',
-				type: 'Auto Block After 1 Orders',
-				reason: 'Spam order bot attack'
-			},
-			{
-				ip: '103.159.72.71',
-				phone: '01862907227',
-				type: 'Auto Block After 1 Orders',
-				reason: 'Automated scraping and fake carting'
-			},
-			{
-				ip: '203.190.10.74',
-				phone: '01727492677',
-				type: 'Auto Block After 1 Orders',
-				reason: 'Unreachable contact info'
-			},
-			{
-				ip: '103.134.88.19',
-				phone: '01711223344',
-				type: 'Auto Block After 1 Orders',
-				reason: 'Fake OTP verification flood'
-			},
-			{
-				ip: '118.179.223.45',
-				phone: '01988776655',
-				type: 'Manual Block',
-				reason: 'Manual blacklist by admin'
-			}
-		];
-
-		for (const item of seedData) {
-			try {
-				await db
-					.insert(schema.ipBlocks)
-					.values({
-						id: crypto.randomUUID(),
-						ipAddress: item.ip,
-						phoneNo: item.phone,
-						type: item.type,
-						reason: item.reason,
-						isPermanent: item.type === 'Manual Block',
-						createdAt: new Date()
-					})
-					.onConflictDoNothing();
-			} catch (e) {
-				console.error(`Failed to seed blocked IP ${item.ip}:`, e);
-			}
+			return { blocked: false };
 		}
 	}
 }

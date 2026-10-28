@@ -13,6 +13,10 @@ export const notifications = sqliteTable(
 		link: text('link'),
 		createdAt: integer('created_at', { mode: 'timestamp_ms' })
 			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => new Date())
 			.notNull()
 	},
 	(table) => [index('notif_read_created_idx').on(table.isRead, table.createdAt)]

@@ -10,12 +10,20 @@ export const carousels = sqliteTable(
 		image: text('image').notNull(),
 		mobileImage: text('mobile_image'),
 		targetUrl: text('target_url').notNull(),
-		urlType: text('url_type').default('internal'),
-		sortOrder: integer('sort_order').notNull().default(0),
-		status: text('status').notNull().default('active'), // 'active' | 'inactive'
+		urlType: text('url_type').default('Internal'),
+		description: text('description'),
+		sortOrder: integer('sort_order').notNull().default(1),
+		status: text('status').notNull().default('Publish'), // 'Publish' | 'Draft'
+		startDate: integer('start_date', { mode: 'timestamp_ms' }),
+		endDate: integer('end_date', { mode: 'timestamp_ms' }),
+		viewCount: integer('view_count').default(0),
+		clickCount: integer('click_count').default(0),
 		createdAt: integer('created_at', { mode: 'timestamp_ms' })
 			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.notNull()
+			.notNull(),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => new Date())
 	},
 	(table) => [index('carousel_active_sort_idx').on(table.status, table.sortOrder)]
 );
@@ -28,11 +36,17 @@ export const banners = sqliteTable(
 		title: text('title').notNull(),
 		image: text('image').notNull(),
 		targetUrl: text('target_url').notNull(),
-		placement: text('placement').notNull().default('hero_bottom'), // 'hero_bottom' | 'category_middle' | 'footer_top'
-		sortOrder: integer('sort_order').notNull().default(0),
-		status: text('status').notNull().default('active'),
+		urlType: text('url_type').default('Internal'),
+		placement: text('placement').notNull().default('Home Page Top Banner'),
+		displayOptions: text('display_options').default('Show on Home'),
+		sortOrder: integer('sort_order').notNull().default(10),
+		status: text('status').notNull().default('Publish'),
 		createdAt: integer('created_at', { mode: 'timestamp_ms' })
 			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => new Date())
 			.notNull()
 	},
 	(table) => [index('banner_placement_status_idx').on(table.placement, table.status, table.sortOrder)]
@@ -49,6 +63,10 @@ export const popups = sqliteTable('popups', {
 	status: text('status').notNull().default('active'),
 	createdAt: integer('created_at', { mode: 'timestamp_ms' })
 		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+		.notNull(),
+	updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+		.$onUpdate(() => new Date())
 		.notNull()
 });
 

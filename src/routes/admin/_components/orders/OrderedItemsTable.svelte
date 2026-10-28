@@ -35,7 +35,7 @@
 	);
 </script>
 
-<Card class="p-4 bg-white/90 shadow-xs border-slate-200/90 flex flex-col h-full">
+<Card class="p-4 bg-white/90 shadow-xs border-slate-200/90 flex flex-col">
 	<!-- Header -->
 	<div class="flex items-center justify-between pb-3 border-b border-slate-100">
 		<div class="flex items-center gap-2">
@@ -48,7 +48,7 @@
 	</div>
 
 	<!-- Items List -->
-	<div class="divide-y divide-slate-100 flex-1 overflow-y-auto max-h-[460px] py-1">
+	<div class="divide-y divide-slate-100 overflow-y-auto max-h-[380px] py-1 pr-1">
 		{#if items.length === 0}
 			<div class="py-14 px-4 text-center text-slate-400 space-y-3 my-auto border-2 border-dashed border-slate-200/90 rounded-2xl bg-slate-50/50">
 				<div class="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mx-auto text-[#5845eb]">

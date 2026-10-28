@@ -1,6 +1,12 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import { onMount } from 'svelte';
 	import { ChevronLeft, ChevronRight, Percent, Sparkles, Tag, ShieldCheck, ArrowRight } from 'lucide-svelte';
+
+	interface Props {
+		carousels?: any[];
+	}
+
+	let { carousels = [] }: Props = $props();
 
 	interface Brand {
 		name: string;
@@ -25,19 +31,20 @@
 
 	interface Slide {
 		id: string;
-		type: 'brand-campaign' | 'product-deal';
+		type: 'brand-campaign' | 'product-deal' | 'db-banner';
 		badge?: string;
 		discountOffer?: string;
 		savingsBadge?: string;
 		title: string;
 		subtitle?: string;
 		image?: string;
+		mobileImage?: string | null;
 		linkUrl: string;
 		bgGradient: string;
 		textColor: string;
 	}
 
-	const slides: Slide[] = [
+	const defaultSlides: Slide[] = [
 		{
 			id: 'slide-1',
 			type: 'brand-campaign',
@@ -90,6 +97,24 @@
 		}
 	];
 
+	// Derived slides: database-driven when carousels exist, fallback to default promo slides
+	const activeSlides = $derived.by<Slide[]>(() => {
+		if (carousels && carousels.length > 0) {
+			return carousels.map((c) => ({
+				id: c.id,
+				type: 'db-banner',
+				title: c.name || '',
+				subtitle: c.description || '',
+				image: c.image || '/images/banners/banner-home.svg',
+				mobileImage: c.mobileImage || null,
+				linkUrl: c.targetUrl || '/products',
+				bgGradient: 'from-slate-900 via-slate-800 to-indigo-950',
+				textColor: 'text-white'
+			}));
+		}
+		return defaultSlides;
+	});
+
 	// Slider State (Svelte 5 Runes)
 	let currentSlide = $state(0);
 	let isHovered = $state(false);
@@ -97,11 +122,13 @@
 	let touchEndX = 0;
 
 	function nextSlide() {
-		currentSlide = (currentSlide + 1) % slides.length;
+		if (activeSlides.length === 0) return;
+		currentSlide = (currentSlide + 1) % activeSlides.length;
 	}
 
 	function prevSlide() {
-		currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+		if (activeSlides.length === 0) return;
+		currentSlide = (currentSlide - 1 + activeSlides.length) % activeSlides.length;
 	}
 
 	function goToSlide(index: number) {
@@ -151,15 +178,51 @@
 			class="flex w-full h-full transition-transform duration-500 ease-out"
 			style="transform: translateX(-{currentSlide * 100}%);"
 		>
-			{#each slides as slide, index}
+			{#each activeSlides as slide, index}
 				<div class="w-full shrink-0 h-full relative overflow-hidden bg-gradient-to-r {slide.bgGradient} flex items-center">
 					
 					<!-- Background Ambient Graphic Overlays & Radial Spotlights -->
 					<div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,rgba(255,255,255,0.22),transparent_65%)] pointer-events-none"></div>
 					<div class="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
 
+					<!-- SLIDE TYPE 0: LIVE DATABASE-DRIVEN HERO BANNER -->
+					{#if slide.type === 'db-banner'}
+						<a
+							href={slide.linkUrl}
+							class="w-full h-full block relative overflow-hidden group select-none"
+						>
+							{#if slide.mobileImage}
+								<picture class="w-full h-full block">
+									<source media="(max-width: 640px)" srcset={slide.mobileImage} />
+									<img
+										src={slide.image}
+										alt={slide.title}
+										class="w-full h-full object-cover sm:object-fill transition-transform duration-700 group-hover:scale-[1.01]"
+										loading={index === 0 ? 'eager' : 'lazy'}
+									/>
+								</picture>
+							{:else}
+								<img
+									src={slide.image}
+									alt={slide.title}
+									class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.01]"
+									loading={index === 0 ? 'eager' : 'lazy'}
+								/>
+							{/if}
+
+							<!-- Optional Overlay Tag if Title Exists and isn't generic -->
+							{#if slide.title && slide.title.toLowerCase() !== 'banner'}
+								<div class="absolute bottom-3 left-4 bg-slate-950/65 backdrop-blur-md px-3 py-1 rounded-lg text-white text-xs font-semibold shadow-md flex items-center gap-2 border border-white/20">
+									<span>{slide.title}</span>
+									{#if slide.subtitle}
+										<span class="text-white/75 text-[11px] font-normal border-l border-white/30 pl-2 hidden sm:inline">{slide.subtitle}</span>
+									{/if}
+								</div>
+							{/if}
+						</a>
+
 					<!-- SLIDE TYPE 1: EXACT CARTUP "BIG BRAND DAYS" (MATCHING USER REFERENCE IMAGE 2) -->
-					{#if slide.type === 'brand-campaign'}
+					{:else if slide.type === 'brand-campaign'}
 						<div class="w-full h-full flex items-center justify-between px-3.5 sm:px-8 md:px-12 relative z-10">
 							
 							<!-- Left Side: 3D "BIG BRAND DAYS", Deals ribbon & Free Delivery -->
@@ -348,7 +411,7 @@
 
 		<!-- Bottom Navigation Indicator Dots (Pink dots matching screenshot) -->
 		<div class="absolute bottom-2 sm:bottom-3 left-1/2 -translate-x-1/2 sm:left-1/3 flex items-center gap-1.5 z-20">
-			{#each slides as _, i}
+			{#each activeSlides as _, i}
 				<button
 					type="button"
 					onclick={() => goToSlide(i)}

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Sparkles, User, ShieldCheck, Package, Download, Key, LogOut, ArrowLeft, Radio } from 'lucide-svelte';
 	import type { PageData } from './$types';
+	import { toast } from 'svelte-sonner';
 
 	let { data }: { data: PageData } = $props();
 </script>
@@ -79,7 +80,7 @@
 					</div>
 					<p class="text-[11px] text-slate-400">AU, VST3, AAX Native 64-bit installer with 120 spatial impulse responses.</p>
 					<button
-						onclick={() => alert('Download link generated! Checking Cloudflare CDN token...')}
+						onclick={() => toast.info('Download link generated! Checking Cloudflare CDN token...')}
 						class="flex items-center gap-1.5 mt-2 text-xs font-semibold text-cyan-300 hover:text-cyan-200"
 					>
 						<Download class="w-3.5 h-3.5" />

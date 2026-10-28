@@ -16,7 +16,8 @@
 		{
 			"binding": "DB",
 			"database_name": "aura",
-			"database_id": "85e821c2-73e0-4490-b87a-66babacf5720"
+			"database_id": "85e821c2-73e0-4490-b87a-66babacf5720",
+			"migrations_dir": "drizzle"
 		}
 	]
 }

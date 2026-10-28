@@ -4,9 +4,10 @@
 
 	interface Props {
 		onToggleMenu: () => void;
+		unreadCount?: number;
 	}
 
-	let { onToggleMenu }: Props = $props();
+	let { onToggleMenu, unreadCount = 0 }: Props = $props();
 
 	let currentPath = $derived(page.url.pathname);
 	let isDashboard = $derived(currentPath === '/admin');
@@ -40,9 +41,11 @@
 		>
 			<div class="relative">
 				<Bell class="w-5 h-5 {isNotificationsActive ? 'stroke-[2.5]' : 'stroke-2'}" />
-				<span class="absolute -top-1 -right-1.5 min-w-[15px] h-[15px] px-0.5 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center leading-none">
-					4
-				</span>
+				{#if unreadCount > 0}
+					<span class="absolute -top-1 -right-1.5 min-w-[15px] h-[15px] px-0.5 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center leading-none">
+						{unreadCount > 99 ? '99+' : unreadCount}
+					</span>
+				{/if}
 			</div>
 			<span class="text-[11px] {isNotificationsActive ? 'font-bold' : 'font-medium'} leading-none">Notification</span>
 		</a>

@@ -17,6 +17,8 @@
 		Trash2,
 		FileEdit
 	} from 'lucide-svelte';
+	import OrderStatusDropdown from '../_components/orders/OrderStatusDropdown.svelte';
+	import ScrollableStatusTabs from '../_components/orders/ScrollableStatusTabs.svelte';
 
 	let { data }: { data: any } = $props();
 
@@ -40,6 +42,7 @@
 
 	let webOrders = $derived(
 		(data.orders || []).filter((o: any) =>
+			!o.isTrashed &&
 			['pending', 'incomplete', 'no_response', 'no_response_3', 'good_no_response', 'busy', 'hold', 'recall', 'confirmed', 'cancelled'].includes(o.status)
 		)
 	);
@@ -65,6 +68,21 @@
 			return matchesStatus && matchesSearch;
 		})
 	);
+
+	let statusCounts = $derived.by(() => {
+		const map: Record<string, number> = {
+			all: webOrders.length
+		};
+		WEB_ORDER_STATUS_TABS.forEach((tab) => {
+			if (tab.id === 'all') return;
+			if (tab.id === 'good_no_response') {
+				map[tab.id] = webOrders.filter((o: any) => o.status === 'good_no_response' || o.status === 'no_response_3').length;
+			} else {
+				map[tab.id] = webOrders.filter((o: any) => o.status === tab.id).length;
+			}
+		});
+		return map;
+	});
 
 	function openEditModal(order: any) {
 		activeOrderForEdit = { ...order };
@@ -105,29 +123,13 @@
 		</div>
 	</div>
 
-	<!-- Status Filter Tabs -->
-	<Card class="p-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-		{#each WEB_ORDER_STATUS_TABS as tab}
-			<button
-				type="button"
-				onclick={() => (webStatusFilter = tab.id)}
-				class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer {webStatusFilter === tab.id
-					? 'bg-[#5845eb] text-white shadow-xs'
-					: 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'}"
-			>
-				<tab.icon class="w-3.5 h-3.5" />
-				<span>{tab.label}</span>
-				{#if tab.id !== 'all'}
-					{@const count = webOrders.filter((o: any) => tab.id === 'good_no_response' ? (o.status === 'good_no_response' || o.status === 'no_response_3') : o.status === tab.id).length}
-					{#if count > 0}
-						<span class="text-[10px] px-1.5 py-0.2 rounded-full {webStatusFilter === tab.id ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}">
-							{count}
-						</span>
-					{/if}
-				{/if}
-			</button>
-		{/each}
-	</Card>
+	<!-- Scrollable Status Filter Tabs with Wheel & Button Navigation -->
+	<ScrollableStatusTabs
+		tabs={WEB_ORDER_STATUS_TABS}
+		activeTab={webStatusFilter}
+		counts={statusCounts}
+		onSelectTab={(newTab) => (webStatusFilter = newTab)}
+	/>
 
 	<!-- Search & Table Card -->
 	<Card class="overflow-hidden">
@@ -148,7 +150,7 @@
 		</div>
 
 		<!-- Table -->
-		<div class="overflow-x-auto">
+		<div class="overflow-x-auto min-h-[240px]">
 			<table class="w-full text-left text-xs text-slate-700">
 				<thead class="bg-slate-50/80 border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-500">
 					<tr>
@@ -212,26 +214,7 @@
 
 								<!-- 5. Status Badge -->
 								<td class="py-4 px-4">
-									<form action="?/updateOrderStatus" method="POST" use:enhance class="inline-block">
-										<input type="hidden" name="orderId" value={order.id} />
-										<select
-											name="status"
-											value={order.status}
-											onchange={(e: Event) => (e.target as HTMLSelectElement).form?.requestSubmit()}
-											class="text-xs font-bold rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-slate-800 focus:outline-none focus:border-[#5845eb] shadow-2xs cursor-pointer"
-										>
-											<option value="pending">পেন্ডিং</option>
-											<option value="incomplete">ইনকমপ্লিট</option>
-											<option value="no_response">নো রেসপন্স</option>
-											<option value="good_no_response">গুড বাট নো রেসপন্স</option>
-											<option value="busy">বিজি</option>
-											<option value="hold">হোল্ড</option>
-											<option value="recall">রি</option>
-											<option value="processing">প্রসেসিং</option>
-											<option value="confirmed">কনফার্মড</option>
-											<option value="cancelled">বাতিল</option>
-										</select>
-									</form>
+									<OrderStatusDropdown orderId={order.id} status={order.status} mode="web" />
 								</td>
 
 								<!-- 6. Actions -->

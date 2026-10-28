@@ -7,4 +7,6 @@ export { default as CourierFraudCard } from './CourierFraudCard.svelte';
 export { default as CustomerProfileCard } from './CustomerProfileCard.svelte';
 export { default as OrderCallNotes } from './OrderCallNotes.svelte';
 export { default as OrderVisitorMetaCard } from './OrderVisitorMetaCard.svelte';
+export { default as OrderStatusDropdown } from './OrderStatusDropdown.svelte';
+export { default as ScrollableStatusTabs } from './ScrollableStatusTabs.svelte';
 

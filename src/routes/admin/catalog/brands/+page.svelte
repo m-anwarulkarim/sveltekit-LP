@@ -16,6 +16,7 @@
 	} from 'lucide-svelte';
 	import { CatalogFilterTabs } from '../../_components/catalog';
 	import { INITIAL_BRANDS, type CatalogBrand } from '../../_data.ts';
+	import { toast } from 'svelte-sonner';
 
 	let brands = $state<CatalogBrand[]>([...INITIAL_BRANDS]);
 	let searchQuery = $state('');
@@ -24,11 +25,8 @@
 	let currentPage = $state(1);
 	let itemsPerPage = 10;
 
-	// Toast notification
-	let toastMessage = $state<string | null>(null);
 	function showToast(msg: string) {
-		toastMessage = msg;
-		setTimeout(() => (toastMessage = null), 3000);
+		toast.success(msg);
 	}
 
 	// Modal state
@@ -117,7 +115,7 @@
 
 	function handleSave() {
 		if (!formName.trim()) {
-			alert('Brand Name required');
+			toast.error('ব্র্যান্ডের নাম প্রদান করুন');
 			return;
 		}
 
@@ -176,14 +174,6 @@
 	<title>Brands | AURA Admin</title>
 </svelte:head>
 
-<!-- Toast Notification -->
-{#if toastMessage}
-	<div class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 border border-slate-800 animate-in fade-in slide-in-from-bottom-2">
-		<CheckCircle2 class="w-4 h-4 text-emerald-400 shrink-0" />
-		<span>{toastMessage}</span>
-	</div>
-{/if}
-
 <div class="space-y-6 max-w-[1400px] mx-auto pb-12">
 	<!-- Top Bar: Title & Support Button -->
 	<div class="flex items-center justify-between gap-4">
@@ -237,7 +227,7 @@
 	/>
 
 	<!-- Data Table Card matching Screenshot 4 -->
-	<div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
+	<div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden min-h-[260px]">
 		<div class="overflow-x-auto">
 			<table class="w-full text-left text-xs border-collapse">
 				<thead>
@@ -339,7 +329,7 @@
 									</button>
 
 									{#if openActionMenuId === brand.id}
-										<div class="absolute right-4 top-10 w-36 bg-white border border-slate-200 rounded-xl shadow-lg z-30 py-1 text-left text-xs">
+										<div class="absolute right-4 {idx >= paginatedItems.length - 2 && paginatedItems.length > 2 ? 'bottom-10 top-auto origin-bottom-right' : 'top-10'} w-36 bg-white border border-slate-200 rounded-xl shadow-lg z-30 py-1 text-left text-xs">
 											<button
 												type="button"
 												onclick={() => openEditModal(brand)}

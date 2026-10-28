@@ -1,11 +1,18 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import { onMount } from 'svelte';
-	import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-svelte';
+	import { ChevronLeft, ChevronRight, ArrowRight, LayoutGrid } from 'lucide-svelte';
+
+	interface Props {
+		categories?: any[];
+	}
+
+	let { categories = [] }: Props = $props();
 
 	interface Category {
 		id: string;
 		name: string;
 		slug: string;
+		image?: string;
 		iconType:
 			| 'book'
 			| 'electronics'
@@ -18,11 +25,30 @@
 			| 'groceries'
 			| 'fashion'
 			| 'gadgets'
-			| 'home';
+			| 'home'
+			| 'generic';
 		accentColor?: string;
 	}
 
-	const categories: Category[] = [
+	function getCategoryIconType(cat: { iconType?: string; slug?: string; name?: string }): Category['iconType'] {
+		const s = (cat.slug || '').toLowerCase();
+		const n = (cat.name || '').toLowerCase();
+		if (s.includes('book') || n.includes('বই') || n.includes('সাহিত্য')) return 'book';
+		if (s.includes('elect') || n.includes('ইলেকট্রনিক') || s.includes('audio') || n.includes('অডিও') || s.includes('sound')) return 'electronics';
+		if (s.includes('ebook') || n.includes('ইবুক')) return 'ebook';
+		if (s.includes('beauty') || s.includes('health') || n.includes('বিউটি') || n.includes('স্কিন') || n.includes('রূপচর্চা')) return 'beauty';
+		if (s.includes('audiobook') || n.includes('অডিওবুক')) return 'audiobook';
+		if (s.includes('admission') || n.includes('ভর্তি') || n.includes('পরীক্ষা') || n.includes('শিক্ষা')) return 'admission';
+		if (s.includes('stationery') || n.includes('স্টেশনারি') || n.includes('খাতা') || n.includes('কলম')) return 'stationery';
+		if (s.includes('science') || n.includes('বিজ্ঞান')) return 'science';
+		if (s.includes('grocer') || n.includes('গ্রোসারি') || n.includes('খাদ্য') || n.includes('বাজার')) return 'groceries';
+		if (s.includes('fashion') || s.includes('cloth') || n.includes('ফ্যাশন') || n.includes('পোশাক') || s.includes('style')) return 'fashion';
+		if (s.includes('gadget') || s.includes('watch') || n.includes('ঘড়ি') || n.includes('স্মার্ট') || s.includes('phone') || s.includes('device')) return 'gadgets';
+		if (s.includes('home') || n.includes('হোম') || n.includes('আসবাবপত্র') || s.includes('living')) return 'home';
+		return 'gadgets';
+	}
+
+	const defaultCategories: Category[] = [
 		{
 			id: 'cat-1',
 			name: 'বই',
@@ -109,6 +135,21 @@
 		}
 	];
 
+	// Derived active categories: live database records when available, fallback to default mock list
+	const activeCategories = $derived.by<Category[]>(() => {
+		if (categories && categories.length > 0) {
+			return categories.map((c) => ({
+				id: c.id,
+				name: c.name,
+				slug: c.slug || c.id,
+				image: c.image || '',
+				iconType: getCategoryIconType(c),
+				accentColor: c.accentColor || '#5845eb'
+			}));
+		}
+		return defaultCategories;
+	});
+
 	let scrollContainer: HTMLDivElement | null = $state(null);
 	let canScrollLeft = $state(false);
 	let canScrollRight = $state(true);
@@ -179,16 +220,22 @@
 				onscroll={updateScrollState}
 				class="flex items-start gap-3 sm:gap-4 md:gap-5 overflow-x-auto no-scrollbar scroll-smooth py-1.5 px-0.5"
 			>
-				{#each categories as category}
+				{#each activeCategories as category}
 					<a
 						href="/categories/{category.slug}"
 						class="flex flex-col items-center shrink-0 group text-center cursor-pointer"
 					>
 						<!-- Rounded White Image Box (matching user's screenshot) -->
-						<div class="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-2xl bg-white border border-slate-100 group-hover:border-indigo-300 shadow-xs group-hover:shadow-md transition-all duration-300 flex items-center justify-center p-2.5 sm:p-3 relative transform group-hover:-translate-y-1">
+						<div class="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-2xl bg-white border border-slate-100 group-hover:border-indigo-300 shadow-xs group-hover:shadow-md transition-all duration-300 flex items-center justify-center p-2.5 sm:p-3 relative transform group-hover:-translate-y-1 overflow-hidden">
 							
-							<!-- 3D / Realistic SVG Visuals for each Category -->
-							{#if category.iconType === 'book'}
+							{#if category.image}
+								<img
+									src={category.image}
+									alt={category.name}
+									class="w-full h-full object-contain p-1 transform group-hover:scale-105 transition-transform"
+									loading="lazy"
+								/>
+							{:else if category.iconType === 'book'}
 								<!-- 1. বই (3D Hardcover Book with Bookmark & Gold Spine) -->
 								<svg class="w-full h-full transform group-hover:scale-105 transition-transform drop-shadow-sm" viewBox="0 0 100 100" fill="none">
 									<defs>
@@ -416,6 +463,11 @@
 									<line x1="32" y1="68" x2="28" y2="78" stroke="#b45309" stroke-width="2.5" stroke-linecap="round" />
 									<line x1="68" y1="68" x2="72" y2="78" stroke="#b45309" stroke-width="2.5" stroke-linecap="round" />
 								</svg>
+							{:else}
+								<!-- Generic Modern Category Icon -->
+								<div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
+									<LayoutGrid class="w-5 h-5 sm:w-6 sm:h-6" />
+								</div>
 							{/if}
 
 						</div>

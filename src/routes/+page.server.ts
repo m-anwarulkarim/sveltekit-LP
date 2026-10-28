@@ -2,9 +2,12 @@ import type { PageServerLoad } from './$types';
 import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
 import { eq, desc } from 'drizzle-orm';
+import { CustomizationService, CategoryService } from '#lib/server/services';
 
 export const load: PageServerLoad = async (event) => {
 	let dbProducts: any[] = [];
+	let dbCarousels: any[] = [];
+	let dbCategories: any[] = [];
 
 	try {
 		const db = getDb(event.platform);
@@ -44,12 +47,27 @@ export const load: PageServerLoad = async (event) => {
 				inStock: Boolean(p.inStock)
 			};
 		});
+
+		try {
+			dbCarousels = await CustomizationService.getActiveCarouselsForStorefront(db);
+		} catch (carErr) {
+			console.error('Failed to load active carousels for storefront:', carErr);
+		}
+
+		try {
+			const liveCategories = await CategoryService.listCategories(db, { parentId: null, status: 'publish' });
+			dbCategories = liveCategories || [];
+		} catch (catErr) {
+			console.error('Failed to load categories for storefront:', catErr);
+		}
 	} catch (e) {
 		console.error('Failed to load storefront products from D1:', e);
 	}
 
 	return {
 		user: event.locals.user ?? null,
-		dbProducts
+		dbProducts,
+		dbCarousels,
+		dbCategories
 	};
 };

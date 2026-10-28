@@ -37,6 +37,10 @@ class CartStore {
 		return this.items.reduce((total, item) => total + item.quantity, 0);
 	}
 
+	get totalQuantity() {
+		return this.count;
+	}
+
 	get subtotal() {
 		return this.items.reduce((total, item) => total + item.price * item.quantity, 0);
 	}
@@ -52,6 +56,10 @@ class CartStore {
 
 	get total() {
 		return Math.max(0, this.subtotal - this.discountAmount + this.deliveryCharge);
+	}
+
+	get totalPrice() {
+		return this.total;
 	}
 
 	toggleCart() {

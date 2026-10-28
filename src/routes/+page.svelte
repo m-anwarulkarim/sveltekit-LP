@@ -3,6 +3,8 @@
 		StoreLayout,
 		Hero,
 		ShopByCategory,
+		DynamicShowcase,
+		DynamicCategoryView,
 		ProductSection,
 		getBestSaleProducts,
 		getNewArrivals,
@@ -33,11 +35,17 @@
 </svelte:head>
 
 <StoreLayout user={data.user}>
-	<!-- 1. Hero Slider Banner Section (Image 2 Cartup Match) -->
-	<Hero />
+	<!-- 1. Hero Showcase Banner Section (Dynamic based on Admin Theme View) -->
+	<DynamicShowcase
+		activeShowcase={data.themeConfig?.views?.showcase}
+		carousels={data.dbCarousels}
+	/>
 
-	<!-- 2. Shop By Category Horizontal Carousel Section -->
-	<ShopByCategory />
+	<!-- 2. Shop By Category Section (Dynamic based on Admin Theme View) -->
+	<DynamicCategoryView
+		activeCategory={data.themeConfig?.views?.category}
+		categories={data.dbCategories}
+	/>
 
 	<!-- 3. Best Sale Products (🔥 সেরা অফার ও হট ডিল) -->
 	<ProductSection
@@ -50,6 +58,7 @@
 		products={bestSaleItems}
 		seeAllLink="/catalog/all-product?filter=best-sale"
 	/>
+
 
 	<!-- 4. New Arrivals (✨ সদ্য যোগ হওয়া নতুন কালেকশন) -->
 	<ProductSection

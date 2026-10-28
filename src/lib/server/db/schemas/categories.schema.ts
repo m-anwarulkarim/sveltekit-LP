@@ -8,7 +8,7 @@ export const categories = sqliteTable(
 		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		name: text('name').notNull(),
 		slug: text('slug').notNull(),
-		parentId: text('parent_id'), // Self-referencing: null = Parent, set = Sub/Child
+		parentId: text('parent_id').references((): any => categories.id, { onDelete: 'cascade' }), // Self-referencing: null = Parent, set = Sub/Child
 		icon: text('icon'),
 		image: text('image'),
 		bannerImage: text('banner_image'),
@@ -19,6 +19,10 @@ export const categories = sqliteTable(
 		seoDescription: text('seo_description'),
 		createdAt: integer('created_at', { mode: 'timestamp_ms' })
 			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => new Date())
 			.notNull()
 	},
 	(table) => [
@@ -40,6 +44,10 @@ export const brands = sqliteTable(
 		isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
 		createdAt: integer('created_at', { mode: 'timestamp_ms' })
 			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => new Date())
 			.notNull()
 	},
 	(table) => [uniqueIndex('brands_slug_uidx').on(table.slug)]
@@ -58,6 +66,10 @@ export const tags = sqliteTable(
 		isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
 		createdAt: integer('created_at', { mode: 'timestamp_ms' })
 			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => new Date())
 			.notNull()
 	},
 	(table) => [uniqueIndex('tags_slug_uidx').on(table.slug)]
@@ -69,4 +81,3 @@ export type Brand = typeof brands.$inferSelect;
 export type NewBrand = typeof brands.$inferInsert;
 export type Tag = typeof tags.$inferSelect;
 export type NewTag = typeof tags.$inferInsert;
-

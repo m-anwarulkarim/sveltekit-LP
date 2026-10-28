@@ -1,6 +1,8 @@
 import { eq, desc, and, or, sql, inArray, like } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from '../db/schema';
+import { hashPassword } from '../utils/password';
+import { normalizePermissions } from '../../constants/admin-permissions';
 
 export interface AdminUserFilterOptions {
 	search?: string;
@@ -16,6 +18,8 @@ export interface CreateAdminUserInput {
 	access?: 'Allowed' | 'Restricted' | 'Suspended';
 	avatarBg?: string;
 	avatarText?: string;
+	password?: string;
+	permissions?: string[];
 }
 
 export interface UpdateAdminUserInput {
@@ -24,6 +28,8 @@ export interface UpdateAdminUserInput {
 	email?: string;
 	role?: string;
 	access?: 'Allowed' | 'Restricted' | 'Suspended';
+	permissions?: string[];
+	password?: string;
 }
 
 /**
@@ -98,7 +104,10 @@ export class AdminControlService {
 				access: r.access as 'Allowed' | 'Restricted' | 'Suspended',
 				isTrashed: r.isTrashed,
 				avatarBg: r.avatarBg || 'bg-indigo-600 text-white border-indigo-400',
-				avatarText: r.avatarText || 'AK'
+				avatarText: r.avatarText || 'AK',
+				avatarUrl: r.avatarUrl || null,
+				permissions: normalizePermissions(r.permissions),
+				plainPasswordHint: r.plainPasswordHint || ''
 			}));
 		} catch (error) {
 			console.error('Error in AdminControlService.listAdminUsers:', error);
@@ -123,15 +132,22 @@ export class AdminControlService {
 			.toUpperCase()
 			.slice(0, 2) || 'AD';
 
+		const passwordHash = input.password ? await hashPassword(input.password) : null;
+		const plainPasswordHint = input.password || null;
+		const permissions = JSON.stringify(input.permissions || (input.role === 'Owner' ? ['*'] : []));
+
 		await db.insert(schema.adminUsers).values({
 			id,
 			name: input.name.trim(),
 			username: input.username.trim().toLowerCase(),
 			email: input.email.trim().toLowerCase(),
-			role: input.role || 'Admin',
+			role: input.role || 'Staff',
 			access: input.access || 'Allowed',
 			isTrashed: false,
 			lastLogin: 'Never',
+			passwordHash,
+			plainPasswordHint,
+			permissions,
 			avatarBg: input.avatarBg || 'bg-[#5845eb] text-white border-indigo-300',
 			avatarText: initials,
 			createdAt: now,
@@ -143,14 +159,94 @@ export class AdminControlService {
 			name: input.name,
 			username: input.username,
 			email: input.email,
-			role: input.role || 'Admin',
+			role: input.role || 'Staff',
 			access: input.access || 'Allowed',
 			isTrashed: false,
 			lastLogin: 'Never',
 			registeredAt: 'Just Now',
+			permissions: normalizePermissions(permissions),
+			plainPasswordHint: plainPasswordHint || '',
 			avatarBg: input.avatarBg || 'bg-[#5845eb] text-white border-indigo-300',
 			avatarText: initials
 		};
+	}
+
+	/**
+	 * Update admin user details and permissions
+	 */
+	static async updateAdminUser(
+		db: DrizzleD1Database<typeof schema>,
+		id: string,
+		input: UpdateAdminUserInput
+	) {
+		const target = await db
+			.select()
+			.from(schema.adminUsers)
+			.where(eq(schema.adminUsers.id, id))
+			.get();
+
+		if (!target) {
+			throw new Error('অ্যাডমিন ইউজার পাওয়া যায়নি!');
+		}
+
+		const updates: any = {
+			updatedAt: new Date()
+		};
+
+		if (input.name !== undefined) updates.name = input.name.trim();
+		if (input.username !== undefined) updates.username = input.username.trim().toLowerCase();
+		if (input.email !== undefined) updates.email = input.email.trim().toLowerCase();
+		if (input.role !== undefined) {
+			if (target.role === 'Owner' && input.role !== 'Owner') {
+				throw new Error('Owner এর রোল পরিবর্তন করা যাবে না!');
+			}
+			updates.role = input.role;
+		}
+		if (input.access !== undefined) {
+			if (target.role === 'Owner' && input.access !== 'Allowed') {
+				throw new Error('Owner অ্যাকাউন্টের অ্যাক্সেস পরিবর্তন করা সম্ভব নয়!');
+			}
+			updates.access = input.access;
+		}
+		if (input.permissions !== undefined) {
+			updates.permissions = JSON.stringify(input.permissions);
+		}
+		if (input.password && input.password.trim()) {
+			updates.passwordHash = await hashPassword(input.password.trim());
+			updates.plainPasswordHint = input.password.trim();
+		}
+
+		await db
+			.update(schema.adminUsers)
+			.set(updates)
+			.where(eq(schema.adminUsers.id, id));
+
+		return { success: true, id };
+	}
+
+	/**
+	 * Reset admin user password
+	 */
+	static async resetPassword(
+		db: DrizzleD1Database<typeof schema>,
+		id: string,
+		newPassword: string
+	) {
+		if (!newPassword || newPassword.trim().length < 6) {
+			throw new Error('পাসওয়ার্ড ন্যূনতম ৬ অক্ষরের হতে হবে!');
+		}
+
+		const passwordHash = await hashPassword(newPassword.trim());
+		await db
+			.update(schema.adminUsers)
+			.set({
+				passwordHash,
+				plainPasswordHint: newPassword.trim(),
+				updatedAt: new Date()
+			})
+			.where(eq(schema.adminUsers.id, id));
+
+		return { success: true, id };
 	}
 
 	/**
@@ -161,6 +257,16 @@ export class AdminControlService {
 		id: string,
 		access: 'Allowed' | 'Restricted' | 'Suspended'
 	) {
+		const target = await db
+			.select({ role: schema.adminUsers.role })
+			.from(schema.adminUsers)
+			.where(eq(schema.adminUsers.id, id))
+			.get();
+
+		if (target?.role === 'Owner' && access !== 'Allowed') {
+			throw new Error('Owner অ্যাকাউন্টের অ্যাক্সেস পরিবর্তন করা সম্ভব নয়!');
+		}
+
 		await db
 			.update(schema.adminUsers)
 			.set({ access, updatedAt: new Date() })
@@ -169,9 +275,19 @@ export class AdminControlService {
 	}
 
 	/**
-	 * Move admin user to trash
+	 * Move admin user to trash (Protected: Owner cannot be trashed)
 	 */
 	static async moveToTrash(db: DrizzleD1Database<typeof schema>, id: string) {
+		const target = await db
+			.select({ role: schema.adminUsers.role })
+			.from(schema.adminUsers)
+			.where(eq(schema.adminUsers.id, id))
+			.get();
+
+		if (target?.role === 'Owner') {
+			throw new Error('Owner অ্যাকাউন্টকে ট্র্যাশে স্থানান্তর করা নিষিদ্ধ!');
+		}
+
 		await db
 			.update(schema.adminUsers)
 			.set({ isTrashed: true, updatedAt: new Date() })
@@ -191,15 +307,25 @@ export class AdminControlService {
 	}
 
 	/**
-	 * Permanently delete admin user
+	 * Permanently delete admin user (Protected: Owner cannot be deleted)
 	 */
 	static async deletePermanently(db: DrizzleD1Database<typeof schema>, id: string) {
+		const target = await db
+			.select({ role: schema.adminUsers.role })
+			.from(schema.adminUsers)
+			.where(eq(schema.adminUsers.id, id))
+			.get();
+
+		if (target?.role === 'Owner') {
+			throw new Error('Owner অ্যাকাউন্টকে মুছে ফেলা সম্পূর্ণ নিষিদ্ধ!');
+		}
+
 		await db.delete(schema.adminUsers).where(eq(schema.adminUsers.id, id));
 		return { success: true, id };
 	}
 
 	/**
-	 * Bulk delete or trash
+	 * Bulk delete or trash (Protected: Owner is automatically excluded)
 	 */
 	static async bulkAction(
 		db: DrizzleD1Database<typeof schema>,
@@ -208,17 +334,32 @@ export class AdminControlService {
 	) {
 		if (ids.length === 0) return { count: 0 };
 
+		let safeIds = ids;
+		if (action === 'delete' || action === 'trash') {
+			const owners = await db
+				.select({ id: schema.adminUsers.id })
+				.from(schema.adminUsers)
+				.where(and(inArray(schema.adminUsers.id, ids), eq(schema.adminUsers.role, 'Owner')))
+				.all();
+			const ownerIds = new Set(owners.map((o) => o.id));
+			safeIds = ids.filter((id) => !ownerIds.has(id));
+		}
+
+		if (safeIds.length === 0) {
+			return { success: true, count: 0, message: 'Owner অ্যাকাউন্ট সুরক্ষিত রাখা হয়েছে।' };
+		}
+
 		if (action === 'delete') {
-			await db.delete(schema.adminUsers).where(inArray(schema.adminUsers.id, ids));
+			await db.delete(schema.adminUsers).where(inArray(schema.adminUsers.id, safeIds));
 		} else {
 			const isTrashed = action === 'trash';
 			await db
 				.update(schema.adminUsers)
 				.set({ isTrashed, updatedAt: new Date() })
-				.where(inArray(schema.adminUsers.id, ids));
+				.where(inArray(schema.adminUsers.id, safeIds));
 		}
 
-		return { success: true, count: ids.length };
+		return { success: true, count: safeIds.length };
 	}
 
 	/**

@@ -25,6 +25,7 @@
 		initialProduct?: Partial<AdminProduct> | null;
 		isEditMode?: boolean;
 		existingGallery?: any[];
+		taxonomyTree?: any[];
 		onSave?: (product: AdminProduct) => void;
 	}
 
@@ -32,6 +33,7 @@
 		initialProduct = null,
 		isEditMode = false,
 		existingGallery = [],
+		taxonomyTree = [],
 		onSave
 	}: Props = $props();
 
@@ -368,6 +370,7 @@
 				bind:status
 				bind:badge
 				bind:sizeChartImage
+				{taxonomyTree}
 			/>
 
 			<!-- Bottom Save Card on Mobile -->

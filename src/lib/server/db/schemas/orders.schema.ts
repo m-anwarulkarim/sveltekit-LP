@@ -76,6 +76,7 @@ export const orders = sqliteTable(
 	},
 	(table) => [
 		index('orders_number_idx').on(table.orderNumber),
+		index('orders_customer_id_idx').on(table.customerId),
 		index('orders_customer_phone_idx').on(table.customerPhone),
 		index('orders_status_created_idx').on(table.status, table.createdAt),
 		index('orders_type_status_idx').on(table.orderType, table.status),

@@ -7,6 +7,8 @@ import {
 	type UpdateOrderStatusInput
 } from '../validations/order.validation';
 import { CustomerService } from './customer.service';
+import { SecurityService } from './security.service';
+import { NotificationService } from './notification.service';
 
 export interface OrderCreationContext {
 	ipAddress?: string;
@@ -86,7 +88,21 @@ export class OrderService {
 			throw new Error('স্বয়ংক্রিয় রোবট দ্বারা স্প্যাম শনাক্ত হয়েছে');
 		}
 
-		// 3. Compute Financial Breakdown
+		// 3. Sentinel IP & Phone Blacklist Check
+		if (context?.ipAddress || data.customerPhone) {
+			const checkResult = await SecurityService.isBlocked(
+				db,
+				context?.ipAddress || '127.0.0.1',
+				data.customerPhone
+			);
+			if (checkResult.blocked) {
+				throw new Error(
+					`আপনার ফোন নম্বর বা আইপি অ্যাড্রেস সিস্টেম দ্বারা সীমাবদ্ধ (Blocked)। কারণ: ${checkResult.reason || 'Restricted Activity'}`
+				);
+			}
+		}
+
+		// 4. Compute Financial Breakdown
 		const subtotal = data.items.reduce((acc, item) => acc + item.price * item.quantity, 0);
 		const deliveryCharge = data.deliveryArea === 'inside_dhaka' ? 60 : 120;
 		const total = subtotal + deliveryCharge;
@@ -201,6 +217,14 @@ export class OrderService {
 					console.error('Customer stats increment failed:', e)
 				);
 			}
+
+			// Trigger real admin notification
+			await NotificationService.createNotification(db, {
+				title: `নতুন অর্ডার #${orderNumber} প্রাপ্ত হয়েছে`,
+				description: `কাস্টমার ${data.customerName} (${data.customerPhone}) ${data.items.length}টি আইটেম অর্ডার করেছেন। মোট বিল: ৳${total.toLocaleString('en-US')}।`,
+				category: 'order',
+				link: `/admin/orders/${orderId}`
+			}).catch((e) => console.error('Failed to trigger order notification:', e));
 		} catch (dbErr: any) {
 			console.error('Failed to persist order to database:', dbErr);
 			throw new Error(`অর্ডার সংরক্ষণ করা সম্ভব হয়নি: ${dbErr?.message || 'Database error'}`);

@@ -17,4 +17,8 @@ export * from './security.service';
 export * from './media.service';
 export * from './admin-control.service';
 export * from './daily-target.service';
+export * from './notification.service';
+export * from './admin-profile.service';
+export * from './customization.service';
+export * from './theme-customization.service';
 

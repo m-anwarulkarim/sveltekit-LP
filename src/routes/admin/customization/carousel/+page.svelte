@@ -14,6 +14,8 @@
 		Sparkles,
 		Eye
 	} from 'lucide-svelte';
+	import { confirmModal } from '#lib/stores/confirm.svelte';
+	import { toast } from 'svelte-sonner';
 
 	interface CarouselItem {
 		id: string;
@@ -25,7 +27,9 @@
 		status: 'PUBLISH' | 'DRAFT';
 	}
 
-	let carousels = $state<CarouselItem[]>([
+	let { data }: { data?: any } = $props();
+
+	let carousels = $state<CarouselItem[]>(data?.carousels || [
 		{
 			id: 'car-1',
 			image: '/images/banners/banner-home.svg',
@@ -55,6 +59,12 @@
 		}
 	]);
 
+	$effect(() => {
+		if (data?.carousels) {
+			carousels = [...data.carousels];
+		}
+	});
+
 	let searchQuery = $state('');
 	let activeTab = $state<'all' | 'publish' | 'draft' | 'low_stock' | 'trash'>('all');
 	let selectedIds = $state<string[]>([]);
@@ -70,14 +80,8 @@
 	let modalStatus = $state<'PUBLISH' | 'DRAFT'>('PUBLISH');
 	let modalImage = $state('/images/banners/banner-home.svg');
 
-	// Toast
-	let toastMessage = $state<string | null>(null);
-
 	function showToast(msg: string) {
-		toastMessage = msg;
-		setTimeout(() => {
-			toastMessage = null;
-		}, 3000);
+		toast.success(msg);
 	}
 
 	function handleActionClick(id: string, e: MouseEvent) {
@@ -183,11 +187,88 @@
 		isModalOpen = false;
 	}
 
-	function handleDelete(item: CarouselItem) {
-		if (confirm(`আপনি কি "${item.name}" মুছতে চান?`)) {
-			carousels = carousels.filter((c) => c.id !== item.id);
-			selectedIds = selectedIds.filter((id) => id !== item.id);
-			showToast(`ক্যারোসেল মুছে ফেলা হয়েছে`);
+	let publishCount = $derived(carousels.filter((c) => c.status === 'PUBLISH' || c.status === 'Publish').length);
+	let draftCount = $derived(carousels.filter((c) => c.status === 'DRAFT' || c.status === 'Draft').length);
+	let allCount = $derived(carousels.length);
+
+	async function handleToggleStatus(item: CarouselItem) {
+		const oldStatus = item.status;
+		const newStatus = oldStatus === 'PUBLISH' || oldStatus === 'Publish' ? 'DRAFT' : 'PUBLISH';
+		item.status = newStatus as any;
+		activeActionId = null;
+		showToast(`স্ট্যাটাস পরিবর্তিত হয়েছে: ${newStatus}`);
+
+		try {
+			const fd = new FormData();
+			fd.append('id', item.id);
+			fd.append('status', oldStatus);
+			await fetch('?/toggleStatus', {
+				method: 'POST',
+				body: fd
+			});
+		} catch (e) {
+			console.error(e);
+		}
+	}
+
+	async function handleDuplicate(item: CarouselItem) {
+		activeActionId = null;
+
+		try {
+			const fd = new FormData();
+			fd.append('id', item.id);
+			const res = await fetch('?/duplicateCarousel', {
+				method: 'POST',
+				body: fd
+			});
+			const result: any = await res.json();
+			if (result?.data?.clone) {
+				const clone = result.data.clone;
+				carousels = [
+					...carousels,
+					{
+						id: clone.id,
+						image: clone.image,
+						name: clone.name,
+						url: clone.targetUrl,
+						urlType: clone.urlType || 'Internal',
+						serial: String(clone.sortOrder || 1),
+						status: 'DRAFT',
+						description: clone.description || ''
+					}
+				];
+				showToast(`"${clone.name}" সফলভাবে ডুপ্লিকেট হয়েছে!`);
+			} else {
+				showToast(`ক্যারোসেল ডুপ্লিকেট হয়েছে!`);
+			}
+		} catch (e) {
+			console.error(e);
+		}
+	}
+
+	async function handleDelete(item: CarouselItem) {
+		const confirmed = await confirmModal({
+			title: 'ক্যারোসেল মুছে ফেলা',
+			message: `আপনি কি "${item.name}" মুছতে চান?`,
+			confirmText: 'হ্যাঁ, মুছে ফেলুন',
+			variant: 'destructive',
+			icon: 'trash'
+		});
+		if (!confirmed) return;
+
+		carousels = carousels.filter((c) => c.id !== item.id);
+		selectedIds = selectedIds.filter((id) => id !== item.id);
+		showToast(`ক্যারোসেল মুছে ফেলা হয়েছে`);
+
+		try {
+			const fd = new FormData();
+			fd.append('id', item.id);
+			await fetch('?/deleteCarousel', {
+				method: 'POST',
+				body: fd
+			});
+		} catch (e) {
+			console.error(e);
 		}
 	}
 </script>
@@ -197,14 +278,6 @@
 <svelte:head>
 	<title>Carousel - Customization - AURA Admin</title>
 </svelte:head>
-
-<!-- Toast Alert -->
-{#if toastMessage}
-	<div class="fixed top-20 right-6 z-50 flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-2xl shadow-xl text-xs font-semibold animate-in slide-in-from-top-2 duration-200">
-		<CheckCircle2 class="w-4 h-4 text-emerald-400" />
-		<span>{toastMessage}</span>
-	</div>
-{/if}
 
 <div class="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
 	<!-- Top Controls Row (Search Left, + Add Carousel Right) -->
@@ -223,14 +296,13 @@
 		</div>
 
 		<!-- + Add Carousel Button -->
-		<button
-			type="button"
-			onclick={openAddModal}
+		<a
+			href="/admin/customization/edit-carousel/new"
 			class="rounded-xl bg-[#5845eb] hover:bg-[#4936d6] text-white px-4 py-2.5 text-xs font-bold flex items-center gap-1.5 shadow-md shadow-indigo-500/25 transition-all cursor-pointer active:scale-95 shrink-0"
 		>
 			<Plus class="w-4 h-4 stroke-[2.5]" />
 			<span>Add Carousel</span>
-		</button>
+		</a>
 	</div>
 
 	<!-- Filter Tabs Capsule (All Data [3], Publish [3], Draft [0], Low Stock [3], Trash [0]) -->
@@ -245,7 +317,7 @@
 			>
 				<span>All Data</span>
 				<span class="px-1.5 py-0.2 rounded-full text-[10px] font-black {activeTab === 'all' ? 'bg-[#5845eb] text-white' : 'bg-slate-200/80 text-slate-700'}">
-					3
+					{allCount}
 				</span>
 			</button>
 
@@ -258,7 +330,7 @@
 			>
 				<span>Publish</span>
 				<span class="px-1.5 py-0.2 rounded-full text-[10px] font-black {activeTab === 'publish' ? 'bg-[#5845eb] text-white' : 'bg-slate-200/80 text-slate-700'}">
-					3
+					{publishCount}
 				</span>
 			</button>
 
@@ -271,7 +343,7 @@
 			>
 				<span>Draft</span>
 				<span class="px-1.5 py-0.2 rounded-full text-[10px] font-black {activeTab === 'draft' ? 'bg-[#5845eb] text-white' : 'bg-slate-200/80 text-slate-700'}">
-					0
+					{draftCount}
 				</span>
 			</button>
 
@@ -304,7 +376,7 @@
 	</div>
 
 	<!-- Carousel Table Card (Exact match to Screenshot 1) -->
-	<div class="bg-white border border-slate-200/90 rounded-3xl shadow-xs overflow-hidden">
+	<div class="bg-white border border-slate-200/90 rounded-3xl shadow-xs overflow-hidden min-h-[260px]">
 		<div class="overflow-x-auto no-scrollbar">
 			<table class="w-full text-left border-collapse">
 				<thead>
@@ -329,7 +401,7 @@
 				</thead>
 
 				<tbody class="divide-y divide-slate-100 text-slate-700 text-xs font-medium">
-					{#each filteredCarousels as item}
+					{#each filteredCarousels as item, index (item.id)}
 						{@const isSelected = selectedIds.includes(item.id)}
 						<tr class="hover:bg-slate-50/70 transition-colors {isSelected ? 'bg-indigo-50/30' : ''}">
 							<!-- Checkbox -->
@@ -389,26 +461,26 @@
 								</button>
 
 								{#if activeActionId === item.id}
-									<div class="absolute right-6 top-12 w-36 bg-white border border-slate-200/90 rounded-2xl shadow-xl py-1.5 z-50 text-xs font-medium text-left animate-in fade-in zoom-in-95 duration-100">
-										<button
-											type="button"
-											onclick={() => {
-												openEditModal(item);
-												activeActionId = null;
-											}}
-											class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer"
+									<div class="absolute right-6 {index >= filteredCarousels.length - 2 && filteredCarousels.length > 2 ? 'bottom-12 top-auto origin-bottom-right' : 'top-12'} w-36 bg-white border border-slate-200/90 rounded-2xl shadow-xl py-1.5 z-50 text-xs font-medium text-left animate-in fade-in zoom-in-95 duration-100">
+										<a
+											href="/admin/customization/edit-carousel/{item.id}"
+											class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"
 										>
 											<Edit3 class="w-3.5 h-3.5 text-slate-400" />
 											<span>Edit</span>
+										</a>
+										<button
+											type="button"
+											onclick={() => handleDuplicate(item)}
+											class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"
+										>
+											<Copy class="w-3.5 h-3.5 text-slate-400" />
+											<span>Duplicate</span>
 										</button>
 										<button
 											type="button"
-											onclick={() => {
-												item.status = item.status === 'PUBLISH' ? 'DRAFT' : 'PUBLISH';
-												activeActionId = null;
-												showToast(`স্ট্যাটাস পরিবর্তন হয়েছে`);
-											}}
-											class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer"
+											onclick={() => handleToggleStatus(item)}
+											class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"
 										>
 											<Eye class="w-3.5 h-3.5 text-slate-400" />
 											<span>Toggle Status</span>

@@ -4,40 +4,44 @@ import * as schema from '#lib/server/db/schema';
 import { eq, or } from 'drizzle-orm';
 import { ProductService } from '#lib/server/services/product.service';
 import { MediaService } from '#lib/server/services/media.service';
+import { CategoryService } from '#lib/server/services/category.service';
 import { fail } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ params, parent, platform }) => {
 	const layoutData = await parent();
 	let foundProduct: any = null;
 	let galleryImages: any[] = [];
+	let taxonomyTree: any[] = [];
 
-	if (platform?.env?.DB) {
-		try {
-			const db = getDb(platform.env.DB);
-			const row = await db
+	try {
+		const db = getDb(platform);
+		const [row, mediaList, tree] = await Promise.all([
+			db
 				.select()
 				.from(schema.products)
 				.where(or(eq(schema.products.id, params.id), eq(schema.products.slug, params.id)))
-				.get();
+				.get(),
+			MediaService.listMedia(db, { limit: 60 }),
+			CategoryService.getTaxonomyTree(db)
+		]);
 
-			if (row) {
-				foundProduct = { ...row };
-				if (row.galleryImages) {
-					try {
-						foundProduct.images = JSON.parse(row.galleryImages);
-					} catch {
-						foundProduct.images = [row.image];
-					}
-				} else {
+		galleryImages = mediaList || [];
+		taxonomyTree = tree || [];
+
+		if (row) {
+			foundProduct = { ...row };
+			if (row.galleryImages) {
+				try {
+					foundProduct.images = JSON.parse(row.galleryImages);
+				} catch {
 					foundProduct.images = [row.image];
 				}
+			} else {
+				foundProduct.images = [row.image];
 			}
-
-			// Preload gallery images for picker
-			galleryImages = await MediaService.listMedia(db, { limit: 60 });
-		} catch (e) {
-			console.error('Failed to query product from D1:', e);
 		}
+	} catch (e) {
+		console.error('Failed to query product/taxonomy from D1:', e);
 	}
 
 	if (!foundProduct && Array.isArray(layoutData?.products)) {
@@ -51,7 +55,8 @@ export const load: PageServerLoad = async ({ params, parent, platform }) => {
 	return {
 		product: foundProduct,
 		productId: params.id,
-		galleryImages
+		galleryImages,
+		taxonomyTree
 	};
 };
 

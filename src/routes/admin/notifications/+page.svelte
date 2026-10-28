@@ -1,5 +1,6 @@
-﻿<script lang="ts">
-	import { Button, Input, Card, Badge } from '#lib/components/ui';
+<script lang="ts">
+	import { onMount } from 'svelte';
+	import { invalidateAll } from '$app/navigation';
 	import {
 		Bell,
 		CheckCircle2,
@@ -7,108 +8,118 @@
 		ShoppingBag,
 		Truck,
 		AlertTriangle,
-		ShieldCheck,
-		Zap,
 		Trash2,
 		CheckCheck,
-		Filter,
 		Search,
-		ExternalLink,
-		Settings,
 		ChevronRight,
-		SlidersHorizontal
+		Volume2,
+		VolumeX,
+		Music,
+		RotateCw
 	} from 'lucide-svelte';
+	import {
+		playNotificationSound,
+		testNotificationSound,
+		isSoundEnabled,
+		setSoundEnabled
+	} from '#lib/utils/notificationSound';
+	import { confirmModal } from '#lib/stores/confirm.svelte';
+	import { toast } from 'svelte-sonner';
+
+	let { data } = $props();
+
+	// Live D1 Notifications State
+	let notifications = $state<any[]>(data?.notifications || []);
+	let isRefreshing = $state(false);
+
+	$effect(() => {
+		notifications = data?.notifications || [];
+	});
+
+	// Sound Alert State
+	let soundEnabled = $state(true);
+
+	onMount(() => {
+		soundEnabled = isSoundEnabled();
+	});
+
+	function toggleSound() {
+		soundEnabled = !soundEnabled;
+		setSoundEnabled(soundEnabled);
+		if (soundEnabled) {
+			testNotificationSound();
+			showToast('🔔 নোটিফিকেশন সাউন্ড চালু করা হয়েছে');
+		} else {
+			showToast('🔕 নোটিফিকেশন সাউন্ড বন্ধ (Mute) করা হয়েছে');
+		}
+	}
+
+	function handleTestSound() {
+		testNotificationSound();
+		showToast('🎶 নোটিফিকেশন অ্যালার্ট সাউন্ড টেস্ট বাজানো হয়েছে');
+	}
 
 	// Filter Tabs: 'all' | 'unread' | 'order' | 'courier' | 'system'
 	let activeFilter = $state<'all' | 'unread' | 'order' | 'courier' | 'system'>('all');
 	let searchQuery = $state('');
 
-	// Notifications State
-	let notifications = $state([
-		{
-			id: 'notif-1',
-			title: 'নতুন ওয়েবসাইট অর্ডার #AUR-9842 প্রাপ্ত হয়েছে',
-			description: 'কাস্টমার সাইদুর রহমান ২ টি আইটেম অর্ডার করেছেন। মোট বিল: ৳৩,৯৫০ (ক্যাশ অন ডেলিভারি)।',
-			category: 'order',
-			time: '১০ মিনিট আগে',
-			timestamp: '২২ অক্টো, ২০২৬ - ০৯:৪৫ PM',
-			isRead: false,
-			link: '/admin/orders',
-			linkLabel: 'অর্ডার দেখুন'
-		},
-		{
-			id: 'notif-2',
-			title: 'Steadfast কুরিয়ার পার্সেল ডেলিভারি সম্পন্ন',
-			description: 'ট্র্যাকিং নম্বর CID-884920 সফলভাবে ডেলিভারি হয়েছে। টাকা অ্যাকাউন্টে জমা হয়েছে।',
-			category: 'courier',
-			time: '২৫ মিনিট আগে',
-			timestamp: '২২ অক্টো, ২০২৬ - ০৯:৩০ PM',
-			isRead: false,
-			link: '/admin/orders/list',
-			linkLabel: 'ট্র্যাকিং হিস্ট্রি'
-		},
-		{
-			id: 'notif-3',
-			title: 'স্টক অ্যালার্ট: AURA Spectrum X অবশিষ্ট মাত্র ৪ টি',
-			description: 'ইনভেন্টরিতে স্টক কমে এসেছে। দ্রুত নতুন ব্যাচ রি-স্টক করার অনুরোধ করা হচ্ছে।',
-			category: 'system',
-			time: '১ ঘণ্টা আগে',
-			timestamp: '২২ অক্টো, ২০২৬ - ০৮:৫৫ PM',
-			isRead: false,
-			link: '/admin/orders',
-			linkLabel: 'ইনভেন্টরি চেক'
-		},
-		{
-			id: 'notif-4',
-			title: 'Meta Conversions API (CAPI) ইভেন্ট সফলভাবে সিঙ্ক হয়েছে',
-			description: 'গত ২৪ ঘণ্টায় ১,২৪০ টি Purchase ও AddToCart ইভেন্ট মেটাতে সফলভাবে পাঠানো হয়েছে।',
-			category: 'system',
-			time: '২ ঘণ্টা আগে',
-			timestamp: '২২ অক্টো, ২০২৬ - ০৭:৫০ PM',
-			isRead: false,
-			link: '/admin/settings/facebook-pixel',
-			linkLabel: 'পিক্সেল সেটিংস'
-		},
-		{
-			id: 'notif-5',
-			title: 'নতুন কাস্টমার রিভিউ যোগ হয়েছে (#REV-819)',
-			description: 'Sarah Chen আপনার পণ্যে ৫-স্টার রেটিং দিয়ে নতুন রিভিউ পোস্ট করেছেন।',
-			category: 'order',
-			time: '৫ ঘণ্টা আগে',
-			timestamp: '২২ অক্টো, ২০২৬ - ০৪:৩০ PM',
-			isRead: true,
-			link: '/admin',
-			linkLabel: 'ড্যাশবোর্ড'
-		},
-		{
-			id: 'notif-6',
-			title: 'Pathao কুরিয়ার এপিআই কানেকশন টেস্ট সফল',
-			description: 'পাথাও কুরিয়ার মার্চেন্ট টোকেন ভ্যালিডেশন সফলভাবে সম্পন্ন হয়েছে।',
-			category: 'courier',
-			time: 'গতকাল - ১১:১৫ PM',
-			timestamp: '২১ অক্টো, ২০২৬ - ১১:১৫ PM',
-			isRead: true,
-			link: '/admin/settings/courier',
-			linkLabel: 'কুরিয়ার পেজ'
-		},
-		{
-			id: 'notif-7',
-			title: 'অ্যাডমিন প্রোফাইল সিকিউরিটি লগইন যাচাই',
-			description: 'আইপি 103.145.72.19 থেকে সফলভাবে অ্যাডমিন প্যানেলে লগইন সম্পন্ন হয়েছে।',
-			category: 'system',
-			time: 'গতকাল - ০২:০০ PM',
-			timestamp: '২১ অক্টো, ২০২৬ - ০২:০০ PM',
-			isRead: true,
-			link: '/admin/profile',
-			linkLabel: 'প্রোফাইল'
-		}
-	]);
-
-	// Toast Feedback
-	let toastMessage = $state<string | null>(null);
 	function showToast(msg: string) {
-		toastMessage = msg;
-		setTimeout(() => (toastMessage = null), 2500);
+		toast.success(msg);
+	}
+
+	// Counts
+	let unreadCount = $derived(notifications.filter((n) => !n.isRead).length);
+	let orderCount = $derived(notifications.filter((n) => n.category === 'order').length);
+	let courierCount = $derived(notifications.filter((n) => n.category === 'courier').length);
+	let systemCount = $derived(notifications.filter((n) => n.category === 'system').length);
+
+	// Bengali Number & Date Formatters
+	function toBengaliNumber(val: number | string): string {
+		const digits: Record<string, string> = {
+			'0': '০', '1': '১', '2': '২', '3': '৩', '4': '৪',
+			'5': '৫', '6': '৬', '7': '৭', '8': '৮', '9': '৯'
+		};
+		return String(val).replace(/\d/g, (d) => digits[d] || d);
+	}
+
+	function formatRelativeTime(dateInput: any): string {
+		if (!dateInput) return 'সম্প্রতি';
+		const date = new Date(dateInput);
+		if (isNaN(date.getTime())) return 'সম্প্রতি';
+		const now = Date.now();
+		const diffMs = now - date.getTime();
+		const diffSec = Math.floor(diffMs / 1000);
+		const diffMin = Math.floor(diffSec / 60);
+		const diffHour = Math.floor(diffMin / 60);
+		const diffDay = Math.floor(diffHour / 24);
+
+		if (diffSec < 45) return 'এইমাত্র';
+		if (diffMin < 60) return `${toBengaliNumber(diffMin)} মিনিট আগে`;
+		if (diffHour < 24) return `${toBengaliNumber(diffHour)} ঘণ্টা আগে`;
+		if (diffDay === 1) return 'গতকাল';
+		if (diffDay < 7) return `${toBengaliNumber(diffDay)} দিন আগে`;
+		return date.toLocaleDateString('bn-BD', { day: 'numeric', month: 'short', year: 'numeric' });
+	}
+
+	function formatFullTimestamp(dateInput: any): string {
+		if (!dateInput) return '';
+		const date = new Date(dateInput);
+		if (isNaN(date.getTime())) return '';
+		return date.toLocaleString('bn-BD', {
+			day: 'numeric',
+			month: 'short',
+			year: 'numeric',
+			hour: '2-digit',
+			minute: '2-digit',
+			hour12: true
+		});
+	}
+
+	function getLinkLabel(notif: any): string {
+		if (notif.category === 'order') return 'অর্ডার দেখুন';
+		if (notif.category === 'courier') return 'কুরিয়ার হিস্ট্রি';
+		if (notif.category === 'system') return 'সিস্টেম লগ';
+		return 'বিস্তারিত দেখুন';
 	}
 
 	// Filtered Notifications
@@ -124,34 +135,92 @@
 			const matchesSearch =
 				searchQuery === ''
 					? true
-					: n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-						n.description.toLowerCase().includes(searchQuery.toLowerCase());
+					: (n.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+						(n.description || '').toLowerCase().includes(searchQuery.toLowerCase());
 
 			return matchesFilter && matchesSearch;
 		})
 	);
 
-	let unreadCount = $derived(notifications.filter((n) => !n.isRead).length);
+	// Action Handlers
+	async function markAsRead(id: string) {
+		const target = notifications.find((n) => n.id === id);
+		if (!target || target.isRead) return;
 
-	function markAsRead(id: string) {
+		// Optimistic update
 		notifications = notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n));
+
+		try {
+			const fd = new FormData();
+			fd.append('id', id);
+			await fetch('?/markAsRead', { method: 'POST', body: fd });
+			await invalidateAll();
+		} catch (e) {
+			console.error('Failed to mark notification as read:', e);
+		}
 	}
 
-	function markAllAsRead() {
+	async function markAllAsRead() {
+		if (unreadCount === 0) return;
+		// Optimistic update
 		notifications = notifications.map((n) => ({ ...n, isRead: true }));
 		showToast('সব নোটিফিকেশন পড়া হয়েছে হিসেবে চিহ্নিত করা হয়েছে');
+
+		try {
+			const fd = new FormData();
+			await fetch('?/markAllAsRead', { method: 'POST', body: fd });
+			await invalidateAll();
+		} catch (e) {
+			console.error('Failed to mark all as read:', e);
+		}
 	}
 
-	function deleteNotification(id: string) {
+	async function deleteNotification(id: string) {
+		// Optimistic update
 		notifications = notifications.filter((n) => n.id !== id);
 		showToast('নোটিফিকেশন মুছে ফেলা হয়েছে');
+
+		try {
+			const fd = new FormData();
+			fd.append('id', id);
+			await fetch('?/deleteNotification', { method: 'POST', body: fd });
+			await invalidateAll();
+		} catch (e) {
+			console.error('Failed to delete notification:', e);
+		}
 	}
 
-	function clearAll() {
-		if (confirm('আপনি কি সব নোটিফিকেশন মুছে ফেলতে চান?')) {
-			notifications = [];
-			showToast('সব নোটিফিকেশন ক্লিয়ার করা হয়েছে');
+	async function clearAll() {
+		if (notifications.length === 0) return;
+		const confirmed = await confirmModal({
+			title: 'সব নোটিফিকেশন মুছুন',
+			message: 'আপনি কি নিশ্চিত যে সব নোটিফিকেশন মুছে ফেলতে চান? এটি আর ফিরিয়ে আনা যাবে না!',
+			confirmText: 'হ্যাঁ, সব মুছুন',
+			variant: 'destructive',
+			icon: 'trash'
+		});
+		if (!confirmed) return;
+
+		// Optimistic update
+		notifications = [];
+		showToast('সব নোটিফিকেশন ক্লিয়ার করা হয়েছে');
+
+		try {
+			const fd = new FormData();
+			await fetch('?/clearAll', { method: 'POST', body: fd });
+			await invalidateAll();
+		} catch (e) {
+			console.error('Failed to clear notifications:', e);
 		}
+	}
+
+	async function refreshNotifications() {
+		isRefreshing = true;
+		await invalidateAll();
+		setTimeout(() => {
+			isRefreshing = false;
+			showToast('নোটিফিকেশন তালিকা আপডেট করা হয়েছে');
+		}, 300);
 	}
 </script>
 
@@ -159,47 +228,82 @@
 	<title>নোটিফিকেশন সেন্টার | Notifications</title>
 </svelte:head>
 
-<!-- Toast Alert -->
-{#if toastMessage}
-	<div class="fixed bottom-24 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-3 duration-200 text-xs font-bold">
-		<CheckCircle2 class="w-4 h-4 text-emerald-400" />
-		<span>{toastMessage}</span>
-	</div>
-{/if}
-
 <div class="max-w-5xl mx-auto space-y-6 font-['Anek_Bangla',sans-serif]">
 	
 	<!-- Top Header Banner -->
 	<div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 		<div class="flex items-center gap-3.5">
-			<div class="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#5845eb] shadow-2xs relative">
+			<div class="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#5845eb] shadow-2xs relative shrink-0">
 				<Bell class="w-6 h-6" />
 				{#if unreadCount > 0}
-					<span class="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white">
-						{unreadCount}
+					<span class="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-xs">
+						{toBengaliNumber(unreadCount)}
 					</span>
 				{/if}
 			</div>
 			<div>
-				<div class="flex items-center gap-2">
+				<div class="flex items-center gap-2 flex-wrap">
 					<h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">নোটিফিকেশন সেন্টার</h2>
 					{#if unreadCount > 0}
 						<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-600 border border-rose-200">
-							{unreadCount} টি নতুন
+							{toBengaliNumber(unreadCount)} টি অপঠিত
+						</span>
+					{:else}
+						<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
+							সব আপডেট সম্পন্ন
 						</span>
 					{/if}
 				</div>
-				<p class="text-xs text-slate-500 mt-0.5">আপনার শপের নতুন অর্ডার, কুরিয়ার স্ট্যাটাস ও সিস্টেম সতর্কতা</p>
+				<p class="text-xs text-slate-500 mt-0.5">রিয়েল-টাইম নতুন ওয়েবসাইট অর্ডার, কুরিয়ার আপডেট ও সিস্টেম নিরাপত্তা সতর্কতা</p>
 			</div>
 		</div>
 
-		<!-- Action Buttons -->
+		<!-- Action Controls -->
 		<div class="flex items-center gap-2 flex-wrap">
+			<!-- Sound Toggle Button -->
+			<button
+				type="button"
+				onclick={toggleSound}
+				class="px-3 py-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs {soundEnabled
+					? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+					: 'bg-slate-100 border-slate-200 text-slate-500 hover:bg-slate-200'}"
+				title={soundEnabled ? 'নোটিফিকেশন সাউন্ড চালু আছে (ক্লিক করে মিউট করুন)' : 'নোটিফিকেশন সাউন্ড বন্ধ আছে (ক্লিক করে অন করুন)'}
+			>
+				{#if soundEnabled}
+					<Volume2 class="w-4 h-4 text-emerald-600 animate-pulse" />
+					<span>সাউন্ড চালু</span>
+				{:else}
+					<VolumeX class="w-4 h-4 text-slate-400" />
+					<span>সাউন্ড বন্ধ</span>
+				{/if}
+			</button>
+
+			<!-- Sound Test Button -->
+			<button
+				type="button"
+				onclick={handleTestSound}
+				class="px-3 py-2 rounded-xl border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100/90 text-[#5845eb] text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+				title="নোটিফিকেশন সাউন্ড প্রিভিউ শুনুন"
+			>
+				<Music class="w-3.5 h-3.5" />
+				<span class="hidden sm:inline">সাউন্ড টেস্ট</span>
+			</button>
+
+			<!-- Refresh Button -->
+			<button
+				type="button"
+				onclick={refreshNotifications}
+				class="w-9 h-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+				title="রিফ্রেশ করুন"
+			>
+				<RotateCw class="w-4 h-4 {isRefreshing ? 'animate-spin text-[#5845eb]' : ''}" />
+			</button>
+
 			{#if unreadCount > 0}
 				<button
 					type="button"
 					onclick={markAllAsRead}
-					class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+					class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
 				>
 					<CheckCheck class="w-4 h-4 text-indigo-600" />
 					<span>সব পড়া হয়েছে</span>
@@ -210,7 +314,7 @@
 				<button
 					type="button"
 					onclick={clearAll}
-					class="px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-rose-50 hover:text-rose-600 text-slate-600 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+					class="px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-rose-50 hover:text-rose-600 text-slate-600 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
 				>
 					<Trash2 class="w-3.5 h-3.5" />
 					<span>ক্লিয়ার করুন</span>
@@ -242,7 +346,7 @@
 					? 'bg-[#5845eb] text-white shadow-xs'
 					: 'bg-slate-100 text-slate-600 hover:bg-slate-200'}"
 			>
-				সবগুলো ({notifications.length})
+				সবগুলো ({toBengaliNumber(notifications.length)})
 			</button>
 
 			<button
@@ -252,7 +356,7 @@
 					? 'bg-[#5845eb] text-white shadow-xs'
 					: 'bg-slate-100 text-slate-600 hover:bg-slate-200'}"
 			>
-				নতুন / অপঠিত ({unreadCount})
+				নতুন / অপঠিত ({toBengaliNumber(unreadCount)})
 			</button>
 
 			<button
@@ -262,7 +366,7 @@
 					? 'bg-[#5845eb] text-white shadow-xs'
 					: 'bg-slate-100 text-slate-600 hover:bg-slate-200'}"
 			>
-				অর্ডার আপডেট
+				অর্ডার আপডেট ({toBengaliNumber(orderCount)})
 			</button>
 
 			<button
@@ -272,7 +376,7 @@
 					? 'bg-[#5845eb] text-white shadow-xs'
 					: 'bg-slate-100 text-slate-600 hover:bg-slate-200'}"
 			>
-				কুরিয়ার ও ট্র্যাকিং
+				কুরিয়ার ও ট্র্যাকিং ({toBengaliNumber(courierCount)})
 			</button>
 
 			<button
@@ -282,7 +386,7 @@
 					? 'bg-[#5845eb] text-white shadow-xs'
 					: 'bg-slate-100 text-slate-600 hover:bg-slate-200'}"
 			>
-				সিস্টেম ও সিকিউরিটি
+				সিস্টেম ও সিকিউরিটি ({toBengaliNumber(systemCount)})
 			</button>
 		</div>
 
@@ -331,19 +435,21 @@
 									{notif.title}
 								</h4>
 								{#if !notif.isRead}
-									<span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+									<span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse shrink-0"></span>
 								{/if}
 							</div>
 							<p class="text-xs text-slate-600 leading-relaxed">
 								{notif.description}
 							</p>
-							<div class="flex items-center gap-3 text-[11px] text-slate-400 pt-1">
+							<div class="flex items-center gap-3 text-[11px] text-slate-400 pt-1 flex-wrap">
 								<span class="flex items-center gap-1 font-medium text-slate-500">
 									<Clock class="w-3.5 h-3.5" />
-									<span>{notif.time}</span>
+									<span>{formatRelativeTime(notif.createdAt)}</span>
 								</span>
-								<span>•</span>
-								<span>{notif.timestamp}</span>
+								{#if notif.createdAt}
+									<span>•</span>
+									<span>{formatFullTimestamp(notif.createdAt)}</span>
+								{/if}
 							</div>
 						</div>
 					</div>
@@ -351,10 +457,10 @@
 					<!-- Right Action Buttons -->
 					<div class="flex items-center gap-2 shrink-0 sm:self-center pl-13 sm:pl-0">
 						<a
-							href={notif.link}
+							href={notif.link || '/admin/orders'}
 							class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 text-xs font-bold text-slate-700 flex items-center gap-1 shadow-2xs transition-colors"
 						>
-							<span>{notif.linkLabel}</span>
+							<span>{getLinkLabel(notif)}</span>
 							<ChevronRight class="w-3.5 h-3.5" />
 						</a>
 
@@ -364,7 +470,7 @@
 								e.stopPropagation();
 								deleteNotification(notif.id);
 							}}
-							class="w-8 h-8 rounded-xl border border-slate-200 bg-white hover:bg-rose-50 hover:text-rose-600 flex items-center justify-center text-slate-400 transition-colors cursor-pointer"
+							class="w-8 h-8 rounded-xl border border-slate-200 bg-white hover:bg-rose-50 hover:text-rose-600 flex items-center justify-center text-slate-400 transition-colors cursor-pointer shadow-2xs"
 							title="মুছে ফেলুন"
 						>
 							<Trash2 class="w-3.5 h-3.5" />

@@ -1,5 +1,6 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import { Button, Input, Card, Badge, Dialog } from '#lib/components/ui';
+	import { toast } from 'svelte-sonner';
 	import {
 		MessageSquare,
 		Ticket,
@@ -107,16 +108,14 @@
 	]);
 
 	// Toast Feedback
-	let toastMessage = $state<string | null>(null);
 	function showToast(msg: string) {
-		toastMessage = msg;
-		setTimeout(() => (toastMessage = null), 3000);
+		toast.success(msg);
 	}
 
 	function handleCreateTicket(e: Event) {
 		e.preventDefault();
 		if (!ticketSubject.trim()) {
-			alert('দয়া করে টিকেটের বিষয় লিখুন');
+			toast.warning('দয়া করে টিকেটের বিষয় লিখুন');
 			return;
 		}
 
@@ -166,14 +165,6 @@
 <svelte:head>
 	<title>Support Center | AURA Executive Panel</title>
 </svelte:head>
-
-<!-- Toast Notification -->
-{#if toastMessage}
-	<div class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-3 duration-300">
-		<CheckCircle2 class="w-5 h-5 text-emerald-400" />
-		<span class="text-sm font-semibold">{toastMessage}</span>
-	</div>
-{/if}
 
 <div class="space-y-6 max-w-7xl mx-auto font-['Anek_Bangla',sans-serif]">
 

@@ -3,17 +3,36 @@ import { fail } from '@sveltejs/kit';
 import { getDb } from '#lib/server/db/index';
 import { OrderService } from '#lib/server/services/order.service';
 import { addLiveOrder } from '#lib/server/orders-store';
+import { ThemeCustomizationService } from '#lib/server/services/theme-customization.service';
 
 export const load: PageServerLoad = async (event) => {
+	const parentData = await event.parent();
+	const themeConfig = parentData.themeConfig;
+	const isLoginRequired = themeConfig?.pageViews?.checkout === 'checkout_1';
+
 	return {
-		user: event.locals.user ?? null
+		user: event.locals.user ?? null,
+		isLoginRequired,
+		activeCheckout: themeConfig?.pageViews?.checkout || 'checkout_2'
 	};
 };
 
 import fs from 'node:fs';
 
-async function handlePlaceOrderAction({ request, platform, getClientAddress }: any) {
+async function handlePlaceOrderAction({ request, platform, getClientAddress, locals }: any) {
 	try {
+		const db = getDb(platform);
+
+		// Check if checkout requires member login
+		try {
+			const themeConfig = await ThemeCustomizationService.getThemeConfig(db);
+			if (themeConfig?.pageViews?.checkout === 'checkout_1' && !locals?.user) {
+				return fail(401, { message: 'এই স্টোরে অর্ডার সম্পন্ন করতে অ্যাকাউন্টে লগইন থাকা আবশ্যক।' });
+			}
+		} catch (err) {
+			console.error('Theme check error in checkout:', err);
+		}
+
 		const formData = await request.formData();
 
 		const customerName = formData.get('customerName')?.toString()?.trim() || '';

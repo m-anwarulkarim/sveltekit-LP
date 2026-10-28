@@ -32,7 +32,8 @@ export const landingPages = sqliteTable(
 	},
 	(table) => [
 		uniqueIndex('landing_slug_uidx').on(table.slug),
-		index('landing_status_idx').on(table.status)
+		index('landing_status_idx').on(table.status),
+		index('landing_product_idx').on(table.productId)
 	]
 );
 

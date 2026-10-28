@@ -77,6 +77,13 @@
 		e.preventDefault();
 		errorMessage = '';
 
+		if (data.isLoginRequired && !data.user) {
+			console.log('[DEBUG] Login required for checkout');
+			errorMessage = 'এই স্টোরে অর্ডার সম্পন্ন করতে অ্যাকাউন্টে লগইন থাকা আবশ্যক।';
+			goto('/account?redirectTo=/checkout');
+			return;
+		}
+
 		if (!name.trim()) {
 			console.log('[DEBUG] Name missing');
 			errorMessage = 'অনুগ্রহ করে আপনার নাম লিখুন।';
@@ -285,6 +292,48 @@
 								{errorMessage}
 							</AlertDescription>
 						</Alert>
+					{/if}
+
+					<!-- Member-First Login Required Gate (if checkout_1 is active in theme settings) -->
+					{#if data.isLoginRequired && !data.user}
+						<Card class="rounded-2xl sm:rounded-3xl border-rose-200 bg-rose-50/40 p-5 sm:p-6 shadow-xs">
+							<div class="flex items-start gap-3.5">
+								<div class="w-10 h-10 rounded-2xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+									<Lock class="w-5 h-5" />
+								</div>
+								<div class="space-y-1.5 flex-1">
+									<div class="flex items-center gap-2">
+										<h4 class="text-sm font-bold text-slate-900">লগইন থাকা বাধ্যতামূলক</h4>
+										<span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-300">
+											LOGIN REQUIRED
+										</span>
+									</div>
+									<p class="text-xs text-slate-600 leading-relaxed">
+										এই স্টোরে অর্ডার সম্পন্ন করতে কাস্টমার অ্যাকাউন্টে লগইন থাকা আবশ্যক। মাত্র ৩০ সেকেন্ডে মোবাইল ওটিপি বা পাসওয়ার্ড দিয়ে লগইন করুন।
+									</p>
+									<div class="pt-2">
+										<Button
+											variant="default"
+											href="/account?redirectTo=/checkout"
+											class="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs h-9 px-4 rounded-xl shadow-xs inline-flex items-center gap-1.5"
+										>
+											<Lock class="w-3.5 h-3.5" />
+											<span>লগইন বা রেজিস্টার করুন</span>
+										</Button>
+									</div>
+								</div>
+							</div>
+						</Card>
+					{:else if data.user}
+						<div class="p-3.5 bg-emerald-50/80 border border-emerald-200/80 rounded-2xl flex items-center justify-between text-xs font-bold text-emerald-800 shadow-2xs">
+							<span class="flex items-center gap-2">
+								<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+								লগইনকৃত অ্যাকাউন্ট: {data.user.name || data.user.phone || data.user.email}
+							</span>
+							<span class="text-[10px] uppercase tracking-wider bg-white px-2 py-0.5 rounded-full border border-emerald-200 shadow-2xs">
+								VERIFIED MEMBER
+							</span>
+						</div>
 					{/if}
 
 					<!-- Section 1: Customer Delivery Info Card -->

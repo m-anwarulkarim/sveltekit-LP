@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Card, Input, Dialog } from '#lib/components/ui';
+	import { Button, Card, Input, Dialog, confirmSubmit } from '#lib/components/ui';
+	import { toast } from 'svelte-sonner';
 	import {
 		Search,
 		Folder,
@@ -29,13 +30,8 @@
 		}
 	});
 
-	// Toast state
-	let toastMessage = $state<string | null>(null);
 	function showToast(msg: string) {
-		toastMessage = msg;
-		setTimeout(() => {
-			toastMessage = null;
-		}, 3000);
+		toast.success(msg);
 	}
 
 	// Search & Filter State
@@ -142,14 +138,6 @@
 <svelte:head>
 	<title>My Gallery | সেন্ট্রালাইজড মিডিয়া লাইব্রেরি</title>
 </svelte:head>
-
-<!-- Toast Notification -->
-{#if toastMessage}
-	<div class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 border border-slate-800 animate-in fade-in slide-in-from-bottom-2">
-		<CheckCircle2 class="w-4 h-4 text-emerald-400 shrink-0" />
-		<span>{toastMessage}</span>
-	</div>
-{/if}
 
 <div class="space-y-6 pb-28 font-['Plus_Jakarta_Sans',sans-serif]">
 
@@ -286,10 +274,17 @@
 								use:enhance={() => {
 									const idToDelete = img.id;
 									galleryImages = galleryImages.filter((i) => i.id !== idToDelete);
-									showToast('ছবি সফলভাবে মুছে ফেলা হয়েছে!');
+									toast.success('ছবি সফলভাবে মুছে ফেলা হয়েছে!');
 									return async ({ update }) => {
 										await update();
 									};
+								}}
+								use:confirmSubmit={{
+									title: 'ছবি মুছে ফেলা',
+									message: 'আপনি কি নিশ্চিত এই ছবিটি গ্যালারি থেকে মুছে ফেলতে চান? এটি আর ফিরিয়ে আনা যাবে না!',
+									confirmText: 'হ্যাঁ, মুছে ফেলুন',
+									variant: 'destructive',
+									icon: 'trash'
 								}}
 								onclick={(e) => e.stopPropagation()}
 							>
@@ -299,11 +294,6 @@
 									class="p-1.5 rounded-lg bg-rose-500/90 text-white hover:bg-rose-600 transition-colors shadow-sm cursor-pointer"
 									title="ছবি ডিলিট করুন"
 									aria-label={`Delete ${img.name}`}
-									onclick={(e) => {
-										if (!confirm('আপনি কি নিশ্চিত এই ছবিটি গ্যালারি থেকে মুছে ফেলতে চান?')) {
-											e.preventDefault();
-										}
-									}}
 								>
 									<Trash2 class="w-3.5 h-3.5" />
 								</button>

@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { Button, Input, Badge } from '#lib/components/ui';
+	import { confirmModal } from '#lib/stores/confirm.svelte';
+	import { toast } from 'svelte-sonner';
 	import {
 		Search,
 		Plus,
@@ -22,7 +24,9 @@
 		status: 'PUBLISHED' | 'DRAFT';
 	}
 
-	let banners = $state<BannerItem[]>([
+	let { data }: { data?: any } = $props();
+
+	let banners = $state<BannerItem[]>(data?.banners || [
 		{
 			id: 'ban-1',
 			image: '/images/banners/banner-home.svg',
@@ -32,6 +36,12 @@
 			status: 'DRAFT'
 		}
 	]);
+
+	$effect(() => {
+		if (data?.banners) {
+			banners = [...data.banners];
+		}
+	});
 
 	let searchQuery = $state('');
 	let activeTab = $state<'all' | 'published' | 'draft' | 'trash'>('all');
@@ -47,13 +57,8 @@
 	let modalStatus = $state<'PUBLISHED' | 'DRAFT'>('DRAFT');
 	let modalImage = $state('/images/banners/banner-home.svg');
 
-	let toastMessage = $state<string | null>(null);
-
 	function showToast(msg: string) {
-		toastMessage = msg;
-		setTimeout(() => {
-			toastMessage = null;
-		}, 3000);
+		toast.success(msg);
 	}
 
 	function handleActionClick(id: string, e: MouseEvent) {
@@ -155,12 +160,19 @@
 		isModalOpen = false;
 	}
 
-	function handleDelete(item: BannerItem) {
-		if (confirm(`আপনি কি "${item.title}" ব্যানারটি মুছে ফেলতে চান?`)) {
-			banners = banners.filter((b) => b.id !== item.id);
-			selectedIds = selectedIds.filter((id) => id !== item.id);
-			showToast(`ব্যানারটি মুছে ফেলা হয়েছে`);
-		}
+	async function handleDelete(item: BannerItem) {
+		const confirmed = await confirmModal({
+			title: 'ব্যানার মুছে ফেলা',
+			message: `আপনি কি "${item.title}" ব্যানারটি মুছে ফেলতে চান?`,
+			confirmText: 'হ্যাঁ, মুছে ফেলুন',
+			variant: 'destructive',
+			icon: 'trash'
+		});
+		if (!confirmed) return;
+
+		banners = banners.filter((b) => b.id !== item.id);
+		selectedIds = selectedIds.filter((id) => id !== item.id);
+		showToast(`ব্যানারটি মুছে ফেলা হয়েছে`);
 	}
 </script>
 
@@ -169,14 +181,6 @@
 <svelte:head>
 	<title>Banner - Customization - AURA Admin</title>
 </svelte:head>
-
-<!-- Toast Alert -->
-{#if toastMessage}
-	<div class="fixed top-20 right-6 z-50 flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-2xl shadow-xl text-xs font-semibold animate-in slide-in-from-top-2 duration-200">
-		<CheckCircle2 class="w-4 h-4 text-emerald-400" />
-		<span>{toastMessage}</span>
-	</div>
-{/if}
 
 <div class="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
 	<!-- Top Search & Add Banner Row (Matches Screenshot 2) -->
@@ -201,14 +205,13 @@
 
 		<!-- + Add Banner Button -->
 		<div>
-			<Button
-				type="button"
-				onclick={openAddModal}
-				class="rounded-xl bg-[#5845eb] hover:bg-[#4936d6] text-white px-5 py-2.5 text-xs font-bold gap-1.5 shadow-md shadow-indigo-500/25 active:scale-95 shrink-0"
+			<a
+				href="/admin/customization/banner/edit-banner/new"
+				class="inline-flex items-center gap-1.5 rounded-xl bg-[#5845eb] hover:bg-[#4936d6] text-white px-5 py-2.5 text-xs font-bold shadow-md shadow-indigo-500/25 active:scale-95 shrink-0 transition-all cursor-pointer"
 			>
 				<Plus class="w-4 h-4 stroke-[2.5]" />
 				<span>Add Banner</span>
-			</Button>
+			</a>
 		</div>
 	</div>
 
@@ -270,7 +273,7 @@
 	</div>
 
 	<!-- Table Card (Exact match to Screenshot 2) -->
-	<div class="bg-white border border-slate-200/90 rounded-3xl shadow-xs overflow-hidden">
+	<div class="bg-white border border-slate-200/90 rounded-3xl shadow-xs overflow-hidden min-h-[260px]">
 		<div class="overflow-x-auto no-scrollbar">
 			<table class="w-full text-left border-collapse">
 				<thead>
@@ -294,7 +297,7 @@
 				</thead>
 
 				<tbody class="divide-y divide-slate-100 text-slate-700 text-xs font-medium">
-					{#each filteredBanners as item}
+					{#each filteredBanners as item, index (item.id)}
 						{@const isSelected = selectedIds.includes(item.id)}
 						<tr class="hover:bg-slate-50/70 transition-colors {isSelected ? 'bg-indigo-50/30' : ''}">
 							<!-- Checkbox -->
@@ -349,18 +352,14 @@
 								</button>
 
 								{#if activeActionId === item.id}
-									<div class="absolute right-6 top-12 w-36 bg-white border border-slate-200/90 rounded-2xl shadow-xl py-1.5 z-50 text-xs font-medium text-left animate-in fade-in zoom-in-95 duration-100">
-										<button
-											type="button"
-											onclick={() => {
-												openEditModal(item);
-												activeActionId = null;
-											}}
-											class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer"
+									<div class="absolute right-6 {index >= filteredBanners.length - 2 && filteredBanners.length > 2 ? 'bottom-12 top-auto origin-bottom-right' : 'top-12'} w-36 bg-white border border-slate-200/90 rounded-2xl shadow-xl py-1.5 z-50 text-xs font-medium text-left animate-in fade-in zoom-in-95 duration-100">
+										<a
+											href="/admin/customization/banner/edit-banner/{item.id}"
+											class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"
 										>
 											<Edit3 class="w-3.5 h-3.5 text-slate-400" />
 											<span>Edit</span>
-										</button>
+										</a>
 										<button
 											type="button"
 											onclick={() => {

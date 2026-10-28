@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <rect width="200" height="200" fill="white"/>
+  <ellipse cx="100" cy="180" rx="38" ry="7" fill="#e2e8f0"/>
+  <!-- Tube -->
+  <path d="M78 40 L 122 40 L 116 155 L 84 155 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <rect x="88" y="155" width="24" height="18" rx="2" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+  <!-- Korean/English text -->
+  <text x="100" y="68" text-anchor="middle" font-family="serif" font-weight="bold" font-size="6.5" fill="#1e293b">BEAUTY OF JOSEON</text>
+  <text x="100" y="82" text-anchor="middle" font-family="sans-serif" font-weight="900" font-size="7.5" fill="#b45309">Relief Sun</text>
+  <text x="100" y="92" text-anchor="middle" font-family="sans-serif" font-size="5" fill="#78350f">Rice + Probiotics</text>
+  <rect x="88" y="104" width="24" height="12" rx="2" fill="#fef3c7"/>
+  <text x="100" y="112" text-anchor="middle" font-family="sans-serif" font-weight="bold" font-size="5" fill="#d97706">SPF50+</text>
+</svg>

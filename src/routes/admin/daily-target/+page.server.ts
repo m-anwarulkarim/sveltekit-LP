@@ -1,0 +1,187 @@
+import type { PageServerLoad, Actions } from './$types';
+import { getDb } from '#lib/server/db/index';
+import { DailyTargetService } from '#lib/server/services/daily-target.service';
+
+export interface TargetViewItem {
+	id: string;
+	title: string;
+	startDate: string;
+	endDate: string;
+	targetAmount: number;
+	consumedAmount: number;
+	status: 'active' | 'upcoming' | 'completed';
+	createdAt?: Date | string | number | null;
+}
+
+export const load: PageServerLoad = async ({ parent, platform }) => {
+	const parentData = await parent();
+	let targets: TargetViewItem[] = [];
+
+	if (platform?.env?.DB) {
+		try {
+			const db = getDb(platform.env.DB);
+			const dbTargets = await DailyTargetService.listTargets(db);
+			targets = dbTargets || [];
+		} catch (error) {
+			console.error('Failed to load daily targets from D1:', error);
+		}
+	}
+
+	// Calculate summary metrics
+	const totalTargets = targets.length;
+	const activeTargets = targets.filter((t) => t.status === 'active').length;
+	const totalTargetAmount = targets.reduce((acc, t) => acc + (t.targetAmount || 0), 0);
+	const totalConsumedAmount = targets.reduce((acc, t) => acc + (t.consumedAmount || 0), 0);
+	const remainingAmount = Math.max(0, totalTargetAmount - totalConsumedAmount);
+	const overallPercent = totalTargetAmount > 0 ? Math.min(100, Math.round((totalConsumedAmount / totalTargetAmount) * 100)) : 0;
+
+	return {
+		...parentData,
+		targets,
+		summary: {
+			totalTargets,
+			activeTargets,
+			totalTargetAmount,
+			totalConsumedAmount,
+			remainingAmount,
+			overallPercent
+		}
+	};
+};
+
+export const actions: Actions = {
+	createTarget: async ({ request, platform }) => {
+		const data = await request.formData();
+		const title = data.get('title')?.toString()?.trim() || 'Daily Sales Target';
+		const startDate = data.get('startDate')?.toString()?.trim() || '';
+		const endDate = data.get('endDate')?.toString()?.trim() || '';
+		const targetAmountStr = data.get('targetAmount')?.toString()?.trim() || '0';
+		const targetAmount = parseFloat(targetAmountStr);
+
+		if (!startDate || !endDate) {
+			return { success: false, message: 'শুরুর তারিখ এবং সমাপ্তির তারিখ দেওয়া আবশ্যক!' };
+		}
+
+		if (isNaN(targetAmount) || targetAmount <= 0) {
+			return { success: false, message: 'সঠিক টার্গেট অ্যামাউন্ট লিখুন!' };
+		}
+
+		if (startDate > endDate) {
+			return { success: false, message: 'সমাপ্তির তারিখ শুরুর তারিখের আগের হতে পারে না!' };
+		}
+
+		if (platform?.env?.DB) {
+			try {
+				const db = getDb(platform.env.DB);
+				await DailyTargetService.createTarget(db, {
+					title,
+					startDate,
+					endDate,
+					targetAmount
+				});
+				return { success: true, message: `নতুন টার্গেট "${title}" সফলভাবে তৈরি হয়েছে!` };
+			} catch (error: any) {
+				console.error('Failed to create target in D1:', error);
+				return { success: false, message: error?.message || 'টার্গেট তৈরিতে ত্রুটি হয়েছে!' };
+			}
+		} else {
+			const today = new Date().toISOString().split('T')[0];
+			let status: 'active' | 'upcoming' | 'completed' = 'active';
+			if (startDate > today) status = 'upcoming';
+			else if (endDate < today) status = 'completed';
+
+			const newTarget: TargetViewItem = {
+				id: 'tgt-' + Date.now(),
+				title,
+				startDate,
+				endDate,
+				targetAmount,
+				consumedAmount: 0,
+				status
+			};
+			INITIAL_FALLBACK_TARGETS = [newTarget, ...INITIAL_FALLBACK_TARGETS];
+		}
+
+		return { success: true, message: `নতুন টার্গেট "${title}" সফলভাবে তৈরি হয়েছে!` };
+	},
+
+	updateTarget: async ({ request, platform }) => {
+		const data = await request.formData();
+		const id = data.get('id')?.toString()?.trim();
+		const title = data.get('title')?.toString()?.trim();
+		const startDate = data.get('startDate')?.toString()?.trim();
+		const endDate = data.get('endDate')?.toString()?.trim();
+		const targetAmountStr = data.get('targetAmount')?.toString()?.trim();
+		const status = data.get('status')?.toString()?.trim() as 'active' | 'upcoming' | 'completed' | undefined;
+
+		if (!id) {
+			return { success: false, message: 'টার্গেট আইডি পাওয়া যায়নি!' };
+		}
+
+		const targetAmount = targetAmountStr ? parseFloat(targetAmountStr) : undefined;
+		if (targetAmount !== undefined && (isNaN(targetAmount) || targetAmount <= 0)) {
+			return { success: false, message: 'সঠিক টার্গেট অ্যামাউন্ট লিখুন!' };
+		}
+
+		if (startDate && endDate && startDate > endDate) {
+			return { success: false, message: 'সমাপ্তির তারিখ শুরুর তারিখের আগের হতে পারে না!' };
+		}
+
+		if (platform?.env?.DB) {
+			try {
+				const db = getDb(platform.env.DB);
+				await DailyTargetService.updateTarget(db, id, {
+					title,
+					startDate,
+					endDate,
+					targetAmount,
+					status
+				});
+				return { success: true, message: 'টার্গেট সফলভাবে আপডেট করা হয়েছে!' };
+			} catch (error: any) {
+				console.error('Failed to update target in D1:', error);
+				return { success: false, message: error?.message || 'টার্গেট আপডেটে ত্রুটি হয়েছে!' };
+			}
+		} else {
+			INITIAL_FALLBACK_TARGETS = INITIAL_FALLBACK_TARGETS.map((t) => {
+				if (t.id === id) {
+					return {
+						...t,
+						title: title ?? t.title,
+						startDate: startDate ?? t.startDate,
+						endDate: endDate ?? t.endDate,
+						targetAmount: targetAmount ?? t.targetAmount,
+						status: status ?? t.status
+					};
+				}
+				return t;
+			});
+		}
+
+		return { success: true, message: 'টার্গেট সফলভাবে আপডেট করা হয়েছে!' };
+	},
+
+	deleteTarget: async ({ request, platform }) => {
+		const data = await request.formData();
+		const id = data.get('id')?.toString()?.trim();
+
+		if (!id) {
+			return { success: false, message: 'টার্গেট আইডি পাওয়া যায়নি!' };
+		}
+
+		if (platform?.env?.DB) {
+			try {
+				const db = getDb(platform.env.DB);
+				await DailyTargetService.deleteTarget(db, id);
+				return { success: true, message: 'টার্গেটটি সফলভাবে মুছে ফেলা হয়েছে।' };
+			} catch (error: any) {
+				console.error('Failed to delete target in D1:', error);
+				return { success: false, message: error?.message || 'টার্গেট মুছতে ত্রুটি হয়েছে!' };
+			}
+		} else {
+			INITIAL_FALLBACK_TARGETS = INITIAL_FALLBACK_TARGETS.filter((t) => t.id !== id);
+		}
+
+		return { success: true, message: 'টার্গেটটি সফলভাবে মুছে ফেলা হয়েছে।' };
+	}
+};

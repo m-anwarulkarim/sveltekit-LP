@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, Input, Card } from '#lib/components/ui';
+	import { Button, Input } from '#lib/components/ui';
 	import {
 		Search,
 		Calendar,
@@ -11,16 +11,27 @@
 		Plus,
 		CheckCircle2,
 		ShieldAlert,
-		X
+		X,
+		Loader2,
+		ShieldCheck
 	} from 'lucide-svelte';
 
-	let searchQuery = $state('');
-	let perPage = $state(10);
-	let isPerPageOpen = $state(false);
-	let currentPage = $state(1);
-	let totalPages = $state(4496);
-	let totalBlocked = $state(44958);
+	let { data }: { data?: any } = $props();
 
+	let blockedList = $state(data?.blockedList || []);
+	let totalBlocked = $state(data?.totalCount ?? 0);
+	let currentPage = $state(data?.currentPage ?? 1);
+	let perPage = $state(data?.perPage ?? 10);
+
+	// Synchronize when server data updates
+	$effect(() => {
+		blockedList = data?.blockedList ? [...data.blockedList] : [];
+		totalBlocked = data?.totalCount ?? 0;
+	});
+
+	let searchQuery = $state('');
+	let isPerPageOpen = $state(false);
+	let isSaving = $state(false);
 	let selectedIds = $state<string[]>([]);
 	let toastMessage = $state<string | null>(null);
 
@@ -35,98 +46,16 @@
 	let manualPhone = $state('');
 	let manualReason = $state('Suspected Fraudulent Orders');
 
-	// Initial Block List Data (Exact Match with Reference Screenshot)
-	let blockedList = $state([
-		{
-			id: '1',
-			sl: 1,
-			ipAddress: '2404:1c40:45b:9e22:18dd:246a:9f7c:92a2',
-			deviceId: '-',
-			phoneNo: '01811174567',
-			type: 'Auto Block After 1 Orders',
-			blockUntil: 'Oct 11, 2026, 5:14:56 AM',
-			date: 'Oct 11, 2026, 12:14:56 AM'
-		},
-		{
-			id: '2',
-			sl: 2,
-			ipAddress: '103.217.111.246',
-			deviceId: '-',
-			phoneNo: '01974142304',
-			type: 'Auto Block After 1 Orders',
-			blockUntil: 'Oct 11, 2026, 5:03:40 AM',
-			date: 'Oct 11, 2026, 12:03:40 AM'
-		},
-		{
-			id: '3',
-			sl: 3,
-			ipAddress: '103.75.138.13',
-			deviceId: '-',
-			phoneNo: '01856996410',
-			type: 'Auto Block After 1 Orders',
-			blockUntil: 'Oct 11, 2026, 4:52:13 AM',
-			date: 'Oct 10, 2026, 11:52:13 PM'
-		},
-		{
-			id: '4',
-			sl: 4,
-			ipAddress: '103.167.17.53',
-			deviceId: '-',
-			phoneNo: '+8801763172390',
-			type: 'Auto Block After 1 Orders',
-			blockUntil: 'Oct 11, 2026, 4:40:07 AM',
-			date: 'Oct 10, 2026, 11:40:07 PM'
-		},
-		{
-			id: '5',
-			sl: 5,
-			ipAddress: '103.159.72.71',
-			deviceId: '-',
-			phoneNo: '01862907227',
-			type: 'Auto Block After 1 Orders',
-			blockUntil: 'Oct 11, 2026, 4:38:24 AM',
-			date: 'Oct 10, 2026, 11:38:24 PM'
-		},
-		{
-			id: '6',
-			sl: 6,
-			ipAddress: '203.190.10.74',
-			deviceId: '-',
-			phoneNo: '01727492677',
-			type: 'Auto Block After 1 Orders',
-			blockUntil: 'Oct 11, 2026, 4:18:07 AM',
-			date: 'Oct 10, 2026, 11:18:07 PM'
-		},
-		{
-			id: '7',
-			sl: 7,
-			ipAddress: '103.134.88.19',
-			deviceId: '-',
-			phoneNo: '01711223344',
-			type: 'Auto Block After 1 Orders',
-			blockUntil: 'Oct 11, 2026, 3:55:12 AM',
-			date: 'Oct 10, 2026, 10:55:12 PM'
-		},
-		{
-			id: '8',
-			sl: 8,
-			ipAddress: '118.179.223.45',
-			deviceId: '-',
-			phoneNo: '01988776655',
-			type: 'Manual Block',
-			blockUntil: 'Permanent',
-			date: 'Oct 10, 2026, 09:30:15 PM'
-		}
-	]);
-
 	// Filtered list by Search
 	let filteredList = $derived(
 		blockedList.filter(
 			(item) =>
 				item.ipAddress.toLowerCase().includes(searchQuery.toLowerCase()) ||
-				item.phoneNo.toLowerCase().includes(searchQuery.toLowerCase())
+				(item.phoneNo && item.phoneNo.toLowerCase().includes(searchQuery.toLowerCase()))
 		)
 	);
+
+	let totalPages = $derived(Math.max(1, Math.ceil(totalBlocked / perPage)));
 
 	let isAllSelected = $derived(
 		filteredList.length > 0 && selectedIds.length === filteredList.length
@@ -148,38 +77,101 @@
 		}
 	}
 
-	function unblockItem(id: string, ip: string) {
+	async function unblockItem(id: string, ip: string) {
 		blockedList = blockedList.filter((item) => item.id !== id);
 		selectedIds = selectedIds.filter((item) => item !== id);
 		totalBlocked = Math.max(0, totalBlocked - 1);
 		showToast(`আইপি '${ip}' সফলভাবে আনব্লক করা হয়েছে!`);
+
+		try {
+			const fd = new FormData();
+			fd.append('id', id);
+			fd.append('ipAddress', ip);
+			await fetch('?/unblockIp', {
+				method: 'POST',
+				body: fd
+			});
+		} catch (error) {
+			console.error('Failed to unblock on server:', error);
+		}
 	}
 
-	function handleManualBlock(e: Event) {
+	async function handleBulkUnblock() {
+		if (selectedIds.length === 0) return;
+		if (!confirm(`আপনি কি নিশ্চিতভাবে নির্বাচিত ${selectedIds.length}টি আইপি আনব্লক করতে চান?`)) {
+			return;
+		}
+
+		const toUnblock = [...selectedIds];
+		const count = toUnblock.length;
+		blockedList = blockedList.filter((item) => !toUnblock.includes(item.id));
+		selectedIds = [];
+		totalBlocked = Math.max(0, totalBlocked - count);
+		showToast(`${count}টি আইপি সফলভাবে আনব্লক করা হয়েছে!`);
+
+		try {
+			const fd = new FormData();
+			fd.append('ids', JSON.stringify(toUnblock));
+			await fetch('?/bulkUnblock', {
+				method: 'POST',
+				body: fd
+			});
+		} catch (e) {
+			console.error('Failed to bulk unblock on server:', e);
+		}
+	}
+
+	async function handleManualBlock(e: Event) {
 		e.preventDefault();
-		if (!manualIp.trim() && !manualPhone.trim()) return;
+		if (!manualIp.trim() && !manualPhone.trim()) {
+			showToast('আইপি অথবা ফোন নম্বর প্রদান করা আবশ্যক!');
+			return;
+		}
 
-		const newItem = {
-			id: String(Date.now()),
-			sl: blockedList.length + 1,
-			ipAddress: manualIp || '103.45.12.89',
-			deviceId: '-',
-			phoneNo: manualPhone || '-',
-			type: 'Manual Admin Block',
-			blockUntil: 'Oct 20, 2026, 12:00:00 AM',
-			date: new Date().toLocaleDateString('en-US', {
-				month: 'short',
-				day: '2-digit',
-				year: 'numeric'
-			}) + ', ' + new Date().toLocaleTimeString('en-US')
-		};
+		isSaving = true;
+		const targetIp = manualIp.trim() || '103.45.12.89';
+		const targetPhone = manualPhone.trim() || '-';
 
-		blockedList = [newItem, ...blockedList];
-		totalBlocked += 1;
-		isBlockModalOpen = false;
-		manualIp = '';
-		manualPhone = '';
-		showToast('আইপি/ফোন সফলভাবে ব্লক লিস্টে যুক্ত করা হয়েছে!');
+		const formData = new FormData();
+		formData.append('ipAddress', targetIp);
+		formData.append('phoneNo', targetPhone);
+		formData.append('reason', manualReason.trim());
+
+		try {
+			const res = await fetch('?/blockIp', {
+				method: 'POST',
+				body: formData
+			});
+			const result = await res.json();
+			const newId = result?.data?.item?.id || String(Date.now());
+
+			const newItem = {
+				id: newId,
+				sl: 1,
+				ipAddress: targetIp,
+				deviceId: '-',
+				phoneNo: targetPhone,
+				type: 'Manual Admin Block',
+				blockUntil: 'Permanent',
+				date: new Date().toLocaleDateString('en-US', {
+					month: 'short',
+					day: '2-digit',
+					year: 'numeric'
+				}) + ', ' + new Date().toLocaleTimeString('en-US')
+			};
+
+			blockedList = [newItem, ...blockedList];
+			totalBlocked += 1;
+			isBlockModalOpen = false;
+			manualIp = '';
+			manualPhone = '';
+			showToast(`আইপি '${targetIp}' সফলভাবে ব্লক লিস্টে যুক্ত করা হয়েছে!`);
+		} catch (error) {
+			console.error('Error blocking IP:', error);
+			showToast('আইপি ব্লক করতে সমস্যা হয়েছে');
+		} finally {
+			isSaving = false;
+		}
 	}
 
 	function handleDocumentClick(e: MouseEvent) {
@@ -196,29 +188,46 @@
 	<title>IP Block List | AURA Enterprise</title>
 </svelte:head>
 
-<div class="space-y-4 max-w-[1400px] mx-auto pb-16">
+<div class="space-y-4 max-w-[1400px] mx-auto pb-16 font-['Plus_Jakarta_Sans',sans-serif]">
 	
 	<!-- Toast Message -->
 	{#if toastMessage}
-		<div class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-bold animate-in fade-in slide-in-from-bottom-4">
-			<CheckCircle2 class="w-4 h-4 text-emerald-400" />
+		<div class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-bold animate-in fade-in slide-in-from-bottom-4 border border-slate-800">
+			<CheckCircle2 class="w-4 h-4 text-emerald-400 shrink-0" />
 			<span>{toastMessage}</span>
 		</div>
 	{/if}
 
 	<!-- Header Title -->
 	<div class="flex items-center justify-between gap-4 pt-1">
-		<h1 class="text-xl font-bold text-slate-900 tracking-tight">IP Block List</h1>
+		<div>
+			<h1 class="text-xl font-bold text-slate-900 tracking-tight">IP Block List</h1>
+			<p class="text-xs text-slate-500 mt-0.5">অটোমেটেড ফ্রড প্রতিরোধ ও ম্যানুয়াল ব্লকলিস্ট পরিচালনা করুন</p>
+		</div>
 
-		<Button
-			type="button"
-			size="sm"
-			onclick={() => (isBlockModalOpen = true)}
-			class="h-9 px-3.5 gap-1.5 text-xs font-bold text-white bg-[#5845eb] hover:bg-[#4936d6] rounded-xl shadow-xs"
-		>
-			<Plus class="w-4 h-4 stroke-[2.5]" />
-			<span>Block New IP</span>
-		</Button>
+		<div class="flex items-center gap-2.5">
+			{#if selectedIds.length > 0}
+				<Button
+					type="button"
+					size="sm"
+					onclick={handleBulkUnblock}
+					class="h-9 px-3.5 gap-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-xs cursor-pointer animate-in fade-in"
+				>
+					<Trash2 class="w-3.5 h-3.5" />
+					<span>আনব্লক করুন ({selectedIds.length})</span>
+				</Button>
+			{/if}
+
+			<Button
+				type="button"
+				size="sm"
+				onclick={() => (isBlockModalOpen = true)}
+				class="h-9 px-3.5 gap-1.5 text-xs font-bold text-white bg-[#5845eb] hover:bg-[#4936d6] rounded-xl shadow-xs cursor-pointer"
+			>
+				<Plus class="w-4 h-4 stroke-[2.5]" />
+				<span>Block New IP</span>
+			</Button>
+		</div>
 	</div>
 
 	<!-- Search & Per-Page Controls Row -->
@@ -236,6 +245,7 @@
 				type="button"
 				class="h-10 px-4 bg-[#cfc7fa] hover:bg-[#b8abf8] text-[#5845eb] rounded-r-xl border border-l-0 border-slate-200 flex items-center justify-center transition-colors cursor-pointer"
 				title="Search"
+				aria-label="Search blocked IPs"
 			>
 				<Search class="w-4 h-4 stroke-[2.5]" />
 			</button>
@@ -247,6 +257,7 @@
 				type="button"
 				onclick={() => (isPerPageOpen = !isPerPageOpen)}
 				class="h-9 px-3 gap-1.5 text-xs font-bold text-white rounded-xl bg-[#5845eb] hover:bg-[#4936d6] flex items-center shadow-xs cursor-pointer"
+				aria-label="Select per page"
 			>
 				<ChevronDown class="w-3.5 h-3.5" />
 				<span>{perPage}</span>
@@ -261,7 +272,7 @@
 								perPage = count;
 								isPerPageOpen = false;
 							}}
-							class="w-full text-left px-3 py-1.5 hover:bg-slate-50 flex items-center justify-between {perPage === count ? 'text-[#5845eb] font-bold bg-indigo-50/50' : ''}"
+							class="w-full text-left px-3 py-1.5 hover:bg-slate-50 flex items-center justify-between cursor-pointer {perPage === count ? 'text-[#5845eb] font-bold bg-indigo-50/50' : ''}"
 						>
 							<span>{count}</span>
 							{#if perPage === count}
@@ -286,13 +297,14 @@
 			</span>
 		</div>
 
-		<!-- Right: Pagination (< [ 1 ] of 4496 >) -->
+		<!-- Right: Pagination -->
 		<div class="flex items-center gap-2 text-xs text-slate-500">
 			<button
 				type="button"
 				disabled={currentPage <= 1}
 				onclick={() => (currentPage = Math.max(1, currentPage - 1))}
-				class="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+				aria-label="Previous page"
+				class="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
 			>
 				<ChevronLeft class="w-4 h-4" />
 			</button>
@@ -307,7 +319,8 @@
 				type="button"
 				disabled={currentPage >= totalPages}
 				onclick={() => (currentPage = Math.min(totalPages, currentPage + 1))}
-				class="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+				aria-label="Next page"
+				class="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
 			>
 				<ChevronRight class="w-4 h-4" />
 			</button>
@@ -328,6 +341,7 @@
 							<button
 								type="button"
 								onclick={toggleSelectAll}
+								aria-label="Select all rows"
 								class="w-4.5 h-4.5 rounded border flex items-center justify-center transition-colors cursor-pointer {selectedIds.length > 0
 									? 'bg-[#5845eb] border-[#5845eb] text-white'
 									: 'border-slate-300 hover:border-slate-400 bg-white'}"
@@ -358,76 +372,86 @@
 
 				<!-- Table Body -->
 				<tbody class="divide-y divide-slate-100 text-slate-700">
-					{#each filteredList as item (item.id)}
-						{@const isSelected = selectedIds.includes(item.id)}
-						<tr class="transition-colors hover:bg-slate-50/70 {isSelected ? 'bg-indigo-50/20' : ''}">
-							
-							<!-- Row Checkbox -->
-							<td class="py-3.5 pl-4 pr-2 text-center">
-								<button
-									type="button"
-									onclick={() => toggleSelectRow(item.id)}
-									class="w-4.5 h-4.5 rounded border flex items-center justify-center transition-colors cursor-pointer {isSelected
-										? 'bg-[#5845eb] border-[#5845eb] text-white'
-										: 'border-slate-300 hover:border-slate-400 bg-white'}"
-								>
-									{#if isSelected}
-										<Check class="w-3 h-3 stroke-[3]" />
-									{/if}
-								</button>
+					{#if filteredList.length === 0}
+						<tr>
+							<td colspan="9" class="py-12 text-center text-slate-400 text-xs">
+								কোনো ব্লক করা আইপি পাওয়া যায়নি।
 							</td>
-
-							<!-- SL -->
-							<td class="py-3.5 px-3 font-semibold text-slate-500 font-mono text-xs">
-								{item.sl}
-							</td>
-
-							<!-- IP Address -->
-							<td class="py-3.5 px-4 font-mono text-xs text-slate-800 break-all select-all">
-								{item.ipAddress}
-							</td>
-
-							<!-- Device ID -->
-							<td class="py-3.5 px-3 text-slate-400">
-								{item.deviceId}
-							</td>
-
-							<!-- Phone No -->
-							<td class="py-3.5 px-4 font-mono text-xs text-slate-800 font-medium select-all">
-								{item.phoneNo}
-							</td>
-
-							<!-- Type (Orange Pill Badge) -->
-							<td class="py-3.5 px-4">
-								<span class="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-orange-50/80 text-orange-600 border border-orange-200/70 whitespace-nowrap">
-									{item.type}
-								</span>
-							</td>
-
-							<!-- Block Until -->
-							<td class="py-3.5 px-4 text-xs text-slate-600 whitespace-nowrap">
-								{item.blockUntil}
-							</td>
-
-							<!-- Date -->
-							<td class="py-3.5 px-4 text-xs text-slate-600 whitespace-nowrap">
-								{item.date}
-							</td>
-
-							<!-- Common.Act (Red Trash Unblock Action) -->
-							<td class="py-3.5 px-4 text-right">
-								<button
-									type="button"
-									onclick={() => unblockItem(item.id, item.ipAddress)}
-									class="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition-colors ml-auto cursor-pointer"
-									title="Unblock / Delete"
-								>
-									<Trash2 class="w-4 h-4" />
-								</button>
-							</td>
-
 						</tr>
-					{/each}
+					{:else}
+						{#each filteredList as item (item.id)}
+							{@const isSelected = selectedIds.includes(item.id)}
+							<tr class="transition-colors hover:bg-slate-50/70 {isSelected ? 'bg-indigo-50/20' : ''}">
+								
+								<!-- Row Checkbox -->
+								<td class="py-3.5 pl-4 pr-2 text-center">
+									<button
+										type="button"
+										onclick={() => toggleSelectRow(item.id)}
+										aria-label={`Select ${item.ipAddress}`}
+										class="w-4.5 h-4.5 rounded border flex items-center justify-center transition-colors cursor-pointer {isSelected
+											? 'bg-[#5845eb] border-[#5845eb] text-white'
+											: 'border-slate-300 hover:border-slate-400 bg-white'}"
+									>
+										{#if isSelected}
+											<Check class="w-3 h-3 stroke-[3]" />
+										{/if}
+									</button>
+								</td>
+
+								<!-- SL -->
+								<td class="py-3.5 px-3 font-semibold text-slate-500 font-mono text-xs">
+									{item.sl}
+								</td>
+
+								<!-- IP Address -->
+								<td class="py-3.5 px-4 font-mono text-xs text-slate-800 break-all select-all font-semibold">
+									{item.ipAddress}
+								</td>
+
+								<!-- Device ID -->
+								<td class="py-3.5 px-3 text-slate-400 font-mono">
+									{item.deviceId}
+								</td>
+
+								<!-- Phone No -->
+								<td class="py-3.5 px-4 font-mono text-xs text-slate-800 font-medium select-all">
+									{item.phoneNo}
+								</td>
+
+								<!-- Type (Orange Pill Badge) -->
+								<td class="py-3.5 px-4">
+									<span class="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-orange-50/80 text-orange-600 border border-orange-200/70 whitespace-nowrap">
+										{item.type}
+									</span>
+								</td>
+
+								<!-- Block Until -->
+								<td class="py-3.5 px-4 text-xs text-slate-600 whitespace-nowrap">
+									{item.blockUntil}
+								</td>
+
+								<!-- Date -->
+								<td class="py-3.5 px-4 text-xs text-slate-600 whitespace-nowrap">
+									{item.date}
+								</td>
+
+								<!-- Common.Act (Red Trash Unblock Action) -->
+								<td class="py-3.5 px-4 text-right">
+									<button
+										type="button"
+										onclick={() => unblockItem(item.id, item.ipAddress)}
+										class="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition-colors ml-auto cursor-pointer"
+										title="Unblock / Delete"
+										aria-label={`Unblock ${item.ipAddress}`}
+									>
+										<Trash2 class="w-4 h-4" />
+									</button>
+								</td>
+
+							</tr>
+						{/each}
+					{/if}
 				</tbody>
 
 			</table>
@@ -453,7 +477,8 @@
 				<button
 					type="button"
 					onclick={() => (isBlockModalOpen = false)}
-					class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+					class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+					aria-label="Close modal"
 				>
 					<X class="w-4 h-4" />
 				</button>
@@ -461,7 +486,7 @@
 
 			<form onsubmit={handleManualBlock} class="space-y-4">
 				<div class="space-y-1.5">
-					<label for="block-ip" class="text-xs font-bold text-slate-700">IP Address (IPv4 or IPv6)</label>
+					<label for="block-ip" class="text-xs font-bold text-slate-700 block">IP Address (IPv4 or IPv6)</label>
 					<Input
 						id="block-ip"
 						type="text"
@@ -472,7 +497,7 @@
 				</div>
 
 				<div class="space-y-1.5">
-					<label for="block-phone" class="text-xs font-bold text-slate-700">Customer Phone Number</label>
+					<label for="block-phone" class="text-xs font-bold text-slate-700 block">Customer Phone Number</label>
 					<Input
 						id="block-phone"
 						type="text"
@@ -483,7 +508,7 @@
 				</div>
 
 				<div class="space-y-1.5">
-					<label for="block-reason" class="text-xs font-bold text-slate-700">Reason</label>
+					<label for="block-reason" class="text-xs font-bold text-slate-700 block">Reason</label>
 					<Input
 						id="block-reason"
 						type="text"
@@ -498,15 +523,22 @@
 						variant="outline"
 						size="sm"
 						onclick={() => (isBlockModalOpen = false)}
+						class="cursor-pointer"
 					>
 						Cancel
 					</Button>
 					<Button
 						type="submit"
 						size="sm"
-						class="bg-rose-600 hover:bg-rose-700 text-white font-bold"
+						disabled={isSaving}
+						class="bg-rose-600 hover:bg-rose-700 text-white font-bold cursor-pointer disabled:opacity-50 flex items-center gap-2"
 					>
-						Confirm Block
+						{#if isSaving}
+							<Loader2 class="w-3.5 h-3.5 animate-spin" />
+							<span>ব্লক করা হচ্ছে...</span>
+						{:else}
+							<span>Confirm Block</span>
+						{/if}
 					</Button>
 				</div>
 			</form>

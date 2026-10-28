@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Card, Input, Dialog, Badge } from '#lib/components/ui';
+	import { Button, Card, Input, Dialog } from '#lib/components/ui';
 	import {
 		Search,
 		Folder,
@@ -12,13 +12,31 @@
 		X,
 		ImageIcon,
 		ExternalLink,
-		Layers,
 		CheckCircle2,
-		Sparkles
+		Sparkles,
+		Loader2
 	} from 'lucide-svelte';
 	import type { GalleryImage } from '../_data/gallery.ts';
 
 	let { data }: { data: any } = $props();
+
+	// Reactive images state initialized from server data
+	let galleryImages = $state<GalleryImage[]>(data?.galleryImages || []);
+
+	$effect(() => {
+		if (data?.galleryImages) {
+			galleryImages = [...data.galleryImages];
+		}
+	});
+
+	// Toast state
+	let toastMessage = $state<string | null>(null);
+	function showToast(msg: string) {
+		toastMessage = msg;
+		setTimeout(() => {
+			toastMessage = null;
+		}, 3000);
+	}
 
 	// Search & Filter State
 	let searchQuery = $state('');
@@ -30,6 +48,7 @@
 	// Modals
 	let isUploadModalOpen = $state(false);
 	let activePreviewImage = $state<GalleryImage | null>(null);
+	let isUploading = $state(false);
 
 	// Upload Form State
 	let uploadName = $state('');
@@ -38,8 +57,6 @@
 	let uploadFileSize = $state('45 KB');
 	let uploadDimensions = $state('800 x 800');
 	let isDragging = $state(false);
-
-	let galleryImages = $derived<GalleryImage[]>(data.galleryImages || []);
 
 	// Folder options
 	const FOLDERS = [
@@ -70,11 +87,12 @@
 		try {
 			await navigator.clipboard.writeText(img.url);
 			copiedImageId = img.id;
+			showToast('ইমেজ লিঙ্ক সফলভাবে ক্লিপবোর্ডে কপি হয়েছে!');
 			setTimeout(() => {
 				copiedImageId = null;
 			}, 2000);
 		} catch {
-			// fallback
+			showToast('পাথ কপি করা যায়নি');
 		}
 	}
 
@@ -125,7 +143,15 @@
 	<title>My Gallery | সেন্ট্রালাইজড মিডিয়া লাইব্রেরি</title>
 </svelte:head>
 
-<div class="space-y-6 pb-28">
+<!-- Toast Notification -->
+{#if toastMessage}
+	<div class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 border border-slate-800 animate-in fade-in slide-in-from-bottom-2">
+		<CheckCircle2 class="w-4 h-4 text-emerald-400 shrink-0" />
+		<span>{toastMessage}</span>
+	</div>
+{/if}
+
+<div class="space-y-6 pb-28 font-['Plus_Jakarta_Sans',sans-serif]">
 
 	<!-- Header Area -->
 	<div class="flex items-center justify-between pb-1">
@@ -147,14 +173,14 @@
 				resetUploadForm();
 				isUploadModalOpen = true;
 			}}
-			class="hidden sm:flex items-center gap-2 bg-[#5845eb] text-white hover:bg-[#4836d4] shadow-md shadow-indigo-600/20 rounded-xl px-4 py-2 font-bold text-xs"
+			class="hidden sm:flex items-center gap-2 bg-[#5845eb] text-white hover:bg-[#4836d4] shadow-md shadow-indigo-600/20 rounded-xl px-4 py-2 font-bold text-xs cursor-pointer"
 		>
 			<UploadCloud class="w-4 h-4" />
 			<span>নতুন ছবি আপলোড</span>
 		</Button>
 	</div>
 
-	<!-- Top Search & Folder Filter Bar (Exact Match to Reference Screenshot) -->
+	<!-- Top Search & Folder Filter Bar -->
 	<div class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs">
 		<!-- Search Input with rounded styling -->
 		<div class="relative w-full sm:flex-1 max-w-xl">
@@ -163,13 +189,13 @@
 				type="text"
 				bind:value={searchQuery}
 				placeholder="Search images, folders..."
-				class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50/80 hover:bg-slate-50 focus:bg-white text-xs text-slate-800 placeholder-slate-400 border border-transparent focus:border-[#5845eb] focus:outline-none transition-all"
+				class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50/80 hover:bg-slate-50 focus:bg-white text-xs text-slate-800 placeholder-slate-400 border border-transparent focus:border-[#5845eb] focus:outline-none transition-all shadow-2xs"
 			/>
 			{#if searchQuery}
 				<button
 					type="button"
 					onclick={() => (searchQuery = '')}
-					class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+					class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
 					aria-label="Clear search"
 				>
 					<X class="w-3.5 h-3.5" />
@@ -177,7 +203,7 @@
 			{/if}
 		</div>
 
-		<!-- Folder Filter Dropdown (Matches Screenshot "All Folders" styling) -->
+		<!-- Folder Filter Dropdown -->
 		<div class="w-full sm:w-auto flex items-center gap-2">
 			<div class="relative w-full sm:w-56">
 				<div class="absolute left-3 top-1/2 -translate-y-1/2 text-[#5845eb] pointer-events-none">
@@ -185,7 +211,7 @@
 				</div>
 				<select
 					bind:value={selectedFolder}
-					class="w-full pl-9 pr-8 py-2.5 rounded-xl bg-slate-50/80 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#5845eb]/20 cursor-pointer appearance-none transition-all"
+					class="w-full pl-9 pr-8 py-2.5 rounded-xl bg-slate-50/80 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#5845eb]/20 cursor-pointer appearance-none transition-all shadow-2xs"
 				>
 					{#each FOLDERS as folder}
 						<option value={folder.id}>{folder.label}</option>
@@ -200,7 +226,7 @@
 		</div>
 	</div>
 
-	<!-- Images Grid (6 columns on desktop matching screenshot) -->
+	<!-- Images Grid (6 columns on desktop matching reference layout) -->
 	{#if filteredImages.length === 0}
 		<Card class="p-16 border-slate-200/80 text-center bg-white shadow-2xs">
 			<div class="w-14 h-14 mx-auto rounded-2xl bg-indigo-50 text-[#5845eb] flex items-center justify-center mb-3">
@@ -216,7 +242,7 @@
 					resetUploadForm();
 					isUploadModalOpen = true;
 				}}
-				class="mt-4 gap-1.5 text-xs font-bold bg-[#5845eb] text-white"
+				class="mt-4 gap-1.5 text-xs font-bold bg-[#5845eb] text-white cursor-pointer"
 			>
 				<UploadCloud class="w-3.5 h-3.5" />
 				<span>এখনই আপলোড করুন</span>
@@ -242,7 +268,7 @@
 						class="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
 					/>
 
-					<!-- Top Folder Pill (Visible always or subtle) -->
+					<!-- Top Folder Pill -->
 					<div class="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
 						<span class="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-900/80 text-white backdrop-blur-xs shadow-2xs">
 							{img.folder}
@@ -257,14 +283,22 @@
 							<form
 								method="POST"
 								action="?/deleteImage"
-								use:enhance
+								use:enhance={() => {
+									const idToDelete = img.id;
+									galleryImages = galleryImages.filter((i) => i.id !== idToDelete);
+									showToast('ছবি সফলভাবে মুছে ফেলা হয়েছে!');
+									return async ({ update }) => {
+										await update();
+									};
+								}}
 								onclick={(e) => e.stopPropagation()}
 							>
 								<input type="hidden" name="id" value={img.id} />
 								<button
 									type="submit"
-									class="p-1.5 rounded-lg bg-rose-500/90 text-white hover:bg-rose-600 transition-colors shadow-sm"
+									class="p-1.5 rounded-lg bg-rose-500/90 text-white hover:bg-rose-600 transition-colors shadow-sm cursor-pointer"
 									title="ছবি ডিলিট করুন"
+									aria-label={`Delete ${img.name}`}
 									onclick={(e) => {
 										if (!confirm('আপনি কি নিশ্চিত এই ছবিটি গ্যালারি থেকে মুছে ফেলতে চান?')) {
 											e.preventDefault();
@@ -288,7 +322,7 @@
 							<button
 								type="button"
 								onclick={(e) => copyImagePath(img, e)}
-								class="flex-1 py-1.5 px-2 rounded-xl bg-white text-slate-800 hover:bg-slate-100 font-bold text-[11px] flex items-center justify-center gap-1 shadow-sm transition-transform active:scale-95"
+								class="flex-1 py-1.5 px-2 rounded-xl bg-white text-slate-800 hover:bg-slate-100 font-bold text-[11px] flex items-center justify-center gap-1 shadow-sm transition-transform active:scale-95 cursor-pointer"
 								title="পাথ কপি করে যেকোনো জায়গায় ব্যবহার করুন"
 							>
 								{#if copiedImageId === img.id}
@@ -306,8 +340,9 @@
 									e.stopPropagation();
 									activePreviewImage = img;
 								}}
-								class="p-1.5 rounded-xl bg-white/90 text-slate-700 hover:bg-white hover:text-[#5845eb] transition-colors shadow-sm"
+								class="p-1.5 rounded-xl bg-white/90 text-slate-700 hover:bg-white hover:text-[#5845eb] transition-colors shadow-sm cursor-pointer"
 								title="বড় করে প্রিভিউ দেখুন"
+								aria-label={`Preview ${img.name}`}
 							>
 								<Eye class="w-3.5 h-3.5" />
 							</button>
@@ -319,7 +354,7 @@
 		</div>
 	{/if}
 
-	<!-- Floating "Upload New" Button (Exact Match to User Screenshot!) -->
+	<!-- Floating "Upload New" Button -->
 	<div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
 		<button
 			type="button"
@@ -339,7 +374,7 @@
 <!-- 1. Upload New Image Modal -->
 {#if isUploadModalOpen}
 	<Dialog bind:open={isUploadModalOpen}>
-		<div class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+		<div class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in">
 			<div class="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
 				
 				<!-- Modal Header -->
@@ -349,14 +384,15 @@
 							<UploadCloud class="w-4 h-4" />
 						</div>
 						<div>
-							<h3 class="text-base font-black text-slate-900">গ্যালারিতে নতুন ছবি আপলোড</h3>
-							<p class="text-xs text-slate-500">প্রোডাক্ট, ক্যাটাগরি বা ব্যানারের জন্য ছবি যুক্ত করুন</p>
+							<h3 class="text-sm font-bold text-slate-900">নতুন ছবি আপলোড করুন</h3>
+							<p class="text-[11px] text-slate-500">গ্যালারিতে যুক্ত করে যেকোনো জায়গায় ব্যবহার করুন</p>
 						</div>
 					</div>
 					<button
 						type="button"
 						onclick={() => (isUploadModalOpen = false)}
-						class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+						class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+						aria-label="Close upload modal"
 					>
 						<X class="w-4 h-4" />
 					</button>
@@ -367,7 +403,17 @@
 					method="POST"
 					action="?/uploadImage"
 					use:enhance={() => {
-						isUploadModalOpen = false;
+						isUploading = true;
+						return async ({ result, update }) => {
+							isUploading = false;
+							if (result.type === 'success') {
+								isUploadModalOpen = false;
+								showToast('ছবি সফলভাবে গ্যালারিতে সংরক্ষিত হয়েছে!');
+								await update();
+							} else {
+								showToast('ছবি আপলোডে ত্রুটি হয়েছে');
+							}
+						};
 					}}
 					class="p-6 space-y-4"
 				>
@@ -438,8 +484,9 @@
 
 					<!-- Image Name Input -->
 					<div>
-						<label class="block text-xs font-bold text-slate-700 mb-1">ছবির নাম / টাইটেল *</label>
+						<label for="img-name" class="block text-xs font-bold text-slate-700 mb-1">ছবির নাম / টাইটেল *</label>
 						<Input
+							id="img-name"
 							type="text"
 							name="name"
 							bind:value={uploadName}
@@ -451,11 +498,12 @@
 
 					<!-- Folder Selection -->
 					<div>
-						<label class="block text-xs font-bold text-slate-700 mb-1">ফোল্ডার / ক্যাটাগরি *</label>
+						<label for="img-folder" class="block text-xs font-bold text-slate-700 mb-1">ফোল্ডার / ক্যাটাগরি *</label>
 						<select
+							id="img-folder"
 							name="folder"
 							bind:value={uploadFolder}
-							class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#5845eb]"
+							class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#5845eb] cursor-pointer"
 						>
 							<option value="products">Products (পণ্য)</option>
 							<option value="categories">Categories (ক্যাটাগরি)</option>
@@ -471,18 +519,23 @@
 							type="button"
 							variant="outline"
 							onclick={() => (isUploadModalOpen = false)}
-							class="text-xs"
+							class="text-xs cursor-pointer"
 						>
 							বাতিল
 						</Button>
 
 						<Button
 							type="submit"
-							disabled={!uploadDataUrl}
-							class="gap-1.5 text-xs font-bold bg-[#5845eb] text-white hover:bg-[#4836d4] disabled:opacity-50"
+							disabled={!uploadDataUrl || isUploading}
+							class="gap-1.5 text-xs font-bold bg-[#5845eb] text-white hover:bg-[#4836d4] disabled:opacity-50 cursor-pointer"
 						>
-							<Sparkles class="w-4 h-4" />
-							<span>গ্যালারিতে যুক্ত করুন</span>
+							{#if isUploading}
+								<Loader2 class="w-4 h-4 animate-spin" />
+								<span>আপলোড হচ্ছে...</span>
+							{:else}
+								<Sparkles class="w-4 h-4" />
+								<span>গ্যালারিতে যুক্ত করুন</span>
+							{/if}
 						</Button>
 					</div>
 				</form>
@@ -495,7 +548,7 @@
 <!-- 2. Image Full Preview & Details Modal -->
 {#if activePreviewImage}
 	<Dialog open={true}>
-		<div class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+		<div class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in">
 			<div class="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
 				
 				<!-- Header -->
@@ -509,7 +562,8 @@
 					<button
 						type="button"
 						onclick={() => (activePreviewImage = null)}
-						class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200"
+						class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 cursor-pointer"
+						aria-label="Close preview modal"
 					>
 						<X class="w-4 h-4" />
 					</button>
@@ -543,9 +597,10 @@
 
 					<!-- URL Box with 1-click Copy -->
 					<div>
-						<label class="block text-[11px] font-bold text-slate-500 mb-1">ইমেজ রিইউজ পাথ (Image URL):</label>
+						<label for="preview-url-copy" class="block text-[11px] font-bold text-slate-500 mb-1">ইমেজ রিইউজ পাথ (Image URL):</label>
 						<div class="flex items-center gap-2">
 							<input
+								id="preview-url-copy"
 								type="text"
 								readonly
 								value={activePreviewImage.url}
@@ -554,7 +609,7 @@
 							<Button
 								type="button"
 								onclick={() => copyImagePath(activePreviewImage!)}
-								class="gap-1.5 text-xs font-bold bg-[#5845eb] text-white hover:bg-[#4836d4]"
+								class="gap-1.5 text-xs font-bold bg-[#5845eb] text-white hover:bg-[#4836d4] cursor-pointer"
 							>
 								{#if copiedImageId === activePreviewImage.id}
 									<Check class="w-3.5 h-3.5" />
@@ -583,7 +638,7 @@
 							type="button"
 							variant="outline"
 							onclick={() => (activePreviewImage = null)}
-							class="text-xs"
+							class="text-xs cursor-pointer"
 						>
 							বন্ধ করুন
 						</Button>
@@ -594,4 +649,3 @@
 		</div>
 	</Dialog>
 {/if}
-

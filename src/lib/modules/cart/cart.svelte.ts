@@ -1,29 +1,37 @@
 export interface CartItem {
 	id: string;
 	name: string;
-	price: number; // in cents
+	price: number; // in BDT Taka
 	originalPrice: number;
 	image: string;
 	quantity: number;
 	category: string;
+	variantId?: string | null;
+	variantName?: string | null;
+}
+
+export interface OrderDetails {
+	orderId: string;
+	customerName: string;
+	customerPhone: string;
+	customerAddress: string;
+	customerCity: string;
+	paymentMethod: string;
+	items: CartItem[];
+	subtotal: number;
+	deliveryCharge: number;
+	discountAmount: number;
+	total: number;
+	createdAt: string;
 }
 
 class CartStore {
-	items = $state<CartItem[]>([
-		{
-			id: 'aura-spectrum-x',
-			name: 'AURA Spectrum X',
-			price: 34900,
-			originalPrice: 42900,
-			image: '/images/headphones.jpg',
-			quantity: 1,
-			category: 'Spatial Audio'
-		}
-	]);
+	items = $state<CartItem[]>([]);
 	isOpen = $state(false);
 	couponCode = $state('');
 	discountPercent = $state(0);
 	couponMessage = $state('');
+	lastOrder = $state<OrderDetails | null>(null);
 
 	get count() {
 		return this.items.reduce((total, item) => total + item.quantity, 0);
@@ -37,8 +45,13 @@ class CartStore {
 		return Math.round((this.subtotal * this.discountPercent) / 100);
 	}
 
+	get deliveryCharge() {
+		if (this.subtotal === 0) return 0;
+		return this.subtotal >= 600 ? 0 : 60;
+	}
+
 	get total() {
-		return Math.max(0, this.subtotal - this.discountAmount);
+		return Math.max(0, this.subtotal - this.discountAmount + this.deliveryCharge);
 	}
 
 	toggleCart() {
@@ -53,14 +66,16 @@ class CartStore {
 		this.isOpen = false;
 	}
 
-	addItem(product: Omit<CartItem, 'quantity'>) {
+	addItem(product: Omit<CartItem, 'quantity'>, openDrawer: boolean = true) {
 		const existing = this.items.find((item) => item.id === product.id);
 		if (existing) {
 			existing.quantity += 1;
 		} else {
 			this.items.push({ ...product, quantity: 1 });
 		}
-		this.isOpen = true;
+		if (openDrawer) {
+			this.isOpen = true;
+		}
 	}
 
 	removeItem(id: string) {
@@ -81,15 +96,17 @@ class CartStore {
 		const clean = code.trim().toUpperCase();
 		if (clean === 'AURA20') {
 			this.discountPercent = 20;
-			this.couponMessage = '20% Special Launch Discount Applied!';
+			this.couponCode = clean;
+			this.couponMessage = '২০% স্পেশাল লঞ্চ ডিসকাউন্ট যুক্ত হয়েছে!';
 			return true;
 		} else if (clean === 'VIP30') {
 			this.discountPercent = 30;
-			this.couponMessage = '30% VIP Member Discount Applied!';
+			this.couponCode = clean;
+			this.couponMessage = '৩০% ভিআইপি মেম্বার ডিসকাউন্ট যুক্ত হয়েছে!';
 			return true;
 		} else {
 			this.discountPercent = 0;
-			this.couponMessage = 'Invalid promo code. Try AURA20';
+			this.couponMessage = 'ভুল প্রোমোকোড। ট্রাই করুন: AURA20';
 			return false;
 		}
 	}
@@ -99,6 +116,33 @@ class CartStore {
 		this.couponCode = '';
 		this.discountPercent = 0;
 		this.couponMessage = '';
+	}
+
+	setLastOrder(order: OrderDetails) {
+		this.lastOrder = order;
+		if (typeof window !== 'undefined') {
+			try {
+				localStorage.setItem('aura_last_order', JSON.stringify(order));
+			} catch (e) {
+				console.error(e);
+			}
+		}
+	}
+
+	loadLastOrder(): OrderDetails | null {
+		if (this.lastOrder) return this.lastOrder;
+		if (typeof window !== 'undefined') {
+			try {
+				const saved = localStorage.getItem('aura_last_order');
+				if (saved) {
+					this.lastOrder = JSON.parse(saved);
+					return this.lastOrder;
+				}
+			} catch (e) {
+				console.error(e);
+			}
+		}
+		return null;
 	}
 }
 

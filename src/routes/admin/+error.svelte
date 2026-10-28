@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { page } from '$app/state';
 	import { Button, Badge, Card, CardContent } from '#lib/components/ui';
 	import {
@@ -35,7 +35,7 @@
 	<title>{status} Error | Admin Control Deck | AURA</title>
 </svelte:head>
 
-<div class="max-w-3xl mx-auto py-8 md:py-16 px-4 font-['Hind_Siliguri',sans-serif]">
+<div class="max-w-3xl mx-auto py-8 md:py-16 px-4 font-['Anek_Bangla',sans-serif]">
 	<Card class="border-slate-200/90 shadow-xl bg-white rounded-2xl overflow-hidden">
 		<!-- Top Indicator Gradient -->
 		<div class="h-2 bg-gradient-to-r {is404 ? 'from-amber-400 via-indigo-500 to-purple-600' : 'from-rose-500 via-red-500 to-orange-500'}"></div>

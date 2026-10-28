@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { Button, Input, Card, Badge, Dialog } from '#lib/components/ui';
 	import {
 		Globe,
@@ -119,7 +119,7 @@
 	</div>
 {/if}
 
-<div class="space-y-6 max-w-7xl mx-auto font-['Hind_Siliguri',sans-serif]">
+<div class="space-y-6 max-w-7xl mx-auto font-['Anek_Bangla',sans-serif]">
 	
 	<!-- ============================================== -->
 	<!-- 1. TOP HEADER BANNER (Matching Screenshot)     -->

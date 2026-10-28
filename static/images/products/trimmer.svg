@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <rect width="200" height="200" fill="white"/>
+  <ellipse cx="100" cy="182" rx="35" ry="7" fill="#e2e8f0"/>
+  <!-- Trimmer Body -->
+  <path d="M85 50 L 115 50 L 110 165 L 90 165 Z" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+  <!-- Gold Blade -->
+  <polygon points="80,50 120,50 115,35 85,35" fill="#f59e0b" stroke="#d97706" stroke-width="1"/>
+  <line x1="88" y1="35" x2="88" y2="48" stroke="#78350f" stroke-width="1"/>
+  <line x1="96" y1="35" x2="96" y2="48" stroke="#78350f" stroke-width="1"/>
+  <line x1="104" y1="35" x2="104" y2="48" stroke="#78350f" stroke-width="1"/>
+  <line x1="112" y1="35" x2="112" y2="48" stroke="#78350f" stroke-width="1"/>
+  <!-- Power Button & LED -->
+  <circle cx="100" cy="100" r="5" fill="#334155" stroke="#65a30d" stroke-width="1.5"/>
+  <rect x="94" y="130" width="12" height="6" rx="2" fill="#65a30d"/>
+  <text x="100" y="152" text-anchor="middle" font-family="sans-serif" font-weight="900" font-size="6" fill="#65a30d">oraimo</text>
+</svg>

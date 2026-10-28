@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <rect width="200" height="200" fill="white"/>
+  <ellipse cx="100" cy="180" rx="46" ry="8" fill="#e2e8f0"/>
+  <!-- Bottle -->
+  <rect x="70" y="65" width="60" height="105" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <!-- Blue Side Bar -->
+  <rect x="70" y="65" width="8" height="105" rx="2" fill="#0284c7"/>
+  <!-- Pump -->
+  <rect x="94" y="48" width="12" height="18" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+  <rect x="80" y="42" width="38" height="8" rx="2" fill="#0284c7"/>
+  <!-- Text -->
+  <text x="104" y="85" text-anchor="middle" font-family="sans-serif" font-weight="900" font-size="8.5" fill="#0284c7">CeraVe</text>
+  <text x="104" y="98" text-anchor="middle" font-family="sans-serif" font-weight="bold" font-size="4.5" fill="#1e293b">Hydrating</text>
+  <text x="104" y="105" text-anchor="middle" font-family="sans-serif" font-size="4" fill="#64748b">Facial Cleanser</text>
+</svg>

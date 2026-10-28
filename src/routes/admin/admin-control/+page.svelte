@@ -3,7 +3,6 @@
 		Search,
 		Plus,
 		MoreVertical,
-		ChevronDown,
 		ChevronLeft,
 		ChevronRight,
 		ShieldCheck,
@@ -13,7 +12,8 @@
 		KeyRound,
 		UserCog,
 		X,
-		Check
+		Check,
+		Loader2
 	} from 'lucide-svelte';
 	import { Button, Input, Badge } from '#lib/components/ui';
 
@@ -31,66 +31,21 @@
 		avatarText: string;
 	}
 
-	let admins = $state<AdminUser[]>([
-		{
-			id: '1',
-			name: 'thecolorlighthouse',
-			username: 'thecolorlighthouse',
-			email: 'contact@thecolorlighthouse.com',
-			role: 'Owner',
-			lastLogin: 'Oct 22, 2026',
-			registeredAt: 'Sep 3, 2025',
-			access: 'Allowed',
-			isTrashed: false,
-			avatarBg: 'bg-black text-pink-500 border-pink-500/40',
-			avatarText: 'COLOR LIGHT'
-		},
-		{
-			id: '2',
-			name: 'Anwarul Karim',
-			username: 'anwarulkarim',
-			email: 'anwarul@haqplus.com',
-			role: 'Super Admin',
-			lastLogin: 'Oct 22, 2026',
-			registeredAt: 'Jan 15, 2026',
-			access: 'Allowed',
-			isTrashed: false,
-			avatarBg: 'bg-indigo-600 text-white border-indigo-400',
-			avatarText: 'AK'
-		},
-		{
-			id: '3',
-			name: 'AURA Support Desk',
-			username: 'aura_support',
-			email: 'support@haqplus.com',
-			role: 'Manager',
-			lastLogin: 'Oct 21, 2026',
-			registeredAt: 'Feb 10, 2026',
-			access: 'Allowed',
-			isTrashed: false,
-			avatarBg: 'bg-emerald-600 text-white border-emerald-400',
-			avatarText: 'AS'
-		},
-		{
-			id: '4',
-			name: 'Legacy Guest Tech',
-			username: 'test_contractor',
-			email: 'contractor@legacy.dev',
-			role: 'Developer',
-			lastLogin: 'Aug 14, 2026',
-			registeredAt: 'Jul 2, 2026',
-			access: 'Suspended',
-			isTrashed: true,
-			avatarBg: 'bg-slate-700 text-slate-300 border-slate-500',
-			avatarText: 'LG'
-		}
-	]);
+	let { data }: { data?: any } = $props();
+
+	// Reactive admins state
+	let admins = $state<AdminUser[]>(data?.admins || []);
+
+	$effect(() => {
+		admins = data?.admins ? [...data.admins] : [];
+	});
 
 	// Filter & search states
 	let currentTab = $state<'all' | 'trash'>('all');
 	let searchQuery = $state('');
 	let selectedIds = $state<string[]>([]);
 	let openActionMenuId = $state<string | null>(null);
+	let isSaving = $state(false);
 
 	// Add Admin Modal State
 	let isAddModalOpen = $state(false);
@@ -149,72 +104,176 @@
 		}
 	}
 
-	function updateAccess(id: string, newAccess: 'Allowed' | 'Restricted' | 'Suspended') {
+	async function updateAccess(id: string, newAccess: 'Allowed' | 'Restricted' | 'Suspended') {
 		const target = admins.find((a) => a.id === id);
 		if (target) {
 			target.access = newAccess;
 			showToast(`${target.username} এর অ্যাক্সেস "${newAccess}" এ পরিবর্তিত হয়েছে।`);
 		}
+
+		try {
+			const fd = new FormData();
+			fd.append('id', id);
+			fd.append('access', newAccess);
+			await fetch('?/updateAccess', {
+				method: 'POST',
+				body: fd
+			});
+		} catch (error) {
+			console.error('Error updating access on server:', error);
+		}
 	}
 
-	function moveToTrash(id: string) {
+	async function moveToTrash(id: string) {
 		const target = admins.find((a) => a.id === id);
 		if (target) {
 			target.isTrashed = true;
 			openActionMenuId = null;
 			showToast(`${target.username} কে ট্র্যাশে পাঠানো হয়েছে।`);
 		}
+
+		try {
+			const fd = new FormData();
+			fd.append('id', id);
+			await fetch('?/moveToTrash', {
+				method: 'POST',
+				body: fd
+			});
+		} catch (error) {
+			console.error('Error moving to trash on server:', error);
+		}
 	}
 
-	function restoreFromTrash(id: string) {
+	async function restoreFromTrash(id: string) {
 		const target = admins.find((a) => a.id === id);
 		if (target) {
 			target.isTrashed = false;
 			openActionMenuId = null;
 			showToast(`${target.username} কে সফলভাবে পুনরুদ্ধার করা হয়েছে।`);
 		}
+
+		try {
+			const fd = new FormData();
+			fd.append('id', id);
+			await fetch('?/restoreFromTrash', {
+				method: 'POST',
+				body: fd
+			});
+		} catch (error) {
+			console.error('Error restoring from trash on server:', error);
+		}
 	}
 
-	function deletePermanently(id: string) {
+	async function deletePermanently(id: string) {
 		const target = admins.find((a) => a.id === id);
 		if (target && confirm(`আপনি কি নিশ্চিত যে "${target.username}" কে স্থায়ীভাবে মুছে ফেলতে চান?`)) {
 			admins = admins.filter((a) => a.id !== id);
 			openActionMenuId = null;
 			showToast(`${target.username} স্থায়ীভাবে মুছে ফেলা হয়েছে।`);
+
+			try {
+				const fd = new FormData();
+				fd.append('id', id);
+				await fetch('?/deletePermanently', {
+					method: 'POST',
+					body: fd
+				});
+			} catch (error) {
+				console.error('Error permanently deleting admin:', error);
+			}
 		}
 	}
 
-	function handleAddAdmin(e: SubmitEvent) {
-		e.preventDefault();
-		if (!newAdminName || !newAdminUsername) return;
+	async function handleBulkAction(action: 'trash' | 'restore' | 'delete') {
+		if (selectedIds.length === 0) return;
+		const actionName = action === 'trash' ? 'ট্র্যাশে পাঠাতে' : action === 'restore' ? 'পুনরুদ্ধার করতে' : 'স্থায়ীভাবে মুছতে';
+		if (!confirm(`আপনি কি নিশ্চিত যে নির্বাচিত ${selectedIds.length} জন ইউজারকে ${actionName} চান?`)) {
+			return;
+		}
 
+		const idsToProcess = [...selectedIds];
+		const count = idsToProcess.length;
+
+		if (action === 'delete') {
+			admins = admins.filter((a) => !idsToProcess.includes(a.id));
+		} else if (action === 'trash') {
+			admins = admins.map((a) => idsToProcess.includes(a.id) ? { ...a, isTrashed: true } : a);
+		} else {
+			admins = admins.map((a) => idsToProcess.includes(a.id) ? { ...a, isTrashed: false } : a);
+		}
+
+		selectedIds = [];
+		showToast(`${count} জন অ্যাডমিনে অ্যাকশন সফল হয়েছে!`);
+
+		try {
+			const fd = new FormData();
+			fd.append('ids', JSON.stringify(idsToProcess));
+			fd.append('action', action);
+			await fetch('?/bulkAction', {
+				method: 'POST',
+				body: fd
+			});
+		} catch (error) {
+			console.error('Error executing bulk action:', error);
+		}
+	}
+
+	async function handleAddAdmin(e: SubmitEvent) {
+		e.preventDefault();
+		if (!newAdminName.trim() || !newAdminUsername.trim()) {
+			showToast('নাম এবং ইউজারনেম আবশ্যক!');
+			return;
+		}
+
+		isSaving = true;
 		const initials = newAdminName
 			.split(' ')
 			.map((n) => n[0])
 			.join('')
 			.toUpperCase()
-			.slice(0, 2);
+			.slice(0, 2) || 'AD';
 
-		const newEntry: AdminUser = {
-			id: String(Date.now()),
-			name: newAdminName.trim(),
-			username: newAdminUsername.trim().toLowerCase(),
-			email: newAdminEmail.trim() || `${newAdminUsername.trim().toLowerCase()}@example.com`,
-			role: newAdminRole,
-			lastLogin: 'Never',
-			registeredAt: 'Just Now',
-			access: newAdminAccess,
-			isTrashed: false,
-			avatarBg: 'bg-[#5845eb] text-white border-indigo-300',
-			avatarText: initials || 'AD'
-		};
+		const formData = new FormData();
+		formData.append('name', newAdminName.trim());
+		formData.append('username', newAdminUsername.trim().toLowerCase());
+		formData.append('email', newAdminEmail.trim() || `${newAdminUsername.trim().toLowerCase()}@example.com`);
+		formData.append('role', newAdminRole);
+		formData.append('access', newAdminAccess);
 
-		admins = [newEntry, ...admins];
-		isAddModalOpen = false;
-		newAdminName = '';
-		newAdminUsername = '';
-		newAdminEmail = '';
-		showToast(`নতুন অ্যাডমিন "${newEntry.name}" সফলভাবে যুক্ত হয়েছে!`);
+		try {
+			const res = await fetch('?/createAdmin', {
+				method: 'POST',
+				body: formData
+			});
+			const result: any = await res.json();
+			const newId = result?.data?.admin?.id || 'adm-' + Date.now();
+
+			const newEntry: AdminUser = {
+				id: newId,
+				name: newAdminName.trim(),
+				username: newAdminUsername.trim().toLowerCase(),
+				email: newAdminEmail.trim() || `${newAdminUsername.trim().toLowerCase()}@example.com`,
+				role: newAdminRole,
+				lastLogin: 'Never',
+				registeredAt: 'Just Now',
+				access: newAdminAccess,
+				isTrashed: false,
+				avatarBg: 'bg-[#5845eb] text-white border-indigo-300',
+				avatarText: initials
+			};
+
+			admins = [newEntry, ...admins];
+			isAddModalOpen = false;
+			newAdminName = '';
+			newAdminUsername = '';
+			newAdminEmail = '';
+			showToast(`নতুন অ্যাডমিন "${newEntry.name}" সফলভাবে যুক্ত হয়েছে!`);
+		} catch (error) {
+			console.error('Error creating admin user:', error);
+			showToast('অ্যাডমিন তৈরি করতে সমস্যা হয়েছে');
+		} finally {
+			isSaving = false;
+		}
 	}
 </script>
 
@@ -231,13 +290,13 @@
 		</div>
 	{/if}
 
-	<!-- Top Search & Action Bar (Exact match with reference screenshot) -->
+	<!-- Top Search & Action Bar -->
 	<div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
 		<!-- Search Input with Attached Purple Search Button -->
 		<div class="flex items-center w-full sm:w-96 shadow-2xs">
 			<input
 				type="text"
-				placeholder="Search"
+				placeholder="Search by name, role or username..."
 				bind:value={searchQuery}
 				class="w-full bg-[#f4f2ff] border border-r-0 border-[#e5e0ff] rounded-l-xl px-4 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#5845eb] transition-all"
 			/>
@@ -251,25 +310,61 @@
 			</button>
 		</div>
 
-		<!-- + Add Admin Button (Matching Screenshot) -->
-		<button
-			type="button"
-			onclick={() => (isAddModalOpen = true)}
-			class="bg-[#635BFF] hover:bg-[#5249e6] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
-		>
-			<Plus class="w-4 h-4" />
-			<span>Add Admin</span>
-		</button>
+		<!-- Action Buttons -->
+		<div class="flex items-center gap-2.5">
+			{#if selectedIds.length > 0}
+				{#if currentTab === 'all'}
+					<button
+						type="button"
+						onclick={() => handleBulkAction('trash')}
+						class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer animate-in fade-in"
+					>
+						<Trash2 class="w-3.5 h-3.5" />
+						<span>ট্র্যাশে পাঠান ({selectedIds.length})</span>
+					</button>
+				{:else}
+					<button
+						type="button"
+						onclick={() => handleBulkAction('restore')}
+						class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer animate-in fade-in"
+					>
+						<RotateCcw class="w-3.5 h-3.5" />
+						<span>পুনরুদ্ধার করুন ({selectedIds.length})</span>
+					</button>
+					<button
+						type="button"
+						onclick={() => handleBulkAction('delete')}
+						class="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer animate-in fade-in"
+					>
+						<Trash2 class="w-3.5 h-3.5" />
+						<span>মুছে ফেলুন ({selectedIds.length})</span>
+					</button>
+				{/if}
+			{/if}
+
+			<!-- + Add Admin Button -->
+			<button
+				type="button"
+				onclick={() => (isAddModalOpen = true)}
+				class="bg-[#635BFF] hover:bg-[#5249e6] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+			>
+				<Plus class="w-4 h-4" />
+				<span>Add Admin</span>
+			</button>
+		</div>
 	</div>
 
-	<!-- Tabs & Pagination Bar (Exact match with screenshot) -->
+	<!-- Tabs & Pagination Bar -->
 	<div class="flex items-center justify-between border-b border-slate-200/80 pt-1">
 		<!-- Left Filter Tabs (All & Trash) -->
 		<div class="flex items-center gap-6">
 			<!-- All Tab -->
 			<button
 				type="button"
-				onclick={() => (currentTab = 'all')}
+				onclick={() => {
+					currentTab = 'all';
+					selectedIds = [];
+				}}
 				class="flex items-center gap-2 pb-3 transition-all cursor-pointer {currentTab === 'all'
 					? 'border-b-2 border-[#5845eb] text-[#5845eb] font-bold'
 					: 'text-slate-600 font-semibold hover:text-slate-900'}"
@@ -287,7 +382,10 @@
 			<!-- Trash Tab -->
 			<button
 				type="button"
-				onclick={() => (currentTab = 'trash')}
+				onclick={() => {
+					currentTab = 'trash';
+					selectedIds = [];
+				}}
 				class="flex items-center gap-2 pb-3 transition-all cursor-pointer {currentTab === 'trash'
 					? 'border-b-2 border-[#5845eb] text-[#5845eb] font-bold'
 					: 'text-slate-600 font-semibold hover:text-slate-900'}"
@@ -303,7 +401,7 @@
 			</button>
 		</div>
 
-		<!-- Right Pagination ( < [1] of 1 > ) -->
+		<!-- Right Pagination -->
 		<div class="flex items-center gap-2 pb-3 text-xs text-slate-500">
 			<button
 				type="button"
@@ -328,7 +426,7 @@
 		</div>
 	</div>
 
-	<!-- Main Table Container (Exact visual match) -->
+	<!-- Main Table Container -->
 	<div class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
 		<div class="overflow-x-auto">
 			<table class="w-full text-left border-collapse">
@@ -340,6 +438,7 @@
 								type="checkbox"
 								checked={selectedIds.length === displayedAdmins.length && displayedAdmins.length > 0}
 								onchange={toggleSelectAll}
+								aria-label="Select all rows"
 								class="w-4 h-4 rounded-md border-slate-300 text-[#5845eb] focus:ring-[#5845eb]/20 cursor-pointer"
 							/>
 						</th>
@@ -364,7 +463,7 @@
 							</td>
 						</tr>
 					{:else}
-						{#each displayedAdmins as admin}
+						{#each displayedAdmins as admin (admin.id)}
 							<tr class="hover:bg-slate-50/70 transition-colors group {selectedIds.includes(admin.id) ? 'bg-indigo-50/30' : ''}">
 								<!-- Checkbox -->
 								<td class="py-3.5 px-4 text-center">
@@ -372,11 +471,12 @@
 										type="checkbox"
 										checked={selectedIds.includes(admin.id)}
 										onchange={() => toggleSelect(admin.id)}
+										aria-label={`Select ${admin.name}`}
 										class="w-4 h-4 rounded-md border-slate-300 text-[#5845eb] focus:ring-[#5845eb]/20 cursor-pointer"
 									/>
 								</td>
 
-								<!-- Image / Avatar (Matching Screenshot Neon Logo) -->
+								<!-- Image / Avatar -->
 								<td class="py-3.5 px-4">
 									<div class="w-8 h-8 rounded-full {admin.avatarBg} flex items-center justify-center font-black text-[7px] tracking-tighter shadow-2xs border">
 										{#if admin.avatarText === 'COLOR LIGHT'}
@@ -421,11 +521,12 @@
 									{admin.registeredAt}
 								</td>
 
-								<!-- Access Select Dropdown (Matching Screenshot border box) -->
+								<!-- Access Select Dropdown -->
 								<td class="py-3.5 px-4">
 									<select
 										value={admin.access}
 										onchange={(e) => updateAccess(admin.id, e.currentTarget.value as any)}
+										aria-label={`Change access for ${admin.username}`}
 										class="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#5845eb] cursor-pointer shadow-2xs hover:border-slate-400 transition-colors"
 									>
 										<option value="Allowed">Allowed</option>
@@ -442,6 +543,7 @@
 											onclick={() => (openActionMenuId = openActionMenuId === admin.id ? null : admin.id)}
 											class="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
 											title="More Options"
+											aria-label="More options"
 										>
 											<MoreVertical class="w-4 h-4" />
 										</button>
@@ -451,10 +553,10 @@
 												<button
 													type="button"
 													onclick={() => {
-														alert(`রোল পরিবর্তন করুন: ${admin.name}`);
+														showToast(`রোল পরিবর্তন অ্যাকশন: ${admin.name}`);
 														openActionMenuId = null;
 													}}
-													class="w-full flex items-center gap-2 px-3.5 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+													class="w-full flex items-center gap-2 px-3.5 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900 cursor-pointer"
 												>
 													<UserCog class="w-3.5 h-3.5 text-slate-400" />
 													<span>Change Role</span>
@@ -463,10 +565,10 @@
 												<button
 													type="button"
 													onclick={() => {
-														alert(`পাসওয়ার্ড রিসেট লিংক তৈরি হয়েছে: ${admin.email}`);
+														showToast(`পাসওয়ার্ড রিসেট লিংক পাঠানো হয়েছে: ${admin.email}`);
 														openActionMenuId = null;
 													}}
-													class="w-full flex items-center gap-2 px-3.5 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+													class="w-full flex items-center gap-2 px-3.5 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900 cursor-pointer"
 												>
 													<KeyRound class="w-3.5 h-3.5 text-slate-400" />
 													<span>Reset Password</span>
@@ -478,7 +580,7 @@
 													<button
 														type="button"
 														onclick={() => moveToTrash(admin.id)}
-														class="w-full flex items-center gap-2 px-3.5 py-2 text-xs text-amber-700 hover:bg-amber-50"
+														class="w-full flex items-center gap-2 px-3.5 py-2 text-xs text-amber-700 hover:bg-amber-50 cursor-pointer"
 													>
 														<Trash2 class="w-3.5 h-3.5 text-amber-500" />
 														<span>Move to Trash</span>
@@ -487,7 +589,7 @@
 													<button
 														type="button"
 														onclick={() => restoreFromTrash(admin.id)}
-														class="w-full flex items-center gap-2 px-3.5 py-2 text-xs text-emerald-700 hover:bg-emerald-50"
+														class="w-full flex items-center gap-2 px-3.5 py-2 text-xs text-emerald-700 hover:bg-emerald-50 cursor-pointer"
 													>
 														<RotateCcw class="w-3.5 h-3.5 text-emerald-500" />
 														<span>Restore Admin</span>
@@ -495,7 +597,7 @@
 													<button
 														type="button"
 														onclick={() => deletePermanently(admin.id)}
-														class="w-full flex items-center gap-2 px-3.5 py-2 text-xs text-rose-700 hover:bg-rose-50"
+														class="w-full flex items-center gap-2 px-3.5 py-2 text-xs text-rose-700 hover:bg-rose-50 cursor-pointer"
 													>
 														<Trash2 class="w-3.5 h-3.5 text-rose-500" />
 														<span>Delete Permanently</span>
@@ -533,6 +635,7 @@
 					type="button"
 					onclick={() => (isAddModalOpen = false)}
 					class="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+					aria-label="Close modal"
 				>
 					<X class="w-4 h-4" />
 				</button>
@@ -541,26 +644,26 @@
 			<!-- Form -->
 			<form onsubmit={handleAddAdmin} class="space-y-4 pt-4">
 				<div>
-					<label for="admin-name" class="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
+					<label for="admin-name" class="block text-xs font-bold text-slate-700 mb-1">Full Name *</label>
 					<Input
 						id="admin-name"
 						type="text"
 						required
 						placeholder="e.g. Tanvir Hossain"
 						bind:value={newAdminName}
-						class="bg-slate-50/70 border-slate-200"
+						class="bg-slate-50/70 border-slate-200 text-xs"
 					/>
 				</div>
 
 				<div>
-					<label for="admin-username" class="block text-xs font-bold text-slate-700 mb-1">Username</label>
+					<label for="admin-username" class="block text-xs font-bold text-slate-700 mb-1">Username *</label>
 					<Input
 						id="admin-username"
 						type="text"
 						required
 						placeholder="e.g. tanvir_admin"
 						bind:value={newAdminUsername}
-						class="bg-slate-50/70 border-slate-200 font-mono"
+						class="bg-slate-50/70 border-slate-200 font-mono text-xs"
 					/>
 				</div>
 
@@ -571,7 +674,7 @@
 						type="email"
 						placeholder="e.g. tanvir@haqplus.com"
 						bind:value={newAdminEmail}
-						class="bg-slate-50/70 border-slate-200"
+						class="bg-slate-50/70 border-slate-200 text-xs"
 					/>
 				</div>
 
@@ -610,6 +713,7 @@
 						variant="ghost"
 						size="sm"
 						onclick={() => (isAddModalOpen = false)}
+						class="cursor-pointer"
 					>
 						Cancel
 					</Button>
@@ -617,9 +721,15 @@
 						type="submit"
 						variant="default"
 						size="sm"
-						class="bg-[#635BFF] hover:bg-[#5249e6] font-bold"
+						disabled={isSaving}
+						class="bg-[#635BFF] hover:bg-[#5249e6] font-bold cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
 					>
-						Save Admin
+						{#if isSaving}
+							<Loader2 class="w-3.5 h-3.5 animate-spin" />
+							<span>সংরক্ষণ হচ্ছে...</span>
+						{:else}
+							<span>Save Admin</span>
+						{/if}
 					</Button>
 				</div>
 			</form>

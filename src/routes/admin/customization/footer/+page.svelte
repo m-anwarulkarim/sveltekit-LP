@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import {
 		Button,
 		Input,
@@ -29,7 +29,7 @@
 	let brandName = $state('AURA');
 	let brandTagline = $state('Next-Gen E-Commerce');
 	let aboutText = $state('AURA is a next-generation e-commerce platform offering premium lifestyle, audio, and home essentials delivered safely to your door.');
-	let phoneHotline = $state('09678 123 456');
+	let phoneHotline = $state('01602867954');
 	let workingHours = $state('9:00 AM – 11:00 PM (Everyday)');
 	let supportEmail = $state('support@aura-store.com');
 	let officeAddress = $state('House-23, Road-12, Dhanmondi, Dhaka-1209, Bangladesh');
@@ -80,7 +80,7 @@
 	<title>Footer Customization | Admin</title>
 </svelte:head>
 
-<div class="space-y-6 max-w-6xl mx-auto pb-16 font-['Hind_Siliguri',sans-serif]">
+<div class="space-y-6 max-w-6xl mx-auto pb-16 font-['Anek_Bangla',sans-serif]">
 	
 	<!-- Header Banner -->
 	<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs">
@@ -177,9 +177,6 @@
 							<span class="w-6 h-6 rounded-full bg-[#1877F2] text-white flex items-center justify-center text-[10px] font-bold">f</span>
 							<span class="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold">X</span>
 							<span class="w-6 h-6 rounded-full bg-[#FF0000] text-white flex items-center justify-center text-[10px] font-bold">▶</span>
-						</div>
-						<div class="p-2.5 rounded-xl border border-indigo-100 bg-indigo-50/50 text-[10px] font-bold text-slate-700 text-center">
-							DOWNLOAD OUR APP
 						</div>
 					</div>
 				</div>

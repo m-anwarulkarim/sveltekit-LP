@@ -3,7 +3,7 @@ import {
 	handleConvertIncompleteToOrder,
 	handleUpdateIncompleteOrder,
 	handleDeleteOrder
-} from '#lib/server/orders.ts';
+} from '#lib/server/orders';
 
 export const load: PageServerLoad = async ({ parent }) => {
 	const parentData = await parent();

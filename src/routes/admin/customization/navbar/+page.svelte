@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import {
 		Button,
 		Input,
@@ -101,7 +101,7 @@
 	<title>Navbar & Header Customization | Admin</title>
 </svelte:head>
 
-<div class="space-y-6 max-w-6xl mx-auto pb-16 font-['Hind_Siliguri',sans-serif]">
+<div class="space-y-6 max-w-6xl mx-auto pb-16 font-['Anek_Bangla',sans-serif]">
 	
 	<!-- Header Banner -->
 	<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs">

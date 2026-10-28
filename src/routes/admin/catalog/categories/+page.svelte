@@ -13,18 +13,29 @@
 		Edit3,
 		Eye,
 		X,
-		CheckCircle2
+		CheckCircle2,
+		Loader2,
+		AlertCircle
 	} from 'lucide-svelte';
 	import { CatalogFilterTabs } from '../../_components/catalog';
-	import { INITIAL_CATEGORIES, type CatalogCategory } from '../../_data.ts';
+	import type { CatalogCategory } from '../../_data.ts';
 
-	// Category state
-	let categories = $state<CatalogCategory[]>([...INITIAL_CATEGORIES]);
+	let { data }: { data?: any } = $props();
+
+	// Category state initialized from real server load
+	let categories = $state<CatalogCategory[]>(data?.categories || []);
+
+	// Synchronize when server data updates
+	$effect(() => {
+		categories = data?.categories ? [...data.categories] : [];
+	});
+
 	let searchQuery = $state('');
 	let activeTab = $state<'all' | 'publish' | 'draft' | 'low_stock' | 'trash'>('all');
 	let selectedIds = $state<string[]>([]);
 	let currentPage = $state(1);
 	let itemsPerPage = 10;
+	let isSaving = $state(false);
 
 	// Toast notification
 	let toastMessage = $state<string | null>(null);
@@ -116,58 +127,133 @@
 		isModalOpen = true;
 	}
 
-	function handleSave() {
+	async function handleSave() {
 		if (!formName.trim()) {
-			alert('Category Name required');
+			showToast('ক্যাটাগরির নাম দেওয়া বাধ্যতামূলক!');
 			return;
 		}
 
-		if (isEditing && editingId) {
-			categories = categories.map((c) =>
-				c.id === editingId
-					? {
-							...c,
-							name: formName.trim(),
-							image: formImage.trim(),
-							priority: formPriority,
-							status: formStatus
-						}
-					: c
-			);
-			showToast('ক্যাটাগরি সফলভাবে আপডেট করা হয়েছে!');
-		} else {
-			const newCat: CatalogCategory = {
-				id: 'cat-' + Date.now(),
-				name: formName.trim(),
-				image: formImage.trim(),
-				productsCount: 0,
-				status: formStatus,
-				priority: formPriority
-			};
-			categories = [newCat, ...categories];
-			showToast('নতুন ক্যাটাগরি সফলভাবে তৈরি করা হয়েছে!');
+		isSaving = true;
+		const formData = new FormData();
+		formData.append('name', formName.trim());
+		formData.append('image', formImage.trim());
+		formData.append('priority', String(formPriority));
+		formData.append('status', formStatus);
+
+		try {
+			if (isEditing && editingId) {
+				formData.append('id', editingId);
+				await fetch('?/updateCategory', {
+					method: 'POST',
+					body: formData
+				});
+
+				// Optimistic UI update
+				categories = categories.map((c) =>
+					c.id === editingId
+						? {
+								...c,
+								name: formName.trim(),
+								image: formImage.trim(),
+								priority: formPriority,
+								status: formStatus
+							}
+						: c
+				);
+				showToast('ক্যাটাগরি সফলভাবে আপডেট করা হয়েছে!');
+			} else {
+				const response = await fetch('?/createCategory', {
+					method: 'POST',
+					body: formData
+				});
+				const result = await response.json();
+
+				const newId = result?.data?.category?.id || 'cat-' + Date.now();
+				const newCat: CatalogCategory = {
+					id: newId,
+					name: formName.trim(),
+					image: formImage.trim(),
+					productsCount: 0,
+					status: formStatus,
+					priority: formPriority
+				};
+				categories = [newCat, ...categories];
+				showToast('নতুন ক্যাটাগরি সফলভাবে তৈরি করা হয়েছে!');
+			}
+			isModalOpen = false;
+		} catch (error) {
+			console.error('Error saving category:', error);
+			showToast('ক্যাটাগরি সংরক্ষণে ত্রুটি হয়েছে');
+		} finally {
+			isSaving = false;
 		}
-
-		isModalOpen = false;
 	}
 
-	function toggleStatus(cat: CatalogCategory) {
+	async function toggleStatus(cat: CatalogCategory) {
 		const newStatus = cat.status === 'publish' ? 'draft' : 'publish';
-		categories = categories.map((c) => (c.id === cat.id ? { ...c, status: newStatus } : c));
 		openActionMenuId = null;
+
+		// Optimistic UI update
+		categories = categories.map((c) => (c.id === cat.id ? { ...c, status: newStatus } : c));
 		showToast(`স্ট্যাটাস ${newStatus === 'publish' ? 'Publish' : 'Draft'}-এ পরিবর্তিত হয়েছে`);
+
+		try {
+			const fd = new FormData();
+			fd.append('id', cat.id);
+			await fetch('?/toggleStatus', {
+				method: 'POST',
+				body: fd
+			});
+		} catch (e) {
+			console.error('Error toggling status on server:', e);
+		}
 	}
 
-	function moveToTrash(id: string) {
-		categories = categories.map((c) => (c.id === id ? { ...c, isTrash: true } : c));
+	async function moveToTrash(id: string) {
 		openActionMenuId = null;
+		categories = categories.map((c) => (c.id === id ? { ...c, isTrash: true } : c));
 		showToast('ক্যাটাগরি ট্র্যাশে পাঠানো হয়েছে');
+
+		try {
+			const fd = new FormData();
+			fd.append('id', id);
+			await fetch('?/deleteCategory', {
+				method: 'POST',
+				body: fd
+			});
+		} catch (e) {
+			console.error('Error deleting category on server:', e);
+		}
 	}
 
 	function restoreFromTrash(id: string) {
 		categories = categories.map((c) => (c.id === id ? { ...c, isTrash: false } : c));
 		openActionMenuId = null;
 		showToast('ক্যাটাগরি রিস্টোর করা হয়েছে');
+	}
+
+	async function handleBulkDelete() {
+		if (selectedIds.length === 0) return;
+		if (!confirm(`আপনি কি নিশ্চিতভাবে নির্বাচিত ${selectedIds.length}টি ক্যাটাগরি মুছে ফেলতে চান?`)) {
+			return;
+		}
+
+		const count = selectedIds.length;
+		const toDelete = [...selectedIds];
+		categories = categories.filter((c) => !toDelete.includes(c.id));
+		selectedIds = [];
+		showToast(`${count}টি ক্যাটাগরি সফলভাবে মুছে ফেলা হয়েছে`);
+
+		try {
+			const fd = new FormData();
+			fd.append('ids', JSON.stringify(toDelete));
+			await fetch('?/bulkDelete', {
+				method: 'POST',
+				body: fd
+			});
+		} catch (e) {
+			console.error('Error bulk deleting categories:', e);
+		}
 	}
 </script>
 
@@ -183,18 +269,21 @@
 	</div>
 {/if}
 
-<div class="space-y-6 max-w-[1400px] mx-auto pb-12">
+<div class="space-y-6 max-w-[1400px] mx-auto pb-12 font-['Plus_Jakarta_Sans',sans-serif]">
 	<!-- Top Bar: Title & Support Button -->
 	<div class="flex items-center justify-between gap-4">
-		<h1 class="text-2xl font-bold text-slate-900 tracking-tight">Category</h1>
+		<div>
+			<h1 class="text-2xl font-bold text-slate-900 tracking-tight">Category</h1>
+			<p class="text-xs text-slate-500 mt-1">পণ্যসমূহের প্রধান ক্যাটাগরি তালিকা ও সংগঠন পরিচালনা করুন</p>
+		</div>
 
-		<button
-			type="button"
+		<a
+			href="/admin/support"
 			class="bg-[#5845eb] hover:bg-[#4a39cf] text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-xs transition-colors inline-flex items-center gap-1.5 cursor-pointer"
 		>
 			<Headset class="w-3.5 h-3.5" />
 			<span>Support</span>
-		</button>
+		</a>
 	</div>
 
 	<!-- Search & Add Category Row -->
@@ -210,18 +299,32 @@
 			<Search class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
 		</div>
 
-		<!-- + Add Category Button -->
-		<button
-			type="button"
-			onclick={openAddModal}
-			class="bg-[#5845eb] hover:bg-[#4a39cf] text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
-		>
-			<Plus class="w-4 h-4" />
-			<span>Add Category</span>
-		</button>
+		<!-- Action Buttons -->
+		<div class="flex items-center gap-3">
+			{#if selectedIds.length > 0}
+				<button
+					type="button"
+					onclick={handleBulkDelete}
+					class="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer animate-in fade-in"
+				>
+					<Trash2 class="w-4 h-4" />
+					<span>মুছে ফেলুন ({selectedIds.length})</span>
+				</button>
+			{/if}
+
+			<!-- + Add Category Button -->
+			<button
+				type="button"
+				onclick={openAddModal}
+				class="bg-[#5845eb] hover:bg-[#4a39cf] text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+			>
+				<Plus class="w-4 h-4" />
+				<span>Add Category</span>
+			</button>
+		</div>
 	</div>
 
-	<!-- Filter Capsules: All Data (32), Publish (22), Draft (10), Low Stock (0), Trash (0) -->
+	<!-- Filter Capsules: All Data, Publish, Draft, Low Stock, Trash -->
 	<CatalogFilterTabs
 		{activeTab}
 		{allCount}
@@ -246,6 +349,7 @@
 								type="checkbox"
 								checked={selectedIds.length > 0 && selectedIds.length === paginatedCategories.length}
 								onchange={handleSelectAll}
+								aria-label="Select all categories"
 								class="rounded border-slate-300 text-[#5845eb] focus:ring-[#5845eb] cursor-pointer"
 							/>
 						</th>
@@ -284,6 +388,7 @@
 										type="checkbox"
 										checked={selectedIds.includes(category.id)}
 										onchange={() => handleSelectRow(category.id)}
+										aria-label={`Select ${category.name}`}
 										class="rounded border-slate-300 text-[#5845eb] focus:ring-[#5845eb] cursor-pointer"
 									/>
 								</td>
@@ -306,7 +411,9 @@
 
 								<!-- Products Count -->
 								<td class="py-3.5 px-4 font-medium text-slate-700">
-									{category.productsCount}
+									<span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-semibold text-[11px]">
+										{category.productsCount}
+									</span>
 								</td>
 
 								<!-- Status -->
@@ -333,17 +440,18 @@
 										type="button"
 										onclick={() => (openActionMenuId = openActionMenuId === category.id ? null : category.id)}
 										class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+										aria-label="Actions menu"
 									>
 										<MoreVertical class="w-4 h-4" />
 									</button>
 
 									<!-- Dropdown Menu -->
 									{#if openActionMenuId === category.id}
-										<div class="absolute right-4 top-10 w-36 bg-white border border-slate-200 rounded-xl shadow-lg z-30 py-1 text-left text-xs">
+										<div class="absolute right-4 top-10 w-36 bg-white border border-slate-200 rounded-xl shadow-lg z-30 py-1 text-left text-xs animate-in fade-in duration-100">
 											<button
 												type="button"
 												onclick={() => openEditModal(category)}
-												class="w-full px-3 py-1.5 flex items-center gap-2 text-slate-700 hover:bg-slate-50 transition-colors"
+												class="w-full px-3 py-2 flex items-center gap-2 text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
 											>
 												<Edit3 class="w-3.5 h-3.5 text-slate-500" />
 												<span>Edit</span>
@@ -352,7 +460,7 @@
 											<button
 												type="button"
 												onclick={() => toggleStatus(category)}
-												class="w-full px-3 py-1.5 flex items-center gap-2 text-slate-700 hover:bg-slate-50 transition-colors"
+												class="w-full px-3 py-2 flex items-center gap-2 text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
 											>
 												<Eye class="w-3.5 h-3.5 text-slate-500" />
 												<span>{category.status === 'publish' ? 'Draft করুন' : 'Publish করুন'}</span>
@@ -362,7 +470,7 @@
 												<button
 													type="button"
 													onclick={() => moveToTrash(category.id)}
-													class="w-full px-3 py-1.5 flex items-center gap-2 text-rose-600 hover:bg-rose-50 transition-colors"
+													class="w-full px-3 py-2 flex items-center gap-2 text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
 												>
 													<Trash2 class="w-3.5 h-3.5" />
 													<span>Trash</span>
@@ -371,7 +479,7 @@
 												<button
 													type="button"
 													onclick={() => restoreFromTrash(category.id)}
-													class="w-full px-3 py-1.5 flex items-center gap-2 text-emerald-600 hover:bg-emerald-50 transition-colors"
+													class="w-full px-3 py-2 flex items-center gap-2 text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer"
 												>
 													<CheckCircle2 class="w-3.5 h-3.5" />
 													<span>Restore</span>
@@ -399,6 +507,7 @@
 						type="button"
 						disabled={currentPage <= 1}
 						onclick={() => (currentPage = Math.max(1, currentPage - 1))}
+						aria-label="Previous page"
 						class="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
 					>
 						<ChevronLeft class="w-4 h-4" />
@@ -412,6 +521,7 @@
 						type="button"
 						disabled={currentPage >= totalPages}
 						onclick={() => (currentPage = Math.min(totalPages, currentPage + 1))}
+						aria-label="Next page"
 						class="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
 					>
 						<ChevronRight class="w-4 h-4" />
@@ -435,6 +545,7 @@
 					type="button"
 					onclick={() => (isModalOpen = false)}
 					class="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+					aria-label="Close modal"
 				>
 					<X class="w-4 h-4" />
 				</button>
@@ -459,7 +570,7 @@
 						id="cat-img"
 						type="text"
 						bind:value={formImage}
-						placeholder="https://example.com/image.png"
+						placeholder="উদাঃ /images/products/soundcore.svg"
 						class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb]"
 					/>
 				</div>
@@ -481,7 +592,7 @@
 						<select
 							id="cat-status"
 							bind:value={formStatus}
-							class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb] bg-white"
+							class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb] bg-white cursor-pointer"
 						>
 							<option value="publish">Publish</option>
 							<option value="draft">Draft</option>
@@ -501,10 +612,16 @@
 				</button>
 				<button
 					type="button"
+					disabled={isSaving}
 					onclick={handleSave}
-					class="px-4 py-2 rounded-xl text-xs font-bold bg-[#5845eb] text-white hover:bg-[#4a39cf] shadow-sm shadow-indigo-600/20 cursor-pointer"
+					class="px-4 py-2 rounded-xl text-xs font-bold bg-[#5845eb] text-white hover:bg-[#4a39cf] shadow-sm shadow-indigo-600/20 flex items-center gap-2 cursor-pointer disabled:opacity-50"
 				>
-					{isEditing ? 'Save Changes' : 'Create Category'}
+					{#if isSaving}
+						<Loader2 class="w-3.5 h-3.5 animate-spin" />
+						<span>সংরক্ষণ হচ্ছে...</span>
+					{:else}
+						<span>{isEditing ? 'Save Changes' : 'Create Category'}</span>
+					{/if}
 				</button>
 			</div>
 		</div>

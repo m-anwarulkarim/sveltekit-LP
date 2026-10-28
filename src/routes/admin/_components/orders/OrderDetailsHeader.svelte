@@ -13,6 +13,7 @@
 
 	interface Props {
 		orderId: string;
+		orderNumber?: string;
 		status: string;
 		title?: string;
 		isNewOrder?: boolean;
@@ -28,6 +29,7 @@
 
 	let {
 		orderId,
+		orderNumber,
 		status = $bindable(),
 		title,
 		isNewOrder = false,
@@ -93,11 +95,11 @@
 		<div class="flex items-center gap-2.5">
 			<h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-mono">
 				{#if title}
-					{title} <span class="text-[#5845eb]">#{orderId}</span>
+					{title} <span class="text-[#5845eb]">#{orderNumber || orderId.slice(0, 8)}</span>
 				{:else if isNewOrder}
-					New Order: <span class="text-[#5845eb]">#{orderId}</span>
+					New Order: <span class="text-[#5845eb]">#{orderNumber || orderId.slice(0, 8)}</span>
 				{:else}
-					Order: <span class="text-[#5845eb]">#{orderId}</span>
+					Order: <span class="text-[#5845eb]">#{orderNumber || orderId.slice(0, 8)}</span>
 				{/if}
 			</h1>
 

@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Sparkles, Globe, Link2, Bold, Italic, Underline, List, ListOrdered, Image as ImageIcon, Smile } from 'lucide-svelte';
+	import { Sparkles, Globe, Link2 } from 'lucide-svelte';
+	import RichTextEditor from './RichTextEditor.svelte';
 
 	interface Props {
 		name: string;
@@ -36,12 +37,6 @@
 			}
 		}
 	});
-
-	function insertText(prefix: string, suffix: string = '') {
-		description = (description || '') + `${prefix}${suffix}`;
-	}
-
-	const commonEmojis = ['🌸', '✨', '🌿', '📦', '💡', '✅', '🔥', '⭐', '❤️'];
 </script>
 
 <div class="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 md:p-6 space-y-5">
@@ -124,107 +119,15 @@
 		</div>
 	</div>
 
-	<!-- Description with Rich Text Editor simulation -->
+	<!-- Product Description with Rich Text WYSIWYG Editor -->
 	<div class="space-y-2">
-		<div class="flex items-center justify-between">
-			<label for="product-description-input" class="block text-xs font-bold text-slate-700">Description</label>
-			<!-- Quick Emojis Bar -->
-			<div class="hidden sm:flex items-center gap-1">
-				{#each commonEmojis as emoji}
-					<button
-						type="button"
-						onclick={() => insertText(` ${emoji} `)}
-						class="text-xs hover:scale-125 transition-transform p-1 cursor-pointer"
-						title="Insert {emoji}"
-					>
-						{emoji}
-					</button>
-				{/each}
-			</div>
-		</div>
-
-		<!-- Toolbar -->
-		<div class="border border-slate-200 rounded-xl overflow-hidden bg-white focus-within:border-[#5845eb] focus-within:ring-3 focus-within:ring-[#5845eb]/10 transition-all">
-			<div class="flex flex-wrap items-center gap-1 p-2 bg-slate-50/80 border-b border-slate-200/80 text-slate-600 text-xs">
-				<button
-					type="button"
-					onclick={() => insertText('**', '**')}
-					class="p-1.5 rounded-lg hover:bg-slate-200/60 hover:text-slate-900 transition-colors cursor-pointer"
-					title="Bold"
-				>
-					<Bold class="w-3.5 h-3.5" />
-				</button>
-				<button
-					type="button"
-					onclick={() => insertText('*', '*')}
-					class="p-1.5 rounded-lg hover:bg-slate-200/60 hover:text-slate-900 transition-colors cursor-pointer"
-					title="Italic"
-				>
-					<Italic class="w-3.5 h-3.5" />
-				</button>
-				<button
-					type="button"
-					onclick={() => insertText('<u>', '</u>')}
-					class="p-1.5 rounded-lg hover:bg-slate-200/60 hover:text-slate-900 transition-colors cursor-pointer"
-					title="Underline"
-				>
-					<Underline class="w-3.5 h-3.5" />
-				</button>
-
-				<span class="w-[1px] h-4 bg-slate-200 mx-1"></span>
-
-				<button
-					type="button"
-					onclick={() => insertText('\n• ')}
-					class="p-1.5 rounded-lg hover:bg-slate-200/60 hover:text-slate-900 transition-colors cursor-pointer"
-					title="Bullet List"
-				>
-					<List class="w-3.5 h-3.5" />
-				</button>
-				<button
-					type="button"
-					onclick={() => insertText('\n1. ')}
-					class="p-1.5 rounded-lg hover:bg-slate-200/60 hover:text-slate-900 transition-colors cursor-pointer"
-					title="Numbered List"
-				>
-					<ListOrdered class="w-3.5 h-3.5" />
-				</button>
-
-				<span class="w-[1px] h-4 bg-slate-200 mx-1"></span>
-
-				<button
-					type="button"
-					onclick={() => {
-						const url = prompt('Enter link URL:');
-						if (url) insertText(`[link](${url})`);
-					}}
-					class="p-1.5 rounded-lg hover:bg-slate-200/60 hover:text-slate-900 transition-colors cursor-pointer"
-					title="Add Link"
-				>
-					<Link2 class="w-3.5 h-3.5" />
-				</button>
-
-				<button
-					type="button"
-					onclick={() => {
-						const url = prompt('Enter Image URL:');
-						if (url) insertText(`\n![image](${url})\n`);
-					}}
-					class="p-1.5 rounded-lg hover:bg-slate-200/60 hover:text-slate-900 transition-colors cursor-pointer"
-					title="Insert Image"
-				>
-					<ImageIcon class="w-3.5 h-3.5" />
-				</button>
-			</div>
-
-			<textarea
-				id="product-description-input"
-				bind:value={description}
-				rows="7"
-				placeholder="🌸 আলমারি সুগন্ধি স্যাশে - ৪৮ পিস&#10;🌿 আপনার কাপড় ও আলমারিতে রাখুন মন মাতানো সুগন্ধ!&#10;📦 প্যাকেজ: ৪৮টি স্যাশে&#10;💡 বৈশিষ্ট্য: পোকা প্রতিরোধক ও লং লাস্টিং..."
-				class="w-full p-4 border-none text-slate-800 placeholder:text-slate-400 focus:outline-hidden text-sm leading-relaxed resize-y font-['Hind_Siliguri',sans-serif]"
-			></textarea>
-		</div>
+		<label class="block text-xs font-bold text-slate-700">
+			প্রোডাক্ট ডেসক্রিপশন (Product Description & Styling)
+		</label>
+		<RichTextEditor
+			bind:value={description}
+			placeholder="পণ্য সম্পর্কে আকর্ষণীয় বর্ণনা লিখুন... বোল্ড, রঙিন লেখা, হেডিং ও বিভিন্ন স্টাইল ব্যবহার করতে পারেন।"
+		/>
 	</div>
 </div>
 

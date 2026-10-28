@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Button, Badge } from '#lib/components/ui';
 	import { ChevronDown, HelpCircle } from 'lucide-svelte';
 
 	interface FAQItem {
@@ -40,10 +41,10 @@
 	<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
 		
 		<div class="text-center mb-16">
-			<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 text-xs font-semibold uppercase tracking-wider mb-4">
+			<Badge variant="outline" class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border-violet-500/20 text-violet-300 text-xs font-semibold uppercase tracking-wider mb-4">
 				<HelpCircle class="w-3.5 h-3.5" />
 				Common Inquiries
-			</div>
+			</Badge>
 			<h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight font-heading">
 				Frequently Asked Questions
 			</h2>
@@ -52,14 +53,15 @@
 		<div class="space-y-4">
 			{#each faqs as faq, i}
 				<div class="glass-card rounded-2xl border border-white/10 overflow-hidden transition-all duration-300">
-					<button
+					<Button
+						variant="ghost"
 						onclick={() => toggle(i)}
-						class="w-full p-5 sm:p-6 text-left flex items-center justify-between gap-4"
+						class="w-full p-5 sm:p-6 text-left flex items-center justify-between gap-4 h-auto hover:bg-white/5 rounded-none font-normal cursor-pointer"
 						aria-expanded={openIndex === i}
 					>
 						<span class="text-sm sm:text-base font-bold text-white font-heading">{faq.q}</span>
 						<ChevronDown class="w-5 h-5 text-cyan-400 shrink-0 transition-transform duration-300 {openIndex === i ? 'rotate-180' : ''}" />
-					</button>
+					</Button>
 
 					{#if openIndex === i}
 						<div class="px-5 pb-6 sm:px-6 text-xs sm:text-sm text-slate-300 leading-relaxed border-t border-white/5 pt-4 animate-in fade-in">

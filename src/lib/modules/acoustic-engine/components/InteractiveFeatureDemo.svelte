@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Button, Badge } from '#lib/components/ui';
 	import { Cpu, Radio, Waves, Compass, Activity, Sliders } from 'lucide-svelte';
 
 	let activeTechTab = $state<'planar' | 'anc' | 'spatial' | 'latency'>('planar');
@@ -58,10 +59,10 @@
 		
 		<!-- Section Header -->
 		<div class="text-center max-w-3xl mx-auto mb-16">
-			<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 text-xs font-semibold uppercase tracking-wider mb-4">
+			<Badge variant="outline" class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border-violet-500/20 text-violet-300 text-xs font-semibold uppercase tracking-wider mb-4">
 				<Activity class="w-3.5 h-3.5" />
 				Deep Engineering
-			</div>
+			</Badge>
 			<h2 class="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight font-heading mb-4">
 				The Science of <br />
 				<span class="bg-gradient-to-r from-violet-400 via-indigo-300 to-cyan-400 bg-clip-text text-transparent">
@@ -79,8 +80,9 @@
 			<!-- Left Nav Tabs -->
 			<div class="lg:col-span-5 flex flex-col gap-3">
 				<button
+					type="button"
 					onclick={() => activeTechTab = 'planar'}
-					class="p-5 rounded-2xl text-left border transition-all duration-300 flex items-start gap-4 {activeTechTab === 'planar' ? 'bg-violet-600/15 border-violet-500/50 shadow-lg shadow-violet-600/10' : 'bg-white/5 border-white/10 hover:border-white/20'}"
+					class="p-5 rounded-2xl text-left border transition-all duration-300 flex items-start gap-4 cursor-pointer {activeTechTab === 'planar' ? 'bg-violet-600/15 border-violet-500/50 shadow-lg shadow-violet-600/10' : 'bg-white/5 border-white/10 hover:border-white/20'}"
 				>
 					<div class="p-3 rounded-xl bg-violet-500/20 text-violet-400 mt-0.5">
 						<Waves class="w-5 h-5" />
@@ -92,8 +94,9 @@
 				</button>
 
 				<button
+					type="button"
 					onclick={() => activeTechTab = 'anc'}
-					class="p-5 rounded-2xl text-left border transition-all duration-300 flex items-start gap-4 {activeTechTab === 'anc' ? 'bg-cyan-600/15 border-cyan-500/50 shadow-lg shadow-cyan-600/10' : 'bg-white/5 border-white/10 hover:border-white/20'}"
+					class="p-5 rounded-2xl text-left border transition-all duration-300 flex items-start gap-4 cursor-pointer {activeTechTab === 'anc' ? 'bg-cyan-600/15 border-cyan-500/50 shadow-lg shadow-cyan-600/10' : 'bg-white/5 border-white/10 hover:border-white/20'}"
 				>
 					<div class="p-3 rounded-xl bg-cyan-500/20 text-cyan-400 mt-0.5">
 						<Cpu class="w-5 h-5" />
@@ -105,8 +108,9 @@
 				</button>
 
 				<button
+					type="button"
 					onclick={() => activeTechTab = 'spatial'}
-					class="p-5 rounded-2xl text-left border transition-all duration-300 flex items-start gap-4 {activeTechTab === 'spatial' ? 'bg-indigo-600/15 border-indigo-500/50 shadow-lg shadow-indigo-600/10' : 'bg-white/5 border-white/10 hover:border-white/20'}"
+					class="p-5 rounded-2xl text-left border transition-all duration-300 flex items-start gap-4 cursor-pointer {activeTechTab === 'spatial' ? 'bg-indigo-600/15 border-indigo-500/50 shadow-lg shadow-indigo-600/10' : 'bg-white/5 border-white/10 hover:border-white/20'}"
 				>
 					<div class="p-3 rounded-xl bg-indigo-500/20 text-indigo-400 mt-0.5">
 						<Compass class="w-5 h-5" />
@@ -118,8 +122,9 @@
 				</button>
 
 				<button
+					type="button"
 					onclick={() => activeTechTab = 'latency'}
-					class="p-5 rounded-2xl text-left border transition-all duration-300 flex items-start gap-4 {activeTechTab === 'latency' ? 'bg-amber-600/15 border-amber-500/50 shadow-lg shadow-amber-600/10' : 'bg-white/5 border-white/10 hover:border-white/20'}"
+					class="p-5 rounded-2xl text-left border transition-all duration-300 flex items-start gap-4 cursor-pointer {activeTechTab === 'latency' ? 'bg-amber-600/15 border-amber-500/50 shadow-lg shadow-amber-600/10' : 'bg-white/5 border-white/10 hover:border-white/20'}"
 				>
 					<div class="p-3 rounded-xl bg-amber-500/20 text-amber-400 mt-0.5">
 						<Radio class="w-5 h-5" />
@@ -133,9 +138,9 @@
 
 			<!-- Right Details Panel -->
 			<div class="lg:col-span-7 glass-panel rounded-3xl p-8 border border-white/10 relative overflow-hidden shadow-2xl">
-				<div class="inline-block px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-white/10 text-cyan-300 mb-4">
+				<Badge variant="outline" class="inline-block px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-white/10 text-cyan-300 border-white/15 mb-4">
 					{techFeatures[activeTechTab].badge}
-				</div>
+				</Badge>
 
 				<h3 class="text-2xl sm:text-3xl font-extrabold text-white font-heading mb-4">
 					{techFeatures[activeTechTab].title}
@@ -171,18 +176,22 @@
 					</div>
 				</div>
 				<div class="flex items-center gap-2">
-					<button
+					<Button
+						variant="ghost"
+						size="sm"
 						onclick={() => { bass = 0; mid = 0; treble = 0; spatial = 0; }}
-						class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-slate-300 transition-colors"
+						class="h-auto px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-slate-300 transition-colors cursor-pointer"
 					>
 						Flat Studio
-					</button>
-					<button
+					</Button>
+					<Button
+						variant="ghost"
+						size="sm"
 						onclick={() => { bass = 8; mid = 3; treble = 7; spatial = 10; }}
-						class="px-3 py-1.5 rounded-lg bg-violet-500/20 border border-violet-500/30 text-xs text-violet-300 transition-colors"
+						class="h-auto px-3 py-1.5 rounded-lg bg-violet-500/20 border border-violet-500/30 text-xs text-violet-300 hover:text-white transition-colors cursor-pointer"
 					>
 						AURA Signature
-					</button>
+					</Button>
 				</div>
 			</div>
 

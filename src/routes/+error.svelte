@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { page } from '$app/state';
 	import { StoreLayout } from '#lib';
 	import { Button, Badge, Card, CardContent } from '#lib/components/ui';
@@ -43,7 +43,7 @@
 
 {#if isAdminPath}
 	<!-- Admin Fallback Error Canvas (if layout didn't catch) -->
-	<div class="min-h-screen bg-[#faf7f2] flex items-center justify-center p-4 font-['Hind_Siliguri',sans-serif]">
+	<div class="min-h-screen bg-[#faf7f2] flex items-center justify-center p-4 font-['Anek_Bangla',sans-serif]">
 		<Card class="max-w-xl w-full border-slate-200 shadow-xl bg-white rounded-2xl overflow-hidden">
 			<div class="h-2 bg-gradient-to-r from-red-500 via-amber-500 to-[#5845eb]"></div>
 			<CardContent class="p-8 text-center space-y-6">
@@ -94,7 +94,7 @@
 {:else}
 	<!-- Storefront Premium Customer Error Page -->
 	<StoreLayout user={data?.user}>
-		<div class="min-h-[70vh] flex items-center justify-center px-4 py-12 md:py-20 font-['Hind_Siliguri',sans-serif]">
+		<div class="min-h-[70vh] flex items-center justify-center px-4 py-12 md:py-20 font-['Anek_Bangla',sans-serif]">
 			<div class="max-w-2xl w-full text-center space-y-8">
 				
 				<!-- Decorative Glowing Icon Stack -->

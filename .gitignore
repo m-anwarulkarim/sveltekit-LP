@@ -26,4 +26,5 @@ vite.config.ts.timestamp-*
 *.png
 *.pdf
 test_site.py
+scratch/
 

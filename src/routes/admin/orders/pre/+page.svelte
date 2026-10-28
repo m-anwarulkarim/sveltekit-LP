@@ -38,7 +38,8 @@
 			const matchesSearch =
 				searchQuery === ''
 					? true
-					: (order.id || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+					: (order.orderNumber || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+						(order.id || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
 						(order.customerName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
 						(order.customerEmail || '').includes(searchQuery);
 
@@ -47,8 +48,14 @@
 	);
 
 	// Metrics
-	let totalValue = $derived(preOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0));
-	let pendingPreOrders = $derived(preOrders.filter((o: any) => o.status !== 'processing' && o.status !== 'confirmed' && o.status !== 'delivered').length);
+	let totalValue = $derived(
+		Array.isArray(preOrders) ? preOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0) : 0
+	);
+	let pendingPreOrders = $derived(
+		Array.isArray(preOrders)
+			? preOrders.filter((o: any) => o.status !== 'processing' && o.status !== 'confirmed' && o.status !== 'delivered').length
+			: 0
+	);
 </script>
 
 <div class="space-y-6">
@@ -189,7 +196,12 @@
 							<tr class="hover:bg-slate-50/60 transition-colors">
 								<td class="py-3.5 px-4 font-mono font-bold text-slate-900">
 									<div class="flex items-center gap-1.5">
-										<span class="text-indigo-600">#{order.id}</span>
+										<a
+											href="/admin/orders/{order.orderNumber || order.id}"
+											class="text-indigo-600 hover:underline font-mono font-bold"
+										>
+											#{order.orderNumber || order.id.slice(0, 8)}
+										</a>
 									</div>
 									<div class="text-[10px] text-slate-400 font-sans font-normal mt-0.5">
 										{new Date(order.createdAt).toLocaleDateString('bn-BD')}

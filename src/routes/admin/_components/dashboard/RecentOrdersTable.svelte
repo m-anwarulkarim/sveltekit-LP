@@ -61,6 +61,12 @@
 							</span>
 						</td>
 					</tr>
+				{:else}
+					<tr>
+						<td colspan="6" class="py-8 text-center text-slate-400 font-medium text-xs">
+							কোনো সাম্প্রতিক ওয়েব অর্ডার পাওয়া যায়নি।
+						</td>
+					</tr>
 				{/each}
 			</tbody>
 		</table>

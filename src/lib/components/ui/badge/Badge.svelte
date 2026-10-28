@@ -4,7 +4,7 @@
 	import type { HTMLAttributes } from 'svelte/elements';
 
 	interface Props extends HTMLAttributes<HTMLDivElement> {
-		variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'purple';
+		variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'purple' | 'blue' | 'rose';
 		children?: Snippet;
 		class?: string;
 	}
@@ -23,7 +23,9 @@
 		outline: 'border-slate-200 text-slate-800',
 		success: 'border-emerald-200 bg-emerald-50 text-emerald-700',
 		warning: 'border-amber-200 bg-amber-50 text-amber-700',
-		purple: 'border-indigo-200 bg-indigo-50 text-[#5845eb]'
+		purple: 'border-indigo-200 bg-indigo-50 text-[#5845eb]',
+		blue: 'border-blue-200 bg-blue-50 text-[#2563eb]',
+		rose: 'border-rose-200 bg-rose-50 text-rose-700'
 	};
 </script>
 

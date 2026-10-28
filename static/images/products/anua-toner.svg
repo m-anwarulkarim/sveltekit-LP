@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <rect width="200" height="200" fill="white"/>
+  <ellipse cx="100" cy="180" rx="42" ry="7" fill="#e2e8f0"/>
+  <!-- Tall Bottle -->
+  <rect x="74" y="55" width="52" height="118" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <!-- Cap -->
+  <rect x="86" y="32" width="28" height="24" rx="2" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <!-- Label -->
+  <rect x="76" y="75" width="48" height="75" fill="#ffffff"/>
+  <text x="100" y="92" text-anchor="middle" font-family="sans-serif" font-weight="900" font-size="8" fill="#0f172a">Anua</text>
+  <text x="100" y="104" text-anchor="middle" font-family="sans-serif" font-weight="bold" font-size="5" fill="#475569">Heartleaf 77%</text>
+  <text x="100" y="112" text-anchor="middle" font-family="sans-serif" font-size="4.5" fill="#64748b">Soothing Toner</text>
+</svg>

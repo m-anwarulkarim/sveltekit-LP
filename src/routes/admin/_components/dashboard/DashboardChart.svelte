@@ -5,26 +5,85 @@
 
 	let { data }: Props = $props();
 
-	// 7-day trend telemetry points
-	const trendData = [
-		{ date: '১৫ অক্টো', sales: 3400, orders: 4, x: 50, ySales: 160 },
-		{ date: '১৬ অক্টো', sales: 4800, orders: 6, x: 140, ySales: 120 },
-		{ date: '১৭ অক্টো', sales: 2900, orders: 3, x: 230, ySales: 175 },
-		{ date: '১৮ অক্টো', sales: 5200, orders: 7, x: 320, ySales: 110 },
-		{ date: '১৯ অক্টো', sales: 4100, orders: 5, x: 410, ySales: 145 },
-		{ date: '২০ অক্টো', sales: 6500, orders: 9, x: 500, ySales: 70 },
-		{ date: '২১ অক্টো', sales: 5900, orders: 8, x: 590, ySales: 90 }
-	];
-
 	let activeChartPoint = $state<{ date: string; sales: number; orders: number } | null>(null);
 
+	let allOrders = $derived(data?.orders || []);
+
 	let webOrders = $derived(
-		(data?.orders || []).filter((o: any) =>
+		allOrders.filter((o: any) =>
 			['pending', 'incomplete', 'no_response', 'no_response_3', 'good_no_response', 'busy', 'hold', 'recall'].includes(o.status)
 		)
 	);
 
-	let trashedOrders = $derived((data?.orders || []).filter((o: any) => o.status === 'cancelled'));
+	let trashedOrders = $derived(allOrders.filter((o: any) => o.status === 'cancelled'));
+
+	// Real 7-day trend telemetry calculation
+	let trendData = $derived.by(() => {
+		const now = new Date();
+		const days: { date: string; sales: number; orders: number; x: number; ySales: number; yOrders: number }[] = [];
+
+		for (let i = 6; i >= 0; i--) {
+			const d = new Date(now);
+			d.setDate(d.getDate() - i);
+			const year = d.getFullYear();
+			const month = d.getMonth();
+			const day = d.getDate();
+
+			const dateStr = d.toLocaleDateString('bn-BD', { day: 'numeric', month: 'short' });
+
+			const dayOrders = allOrders.filter((o: any) => {
+				if (!o.createdAt) return false;
+				const orderDate = new Date(o.createdAt);
+				return (
+					orderDate.getDate() === day &&
+					orderDate.getMonth() === month &&
+					orderDate.getFullYear() === year
+				);
+			});
+
+			const activeOrders = dayOrders.filter((o: any) => o.status !== 'cancelled');
+			const daySales = activeOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
+			const dayOrdersCount = dayOrders.length;
+
+			days.push({
+				date: dateStr,
+				sales: daySales,
+				orders: dayOrdersCount,
+				x: 50 + (6 - i) * 90,
+				ySales: 190,
+				yOrders: 190
+			});
+		}
+
+		const maxSales = Math.max(100, ...days.map((d) => d.sales));
+		const maxOrders = Math.max(5, ...days.map((d) => d.orders));
+
+		return days.map((d) => ({
+			...d,
+			ySales: d.sales > 0 ? Math.round(190 - (d.sales / maxSales) * 140) : 190,
+			yOrders: d.orders > 0 ? Math.round(190 - (d.orders / maxOrders) * 130) : 190
+		}));
+	});
+
+	let weeklyTotal = $derived(trendData.reduce((sum, d) => sum + d.sales, 0));
+	let highestDay = $derived.by(() => {
+		let max = trendData[0];
+		for (const d of trendData) {
+			if (d.sales > (max?.sales || 0)) {
+				max = d;
+			}
+		}
+		return max;
+	});
+
+	let areaPoints = $derived.by(() => {
+		if (trendData.length === 0) return '50,190 590,190';
+		const linePts = trendData.map((d) => `${d.x},${d.ySales}`).join(' ');
+		return `50,190 ${linePts} 590,190`;
+	});
+
+	let salesPoints = $derived(trendData.map((d) => `${d.x},${d.ySales}`).join(' '));
+	let ordersPoints = $derived(trendData.map((d) => `${d.x},${d.yOrders}`).join(' '));
 </script>
 
 <!-- Visual Dual Analytics Section -->
@@ -50,6 +109,12 @@
 
 		<!-- Interactive SVG Chart Canvas -->
 		<div class="relative w-full h-52 flex items-center justify-center overflow-x-auto">
+			{#if activeChartPoint}
+				<div class="absolute top-2 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-semibold px-3 py-1 rounded-xl shadow-lg z-20 pointer-events-none">
+					{activeChartPoint.date}: ৳{activeChartPoint.sales.toLocaleString('en-US')} ({activeChartPoint.orders} অর্ডার)
+				</div>
+			{/if}
+
 			<svg viewBox="0 0 640 220" class="w-full h-full min-w-[500px] sm:min-w-0 overflow-visible">
 				<defs>
 					<linearGradient id="areaGradientSales" x1="0" y1="0" x2="0" y2="1">
@@ -66,13 +131,13 @@
 
 				<!-- Sales Area -->
 				<polygon
-					points="50,190 50,75 140,165 230,125 320,175 410,95 500,45 590,110 590,190"
+					points={areaPoints}
 					fill="url(#areaGradientSales)"
 				/>
 
 				<!-- Sales Spline Line -->
 				<polyline
-					points="50,75 140,165 230,125 320,175 410,95 500,45 590,110"
+					points={salesPoints}
 					fill="none"
 					stroke="#5845eb"
 					stroke-width="3"
@@ -82,7 +147,7 @@
 
 				<!-- Orders Line -->
 				<polyline
-					points="50,70 140,135 230,105 320,150 410,85 500,55 590,105"
+					points={ordersPoints}
 					fill="none"
 					stroke="#d97706"
 					stroke-width="2"
@@ -114,8 +179,8 @@
 		</div>
 
 		<div class="mt-3 flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
-			<span>সর্বোচ্চ সেলস: ২১ অক্টো (৳৫,৯০০)</span>
-			<span>সাপ্তাহিক মোট: ৳২২,৮০০</span>
+			<span>সর্বোচ্চ সেলস: {highestDay?.date || 'আজ'} (৳{highestDay?.sales ? highestDay.sales.toLocaleString('en-US') : '০'})</span>
+			<span>সাপ্তাহিক মোট: ৳{weeklyTotal.toLocaleString('en-US')}</span>
 		</div>
 	</div>
 
@@ -134,7 +199,7 @@
 						cx="50" cy="50" r="40"
 						stroke="#047857" stroke-width="12" fill="none"
 						stroke-dasharray="251.2"
-						stroke-dashoffset={251.2 * (1 - ((data?.stats?.deliveredCount || 0) / (data?.orders?.length || 1)))}
+						stroke-dashoffset={allOrders.length > 0 ? 251.2 * (1 - ((data?.stats?.deliveredCount || 0) / allOrders.length)) : 251.2}
 						stroke-linecap="round"
 					/>
 				</svg>

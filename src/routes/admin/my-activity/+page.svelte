@@ -59,50 +59,19 @@
 	// Orders data from layout
 	let allOrders = $derived(data?.orders || []);
 
-	// My Activity Orders (Admin's own processed items)
-	let myOrders = $derived([
-		{
-			id: '1002',
-			customerName: 'Rahim Uddin',
-			phone: '01602867954',
-			status: 'confirmed',
-			amount: 135,
-			createdAt: '25 Oct 2026, 10:54 PM',
-			items: 'Hybrid Green Tomato Seeds (1 Pack)',
-			callStatus: 'Call Completed'
-		},
-		{
-			id: '1001',
-			customerName: 'Rakib Hasan',
-			phone: '01712345678',
-			status: 'delivered',
-			amount: 490,
-			createdAt: '24 Oct 2026, 04:30 PM',
-			items: 'Original Red Salvia Flower Seeds',
-			callStatus: 'Call Completed'
-		},
-		{
-			id: '1000',
-			customerName: 'Mahmudul Haque',
-			phone: '01898765432',
-			status: 'processing',
-			amount: 850,
-			createdAt: '24 Oct 2026, 01:15 PM',
-			items: 'Gardening Special Combo Pack',
-			callStatus: 'Call Completed'
-		}
-	]);
+	// My Activity Orders directly from D1
+	let myOrders = $derived(data?.myOrders || []);
 
 	// Filtered orders list
 	let displayedOrders = $derived.by(() => {
 		let list = activeTab === 'my' ? myOrders : allOrders.map((o: any, idx: number) => ({
-			id: o.id || `${1000 + idx}`,
+			id: o.orderNumber || o.id || `${1000 + idx}`,
 			customerName: o.customerName || 'Customer',
-			phone: o.customerEmail || '01700000000',
+			phone: o.customerPhone || o.customerEmail || '01700000000',
 			status: o.status || 'pending',
-			amount: o.total || 135,
-			createdAt: '25 Oct 2026, 10:54 PM',
-			items: 'Standard Order Item',
+			amount: o.total || 0,
+			createdAt: o.createdAt ? new Date(o.createdAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : 'Today',
+			items: o.items ? (typeof o.items === 'string' && o.items.startsWith('[') ? JSON.parse(o.items)[0]?.name || 'Product' : 'Standard Item') : 'Standard Order Item',
 			callStatus: 'Call Verified'
 		}));
 
@@ -118,27 +87,25 @@
 		return list;
 	});
 
-	// 14-day Activity Data
-	const ACTIVITY_DAYS = [
-		{ date: '14 Oct', count: 0 },
-		{ date: '15 Oct', count: 0 },
-		{ date: '16 Oct', count: 0 },
-		{ date: '17 Oct', count: 0 },
-		{ date: '18 Oct', count: 0 },
-		{ date: '19 Oct', count: 0 },
-		{ date: '20 Oct', count: 0 },
-		{ date: '21 Oct', count: 0 },
-		{ date: '22 Oct', count: 0 },
-		{ date: '23 Oct', count: 0 },
-		{ date: '24 Oct', count: 2 },
-		{ date: '25 Oct', count: 1 },
-		{ date: '26 Oct', count: 0 },
-		{ date: '27 Oct', count: 0 }
-	];
+	// Real 14-day Activity Data directly from server/database
+	let activityDays = $derived(data?.activityDays || []);
 
 	let totalTrackedOrders = $derived(
-		ACTIVITY_DAYS.reduce((sum, d) => sum + d.count, 0)
+		activityDays.reduce((sum: number, d: any) => sum + d.count, 0)
 	);
+
+	let mySalesTotal = $derived(myOrders.reduce((sum: number, o: any) => sum + (o.amount || o.total || 0), 0));
+	let allSalesTotal = $derived(allOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0));
+	let targetOrders = $derived(data?.activeDailyTarget?.targetOrders || 20);
+	let completedOrders = $derived(myOrders.filter((o: any) => ['confirmed', 'delivered'].includes(o.status)).length);
+	let targetPercent = $derived(targetOrders > 0 ? Math.min(100, Math.round((completedOrders / targetOrders) * 100)) : 0);
+
+	let ordersCount = $derived(activeTab === 'my' ? myOrders.length : allOrders.length);
+	let confirmedCount = $derived((activeTab === 'my' ? myOrders : allOrders).filter((o: any) => ['confirmed', 'processing', 'entry_done', 'shipped'].includes(o.status)).length);
+	let deliveredCount = $derived((activeTab === 'my' ? myOrders : allOrders).filter((o: any) => o.status === 'delivered').length);
+	let cancelledCount = $derived((activeTab === 'my' ? myOrders : allOrders).filter((o: any) => o.status === 'cancelled').length);
+	let returnedCount = $derived((activeTab === 'my' ? myOrders : allOrders).filter((o: any) => ['returned', 'pending_return'].includes(o.status)).length);
+	let totalCalls = $derived(data?.recentNotes?.length || 0);
 </script>
 
 <svelte:head>
@@ -259,7 +226,7 @@
 				</div>
 			</div>
 			<div class="text-xl font-black text-slate-900 font-['Outfit']">
-				{activeTab === 'my' ? '1' : allOrders.length}
+				{ordersCount}
 			</div>
 			<div class="text-[10.5px] font-semibold text-slate-400 mt-0.5 truncate">
 				Orders
@@ -275,7 +242,7 @@
 				</div>
 			</div>
 			<div class="text-xl font-black text-slate-900 font-['Outfit']">
-				{activeTab === 'my' ? '1' : (data?.stats?.confirmedCount || 12)}
+				{confirmedCount}
 			</div>
 			<div class="text-[10.5px] font-semibold text-blue-600 mt-0.5 truncate">
 				In Processing
@@ -291,7 +258,7 @@
 				</div>
 			</div>
 			<div class="text-xl font-black text-slate-900 font-['Outfit']">
-				{activeTab === 'my' ? '1' : (data?.stats?.deliveredCount || 2)}
+				{deliveredCount}
 			</div>
 			<div class="text-[10.5px] font-semibold text-emerald-600 mt-0.5 truncate">
 				Completed
@@ -307,7 +274,7 @@
 				</div>
 			</div>
 			<div class="text-xl font-black text-slate-900 font-['Outfit']">
-				{activeTab === 'my' ? '0' : (data?.stats?.cancelledCount || 1)}
+				{cancelledCount}
 			</div>
 			<div class="text-[10.5px] font-semibold text-rose-600 mt-0.5 truncate">
 				Void Orders
@@ -323,7 +290,7 @@
 				</div>
 			</div>
 			<div class="text-xl font-black text-slate-900 font-['Outfit']">
-				0
+				{returnedCount}
 			</div>
 			<div class="text-[10.5px] font-semibold text-amber-600 mt-0.5 truncate">
 				Dispatched Back
@@ -339,7 +306,7 @@
 				</div>
 			</div>
 			<div class="text-xl font-black text-slate-900 font-['Outfit']">
-				{activeTab === 'my' ? '3' : '15'}
+				{totalCalls}
 			</div>
 			<div class="text-[10.5px] font-semibold text-purple-600 mt-0.5 truncate">
 				Outbound Calls
@@ -355,7 +322,7 @@
 				</div>
 			</div>
 			<div class="text-xl font-black text-slate-900 font-['Outfit'] truncate">
-				{activeTab === 'my' ? '৳1,475' : '৳28,233'}
+				৳{(activeTab === 'my' ? mySalesTotal : allSalesTotal).toLocaleString()}
 			</div>
 			<div class="text-[10.5px] font-semibold text-emerald-600 mt-0.5 truncate">
 				Active Volume
@@ -371,11 +338,13 @@
 			</div>
 			<div>
 				<div class="flex items-center gap-2">
-					<span class="text-sm font-black text-slate-900">Daily Order Target: 85% Completed</span>
-					<Badge variant="purple" class="text-[10px] font-bold">Excellent Pace</Badge>
+					<span class="text-sm font-black text-slate-900">Daily Order Target: {targetPercent}% Completed</span>
+					<Badge variant={targetPercent >= 80 ? 'default' : 'secondary'} class="text-[10px] font-bold">
+						{targetPercent >= 80 ? 'Excellent Pace' : 'In Progress'}
+					</Badge>
 				</div>
 				<p class="text-xs text-slate-500 mt-0.5">
-					Target today: 20 verified orders — 17 successfully confirmed and queued for dispatch.
+					Target today: {targetOrders} verified orders — {completedOrders} successfully confirmed and queued for dispatch.
 				</p>
 			</div>
 		</div>
@@ -384,10 +353,10 @@
 		<div class="w-full md:w-64 space-y-1">
 			<div class="flex items-center justify-between text-[11px] font-bold">
 				<span class="text-slate-500">Target Progress</span>
-				<span class="text-[#5845eb]">17 / 20 Orders</span>
+				<span class="text-[#5845eb]">{completedOrders} / {targetOrders} Orders</span>
 			</div>
 			<div class="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
-				<div class="h-full bg-gradient-to-r from-[#5845eb] to-[#7c3aed] rounded-full transition-all duration-500" style="width: 85%;"></div>
+				<div class="h-full bg-gradient-to-r from-[#5845eb] to-[#7c3aed] rounded-full transition-all duration-500" style="width: {targetPercent}%;"></div>
 			</div>
 		</div>
 	</div>
@@ -430,7 +399,7 @@
 
 				<!-- Bars & Labels Area -->
 				<div class="ml-8 h-full flex items-end justify-between gap-2 z-10 pt-4">
-					{#each ACTIVITY_DAYS as day}
+					{#each activityDays as day}
 						{@const heightPercent = (day.count / 4) * 100}
 						<div class="flex-1 flex flex-col items-center h-full justify-end group cursor-pointer relative">
 							
@@ -518,7 +487,7 @@
 								</span>
 							</div>
 							<div class="text-[11px] text-slate-400 font-mono flex items-center gap-2">
-								<span>#{order.id}</span>
+								<span>#{order.orderNumber || order.id.slice(0, 8)}</span>
 								<span>•</span>
 								<span>{order.createdAt}</span>
 							</div>

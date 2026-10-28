@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { Button, Badge } from '#lib/components/ui';
 	import {
 		Search,
 		X,
@@ -208,24 +209,28 @@
 		<div class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
 			<!-- Clear Button (shows when there is text) -->
 			{#if searchQuery.trim().length > 0}
-				<button
+				<Button
+					variant="ghost"
+					size="icon"
 					type="button"
 					onclick={clearInput}
-					class="p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+					class="h-7 w-7 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer p-0"
 					aria-label="Clear search input"
 				>
 					<X class="w-3.5 h-3.5 stroke-[2.5]" />
-				</button>
+				</Button>
 			{/if}
 
-			<!-- Magnifying Glass Search Button (Screenshot exact: pale pink box + pink/magenta icon) -->
-			<button
+			<!-- Magnifying Glass Search Button with shadcn Button -->
+			<Button
+				variant="ghost"
+				size="icon"
 				type="submit"
 				class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-pink-50 hover:bg-pink-100/90 text-pink-500 hover:text-pink-600 border border-pink-100/80 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 group"
 				aria-label="Search"
 			>
 				<Search class="w-4 h-4 stroke-[2.5] group-hover:scale-110 transition-transform" />
-			</button>
+			</Button>
 		</div>
 	</form>
 
@@ -237,15 +242,16 @@
 			<!-- If user has typed something, show direct query suggestion -->
 			{#if searchQuery.trim().length > 0}
 				<div class="mb-3.5 pb-3 border-b border-slate-100 flex items-center justify-between">
-					<button
+					<Button
+						variant="ghost"
 						type="button"
 						onclick={() => executeSearch(searchQuery)}
-						class="flex items-center gap-2 text-xs font-semibold text-[#5845eb] hover:text-[#4936d6] text-left cursor-pointer group"
+						class="h-auto p-0 hover:bg-transparent flex items-center gap-2 text-xs font-semibold text-[#5845eb] hover:text-[#4936d6] text-left cursor-pointer group"
 					>
 						<Search class="w-3.5 h-3.5 text-pink-500" />
 						<span>খুঁজুন: <strong class="text-slate-900 underline underline-offset-2">"{searchQuery}"</strong></span>
 						<ArrowRight class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-					</button>
+					</Button>
 					<span class="text-[10px] text-slate-400 font-medium hidden sm:inline">↵ Enter চাপুন</span>
 				</div>
 			{/if}
@@ -258,33 +264,37 @@
 							<Clock class="w-3.5 h-3.5 text-slate-400" />
 							<span>সাম্প্রতিক অনুসন্ধান</span>
 						</div>
-						<button
+						<Button
+							variant="ghost"
 							type="button"
 							onclick={clearRecentSearches}
-							class="text-[11px] text-slate-400 hover:text-rose-500 transition-colors font-medium cursor-pointer"
+							class="h-auto p-0 hover:bg-transparent text-[11px] text-slate-400 hover:text-rose-500 transition-colors font-medium cursor-pointer"
 						>
 							মুছে ফেলুন
-						</button>
+						</Button>
 					</div>
 
 					<div class="flex flex-wrap gap-1.5">
 						{#each recentSearches as item}
-							<button
-								type="button"
-								onclick={() => executeSearch(item)}
-								class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-xs text-slate-700 transition-colors cursor-pointer group"
+							<div
+								class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-xs text-slate-700 transition-colors group"
 							>
-								<span>{item}</span>
-								<span
+								<button
+									type="button"
+									onclick={() => executeSearch(item)}
+									class="cursor-pointer font-medium hover:text-[#5845eb] transition-colors"
+								>
+									{item}
+								</button>
+								<button
+									type="button"
 									onclick={(e) => removeRecentSearch(item, e)}
-									class="text-slate-400 hover:text-rose-500 transition-colors p-0.5 rounded-full"
-									role="button"
-									tabindex="0"
+									class="text-slate-400 hover:text-rose-500 transition-colors p-0.5 rounded-full cursor-pointer"
 									aria-label="Remove recent search"
 								>
 									<X class="w-3 h-3" />
-								</span>
-							</button>
+								</button>
+							</div>
 						{/each}
 					</div>
 				</div>
@@ -296,33 +306,37 @@
 					Popular Right Now
 				</span>
 
-				<!-- Refresh Button (Spinning reload icon) -->
-				<button
+				<!-- Refresh Button (Spinning reload icon) with shadcn Button -->
+				<Button
+					variant="ghost"
+					size="icon"
 					type="button"
 					onclick={handleRefreshSuggestions}
-					class="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+					class="h-7 w-7 p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
 					title="নতুন সাজেশন দেখুন"
 					aria-label="Refresh popular searches"
 				>
 					<RotateCw
 						class="w-3.5 h-3.5 {isRefreshing ? 'animate-spin text-pink-500' : ''} transition-transform"
 					/>
-				</button>
+				</Button>
 			</div>
 
-			<!-- Popular Tag Chips (Exact match to screenshot pills) -->
+			<!-- Popular Tag Chips with shadcn Button -->
 			<div class="flex flex-wrap gap-2">
 				{#each filteredTags as tag}
-					<button
+					<Button
+						variant="outline"
+						size="sm"
 						type="button"
 						onclick={() => executeSearch(tag.text)}
-						class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-xs text-slate-700 font-medium transition-all cursor-pointer shadow-2xs hover:shadow-xs active:scale-95 select-none"
+						class="h-auto inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-xs text-slate-700 font-medium transition-all cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
 					>
 						{#if tag.trending}
 							<span class="text-sm leading-none">🔥</span>
 						{/if}
 						<span>{tag.text}</span>
-					</button>
+					</Button>
 				{:else}
 					<div class="w-full py-2 text-center text-xs text-slate-400">
 						কোনো সাজেশন পাওয়া যায়নি।

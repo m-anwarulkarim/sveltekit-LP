@@ -29,7 +29,16 @@
 		Accessories: ['Cases', 'Straps', 'Cleaning Kits']
 	};
 
-	const availableBadges = ['Bestseller', 'New Arrival', 'Hot Deal', 'Trending', 'Special Offer', 'Top Rated'];
+	const availableBadges = [
+		'Bestseller',
+		'Popular',
+		'New Arrival',
+		'Best Sale',
+		'Hot Deal',
+		'Trending',
+		'Special Offer',
+		'Top Rated'
+	];
 </script>
 
 <div class="space-y-4">

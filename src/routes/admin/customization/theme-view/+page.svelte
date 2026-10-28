@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import {
 		ArrowLeft,
 		AlertTriangle,
@@ -473,7 +473,7 @@
 						<option value="Plus Jakarta Sans">Plus Jakarta Sans (Modern & Crisp)</option>
 						<option value="Outfit">Outfit (Clean Geometric Sans)</option>
 						<option value="Inter">Inter (High Legibility)</option>
-						<option value="Hind Siliguri">Hind Siliguri (বাংলা ও ইংরেজির জন্য নিখুঁত)</option>
+						<option value="Anek Bangla">Anek Bangla (বাংলা ও ইংরেজির জন্য নিখুঁত)</option>
 					</select>
 				</div>
 

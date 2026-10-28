@@ -1,6 +1,6 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { cart } from '#lib/modules/cart/cart.svelte';
-	import { Button, Input, Badge } from '#lib/components/ui';
+	import { Button, Badge, Separator } from '#lib/components/ui';
 	import {
 		Globe,
 		Search,
@@ -21,6 +21,7 @@
 	} from 'lucide-svelte';
 
 	import SearchAutocomplete from './SearchAutocomplete.svelte';
+	import { CATEGORIES_DATA } from '#lib/modules/products/categories.data.ts';
 
 	interface Props {
 		user: { name?: string; email?: string; image?: string | null } | null;
@@ -35,30 +36,6 @@
 	let isCategoryDropdownOpen = $state(false);
 	let currentLang = $state<'bn' | 'en'>('bn');
 	let activeMobileTab = $state<'home' | 'categories' | 'cart' | 'account'>('home');
-	let activeCategoryChip = $state('সব');
-
-	// Category Chips matching Screenshot 2
-	const CATEGORY_CHIPS = [
-		'সব',
-		'ফুল',
-		'শাক - সবজি',
-		'করলা-সিম-বরবটি',
-		'কম্বো প্যাক',
-		'ফলমূল',
-		'গার্ডেনিং টুলস',
-		'অর্গানিক সার'
-	];
-
-	// All Categories List for Dropdown / Drawer
-	const ALL_CATEGORIES = [
-		{ name: 'ফুল বীজ ও চারা', count: 42, icon: '🌸' },
-		{ name: 'শাক ও সবজি বীজ', count: 68, icon: '🥬' },
-		{ name: 'করলা, সিম ও বরবটি', count: 24, icon: '🥒' },
-		{ name: 'ফলমূল ও বাগান গাছ', count: 35, icon: '🍓' },
-		{ name: 'স্পেশাল কম্বো প্যাক', count: 12, icon: '🎁' },
-		{ name: 'গার্ডেনিং ও কৃষি টুলস', count: 19, icon: '🌱' },
-		{ name: 'জৈব ও ভার্মিকম্পোস্ট সার', count: 15, icon: '🌾' }
-	];
 
 	function handleSearch(e: SubmitEvent) {
 		e.preventDefault();
@@ -76,7 +53,7 @@
 	}
 </script>
 
-<header class="w-full bg-white font-['Hind_Siliguri',sans-serif] selection:bg-[#5845eb]/20 selection:text-[#5845eb] border-b border-slate-100 shadow-xs relative z-40">
+<header class="w-full bg-white font-['Anek_Bangla',sans-serif] selection:bg-[#5845eb]/20 selection:text-[#5845eb] border-b border-slate-100 shadow-xs sticky top-0 z-40">
 	
 	<!-- 1. Top Announcement Bar (Dashboard Theme: Purple Gradient) -->
 	<div class="bg-gradient-to-r from-[#4936d6] via-[#5845eb] to-[#7c3aed] text-white text-xs sm:text-sm font-bold py-2 px-4 text-center tracking-wide flex items-center justify-center gap-2 shadow-xs">
@@ -90,15 +67,16 @@
 			
 			<!-- Left: Mobile Hamburger & Brand Logo -->
 			<div class="flex items-center gap-2.5 sm:gap-4 shrink-0">
-				<!-- Mobile Hamburger Icon -->
-				<button
-					type="button"
+				<!-- Mobile Hamburger Icon with shadcn Button -->
+				<Button
+					variant="ghost"
+					size="icon"
 					onclick={() => (isMobileDrawerOpen = true)}
-					class="md:hidden p-2 -ml-1 text-slate-700 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+					class="md:hidden p-2 -ml-1 h-9 w-9 text-slate-700 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
 					aria-label="Open Mobile Menu"
 				>
 					<Menu class="w-6 h-6 stroke-[2.5]" />
-				</button>
+				</Button>
 
 				<!-- Brand Identity -->
 				<a href="/" class="flex items-center gap-2.5 group">
@@ -112,9 +90,9 @@
 							<span class="font-black text-lg sm:text-xl text-slate-900 font-['Outfit'] tracking-tight">
 								AURA
 							</span>
-							<span class="hidden sm:inline-block px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-widest bg-indigo-50 text-[#5845eb] border border-indigo-200">
+							<Badge variant="purple" class="hidden sm:inline-block px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-indigo-50 text-[#5845eb] border border-indigo-200">
 								ORIGINAL
-							</span>
+							</Badge>
 						</div>
 						<span class="text-[10.5px] text-slate-500 font-medium -mt-0.5 hidden xs:block">
 							Next-Gen E-Commerce
@@ -139,9 +117,10 @@
 				
 				<!-- 1. Account & Orders (Desktop) -->
 				{#if user}
-					<a
+					<Button
+						variant="ghost"
 						href="/account"
-						class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all text-left"
+						class="hidden md:inline-flex h-auto items-center gap-2 px-3 py-1.5 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all text-left font-normal"
 					>
 						<div class="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#5845eb] shrink-0">
 							<User class="w-4 h-4 stroke-[2.5]" />
@@ -150,12 +129,12 @@
 							<span class="text-[10px] text-slate-400 font-medium">প্রোফাইল</span>
 							<span class="text-xs font-bold text-slate-800 max-w-[90px] truncate">{user.name || 'আমার একাউন্ট'}</span>
 						</div>
-					</a>
+					</Button>
 				{:else}
-					<button
-						type="button"
+					<Button
+						variant="ghost"
 						onclick={onOpenAuth}
-						class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all text-left cursor-pointer group"
+						class="hidden md:inline-flex h-auto items-center gap-2 px-3 py-1.5 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all text-left cursor-pointer group font-normal"
 					>
 						<div class="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 group-hover:bg-[#5845eb] group-hover:text-white flex items-center justify-center text-[#5845eb] transition-colors shrink-0">
 							<User class="w-4 h-4 stroke-[2.5]" />
@@ -164,32 +143,32 @@
 							<span class="text-[10.5px] text-slate-400 font-medium">লগইন করুন</span>
 							<span class="text-xs font-black text-slate-800 group-hover:text-[#5845eb] transition-colors">একাউন্ট ও অর্ডার</span>
 						</div>
-					</button>
+					</Button>
 				{/if}
 
-				<!-- 2. Cart Pill Button -->
-				<button
-					type="button"
+				<!-- 2. Cart Pill Button with shadcn Button + Badge -->
+				<Button
+					variant="outline"
 					onclick={() => cart.toggleCart()}
-					class="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-pink-50/80 hover:bg-pink-100/80 text-pink-600 border border-pink-200/90 shadow-2xs transition-all cursor-pointer group active:scale-95"
+					class="h-auto flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-pink-50/80 hover:bg-pink-100/80 text-pink-600 hover:text-pink-700 border-pink-200/90 shadow-2xs transition-all cursor-pointer group active:scale-95"
 					aria-label="View Cart"
 				>
 					<div class="relative flex items-center justify-center">
 						<ShoppingCart class="w-4 h-4 text-pink-600 stroke-[2.5] group-hover:scale-110 transition-transform" />
 						{#if cart.count > 0}
-							<span class="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-rose-600 text-white text-[9px] font-black flex items-center justify-center animate-pulse shadow-xs">
+							<Badge variant="destructive" class="absolute -top-2.5 -right-2.5 h-4 min-w-4 px-1 rounded-full bg-rose-600 text-white text-[9px] font-black flex items-center justify-center animate-pulse shadow-xs border-0 p-0">
 								{cart.count}
-							</span>
+							</Badge>
 						{/if}
 					</div>
 					<span class="text-xs font-black tracking-wide hidden xs:inline">কার্ট</span>
-				</button>
+				</Button>
 
-				<!-- 3. Language Selector (Hover reveals Bangla + English with Globe Icon) -->
+				<!-- 3. Language Selector with shadcn Button -->
 				<div class="relative group">
-					<button
-						type="button"
-						class="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-2xl border border-slate-200/90 hover:border-[#5845eb] bg-white hover:bg-indigo-50/40 text-slate-700 hover:text-[#5845eb] text-xs font-bold transition-all shadow-2xs cursor-pointer"
+					<Button
+						variant="outline"
+						class="h-auto flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-2xl border border-slate-200/90 hover:border-[#5845eb] bg-white hover:bg-indigo-50/40 text-slate-700 hover:text-[#5845eb] text-xs font-bold transition-all shadow-2xs cursor-pointer"
 						aria-label="Change Language"
 					>
 						<Globe class="w-4 h-4 text-[#5845eb] stroke-[2.2]" />
@@ -197,17 +176,17 @@
 							{currentLang === 'bn' ? 'BN' : 'EN'}
 						</span>
 						<ChevronDown class="w-3 h-3 text-slate-400 group-hover:rotate-180 transition-transform duration-200" />
-					</button>
+					</Button>
 
 					<!-- Floating Hover Dropdown Menu -->
 					<div class="absolute right-0 top-full pt-1.5 w-44 invisible opacity-0 translate-y-1 group-hover:visible group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 z-50">
 						<div class="bg-white rounded-2xl border border-slate-200/90 shadow-xl p-1.5 space-y-1">
 							<!-- Bangla Option -->
-							<button
-								type="button"
+							<Button
+								variant="ghost"
 								onclick={() => (currentLang = 'bn')}
-								class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer {currentLang === 'bn'
-									? 'bg-indigo-50 text-[#5845eb]'
+								class="w-full h-auto flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer {currentLang === 'bn'
+									? 'bg-indigo-50 text-[#5845eb] hover:bg-indigo-50 hover:text-[#5845eb]'
 									: 'text-slate-700 hover:bg-slate-50'}"
 							>
 								<div class="flex items-center gap-2">
@@ -217,14 +196,14 @@
 								{#if currentLang === 'bn'}
 									<Check class="w-3.5 h-3.5 text-[#5845eb] stroke-[3]" />
 								{/if}
-							</button>
+							</Button>
 
 							<!-- English Option -->
-							<button
-								type="button"
+							<Button
+								variant="ghost"
 								onclick={() => (currentLang = 'en')}
-								class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer {currentLang === 'en'
-									? 'bg-indigo-50 text-[#5845eb]'
+								class="w-full h-auto flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer {currentLang === 'en'
+									? 'bg-indigo-50 text-[#5845eb] hover:bg-indigo-50 hover:text-[#5845eb]'
 									: 'text-slate-700 hover:bg-slate-50'}"
 							>
 								<div class="flex items-center gap-2">
@@ -234,7 +213,7 @@
 								{#if currentLang === 'en'}
 									<Check class="w-3.5 h-3.5 text-[#5845eb] stroke-[3]" />
 								{/if}
-							</button>
+							</Button>
 						</div>
 					</div>
 				</div>
@@ -260,32 +239,32 @@
 				
 				<!-- Left: "সকল ক্যাটাগরি" Dropdown Button -->
 				<div class="relative">
-					<button
-						type="button"
+					<Button
+						variant="ghost"
 						onclick={() => (isCategoryDropdownOpen = !isCategoryDropdownOpen)}
-						class="flex items-center gap-2 text-xs font-black tracking-wide text-slate-800 hover:text-[#5845eb] transition-colors py-2 cursor-pointer group"
+						class="h-auto p-0 hover:bg-transparent flex items-center gap-2 text-xs font-black tracking-wide text-slate-800 hover:text-[#5845eb] transition-colors py-2 cursor-pointer group"
 					>
 						<LayoutGrid class="w-4 h-4 text-pink-600 group-hover:text-[#5845eb] transition-colors" />
 						<span>সকল ক্যাটাগরি</span>
 						<ChevronDown class="w-3 h-3 text-slate-400 group-hover:rotate-180 transition-transform duration-200" />
-					</button>
+					</Button>
 
 					<!-- Category Dropdown Menu -->
 					{#if isCategoryDropdownOpen}
 						<div class="absolute left-0 top-full pt-1 w-64 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
-							<div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xl p-2 space-y-1">
-								{#each ALL_CATEGORIES as cat}
+							<div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xl p-2 space-y-1 max-h-96 overflow-y-auto no-scrollbar">
+								{#each CATEGORIES_DATA as cat}
 									<a
-										href="#products"
+										href="/categories/{cat.slug}"
 										onclick={() => (isCategoryDropdownOpen = false)}
 										class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-[#5845eb] hover:bg-indigo-50/60 transition-colors"
 									>
 										<div class="flex items-center gap-2.5">
 											<span class="text-sm">{cat.icon}</span>
-											<span>{cat.name}</span>
+											<span>{cat.nameBn}</span>
 										</div>
-										<span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500">
-											{cat.count}
+										<span class="text-[10px] text-slate-400 font-medium">
+											{cat.name}
 										</span>
 									</a>
 								{/each}
@@ -294,8 +273,8 @@
 					{/if}
 				</div>
 
-				<!-- Divider -->
-				<div class="h-4 w-px bg-slate-200 mx-3"></div>
+				<!-- Separator -->
+				<Separator orientation="vertical" class="h-4 mx-3 bg-slate-200" />
 
 				<!-- Center / Right Links with Icons (Exact match to Screenshot 1) -->
 				<nav class="flex items-center gap-6 flex-1">
@@ -308,7 +287,7 @@
 					</a>
 
 					<a
-						href="#products"
+						href="/catalog/all-product"
 						class="flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-[#5845eb] transition-colors group"
 					>
 						<Package class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#5845eb] transition-colors" />
@@ -316,7 +295,7 @@
 					</a>
 
 					<a
-						href="#products"
+						href="/catalog/all-category"
 						class="flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-[#5845eb] transition-colors group"
 					>
 						<LayoutGrid class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#5845eb] transition-colors" />
@@ -332,14 +311,14 @@
 							<span>একাউন্ট</span>
 						</a>
 					{:else}
-						<button
-							type="button"
+						<Button
+							variant="ghost"
 							onclick={onOpenAuth}
-							class="flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-[#5845eb] transition-colors cursor-pointer group"
+							class="h-auto p-0 hover:bg-transparent flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-[#5845eb] transition-colors cursor-pointer group"
 						>
 							<User class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#5845eb] transition-colors" />
 							<span>একাউন্ট</span>
-						</button>
+						</Button>
 					{/if}
 
 					<a
@@ -359,24 +338,6 @@
 			</div>
 		</div>
 	</div>
-
-	<!-- 4. Mobile Category Chips (Horizontally Scrollable - Exact Match to Screenshot 2) -->
-	<div class="md:hidden border-t border-slate-100 bg-slate-50/50 py-2 px-3 overflow-x-auto no-scrollbar flex items-center gap-2">
-		{#each CATEGORY_CHIPS as chip}
-			<button
-				type="button"
-				onclick={() => {
-					activeCategoryChip = chip;
-					scrollToSection('products');
-				}}
-				class="px-3.5 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all border shadow-2xs cursor-pointer {activeCategoryChip === chip
-					? 'bg-[#5845eb] text-white border-[#5845eb] shadow-sm shadow-indigo-600/20'
-					: 'bg-white text-slate-700 border-slate-200/90 hover:bg-slate-100'}"
-			>
-				{chip}
-			</button>
-		{/each}
-	</div>
 </header>
 
 <!-- 5. Mobile Slide-out Drawer (Categories, Links, Support) -->
@@ -390,7 +351,7 @@
 	></button>
 
 	<!-- Drawer Content -->
-	<aside class="fixed top-0 left-0 bottom-0 w-72 bg-white z-50 md:hidden shadow-2xl flex flex-col justify-between animate-in slide-in-from-left duration-200 font-['Hind_Siliguri',sans-serif]">
+	<aside class="fixed top-0 left-0 bottom-0 w-72 bg-white z-50 md:hidden shadow-2xl flex flex-col justify-between animate-in slide-in-from-left duration-200 font-['Anek_Bangla',sans-serif]">
 		<div>
 			<!-- Drawer Header -->
 			<div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
@@ -400,14 +361,15 @@
 					</div>
 					<span class="font-black text-slate-900 text-base font-['Outfit']">AURA</span>
 				</div>
-				<button
-					type="button"
+				<Button
+					variant="ghost"
+					size="icon"
 					onclick={() => (isMobileDrawerOpen = false)}
-					class="p-2 text-slate-400 hover:text-slate-800 rounded-xl hover:bg-slate-100 cursor-pointer"
+					class="h-8 w-8 text-slate-400 hover:text-slate-800 rounded-xl hover:bg-slate-100 cursor-pointer"
 					aria-label="Close"
 				>
 					<X class="w-5 h-5" />
-				</button>
+				</Button>
 			</div>
 
 			<!-- Drawer Navigation Links -->
@@ -449,17 +411,17 @@
 						<span>আমার একাউন্ট</span>
 					</a>
 				{:else}
-					<button
-						type="button"
+					<Button
+						variant="ghost"
 						onclick={() => {
 							isMobileDrawerOpen = false;
 							onOpenAuth();
 						}}
-						class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-[#5845eb] transition-colors cursor-pointer text-left"
+						class="w-full h-auto justify-start flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-[#5845eb] transition-colors cursor-pointer text-left font-normal"
 					>
 						<User class="w-4 h-4 text-slate-400" />
 						<span>লগইন / রেজিস্টার করুন</span>
-					</button>
+					</Button>
 				{/if}
 			</div>
 
@@ -468,18 +430,20 @@
 				<div class="text-[10px] font-black uppercase tracking-wider text-slate-400 px-3.5 py-1">
 					ক্যাটাগরি সমূহ
 				</div>
-				<div class="space-y-0.5 mt-1">
-					{#each ALL_CATEGORIES as cat}
+				<div class="space-y-0.5 mt-1 max-h-60 overflow-y-auto no-scrollbar">
+					{#each CATEGORIES_DATA as cat}
 						<a
-							href="#products"
-							onclick={() => scrollToSection('products')}
+							href="/categories/{cat.slug}"
+							onclick={() => (isMobileDrawerOpen = false)}
 							class="flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
 						>
 							<div class="flex items-center gap-2">
 								<span>{cat.icon}</span>
-								<span>{cat.name}</span>
+								<span>{cat.nameBn}</span>
 							</div>
-							<span class="text-[10px] font-bold text-slate-400">({cat.count})</span>
+							<span class="text-[10px] text-slate-400">
+								{cat.name}
+							</span>
 						</a>
 					{/each}
 				</div>
@@ -499,7 +463,7 @@
 {/if}
 
 <!-- 6. Mobile Bottom Navigation Bar (Exact Match to Red Box in Screenshot 2) -->
-<nav class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-3 py-1.5 flex items-center justify-around font-['Hind_Siliguri',sans-serif]">
+<nav class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-3 py-1.5 flex items-center justify-around font-['Anek_Bangla',sans-serif]">
 	
 	<!-- 1. হোম (Home) -->
 	<a
@@ -542,9 +506,9 @@
 		<div class="relative">
 			<ShoppingCart class="w-5 h-5 {activeMobileTab === 'cart' ? 'text-[#5845eb] stroke-[2.5]' : 'stroke-[1.8]'}" />
 			{#if cart.count > 0}
-				<span class="absolute -top-1.5 -right-2 w-4 h-4 rounded-full bg-rose-600 text-white text-[9px] font-black flex items-center justify-center animate-pulse shadow-xs">
+				<Badge variant="destructive" class="absolute -top-1.5 -right-2 h-4 min-w-4 px-1 rounded-full bg-rose-600 text-white text-[9px] font-black flex items-center justify-center animate-pulse shadow-xs border-0 p-0">
 					{cart.count}
-				</span>
+				</Badge>
 			{/if}
 		</div>
 		<span class="text-[10.5px] mt-0.5 leading-none">কার্ট</span>

@@ -121,7 +121,8 @@
 			const matchesSearch =
 				q === ''
 					? true
-					: (order.id || '').toLowerCase().includes(q) ||
+					: (order.orderNumber || '').toLowerCase().includes(q) ||
+						(order.id || '').toLowerCase().includes(q) ||
 						(order.customerName || '').toLowerCase().includes(q) ||
 						(order.customerEmail || '').includes(q) ||
 						(order.notes || '').toLowerCase().includes(q);
@@ -362,7 +363,7 @@
 								<!-- 1. Drop Time & ID -->
 								<td class="py-3.5 px-4 whitespace-nowrap">
 									<div class="font-mono font-bold text-indigo-600 hover:underline cursor-pointer">
-										#{order.id}
+										#{order.orderNumber || order.id.slice(0, 8)}
 									</div>
 									<div class="flex items-center gap-1 text-[11px] text-slate-400 mt-0.5">
 										<Clock class="w-3 h-3 text-slate-400" />

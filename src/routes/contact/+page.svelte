@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { StoreLayout } from '#lib';
 	import { Button, Input, Textarea, Card, CardContent, Badge, Alert, AlertDescription } from '#lib/components/ui';
 	import { Phone, Mail, MapPin, Clock, Send, CheckCircle2, MessageSquare } from 'lucide-svelte';
@@ -24,7 +24,7 @@
 </svelte:head>
 
 <StoreLayout user={data.user}>
-	<div class="max-w-6xl mx-auto px-4 sm:px-6 py-10 lg:py-16 space-y-10 font-['Hind_Siliguri',sans-serif]">
+	<div class="max-w-6xl mx-auto px-4 sm:px-6 py-10 lg:py-16 space-y-10 font-['Anek_Bangla',sans-serif]">
 		
 		<!-- Header -->
 		<div class="text-center space-y-2 max-w-2xl mx-auto">
@@ -52,7 +52,7 @@
 						</div>
 						<div class="space-y-1">
 							<span class="text-xs font-semibold text-slate-500">কাস্টমার কেয়ার হটলাইন</span>
-							<h3 class="text-base font-black text-slate-900">09678 123 456</h3>
+							<h3 class="text-base font-black text-slate-900">01602867954</h3>
 							<p class="text-xs text-slate-500 flex items-center gap-1">
 								<Clock class="w-3.5 h-3.5 text-slate-400" />
 								সকাল ৯:০০টা - রাত ১১:০০টা (প্রতিদিন খোলা)

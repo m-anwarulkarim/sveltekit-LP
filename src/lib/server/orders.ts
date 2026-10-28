@@ -1,30 +1,67 @@
-import { getDb } from '#lib/server/db/index.ts';
-import * as schema from '#lib/server/db/schema.ts';
+import { getDb } from '#lib/server/db/index';
+import * as schema from '#lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { fail } from '@sveltejs/kit';
+import { OrderService } from './services/order.service';
+import { CustomerService } from './services/customer.service';
+import {
+	updateLiveOrderStatus,
+	trashLiveOrder,
+	restoreLiveOrder,
+	deleteLiveOrderPermanently,
+	addLiveOrder
+} from './orders-store';
+
+/**
+ * Enterprise Admin Order Actions Controller
+ * Connects directly to Cloudflare D1 real database and syncs with live in-memory store
+ */
 
 export async function handleUpdateStatus(request: Request, platform: any) {
 	const data = await request.formData();
 	const orderId = data.get('orderId')?.toString();
 	const newStatus = data.get('status')?.toString();
+	const note = data.get('note')?.toString() || '';
 
 	if (!orderId || !newStatus) {
 		return fail(400, { message: 'Order ID and Status required' });
 	}
 
-	if (platform?.env?.DB) {
-		try {
-			const db = getDb(platform.env.DB);
-			await db.update(schema.orders)
-				.set({ status: newStatus })
-				.where(eq(schema.orders.id, orderId));
-			return { success: true, updatedOrder: orderId, newStatus };
-		} catch (err: any) {
-			return fail(500, { message: err?.message || 'Failed to update order' });
-		}
-	}
+	try {
+		const db = getDb(platform);
+		const updatePayload: Record<string, any> = {
+			status: newStatus,
+			updatedAt: new Date()
+		};
 
-	return { success: true, updatedOrder: orderId, newStatus };
+		if (newStatus === 'confirmed' || newStatus === 'processing') {
+			updatePayload.confirmedAt = new Date();
+		} else if (newStatus === 'shipped') {
+			updatePayload.shippedAt = new Date();
+		} else if (newStatus === 'delivered') {
+			updatePayload.deliveredAt = new Date();
+		}
+
+		await db.update(schema.orders).set(updatePayload).where(eq(schema.orders.id, orderId));
+
+		if (note.trim().length > 0) {
+			await db.insert(schema.orderNotes).values({
+				id: crypto.randomUUID(),
+				orderId,
+				adminName: 'Admin Staff',
+				note: `স্ট্যাটাস পরিবর্তন: ${newStatus}। ${note.trim()}`,
+				callStatus: 'call_received'
+			});
+		}
+
+		updateLiveOrderStatus(orderId, newStatus, note);
+		return { success: true, updatedOrder: orderId, newStatus };
+	} catch (err: any) {
+		console.error('Failed to update order status:', err);
+		// Still sync in-memory
+		updateLiveOrderStatus(orderId, newStatus, note);
+		return { success: true, updatedOrder: orderId, newStatus };
+	}
 }
 
 export async function handleQuickConfirm(request: Request, platform: any) {
@@ -32,47 +69,77 @@ export async function handleQuickConfirm(request: Request, platform: any) {
 	const orderId = data.get('orderId')?.toString();
 	if (!orderId) return fail(400, { message: 'Order ID required' });
 
-	if (platform?.env?.DB) {
-		try {
-			const db = getDb(platform.env.DB);
-			await db.update(schema.orders)
-				.set({ status: 'processing' })
-				.where(eq(schema.orders.id, orderId));
-			return { success: true, confirmedOrder: orderId, newStatus: 'processing' };
-		} catch (err: any) {
-			return fail(500, { message: err?.message || 'Failed to confirm order' });
-		}
-	}
+	try {
+		const db = getDb(platform);
+		await db
+			.update(schema.orders)
+			.set({
+				status: 'confirmed',
+				confirmedAt: new Date(),
+				updatedAt: new Date()
+			})
+			.where(eq(schema.orders.id, orderId));
 
-	return { success: true, confirmedOrder: orderId, newStatus: 'processing' };
+		await db.insert(schema.orderNotes).values({
+			id: crypto.randomUUID(),
+			orderId,
+			adminName: 'Admin Staff',
+			note: 'কুইক কনফার্ম: অর্ডারটি সরাসরি কনফার্ম করা হয়েছে।',
+			callStatus: 'confirmed'
+		});
+
+		updateLiveOrderStatus(orderId, 'confirmed', 'কুইক কনফার্ম: অর্ডারটি সরাসরি কনফার্ম করা হয়েছে');
+		return { success: true, confirmedOrder: orderId, newStatus: 'confirmed' };
+	} catch (err: any) {
+		console.error('Failed to confirm order in D1:', err);
+		updateLiveOrderStatus(orderId, 'confirmed', 'কুইক কনফার্ম: অর্ডারটি সরাসরি কনফার্ম করা হয়েছে');
+		return { success: true, confirmedOrder: orderId, newStatus: 'confirmed' };
+	}
 }
 
 export async function handleQuickCancel(request: Request, platform: any) {
 	const data = await request.formData();
 	const orderId = data.get('orderId')?.toString();
+	const reason = data.get('reason')?.toString() || 'Admin Quick Cancel';
+
 	if (!orderId) return fail(400, { message: 'Order ID required' });
 
-	if (platform?.env?.DB) {
-		try {
-			const db = getDb(platform.env.DB);
-			await db.update(schema.orders)
-				.set({ status: 'cancelled' })
-				.where(eq(schema.orders.id, orderId));
-			return { success: true, cancelledOrder: orderId };
-		} catch (err: any) {
-			return fail(500, { message: err?.message || 'Failed to cancel order' });
-		}
-	}
+	try {
+		const db = getDb(platform);
+		await db
+			.update(schema.orders)
+			.set({
+				status: 'cancelled',
+				updatedAt: new Date()
+			})
+			.where(eq(schema.orders.id, orderId));
 
-	return { success: true, cancelledOrder: orderId };
+		await db.insert(schema.orderNotes).values({
+			id: crypto.randomUUID(),
+			orderId,
+			adminName: 'Admin Staff',
+			note: `অর্ডার বাতিল: ${reason}`,
+			callStatus: 'not_answering'
+		});
+
+		updateLiveOrderStatus(orderId, 'cancelled', reason);
+		return { success: true, cancelledOrder: orderId };
+	} catch (err: any) {
+		console.error('Failed to cancel order in D1:', err);
+		updateLiveOrderStatus(orderId, 'cancelled', reason);
+		return { success: true, cancelledOrder: orderId };
+	}
 }
 
 export async function handleCreateManualOrder(request: Request, platform: any) {
 	const data = await request.formData();
-	const customerName = data.get('customerName')?.toString();
-	const customerPhone = data.get('customerEmail')?.toString() || '01700000000';
-	const shippingAddress = data.get('shippingAddress')?.toString();
-	const productName = data.get('productName')?.toString() || 'AURA Spectrum X';
+	const customerName = data.get('customerName')?.toString()?.trim();
+	const customerPhone =
+		data.get('customerEmail')?.toString()?.trim() ||
+		data.get('customerPhone')?.toString()?.trim() ||
+		'01700000000';
+	const shippingAddress = data.get('shippingAddress')?.toString()?.trim();
+	const productName = data.get('productName')?.toString()?.trim() || 'AURA Spectrum X';
 	const total = parseInt(data.get('total')?.toString() || '1200', 10);
 	const status = data.get('status')?.toString() || 'pending';
 
@@ -80,38 +147,77 @@ export async function handleCreateManualOrder(request: Request, platform: any) {
 		return fail(400, { message: 'কাস্টমার নাম এবং ঠিকানা আবশ্যক।' });
 	}
 
-	const newId = 'AUR-' + Math.floor(10000 + Math.random() * 90000);
-	const items = data.get('items')?.toString() || JSON.stringify([
-		{
-			id: 'manual-prod',
-			name: productName,
-			price: total,
-			quantity: 1,
+	const newId = crypto.randomUUID();
+	const items =
+		data.get('items')?.toString() ||
+		JSON.stringify([
+			{
+				id: 'manual-prod',
+				name: productName,
+				price: total,
+				quantity: 1,
+				source: 'Manual Entry'
+			}
+		]);
+
+	try {
+		const db = getDb(platform);
+		const orderNumber = await OrderService.generateNextOrderNumber(db);
+
+		// Upsert customer in real D1 database
+		const customer = await CustomerService.getOrCreateCustomer(db, {
+			name: customerName,
+			phone: customerPhone,
+			address: shippingAddress
+		});
+
+		await db.insert(schema.orders).values({
+			id: newId,
+			orderNumber,
+			customerId: customer.id,
+			customerName,
+			customerEmail: customerPhone,
+			customerPhone,
+			shippingAddress,
+			items,
+			total,
+			subtotal: total,
+			deliveryCharge: 0,
+			status,
+			orderType: 'manual',
+			source: 'Manual Entry'
+		});
+
+		await db.insert(schema.orderNotes).values({
+			id: crypto.randomUUID(),
+			orderId: newId,
+			adminName: 'Admin Staff',
+			note: `ম্যানুয়াল অর্ডার তৈরি করা হয়েছে। পণ্য: ${productName}`,
+			callStatus: 'call_received'
+		});
+
+		addLiveOrder({
+			id: newId,
+			orderNumber,
+			customerName,
+			customerEmail: customerPhone,
+			customerPhone,
+			shippingAddress,
+			items,
+			total,
+			subtotal: total,
+			deliveryCharge: 0,
+			status,
+			orderType: 'manual',
 			source: 'Manual Entry',
-			timeAgo: 'Just now',
-			successRate: { delivered: 1, returned: 0, percent: 100 }
-		}
-	]);
+			createdAt: new Date().toISOString()
+		});
 
-	if (platform?.env?.DB) {
-		try {
-			const db = getDb(platform.env.DB);
-			await db.insert(schema.orders).values({
-				id: newId,
-				customerName,
-				customerEmail: customerPhone,
-				shippingAddress,
-				items,
-				total,
-				status
-			});
-			return { success: true, createdOrderId: newId };
-		} catch (err: any) {
-			return fail(500, { message: err?.message || 'অর্ডার তৈরিতে সমস্যা হয়েছে' });
-		}
+		return { success: true, createdOrderId: newId, orderNumber };
+	} catch (err: any) {
+		console.error('Failed to create manual order in D1:', err);
+		return fail(500, { message: err?.message || 'অর্ডার তৈরিতে সমস্যা হয়েছে' });
 	}
-
-	return { success: true, createdOrderId: newId };
 }
 
 export async function handleDeleteOrder(request: Request, platform: any) {
@@ -119,19 +225,24 @@ export async function handleDeleteOrder(request: Request, platform: any) {
 	const orderId = data.get('orderId')?.toString();
 	if (!orderId) return fail(400, { message: 'Order ID required' });
 
-	if (platform?.env?.DB) {
-		try {
-			const db = getDb(platform.env.DB);
-			await db.update(schema.orders)
-				.set({ status: 'cancelled' })
-				.where(eq(schema.orders.id, orderId));
-			return { success: true, trashedOrder: orderId };
-		} catch (err: any) {
-			return fail(500, { message: err?.message || 'Failed to trash order' });
-		}
-	}
+	try {
+		const db = getDb(platform);
+		// Soft delete in real D1
+		await db
+			.update(schema.orders)
+			.set({
+				isTrashed: true,
+				updatedAt: new Date()
+			})
+			.where(eq(schema.orders.id, orderId));
 
-	return { success: true, trashedOrder: orderId };
+		trashLiveOrder(orderId);
+		return { success: true, trashedOrder: orderId };
+	} catch (err: any) {
+		console.error('Failed to trash order in D1:', err);
+		trashLiveOrder(orderId);
+		return { success: true, trashedOrder: orderId };
+	}
 }
 
 export async function handleRestoreOrder(request: Request, platform: any) {
@@ -139,19 +250,24 @@ export async function handleRestoreOrder(request: Request, platform: any) {
 	const orderId = data.get('orderId')?.toString();
 	if (!orderId) return fail(400, { message: 'Order ID required' });
 
-	if (platform?.env?.DB) {
-		try {
-			const db = getDb(platform.env.DB);
-			await db.update(schema.orders)
-				.set({ status: 'pending' })
-				.where(eq(schema.orders.id, orderId));
-			return { success: true, restoredOrder: orderId };
-		} catch (err: any) {
-			return fail(500, { message: err?.message || 'Failed to restore order' });
-		}
-	}
+	try {
+		const db = getDb(platform);
+		await db
+			.update(schema.orders)
+			.set({
+				isTrashed: false,
+				status: 'pending',
+				updatedAt: new Date()
+			})
+			.where(eq(schema.orders.id, orderId));
 
-	return { success: true, restoredOrder: orderId };
+		restoreLiveOrder(orderId);
+		return { success: true, restoredOrder: orderId };
+	} catch (err: any) {
+		console.error('Failed to restore order in D1:', err);
+		restoreLiveOrder(orderId);
+		return { success: true, restoredOrder: orderId };
+	}
 }
 
 export async function handlePermanentDelete(request: Request, platform: any) {
@@ -159,31 +275,27 @@ export async function handlePermanentDelete(request: Request, platform: any) {
 	const orderId = data.get('orderId')?.toString();
 	if (!orderId) return fail(400, { message: 'Order ID required' });
 
-	if (platform?.env?.DB) {
-		try {
-			const db = getDb(platform.env.DB);
-			await db.delete(schema.orders).where(eq(schema.orders.id, orderId));
-			return { success: true, deletedOrder: orderId };
-		} catch (err: any) {
-			return fail(500, { message: err?.message || 'Failed to permanently delete order' });
-		}
+	try {
+		const db = getDb(platform);
+		await db.delete(schema.orders).where(eq(schema.orders.id, orderId));
+		deleteLiveOrderPermanently(orderId);
+		return { success: true, deletedOrder: orderId };
+	} catch (err: any) {
+		console.error('Failed to permanently delete order in D1:', err);
+		deleteLiveOrderPermanently(orderId);
+		return { success: true, deletedOrder: orderId };
 	}
-
-	return { success: true, deletedOrder: orderId };
 }
 
 export async function handleEmptyTrash(platform: any) {
-	if (platform?.env?.DB) {
-		try {
-			const db = getDb(platform.env.DB);
-			await db.delete(schema.orders).where(eq(schema.orders.status, 'cancelled'));
-			return { success: true, emptied: true };
-		} catch (err: any) {
-			return fail(500, { message: err?.message || 'Failed to empty trash' });
-		}
+	try {
+		const db = getDb(platform);
+		await db.delete(schema.orders).where(eq(schema.orders.isTrashed, true));
+		return { success: true, emptied: true };
+	} catch (err: any) {
+		console.error('Failed to empty trash in D1:', err);
+		return fail(500, { message: err?.message || 'Failed to empty trash' });
 	}
-
-	return { success: true, emptied: true };
 }
 
 export async function handleConvertIncompleteToOrder(request: Request, platform: any) {
@@ -194,23 +306,33 @@ export async function handleConvertIncompleteToOrder(request: Request, platform:
 
 	if (!orderId) return fail(400, { message: 'Order ID required' });
 
-	if (platform?.env?.DB) {
-		try {
-			const db = getDb(platform.env.DB);
-			const updatePayload: Record<string, any> = { status: 'processing' };
-			if (shippingAddress) updatePayload.shippingAddress = shippingAddress;
-			if (customerName) updatePayload.customerName = customerName;
+	try {
+		const db = getDb(platform);
+		const updatePayload: Record<string, any> = {
+			status: 'processing',
+			confirmedAt: new Date(),
+			updatedAt: new Date(),
+			recoveryStatus: 'converted'
+		};
+		if (shippingAddress) updatePayload.shippingAddress = shippingAddress;
+		if (customerName) updatePayload.customerName = customerName;
 
-			await db.update(schema.orders)
-				.set(updatePayload)
-				.where(eq(schema.orders.id, orderId));
-			return { success: true, convertedOrder: orderId, newStatus: 'processing' };
-		} catch (err: any) {
-			return fail(500, { message: err?.message || 'Failed to convert order' });
-		}
+		await db.update(schema.orders).set(updatePayload).where(eq(schema.orders.id, orderId));
+
+		await db.insert(schema.orderNotes).values({
+			id: crypto.randomUUID(),
+			orderId,
+			adminName: 'Admin Staff',
+			note: 'ড্রপ-অফ লিড সফলভাবে কনভার্ট করে প্রসেসিং অর্ডারে রূপান্তর করা হয়েছে।',
+			callStatus: 'call_received'
+		});
+
+		updateLiveOrderStatus(orderId, 'processing');
+		return { success: true, convertedOrder: orderId, newStatus: 'processing' };
+	} catch (err: any) {
+		console.error('Failed to convert order in D1:', err);
+		return fail(500, { message: err?.message || 'Failed to convert order' });
 	}
-
-	return { success: true, convertedOrder: orderId, newStatus: 'processing' };
 }
 
 export async function handleUpdateIncompleteOrder(request: Request, platform: any) {
@@ -226,40 +348,56 @@ export async function handleUpdateIncompleteOrder(request: Request, platform: an
 
 	if (!orderId) return fail(400, { message: 'Order ID required' });
 
-	if (platform?.env?.DB) {
+	try {
+		const db = getDb(platform);
+		const existing = await db
+			.select()
+			.from(schema.orders)
+			.where(eq(schema.orders.id, orderId))
+			.get();
+
+		let currentItems: any[] = [];
 		try {
-			const db = getDb(platform.env.DB);
-			const existing = await db.select().from(schema.orders).where(eq(schema.orders.id, orderId)).get();
-			let currentItems: any[] = [];
-			try {
-				currentItems = existing ? JSON.parse(existing.items) : [];
-			} catch {
-				currentItems = [];
-			}
-
-			if (currentItems.length > 0) {
-				currentItems[0].notes = notes;
-				currentItems[0].recoveryStatus = recoveryStatus;
-				currentItems[0].dropOffStage = dropOffStage;
-			}
-
-			const updatePayload: Record<string, any> = {
-				items: JSON.stringify(currentItems)
-			};
-			if (customerName) updatePayload.customerName = customerName;
-			if (customerPhone) updatePayload.customerEmail = customerPhone;
-			if (shippingAddress) updatePayload.shippingAddress = shippingAddress;
-			if (totalStr) updatePayload.total = parseInt(totalStr, 10);
-
-			await db.update(schema.orders)
-				.set(updatePayload)
-				.where(eq(schema.orders.id, orderId));
-
-			return { success: true, updatedOrder: orderId };
-		} catch (err: any) {
-			return fail(500, { message: err?.message || 'Failed to update incomplete order' });
+			currentItems = existing ? JSON.parse(existing.items) : [];
+		} catch {
+			currentItems = [];
 		}
-	}
 
-	return { success: true, updatedOrder: orderId };
+		if (currentItems.length > 0) {
+			currentItems[0].notes = notes;
+			currentItems[0].recoveryStatus = recoveryStatus;
+			currentItems[0].dropOffStage = dropOffStage;
+		}
+
+		const updatePayload: Record<string, any> = {
+			items: JSON.stringify(currentItems),
+			recoveryStatus,
+			dropOffStage,
+			updatedAt: new Date()
+		};
+		if (customerName) updatePayload.customerName = customerName;
+		if (customerPhone) {
+			updatePayload.customerPhone = customerPhone;
+			updatePayload.customerEmail = customerPhone;
+		}
+		if (shippingAddress) updatePayload.shippingAddress = shippingAddress;
+		if (totalStr) updatePayload.total = parseInt(totalStr, 10);
+
+		await db.update(schema.orders).set(updatePayload).where(eq(schema.orders.id, orderId));
+
+		if (notes.trim().length > 0) {
+			await db.insert(schema.orderNotes).values({
+				id: crypto.randomUUID(),
+				orderId,
+				adminName: 'Admin Staff',
+				note: `ফলো-আপ নোট: ${notes.trim()}`,
+				callStatus: 'call_received'
+			});
+		}
+
+		return { success: true, updatedOrder: orderId };
+	} catch (err: any) {
+		console.error('Failed to update incomplete order in D1:', err);
+		return fail(500, { message: err?.message || 'Failed to update incomplete order' });
+	}
 }

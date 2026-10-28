@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { AdminProduct } from '../../_data.ts';
+	import type { AdminProduct } from '../../_data';
 	import { X, Plus, Trash2, Image as ImageIcon, Sparkles } from 'lucide-svelte';
 	import { MediaPickerModal } from '../gallery';
 

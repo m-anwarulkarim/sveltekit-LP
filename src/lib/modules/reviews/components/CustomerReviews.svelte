@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Star, CheckCircle, MessageSquarePlus, Sparkles } from 'lucide-svelte';
+	import { Button, Badge } from '#lib/components/ui';
+	import { Star, CheckCircle, MessageSquarePlus, Sparkles, X } from 'lucide-svelte';
 
 	interface Review {
 		id: string;
@@ -101,10 +102,10 @@
 		<div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center mb-16">
 			
 			<div class="lg:col-span-6">
-				<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-semibold uppercase tracking-wider mb-4">
+				<Badge variant="outline" class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border-amber-500/20 text-amber-300 text-xs font-semibold uppercase tracking-wider mb-4">
 					<Sparkles class="w-3.5 h-3.5" />
 					Creator Tested & Approved
-				</div>
+				</Badge>
 				<h2 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight font-heading mb-4">
 					Loved by over <br />
 					<span class="bg-gradient-to-r from-amber-400 via-orange-300 to-rose-400 bg-clip-text text-transparent">
@@ -116,13 +117,14 @@
 				</p>
 
 				<div class="pt-6">
-					<button
+					<Button
+						variant="ghost"
 						onclick={() => isReviewModalOpen = true}
-						class="flex items-center gap-2 px-5 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-slate-200 text-xs font-semibold hover:border-violet-500/40 transition-all"
+						class="flex items-center gap-2 px-5 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-slate-200 text-xs font-semibold hover:border-violet-500/40 transition-all h-auto cursor-pointer"
 					>
 						<MessageSquarePlus class="w-4 h-4 text-violet-400" />
 						<span>Write a Creator Review</span>
-					</button>
+					</Button>
 				</div>
 			</div>
 
@@ -221,13 +223,15 @@
 	{#if isReviewModalOpen}
 		<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
 			<div class="w-full max-w-lg bg-[#11131f] border border-white/15 rounded-3xl p-6 sm:p-8 shadow-2xl relative">
-				<button
+				<Button
+					variant="ghost"
+					size="icon"
 					onclick={() => isReviewModalOpen = false}
-					class="absolute top-5 right-5 text-slate-400 hover:text-white"
+					class="absolute top-5 right-5 text-slate-400 hover:text-white hover:bg-white/5 h-8 w-8 rounded-xl cursor-pointer"
 					aria-label="Close review dialog"
 				>
-					✕
-				</button>
+					<X class="w-4 h-4" />
+				</Button>
 
 				{#if submissionSuccess}
 					<div class="text-center py-8 flex flex-col items-center gap-3">
@@ -271,7 +275,7 @@
 									<button
 										type="button"
 										onclick={() => newRating = star}
-										class="p-1 hover:scale-110 transition-transform"
+										class="p-1 hover:scale-110 transition-transform cursor-pointer"
 									>
 										<Star class="w-6 h-6 {newRating >= star ? 'fill-amber-400 text-amber-400' : 'text-slate-600'}" />
 									</button>
@@ -303,12 +307,12 @@
 							></textarea>
 						</div>
 
-						<button
+						<Button
 							type="submit"
-							class="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:from-violet-500 hover:to-cyan-400 text-white text-xs font-bold shadow-lg transition-transform hover:scale-[1.01]"
+							class="w-full h-auto py-3 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:from-violet-500 hover:to-cyan-400 text-white text-xs font-bold shadow-lg transition-transform hover:scale-[1.01] border-0"
 						>
 							Publish Review
-						</button>
+						</Button>
 					</form>
 				{/if}
 			</div>

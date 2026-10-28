@@ -1,0 +1,132 @@
+import type { PageServerLoad, Actions } from './$types';
+import { fail } from '@sveltejs/kit';
+import { getDb } from '#lib/server/db/index';
+import { OrderService } from '#lib/server/services/order.service';
+import { addLiveOrder } from '#lib/server/orders-store';
+
+export const load: PageServerLoad = async (event) => {
+	return {
+		user: event.locals.user ?? null
+	};
+};
+
+import fs from 'node:fs';
+
+async function handlePlaceOrderAction({ request, platform, getClientAddress }: any) {
+	try {
+		const formData = await request.formData();
+
+		const customerName = formData.get('customerName')?.toString()?.trim() || '';
+		const customerPhone = formData.get('customerPhone')?.toString()?.trim() || '';
+		const shippingAddress = formData.get('shippingAddress')?.toString()?.trim() || '';
+		const deliveryArea = (formData.get('deliveryArea')?.toString() || 'inside_dhaka') as
+			| 'inside_dhaka'
+			| 'outside_dhaka';
+		const paymentMethod = (formData.get('paymentMethod')?.toString() || 'cod') as
+			| 'cod'
+			| 'bkash'
+			| 'nagad'
+			| 'card';
+		const orderNote = formData.get('orderNote')?.toString()?.trim() || '';
+		const honeypot = formData.get('website_url')?.toString()?.trim() || '';
+		const itemsRaw = formData.get('items')?.toString() || '[]';
+
+		let items: any[] = [];
+		try {
+			items = JSON.parse(itemsRaw);
+		} catch {
+			return fail(400, { message: 'কার্ট আইটেমের ডাটা সঠিক নয়।' });
+		}
+
+		if (!Array.isArray(items) || items.length === 0) {
+			return fail(400, { message: 'আপনার কার্টে কোনো পণ্য নেই। অর্ডার করতে পণ্য যোগ করুন।' });
+		}
+
+		if (!customerName || !customerPhone || !shippingAddress) {
+			return fail(400, { message: 'নাম, মোবাইল নম্বর এবং ঠিকানা পূরণ করা আবশ্যক।' });
+		}
+
+		const payload = {
+			customerName,
+			customerPhone,
+			shippingAddress,
+			deliveryArea,
+			paymentMethod,
+			orderNote,
+			items,
+			website_url: honeypot
+		};
+
+		let ipAddress = '127.0.0.1';
+		try {
+			ipAddress = getClientAddress();
+		} catch {
+			// development fallback
+		}
+
+		const userAgent = request.headers.get('user-agent') || undefined;
+
+		const mockOrderNumber = OrderService.generateOrderNumber();
+		const mockOrderId = crypto.randomUUID();
+		const subtotal = items.reduce((acc: number, item: any) => acc + (item.price || 0) * (item.quantity || 1), 0);
+		const deliveryCharge = deliveryArea === 'inside_dhaka' ? 60 : 120;
+		const total = subtotal + deliveryCharge;
+
+		let orderId = '';
+		let orderNumber = '';
+
+		try {
+			const db = getDb(platform);
+			const result = await OrderService.createWebOrder(db, payload, {
+				ipAddress,
+				userAgent,
+				source: 'Storefront Checkout'
+			});
+			orderId = result.orderId;
+			orderNumber = result.orderNumber;
+		} catch (err: any) {
+			console.error('Order creation error in D1:', err);
+			return fail(400, {
+				message: err?.message || 'অর্ডার সম্পন্ন করা সম্ভব হয়নি। আবার চেষ্টা করুন।'
+			});
+		}
+
+		// Sync into live orders store (so it appears immediately across all admin views)
+		addLiveOrder({
+			id: orderId,
+			orderNumber,
+			customerName,
+			customerEmail: customerPhone,
+			customerPhone,
+			shippingAddress,
+			deliveryArea,
+			paymentMethod,
+			orderNote,
+			total,
+			subtotal,
+			deliveryCharge,
+			status: 'pending',
+			orderType: 'web',
+			items: JSON.stringify(items),
+			createdAt: new Date().toISOString(),
+			source: 'Storefront Checkout'
+		});
+
+		return {
+			success: true,
+			orderId,
+			orderNumber,
+			total
+		};
+	} catch (err: any) {
+		fs.writeFileSync('checkout_error.log', (err && (err.stack || err.message)) || String(err));
+		console.error('CRITICAL CHECKOUT ERROR:', err);
+		return fail(500, {
+			message: err?.message || 'অর্ডারে ত্রুটি হয়েছে।'
+		});
+	}
+}
+
+export const actions: Actions = {
+	placeOrder: handlePlaceOrderAction
+};

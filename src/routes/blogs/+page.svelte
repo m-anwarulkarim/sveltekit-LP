@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { StoreLayout } from '#lib';
 	import { Card, CardContent, Badge, Button } from '#lib/components/ui';
 	import { BookOpen, Calendar, ArrowRight, Clock } from 'lucide-svelte';
@@ -39,7 +39,7 @@
 </svelte:head>
 
 <StoreLayout user={data.user}>
-	<div class="max-w-6xl mx-auto px-4 sm:px-6 py-10 lg:py-16 space-y-10 font-['Hind_Siliguri',sans-serif]">
+	<div class="max-w-6xl mx-auto px-4 sm:px-6 py-10 lg:py-16 space-y-10 font-['Anek_Bangla',sans-serif]">
 		
 		<div class="text-center space-y-2 max-w-2xl mx-auto">
 			<Badge variant="outline" class="bg-indigo-50 text-[#5845eb] border-indigo-200">

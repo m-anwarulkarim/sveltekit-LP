@@ -31,7 +31,7 @@
 	}: Props = $props();
 
 	let totalPieces = $derived(
-		items.reduce((acc, it) => acc + (Number(it.quantity) || 1), 0)
+		Array.isArray(items) ? items.reduce((acc, it) => acc + (Number(it.quantity) || 1), 0) : 0
 	);
 </script>
 
@@ -43,7 +43,7 @@
 			<h2 class="text-sm font-black text-slate-900 tracking-tight">অর্ডারকৃত পণ্যসমূহ</h2>
 		</div>
 		<Badge variant="purple" class="px-2 py-0.5 text-[11px] font-bold font-mono">
-			{items.length} items · {totalPieces} pcs
+			{Array.isArray(items) ? items.length : 0} items · {totalPieces} pcs
 		</Badge>
 	</div>
 

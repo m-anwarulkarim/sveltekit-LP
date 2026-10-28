@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { Button, Input, Card, Badge, Dialog } from '#lib/components/ui';
 	import {
 		Play,
@@ -134,7 +134,7 @@
 	</div>
 {/if}
 
-<div class="space-y-6 max-w-7xl mx-auto font-['Hind_Siliguri',sans-serif]">
+<div class="space-y-6 max-w-7xl mx-auto font-['Anek_Bangla',sans-serif]">
 	
 	<!-- Top Sub-Header Row: Title on Left, Search Bar on Right (Exact Match) -->
 	<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

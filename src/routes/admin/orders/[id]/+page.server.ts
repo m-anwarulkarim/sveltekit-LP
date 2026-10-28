@@ -1,54 +1,47 @@
 import type { Actions, PageServerLoad } from './$types';
-import { getDb } from '#lib/server/db/index.ts';
-import * as schema from '#lib/server/db/schema.ts';
+import { getDb } from '#lib/server/db/index';
+import * as schema from '#lib/server/db/schema';
 import { eq } from 'drizzle-orm';
-import { fail } from '@sveltejs/kit';
-import { INITIAL_PRODUCTS, INITIAL_ORDERS } from '../../_data.ts';
+import { error, fail } from '@sveltejs/kit';
+import { INITIAL_PRODUCTS } from '../../_data';
+import { OrderService } from '#lib/server/services/order.service';
+import { FraudService } from '#lib/server/services/fraud.service';
 
 export const load: PageServerLoad = async ({ params, parent, platform }) => {
 	const parentData = await parent();
 	const orderId = params.id;
 
 	let foundOrder: any = null;
+	let orderNotesFromDb: any[] = [];
 
-	// 1. Try finding in parent data
-	if (parentData?.orders) {
-		foundOrder = parentData.orders.find((o: any) => o.id === orderId);
-	}
-
-	// 2. If D1 is connected, check database directly
-	if (!foundOrder && platform?.env?.DB) {
-		try {
-			const db = getDb(platform.env.DB);
-			const row = await db.select().from(schema.orders).where(eq(schema.orders.id, orderId)).get();
-			if (row) {
-				foundOrder = row;
-			}
-		} catch (e) {
-			console.error('Error fetching order from D1:', e);
+	// 1. Query full order using OrderService from real D1
+	try {
+		const db = getDb(platform);
+		const detailedOrder = await OrderService.getOrderById(db, orderId);
+		if (detailedOrder) {
+			foundOrder = detailedOrder;
+			orderNotesFromDb = detailedOrder.notesList || [];
 		}
+	} catch (e) {
+		console.error('Error fetching order from D1:', e);
 	}
 
-	// 3. Fallback to INITIAL_ORDERS or generate dynamic fallback so page never 404s
+	// 2. Try finding in parent data
+	if (!foundOrder && parentData?.orders) {
+		const clean = (orderId || '').trim();
+		const withoutHash = clean.replace(/^#/, '');
+		foundOrder = parentData.orders.find(
+			(o: any) =>
+				o.id === clean ||
+				o.orderNumber === clean ||
+				o.orderNumber === withoutHash ||
+				o.orderNumber === `#${withoutHash}`
+		);
+	}
+
+	// 3. Throw 404 if order does not exist in real database (no demo data)
 	if (!foundOrder) {
-		foundOrder = INITIAL_ORDERS.find((o: any) => o.id === orderId) || {
-			id: orderId,
-			customerName: 'Mohammad Lokman',
-			customerEmail: '01758170313',
-			shippingAddress: 'পূর্ব চাম্বল মিয়ার দোকান, বাঁশখালী, চট্টগ্রাম',
-			items: JSON.stringify([
-				{
-					id: 'prod-paint-pen',
-					name: 'হাইব্রিড মরিচ- ১২ মাস সেরা ফলন',
-					price: 130,
-					quantity: 3,
-					image: '/images/products/car-paint-pen.svg'
-				}
-			]),
-			total: 390,
-			status: 'pending',
-			createdAt: new Date()
-		};
+		throw error(404, 'অর্ডারটি ডাটাবেজে পাওয়া যায়নি।');
 	}
 
 	// Parse items
@@ -61,7 +54,6 @@ export const load: PageServerLoad = async ({ params, parent, platform }) => {
 		parsedItems = [];
 	}
 
-	// Ensure item fields are clean
 	parsedItems = parsedItems.map((it: any) => ({
 		id: it.id || 'prod-' + Math.random().toString(36).slice(2, 7),
 		name: it.name || 'পণ্য আইটেম',
@@ -72,9 +64,9 @@ export const load: PageServerLoad = async ({ params, parent, platform }) => {
 	}));
 
 	// Find past orders for this customer (by phone / customerEmail)
-	const allOrders = parentData?.orders || INITIAL_ORDERS;
+	const allOrders = parentData?.orders || [];
 	const pastOrders = allOrders
-		.filter((o: any) => o.customerEmail === foundOrder.customerEmail)
+		.filter((o: any) => o.customerEmail === foundOrder.customerEmail && o.id !== foundOrder.id)
 		.map((o: any) => ({
 			id: o.id,
 			status: o.status,
@@ -82,117 +74,131 @@ export const load: PageServerLoad = async ({ params, parent, platform }) => {
 			date: o.createdAt ? new Date(o.createdAt).toLocaleDateString('bn-BD') : 'আজ'
 		}));
 
-	// Courier statistics (Steadfast / Pathao simulation)
-	const courierStats = {
-		total: Math.max(pastOrders.length * 3 + 2, 4),
-		delivered: Math.max(pastOrders.length * 3, 3),
-		cancelled: 1,
-		successRate: 88,
+	// Fraud & Courier Telemetry from FraudService
+	let courierStats = {
+		total: pastOrders.length,
+		delivered: pastOrders.filter((o: any) => o.status === 'delivered').length,
+		cancelled: pastOrders.filter((o: any) => o.status === 'cancelled').length,
+		successRate:
+			pastOrders.length > 0
+				? Math.round(
+						(pastOrders.filter((o: any) => o.status === 'delivered').length / pastOrders.length) * 100
+					)
+				: 100,
 		courierName: 'Steadfast & Pathao'
 	};
 
-	// Initial call notes
-	const initialNotes = [
-		{
-			id: 'note-1',
-			note: 'অর্ডারটি ল্যান্ডিং পেজ ক্যাম্পেইন থেকে সরাসরি প্লেস করা হয়েছে।',
-			author: 'System Bot',
-			time: '১০ মিনিট আগে'
+	try {
+		const db = getDb(platform);
+		const targetPhone = foundOrder.customerPhone || foundOrder.customerEmail;
+		if (targetPhone) {
+			const risk = await FraudService.checkPhoneRisk(db, targetPhone);
+			if (risk) {
+				courierStats = {
+					total: risk.totalParcels,
+					delivered: risk.deliveredParcels,
+					cancelled: risk.cancelledParcels,
+					successRate: risk.successRate,
+					courierName: risk.courierName
+				};
+			}
 		}
-	];
+	} catch (e) {
+		console.error('Courier stats query error in D1:', e);
+	}
 
-	// Available products for upsell
-	const products = parentData?.products || INITIAL_PRODUCTS;
+	const initialNotes = orderNotesFromDb.map((n) => ({
+		id: n.id,
+		note: n.note,
+		author: n.adminName || 'Admin',
+		time: n.createdAt ? new Date(n.createdAt).toLocaleTimeString('bn-BD') : 'এখনই'
+	}));
 
 	return {
-		order: {
-			...foundOrder,
-			items: parsedItems
-		},
-		products,
+		order: foundOrder,
+		orderId,
+		items: parsedItems,
 		pastOrders,
 		courierStats,
-		initialNotes
+		initialNotes,
+		availableProducts: INITIAL_PRODUCTS
 	};
 };
 
 export const actions: Actions = {
-	// 1. Save Full Order
 	saveOrder: async ({ request, platform }) => {
 		const formData = await request.formData();
 		const orderId = formData.get('orderId')?.toString();
 		const customerName = formData.get('customerName')?.toString();
 		const customerPhone = formData.get('customerPhone')?.toString();
 		const shippingAddress = formData.get('shippingAddress')?.toString();
-		const itemsJson = formData.get('items')?.toString() || '[]';
-		const total = parseInt(formData.get('total')?.toString() || '0', 10);
 		const status = formData.get('status')?.toString() || 'pending';
+		const total = parseInt(formData.get('total')?.toString() || '0', 10);
+		const itemsJson = formData.get('items')?.toString() || '[]';
 
 		if (!orderId) {
-			return fail(400, { message: 'Order ID is required' });
+			return fail(400, { message: 'Order ID required' });
 		}
 
-		if (platform?.env?.DB) {
-			try {
-				const db = getDb(platform.env.DB);
-				await db.update(schema.orders)
-					.set({
-						customerName: customerName || 'Unnamed Customer',
-						customerEmail: customerPhone || '01700000000',
-						shippingAddress: shippingAddress || 'Dhaka',
-						items: itemsJson,
-						total,
-						status
-					})
-					.where(eq(schema.orders.id, orderId));
-			} catch (err: any) {
-				return fail(500, { message: err?.message || 'Database update failed' });
-			}
-		}
+		try {
+			const db = getDb(platform);
+			await db
+				.update(schema.orders)
+				.set({
+					customerName: customerName || 'Unnamed Customer',
+					customerEmail: customerPhone || '01700000000',
+					customerPhone: customerPhone || '01700000000',
+					shippingAddress: shippingAddress || 'Dhaka',
+					items: itemsJson,
+					total,
+					status,
+					updatedAt: new Date()
+				})
+				.where(eq(schema.orders.id, orderId));
 
-		return { success: true, message: 'অর্ডার সফলভাবে সেভ করা হয়েছে!' };
+			return { success: true, message: 'অর্ডার সফলভাবে সেভ করা হয়েছে!' };
+		} catch (err: any) {
+			return fail(500, { message: err?.message || 'Database update failed' });
+		}
 	},
 
-	// 2. Quick Confirm
 	confirmOrder: async ({ request, platform }) => {
 		const formData = await request.formData();
 		const orderId = formData.get('orderId')?.toString();
 
 		if (!orderId) return fail(400, { message: 'Order ID required' });
 
-		if (platform?.env?.DB) {
-			try {
-				const db = getDb(platform.env.DB);
-				await db.update(schema.orders)
-					.set({ status: 'confirmed' })
-					.where(eq(schema.orders.id, orderId));
-			} catch (err: any) {
-				return fail(500, { message: err?.message });
-			}
-		}
+		try {
+			const db = getDb(platform);
+			await OrderService.updateOrderStatus(
+				db,
+				{ orderId, status: 'confirmed', note: 'অর্ডারটি বিস্তারিত কনফার্ম করা হয়েছে।' },
+				'Admin Staff'
+			);
 
-		return { success: true, newStatus: 'confirmed', message: 'অর্ডার কনফার্ম করা হয়েছে!' };
+			return { success: true, newStatus: 'confirmed', message: 'অর্ডার কনফার্ম করা হয়েছে!' };
+		} catch (err: any) {
+			return fail(500, { message: err?.message });
+		}
 	},
 
-	// 3. Cancel Order
 	cancelOrder: async ({ request, platform }) => {
 		const formData = await request.formData();
 		const orderId = formData.get('orderId')?.toString();
 
 		if (!orderId) return fail(400, { message: 'Order ID required' });
 
-		if (platform?.env?.DB) {
-			try {
-				const db = getDb(platform.env.DB);
-				await db.update(schema.orders)
-					.set({ status: 'cancelled' })
-					.where(eq(schema.orders.id, orderId));
-			} catch (err: any) {
-				return fail(500, { message: err?.message });
-			}
-		}
+		try {
+			const db = getDb(platform);
+			await OrderService.updateOrderStatus(
+				db,
+				{ orderId, status: 'cancelled', note: 'অর্ডারটি অ্যাডমিন প্যানেল থেকে বাতিল করা হয়েছে।' },
+				'Admin Staff'
+			);
 
-		return { success: true, newStatus: 'cancelled', message: 'অর্ডার বাতিল করা হয়েছে!' };
+			return { success: true, newStatus: 'cancelled', message: 'অর্ডার বাতিল করা হয়েছে!' };
+		} catch (err: any) {
+			return fail(500, { message: err?.message });
+		}
 	}
 };
-

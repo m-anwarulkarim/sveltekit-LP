@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { AdminProduct } from '../../_data.ts';
+	import type { AdminProduct } from '../../_data';
 	import {
 		ArrowDown,
 		ArrowUp,
@@ -193,10 +193,20 @@
 				{#if products.length === 0}
 					<tr>
 						<td colspan="9" class="py-16 text-center text-slate-400">
-							<div class="flex flex-col items-center justify-center gap-2">
-								<PackageOpen class="w-10 h-10 text-slate-300" />
-								<p class="font-semibold text-slate-600 text-sm">কোন প্রোডাক্ট পাওয়া যায়নি</p>
-								<p class="text-xs text-slate-400">আপনার ফিল্টার বা সার্চ টার্ম পরিবর্তন করে দেখুন।</p>
+							<div class="flex flex-col items-center justify-center gap-3">
+								<div class="w-14 h-14 rounded-3xl bg-slate-100 flex items-center justify-center text-slate-400 shadow-inner">
+									<PackageOpen class="w-7 h-7" />
+								</div>
+								<div class="space-y-1">
+									<p class="font-bold text-slate-700 text-sm">কোনো প্রোডাক্ট পাওয়া যায়নি</p>
+									<p class="text-xs text-slate-400 max-w-sm mx-auto">ডাটাবেজে বর্তমানে কোনো প্রোডাক্ট নেই অথবা আপনার সার্চ ফিল্টারের সাথে মিলছে না।</p>
+								</div>
+								<a
+									href="/admin/products/new"
+									class="inline-flex items-center gap-1.5 px-4 py-2 bg-[#5845eb] text-white rounded-xl text-xs font-bold hover:bg-[#4936d6] transition-all shadow-sm shadow-indigo-500/20"
+								>
+									<span>+ নতুন প্রোডাক্ট যোগ করুন</span>
+								</a>
 							</div>
 						</td>
 					</tr>

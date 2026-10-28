@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { StoreLayout } from '#lib';
 	import { Card, CardContent, Badge } from '#lib/components/ui';
 	import { Sparkles, ShieldCheck, Award, HeartHandshake, Leaf, Users } from 'lucide-svelte';
@@ -12,7 +12,7 @@
 </svelte:head>
 
 <StoreLayout user={data.user}>
-	<div class="max-w-5xl mx-auto px-4 sm:px-6 py-10 lg:py-16 space-y-12 font-['Hind_Siliguri',sans-serif]">
+	<div class="max-w-5xl mx-auto px-4 sm:px-6 py-10 lg:py-16 space-y-12 font-['Anek_Bangla',sans-serif]">
 		
 		<!-- Hero Section -->
 		<div class="text-center space-y-3 max-w-3xl mx-auto">

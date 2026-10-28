@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { StoreLayout } from '#lib';
 	import { Button, Input, Card, CardContent, Badge } from '#lib/components/ui';
 	import { Search, Package, Truck, CheckCircle2, Clock, Phone, AlertCircle } from 'lucide-svelte';
@@ -41,7 +41,7 @@
 </svelte:head>
 
 <StoreLayout user={data.user}>
-	<div class="max-w-4xl mx-auto px-4 sm:px-6 py-10 lg:py-16 space-y-8 font-['Hind_Siliguri',sans-serif]">
+	<div class="max-w-4xl mx-auto px-4 sm:px-6 py-10 lg:py-16 space-y-8 font-['Anek_Bangla',sans-serif]">
 		
 		<!-- Page Header -->
 		<div class="text-center space-y-2">

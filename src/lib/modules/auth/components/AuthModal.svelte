@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { User, Lock, Mail, Sparkles, ArrowRight } from 'lucide-svelte';
+	import { Button } from '#lib/components/ui';
+	import { User, Lock, Mail, Sparkles, ArrowRight, X } from 'lucide-svelte';
 
 	interface Props {
 		isOpen: boolean;
@@ -17,13 +18,15 @@
 	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
 		<div class="relative w-full max-w-md bg-[#10121d] border border-white/15 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden">
 			
-			<button
+			<Button
+				variant="ghost"
+				size="icon"
 				onclick={onClose}
-				class="absolute top-5 right-5 text-slate-400 hover:text-white p-2"
+				class="absolute top-5 right-5 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl h-8 w-8 cursor-pointer"
 				aria-label="Close authentication modal"
 			>
-				✕
-			</button>
+				<X class="w-4 h-4" />
+			</Button>
 
 			<!-- Header -->
 			<div class="text-center mb-6">
@@ -45,14 +48,14 @@
 				<button
 					type="button"
 					onclick={() => isRegister = false}
-					class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all {!isRegister ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}"
+					class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer {!isRegister ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}"
 				>
 					Sign In
 				</button>
 				<button
 					type="button"
 					onclick={() => isRegister = true}
-					class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all {isRegister ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}"
+					class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer {isRegister ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}"
 				>
 					Register
 				</button>
@@ -114,13 +117,13 @@
 					</div>
 				</div>
 
-				<button
+				<Button
 					type="submit"
-					class="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-500 hover:from-violet-500 hover:to-cyan-400 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-violet-600/30 transition-transform hover:scale-[1.01] active:scale-[0.99]"
+					class="w-full h-auto flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-500 hover:from-violet-500 hover:to-cyan-400 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-violet-600/30 transition-transform hover:scale-[1.01] active:scale-[0.99] border-0"
 				>
 					<span>{isRegister ? 'Create Account' : 'Sign In'}</span>
 					<ArrowRight class="w-4 h-4" />
-				</button>
+				</Button>
 			</form>
 
 			<div class="mt-4 text-center">

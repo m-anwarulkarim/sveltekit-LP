@@ -40,7 +40,7 @@
 {#if open}
 	<!-- Backdrop -->
 	<div
-		class="fixed inset-0 z-50 bg-black#lib/40 backdrop-blur-xs transition-opacity animate-in fade-in"
+		class="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs transition-opacity animate-in fade-in"
 		onclick={close}
 		role="presentation"
 	></div>

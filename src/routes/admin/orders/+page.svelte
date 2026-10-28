@@ -21,27 +21,26 @@
 	let { data }: { data: any } = $props();
 
 	let orderSearchQuery = $state('');
-	let webStatusFilter = $state('all');
+	let webStatusFilter = $state('pending');
 	let activeOrderForEdit = $state<any | null>(null);
 	let isEditDialogOpen = $state(false);
 
 	const WEB_ORDER_STATUS_TABS = [
-		{ id: 'all', label: 'সব', icon: Clock },
 		{ id: 'pending', label: 'পেন্ডিং', icon: Clock },
 		{ id: 'incomplete', label: 'ইনকমপ্লিট', icon: AlertTriangle },
 		{ id: 'no_response', label: 'নো রেসপন্স', icon: PhoneMissed },
 		{ id: 'good_no_response', label: 'গুড বাট নো রেসপন্স', icon: ThumbsUp },
 		{ id: 'busy', label: 'বিজি', icon: Phone },
 		{ id: 'hold', label: 'হোল্ড', icon: PauseCircle },
-		{ id: 'recall', label: 'রি', icon: RotateCcw },
-		{ id: 'processing', label: 'প্রসেসিং', icon: CheckCircle2 },
+		{ id: 'recall', label: 'রি-কল', icon: RotateCcw },
 		{ id: 'confirmed', label: 'কনফার্মড', icon: CheckCircle2 },
-		{ id: 'cancelled', label: 'বাতিল', icon: XCircle }
+		{ id: 'cancelled', label: 'বাতিল', icon: XCircle },
+		{ id: 'all', label: 'সব', icon: Clock }
 	];
 
 	let webOrders = $derived(
 		(data.orders || []).filter((o: any) =>
-			['pending', 'incomplete', 'no_response', 'no_response_3', 'good_no_response', 'busy', 'hold', 'recall'].includes(o.status)
+			['pending', 'incomplete', 'no_response', 'no_response_3', 'good_no_response', 'busy', 'hold', 'recall', 'confirmed', 'cancelled'].includes(o.status)
 		)
 	);
 
@@ -57,8 +56,10 @@
 			const matchesSearch =
 				orderSearchQuery === ''
 					? true
-					: (order.id || '').toLowerCase().includes(orderSearchQuery.toLowerCase()) ||
+					: (order.orderNumber || '').toLowerCase().includes(orderSearchQuery.toLowerCase()) ||
+						(order.id || '').toLowerCase().includes(orderSearchQuery.toLowerCase()) ||
 						(order.customerName || '').toLowerCase().includes(orderSearchQuery.toLowerCase()) ||
+						(order.customerPhone || '').includes(orderSearchQuery) ||
 						(order.customerEmail || '').includes(orderSearchQuery);
 
 			return matchesStatus && matchesSearch;
@@ -171,15 +172,15 @@
 							{@const items = parseItems(order.items)}
 							<tr class="hover:bg-slate-50/70 transition-colors">
 								
-								<!-- 1. Order ID -->
+								<!-- 1. Order ID (Clean Sequential Display: e.g. #1001) -->
 								<td class="py-4 px-4 font-mono font-bold text-slate-900">
 									<div class="flex items-center gap-1.5">
 										<a
-											href="/admin/orders/{order.id}"
-											class="text-[#5845eb] hover:underline hover:text-indigo-800 transition-colors"
+											href="/admin/orders/{order.orderNumber || order.id}"
+											class="text-[#5845eb] hover:underline hover:text-indigo-800 transition-colors font-mono font-black text-sm"
 											title="বিস্তারিত দেখুন ও সম্পাদনা করুন"
 										>
-											#{order.id}
+											{order.orderNumber ? (order.orderNumber.startsWith('#') ? order.orderNumber : '#' + order.orderNumber) : '#' + order.id.slice(0, 8)}
 										</a>
 									</div>
 									<span class="text-[10px] text-slate-400 font-sans block mt-0.5">
@@ -237,18 +238,25 @@
 								<td class="py-4 px-4 text-right">
 									<div class="flex items-center justify-end gap-1.5">
 										<!-- Quick Confirm Button -->
-										<form action="?/quickConfirmOrder" method="POST" use:enhance class="inline">
-											<input type="hidden" name="orderId" value={order.id} />
-											<Button
-												type="submit"
-												size="sm"
-												class="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20 text-xs font-bold gap-1"
-												title="অর্ডার কনফার্ম করুন"
-											>
+										{#if order.status === 'confirmed'}
+											<Badge variant="success" class="text-xs font-bold gap-1 py-1 px-2.5">
 												<CheckCircle2 class="w-3.5 h-3.5" />
-												<span>কনফার্ম</span>
-											</Button>
-										</form>
+												<span>কনফার্মড</span>
+											</Badge>
+										{:else}
+											<form action="?/quickConfirmOrder" method="POST" use:enhance class="inline">
+												<input type="hidden" name="orderId" value={order.id} />
+												<Button
+													type="submit"
+													size="sm"
+													class="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20 text-xs font-bold gap-1"
+													title="অর্ডার কনফার্ম করুন"
+												>
+													<CheckCircle2 class="w-3.5 h-3.5" />
+													<span>কনফার্ম</span>
+												</Button>
+											</form>
+										{/if}
 
 										<!-- Call Button -->
 										<Button

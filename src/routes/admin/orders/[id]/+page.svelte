@@ -17,19 +17,54 @@
 	let { data }: { data: any } = $props();
 
 	// Reactive Order State
-	let orderId = $state(data.order.id);
-	let status = $state(data.order.status || 'pending');
-	let customerName = $state(data.order.customerName || '');
-	let customerPhone = $state(data.order.customerEmail || '');
-	let altPhone = $state(data.order.altPhone || '');
-	let shippingAddress = $state(data.order.shippingAddress || '');
-	let items = $state<any[]>(data.order.items || []);
-	let createdAt = $state(data.order.createdAt);
+	let orderId = $state(data?.order?.id || '');
+	let status = $state(data?.order?.status || 'pending');
+	let customerName = $state(data?.order?.customerName || '');
+	let customerPhone = $state(data?.order?.customerPhone || data?.order?.customerEmail || '');
+	let altPhone = $state(data?.order?.alternatePhone || data?.order?.altPhone || '');
+	let shippingAddress = $state(data?.order?.shippingAddress || '');
+	let items = $state<any[]>(
+		Array.isArray(data?.items) && data.items.length > 0
+			? data.items
+			: Array.isArray(data?.order?.items)
+				? data.order.items
+				: typeof data?.order?.items === 'string'
+					? (() => {
+							try {
+								return JSON.parse(data.order.items);
+							} catch {
+								return [];
+							}
+						})()
+					: []
+	);
+	let createdAt = $state(data?.order?.createdAt);
 
 	// Financials
-	let discount = $state(Number(data.order.discount) || 0);
-	let deliveryFee = $state(Number(data.order.deliveryFee) || 60);
-	let advancePaid = $state(Number(data.order.advancePaid) || 0);
+	let discount = $state(Number(data?.order?.discountAmount) || Number(data?.order?.discount) || 0);
+	let deliveryFee = $state(Number(data?.order?.deliveryCharge) || Number(data?.order?.deliveryFee) || 60);
+	let advancePaid = $state(Number(data?.order?.advancePayment) || Number(data?.order?.advancePaid) || 0);
+
+	// Synchronize when data changes
+	$effect(() => {
+		if (data?.order) {
+			orderId = data.order.id;
+			status = data.order.status || 'pending';
+			customerName = data.order.customerName || '';
+			customerPhone = data.order.customerPhone || data.order.customerEmail || '';
+			altPhone = data.order.alternatePhone || data.order.altPhone || '';
+			shippingAddress = data.order.shippingAddress || '';
+			if (Array.isArray(data.items) && data.items.length > 0) {
+				items = data.items;
+			} else if (Array.isArray(data.order.items)) {
+				items = data.order.items;
+			}
+			discount = Number(data.order.discountAmount) || Number(data.order.discount) || 0;
+			deliveryFee = Number(data.order.deliveryCharge) || Number(data.order.deliveryFee) || 60;
+			advancePaid = Number(data.order.advancePayment) || Number(data.order.advancePaid) || 0;
+			createdAt = data.order.createdAt;
+		}
+	});
 
 	// Intelligence & Notes
 	let callNotes = $state<any[]>(data.initialNotes || []);
@@ -47,6 +82,7 @@
 
 	// Subtotal & Total
 	let subtotal = $derived.by(() => {
+		if (!Array.isArray(items)) return 0;
 		return items.reduce((acc: number, it: any) => acc + (Number(it.price) * Number(it.quantity) || 0), 0);
 	});
 
@@ -157,7 +193,7 @@
 </script>
 
 <svelte:head>
-	<title>Order #{orderId} - বিস্তারিত ও সম্পাদনা | AURA Pro</title>
+	<title>Order #{data.order?.orderNumber || orderId.slice(0, 8)} - বিস্তারিত ও সম্পাদনা | AURA Pro</title>
 </svelte:head>
 
 <div class="space-y-4 pb-12 print:p-0 print:space-y-2">
@@ -166,6 +202,7 @@
 	<div class="print:hidden">
 		<OrderDetailsHeader
 			{orderId}
+			orderNumber={data.order?.orderNumber}
 			bind:status
 			{createdAt}
 			{isSaving}
@@ -205,7 +242,7 @@
 		<!-- Column 2: Product Search / Upsell (4 cols) -->
 		<div class="lg:col-span-4 flex flex-col">
 			<ProductUpsellSelector
-				catalogProducts={data.products}
+				catalogProducts={data.availableProducts || data.products || []}
 				orderedItems={items}
 				onAddProduct={handleAddProduct}
 			/>

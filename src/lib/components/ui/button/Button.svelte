@@ -11,7 +11,8 @@
 		| 'ghost'
 		| 'link'
 		| 'success'
-		| 'purple';
+		| 'purple'
+		| 'blue';
 
 	export type ButtonSize = 'default' | 'sm' | 'lg' | 'icon';
 
@@ -50,7 +51,8 @@
 		ghost: 'hover:bg-slate-100 hover:text-slate-900 text-slate-700',
 		link: 'text-[#5845eb] underline-offset-4 hover:underline',
 		success: 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm shadow-emerald-500/20 active:scale-[0.98]',
-		purple: 'bg-[#5845eb] text-white hover:bg-[#4936d6] shadow-sm shadow-indigo-500/20 active:scale-[0.98]'
+		purple: 'bg-[#5845eb] text-white hover:bg-[#4936d6] shadow-sm shadow-indigo-500/20 active:scale-[0.98]',
+		blue: 'bg-[#2563eb] text-white hover:bg-[#1d4ed8] shadow-sm shadow-blue-500/20 active:scale-[0.98]'
 	};
 
 	const sizeClasses: Record<ButtonSize, string> = {

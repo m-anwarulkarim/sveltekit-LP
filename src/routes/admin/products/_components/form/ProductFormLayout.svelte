@@ -24,12 +24,14 @@
 	interface Props {
 		initialProduct?: Partial<AdminProduct> | null;
 		isEditMode?: boolean;
+		existingGallery?: any[];
 		onSave?: (product: AdminProduct) => void;
 	}
 
 	let {
 		initialProduct = null,
 		isEditMode = false,
+		existingGallery = [],
 		onSave
 	}: Props = $props();
 
@@ -75,11 +77,11 @@
 	let returnPolicy = $state(initialProduct?.returnPolicy || '');
 
 	// Media Assets
-	let image = $state(initialProduct?.image || '/images/products/speaker-front.webp');
+	let image = $state(initialProduct?.image || '/images/products/soundcore.svg');
 	let images = $state(initialProduct?.images || [
-		initialProduct?.image || '/images/products/speaker-front.webp',
-		'/images/products/speaker-angle.webp',
-		'/images/products/speaker-top.webp'
+		initialProduct?.image || '/images/products/soundcore.svg',
+		'/images/products/trimmer.svg',
+		'/images/products/kirkland.svg'
 	]);
 
 	// Category & Status
@@ -102,7 +104,7 @@
 		}, 3500);
 	}
 
-	function handleSubmit() {
+	async function handleSubmit() {
 		validationError = null;
 
 		if (!name.trim()) {
@@ -134,7 +136,7 @@
 			sku: sku || `SKU-${Date.now().toString().slice(-6)}`,
 			rating: initialProduct?.rating || 48,
 			reviewsCount: initialProduct?.reviewsCount || 1,
-			image: image || images[0] || '/images/products/speaker-front.webp',
+			image: image || images[0] || '/images/products/soundcore.svg',
 			images,
 			category,
 			subCategory,
@@ -161,17 +163,35 @@
 			sizeChartImage
 		};
 
-		setTimeout(() => {
+		try {
+			const actionUrl = isEditMode ? '?/updateProduct' : '?/createProduct';
+			const fd = new FormData();
+			fd.append('productData', JSON.stringify(productData));
+
+			const res = await fetch(actionUrl, {
+				method: 'POST',
+				body: fd
+			});
+
+			if (!res.ok) {
+				const errorData = await res.json().catch(() => ({}));
+				throw new Error(errorData?.message || 'প্রোডাক্ট সেভ করতে সমস্যা হয়েছে');
+			}
+
 			if (onSave) {
 				onSave(productData);
 			}
 			showToast(isEditMode ? 'প্রোডাক্ট সফলভাবে আপডেট করা হয়েছে!' : 'নতুন প্রোডাক্ট সফলভাবে যুক্ত করা হয়েছে!');
-			isSaving = false;
 
 			setTimeout(() => {
 				goto('/admin/products');
-			}, 1200);
-		}, 600);
+			}, 1000);
+		} catch (err: any) {
+			console.error('Save product error:', err);
+			showToast(err?.message || 'প্রোডাক্ট সেভ করতে সমস্যা হয়েছে');
+		} finally {
+			isSaving = false;
+		}
 	}
 </script>
 
@@ -333,10 +353,11 @@
 
 		<!-- Right Column (32% - 4 cols, Sticky) -->
 		<div class="lg:col-span-4 space-y-6 lg:sticky lg:top-24">
-			<!-- 1. Media Assets Gallery -->
+			<!-- 1. Media Assets Gallery (Upload, Link & Gallery Picker) -->
 			<MediaAssetsCard
 				bind:image
 				bind:images
+				{existingGallery}
 			/>
 
 			<!-- 2. Category, Status & Badges -->

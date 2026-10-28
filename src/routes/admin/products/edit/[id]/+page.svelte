@@ -11,7 +11,11 @@
 
 <div class="p-4 sm:p-6 lg:p-8">
 	{#if data.product}
-		<ProductFormLayout initialProduct={data.product} isEditMode={true} />
+		<ProductFormLayout
+			initialProduct={data.product}
+			isEditMode={true}
+			existingGallery={data.galleryImages || []}
+		/>
 	{:else}
 		<div class="max-w-md mx-auto text-center py-16 space-y-4">
 			<h2 class="text-xl font-bold text-slate-800">প্রোডাক্ট পাওয়া যায়নি</h2>

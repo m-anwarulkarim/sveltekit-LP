@@ -12,17 +12,29 @@
 		Edit3,
 		Eye,
 		X,
-		CheckCircle2
+		CheckCircle2,
+		Loader2,
+		Tag as TagIcon
 	} from 'lucide-svelte';
 	import { CatalogFilterTabs } from '../../_components/catalog';
-	import { INITIAL_TAGS, type CatalogTag } from '../../_data.ts';
+	import type { CatalogTag } from '../../_data.ts';
 
-	let tags = $state<CatalogTag[]>([...INITIAL_TAGS]);
+	let { data }: { data?: any } = $props();
+
+	// Tags state initialized from real server data
+	let tags = $state<CatalogTag[]>(data?.tags || []);
+
+	// Synchronize when server data updates
+	$effect(() => {
+		tags = data?.tags ? [...data.tags] : [];
+	});
+
 	let searchQuery = $state('');
 	let activeTab = $state<'all' | 'publish' | 'draft' | 'low_stock' | 'trash'>('all');
 	let selectedIds = $state<string[]>([]);
 	let currentPage = $state(1);
 	let itemsPerPage = 10;
+	let isSaving = $state(false);
 
 	// Toast notification
 	let toastMessage = $state<string | null>(null);
@@ -36,7 +48,7 @@
 	let isEditing = $state(false);
 	let editingId = $state<string | null>(null);
 	let formName = $state('');
-	let formDate = $state('Oct 26, 2026');
+	let formDate = $state('Oct 28, 2026');
 	let formHomeShow = $state<'Yes' | 'No'>('Yes');
 	let formPriority = $state<string | number>('-');
 	let formStatus = $state<'publish' | 'draft'>('publish');
@@ -115,60 +127,133 @@
 		isModalOpen = true;
 	}
 
-	function handleSave() {
+	async function handleSave() {
 		if (!formName.trim()) {
-			alert('Tag Name required');
+			showToast('ট্যাগের নাম প্রদান করা আবশ্যক!');
 			return;
 		}
 
-		if (isEditing && editingId) {
-			tags = tags.map((t) =>
-				t.id === editingId
-					? {
-							...t,
-							name: formName.trim(),
-							date: formDate,
-							homeShow: formHomeShow,
-							priority: formPriority,
-							status: formStatus
-						}
-					: t
-			);
-			showToast('ট্যাগ সফলভাবে আপডেট করা হয়েছে!');
-		} else {
-			const newTag: CatalogTag = {
-				id: 'tag-' + Date.now(),
-				sl: tags.length + 1,
-				name: formName.trim(),
-				date: formDate,
-				homeShow: formHomeShow,
-				status: formStatus,
-				priority: formPriority
-			};
-			tags = [...tags, newTag];
-			showToast('নতুন ট্যাগ তৈরি করা হয়েছে!');
+		isSaving = true;
+		const formData = new FormData();
+		formData.append('name', formName.trim());
+		formData.append('homeShow', formHomeShow);
+		formData.append('priority', String(formPriority));
+		formData.append('status', formStatus);
+
+		try {
+			if (isEditing && editingId) {
+				formData.append('id', editingId);
+				await fetch('?/updateTag', {
+					method: 'POST',
+					body: formData
+				});
+
+				tags = tags.map((t) =>
+					t.id === editingId
+						? {
+								...t,
+								name: formName.trim(),
+								date: formDate,
+								homeShow: formHomeShow,
+								priority: formPriority,
+								status: formStatus
+							}
+						: t
+				);
+				showToast('ট্যাগ সফলভাবে আপডেট করা হয়েছে!');
+			} else {
+				const response = await fetch('?/createTag', {
+					method: 'POST',
+					body: formData
+				});
+				const result = await response.json();
+				const newId = result?.data?.tag?.id || 'tag-' + Date.now();
+
+				const newTag: CatalogTag = {
+					id: newId,
+					sl: tags.length + 1,
+					name: formName.trim(),
+					date: formDate,
+					homeShow: formHomeShow,
+					status: formStatus,
+					priority: formPriority
+				};
+				tags = [newTag, ...tags];
+				showToast('নতুন ট্যাগ সফলভাবে তৈরি করা হয়েছে!');
+			}
+			isModalOpen = false;
+		} catch (error) {
+			console.error('Error saving tag:', error);
+			showToast('ট্যাগ সংরক্ষণে ত্রুটি হয়েছে');
+		} finally {
+			isSaving = false;
 		}
-
-		isModalOpen = false;
 	}
 
-	function toggleStatus(tag: CatalogTag) {
+	async function toggleStatus(tag: CatalogTag) {
 		const newStatus = tag.status === 'publish' ? 'draft' : 'publish';
-		tags = tags.map((t) => (t.id === tag.id ? { ...t, status: newStatus } : t));
 		openActionMenuId = null;
+
+		tags = tags.map((t) => (t.id === tag.id ? { ...t, status: newStatus } : t));
 		showToast(`স্ট্যাটাস ${newStatus === 'publish' ? 'Publish' : 'Draft'}-এ পরিবর্তিত হয়েছে`);
+
+		try {
+			const fd = new FormData();
+			fd.append('id', tag.id);
+			await fetch('?/toggleStatus', {
+				method: 'POST',
+				body: fd
+			});
+		} catch (e) {
+			console.error('Error toggling tag status:', e);
+		}
 	}
 
-	function moveToTrash(id: string) {
-		tags = tags.map((t) => (t.id === id ? { ...t, isTrash: true } : t));
+	async function moveToTrash(id: string) {
 		openActionMenuId = null;
+		tags = tags.map((t) => (t.id === id ? { ...t, isTrash: true } : t));
 		showToast('ট্যাগ ট্র্যাশে পাঠানো হয়েছে');
+
+		try {
+			const fd = new FormData();
+			fd.append('id', id);
+			await fetch('?/deleteTag', {
+				method: 'POST',
+				body: fd
+			});
+		} catch (e) {
+			console.error('Error deleting tag:', e);
+		}
 	}
 
 	function restoreFromTrash(id: string) {
 		tags = tags.map((t) => (t.id === id ? { ...t, isTrash: false } : t));
 		openActionMenuId = null;
 		showToast('ট্যাগ রিস্টোর করা হয়েছে');
+	}
+
+	async function handleBulkDelete() {
+		if (selectedIds.length === 0) return;
+		if (!confirm(`আপনি কি নিশ্চিতভাবে নির্বাচিত ${selectedIds.length}টি ট্যাগ মুছে ফেলতে চান?`)) {
+			return;
+		}
+
+		const count = selectedIds.length;
+		const toDelete = [...selectedIds];
+		tags = tags.filter((t) => !toDelete.includes(t.id));
+		selectedIds = [];
+		showToast(`${count}টি ট্যাগ সফলভাবে মুছে ফেলা হয়েছে`);
+
+		try {
+			const fd = new FormData();
+			fd.append('ids', JSON.stringify(toDelete));
+			await fetch('?/bulkDelete', {
+				method: 'POST',
+				body: fd
+			});
+		} catch (e) {
+			console.error('Error bulk deleting tags:', e);
+		}
 	}
 </script>
 
@@ -184,23 +269,26 @@
 	</div>
 {/if}
 
-<div class="space-y-6 max-w-[1400px] mx-auto pb-12">
+<div class="space-y-6 max-w-[1400px] mx-auto pb-12 font-['Plus_Jakarta_Sans',sans-serif]">
 	<!-- Top Bar: Title & Support Button -->
 	<div class="flex items-center justify-between gap-4">
-		<h1 class="text-2xl font-bold text-slate-900 tracking-tight">Tags</h1>
+		<div>
+			<h1 class="text-2xl font-bold text-slate-900 tracking-tight">Tags</h1>
+			<p class="text-xs text-slate-500 mt-1">পণ্য ফিল্টারিং ও স্পেশাল অফার ট্যাগসমূহ পরিচালনা করুন</p>
+		</div>
 
-		<button
-			type="button"
+		<a
+			href="/admin/support"
 			class="bg-[#5845eb] hover:bg-[#4a39cf] text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-xs transition-colors inline-flex items-center gap-1.5 cursor-pointer"
 		>
 			<Headset class="w-3.5 h-3.5" />
 			<span>Support</span>
-		</button>
+		</a>
 	</div>
 
 	<!-- Search & Add Tag Row -->
 	<div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-		<!-- Search Input matching screenshot placeholder -->
+		<!-- Search Input -->
 		<div class="relative w-full sm:max-w-md">
 			<input
 				type="text"
@@ -211,18 +299,32 @@
 			<Search class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
 		</div>
 
-		<!-- + Add Tag Button -->
-		<button
-			type="button"
-			onclick={openAddModal}
-			class="bg-[#5845eb] hover:bg-[#4a39cf] text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
-		>
-			<Plus class="w-4 h-4" />
-			<span>Add Tag</span>
-		</button>
+		<!-- Action Buttons -->
+		<div class="flex items-center gap-3">
+			{#if selectedIds.length > 0}
+				<button
+					type="button"
+					onclick={handleBulkDelete}
+					class="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer animate-in fade-in"
+				>
+					<Trash2 class="w-4 h-4" />
+					<span>মুছে ফেলুন ({selectedIds.length})</span>
+				</button>
+			{/if}
+
+			<!-- + Add Tag Button -->
+			<button
+				type="button"
+				onclick={openAddModal}
+				class="bg-[#5845eb] hover:bg-[#4a39cf] text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+			>
+				<Plus class="w-4 h-4" />
+				<span>Add Tag</span>
+			</button>
+		</div>
 	</div>
 
-	<!-- Filter Capsules: All Data (5), Publish (5), Draft (0), Low Stock (0), Trash (0) -->
+	<!-- Filter Capsules: All Data, Publish, Draft, Low Stock, Trash -->
 	<CatalogFilterTabs
 		{activeTab}
 		{allCount}
@@ -236,7 +338,7 @@
 		}}
 	/>
 
-	<!-- Data Table Card matching Screenshot 5 -->
+	<!-- Data Table Card -->
 	<div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
 		<div class="overflow-x-auto">
 			<table class="w-full text-left text-xs border-collapse">
@@ -247,6 +349,7 @@
 								type="checkbox"
 								checked={selectedIds.length > 0 && selectedIds.length === paginatedItems.length}
 								onchange={handleSelectAll}
+								aria-label="Select all tags"
 								class="rounded border-slate-300 text-[#5845eb] focus:ring-[#5845eb] cursor-pointer"
 							/>
 						</th>
@@ -286,28 +389,40 @@
 										type="checkbox"
 										checked={selectedIds.includes(tag.id)}
 										onchange={() => handleSelectRow(tag.id)}
+										aria-label={`Select ${tag.name}`}
 										class="rounded border-slate-300 text-[#5845eb] focus:ring-[#5845eb] cursor-pointer"
 									/>
 								</td>
 
 								<!-- SL -->
-								<td class="py-3.5 px-4 font-mono text-slate-600">
+								<td class="py-3.5 px-4 font-mono text-slate-500 font-semibold">
 									{tag.sl ?? (idx + 1)}
 								</td>
 
 								<!-- Name -->
-								<td class="py-3.5 px-4 font-semibold text-slate-800">
-									{tag.name}
+								<td class="py-3.5 px-4">
+									<span class="inline-flex items-center gap-1.5 font-bold text-slate-800">
+										<TagIcon class="w-3.5 h-3.5 text-indigo-500" />
+										<span>{tag.name}</span>
+									</span>
 								</td>
 
 								<!-- Date -->
-								<td class="py-3.5 px-4 text-slate-500 font-mono">
+								<td class="py-3.5 px-4 text-slate-500 font-mono text-[11px]">
 									{tag.date}
 								</td>
 
 								<!-- Home Show -->
-								<td class="py-3.5 px-4 text-slate-600 font-medium">
-									{tag.homeShow}
+								<td class="py-3.5 px-4">
+									{#if tag.homeShow === 'Yes'}
+										<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+											Yes
+										</span>
+									{:else}
+										<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600">
+											No
+										</span>
+									{/if}
 								</td>
 
 								<!-- Priority -->
@@ -334,16 +449,17 @@
 										type="button"
 										onclick={() => (openActionMenuId = openActionMenuId === tag.id ? null : tag.id)}
 										class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+										aria-label="Actions menu"
 									>
 										<MoreVertical class="w-4 h-4" />
 									</button>
 
 									{#if openActionMenuId === tag.id}
-										<div class="absolute right-4 top-10 w-36 bg-white border border-slate-200 rounded-xl shadow-lg z-30 py-1 text-left text-xs">
+										<div class="absolute right-4 top-10 w-36 bg-white border border-slate-200 rounded-xl shadow-lg z-30 py-1 text-left text-xs animate-in fade-in duration-100">
 											<button
 												type="button"
 												onclick={() => openEditModal(tag)}
-												class="w-full px-3 py-1.5 flex items-center gap-2 text-slate-700 hover:bg-slate-50 transition-colors"
+												class="w-full px-3 py-2 flex items-center gap-2 text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
 											>
 												<Edit3 class="w-3.5 h-3.5 text-slate-500" />
 												<span>Edit</span>
@@ -352,7 +468,7 @@
 											<button
 												type="button"
 												onclick={() => toggleStatus(tag)}
-												class="w-full px-3 py-1.5 flex items-center gap-2 text-slate-700 hover:bg-slate-50 transition-colors"
+												class="w-full px-3 py-2 flex items-center gap-2 text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
 											>
 												<Eye class="w-3.5 h-3.5 text-slate-500" />
 												<span>{tag.status === 'publish' ? 'Draft করুন' : 'Publish করুন'}</span>
@@ -362,7 +478,7 @@
 												<button
 													type="button"
 													onclick={() => moveToTrash(tag.id)}
-													class="w-full px-3 py-1.5 flex items-center gap-2 text-rose-600 hover:bg-rose-50 transition-colors"
+													class="w-full px-3 py-2 flex items-center gap-2 text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
 												>
 													<Trash2 class="w-3.5 h-3.5" />
 													<span>Trash</span>
@@ -371,7 +487,7 @@
 												<button
 													type="button"
 													onclick={() => restoreFromTrash(tag.id)}
-													class="w-full px-3 py-1.5 flex items-center gap-2 text-emerald-600 hover:bg-emerald-50 transition-colors"
+													class="w-full px-3 py-2 flex items-center gap-2 text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer"
 												>
 													<CheckCircle2 class="w-3.5 h-3.5" />
 													<span>Restore</span>
@@ -399,6 +515,7 @@
 						type="button"
 						disabled={currentPage <= 1}
 						onclick={() => (currentPage = Math.max(1, currentPage - 1))}
+						aria-label="Previous page"
 						class="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
 					>
 						<ChevronLeft class="w-4 h-4" />
@@ -412,6 +529,7 @@
 						type="button"
 						disabled={currentPage >= totalPages}
 						onclick={() => (currentPage = Math.min(totalPages, currentPage + 1))}
+						aria-label="Next page"
 						class="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
 					>
 						<ChevronRight class="w-4 h-4" />
@@ -434,6 +552,7 @@
 					type="button"
 					onclick={() => (isModalOpen = false)}
 					class="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+					aria-label="Close modal"
 				>
 					<X class="w-4 h-4" />
 				</button>
@@ -457,7 +576,7 @@
 						<select
 							id="tag-home"
 							bind:value={formHomeShow}
-							class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb] bg-white"
+							class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb] bg-white cursor-pointer"
 						>
 							<option value="Yes">Yes</option>
 							<option value="No">No</option>
@@ -483,7 +602,7 @@
 							id="tag-date"
 							type="text"
 							bind:value={formDate}
-							placeholder="Aug 25, 2025"
+							placeholder="Aug 25, 2026"
 							class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb]"
 						/>
 					</div>
@@ -493,7 +612,7 @@
 						<select
 							id="tag-status"
 							bind:value={formStatus}
-							class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb] bg-white"
+							class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb] bg-white cursor-pointer"
 						>
 							<option value="publish">Publish</option>
 							<option value="draft">Draft</option>
@@ -512,10 +631,16 @@
 				</button>
 				<button
 					type="button"
+					disabled={isSaving}
 					onclick={handleSave}
-					class="px-4 py-2 rounded-xl text-xs font-bold bg-[#5845eb] text-white hover:bg-[#4a39cf] shadow-sm shadow-indigo-600/20 cursor-pointer"
+					class="px-4 py-2 rounded-xl text-xs font-bold bg-[#5845eb] text-white hover:bg-[#4a39cf] shadow-sm shadow-indigo-600/20 flex items-center gap-2 cursor-pointer disabled:opacity-50"
 				>
-					{isEditing ? 'Save Changes' : 'Create Tag'}
+					{#if isSaving}
+						<Loader2 class="w-3.5 h-3.5 animate-spin" />
+						<span>সংরক্ষণ হচ্ছে...</span>
+					{:else}
+						<span>{isEditing ? 'Save Changes' : 'Create Tag'}</span>
+					{/if}
 				</button>
 			</div>
 		</div>

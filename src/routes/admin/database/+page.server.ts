@@ -1,7 +1,7 @@
 import type { Actions, PageServerLoad } from './$types';
-import { getDb } from '#lib/server/db/index.ts';
-import * as schema from '#lib/server/db/schema.ts';
-import { INITIAL_PRODUCTS, INITIAL_ORDERS } from '../_data.ts';
+import { getDb } from '#lib/server/db/index';
+import * as schema from '#lib/server/db/schema';
+import { INITIAL_PRODUCTS } from '../_data';
 import { fail } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ parent }) => {
@@ -25,12 +25,7 @@ export const actions: Actions = {
 				await db.insert(schema.products).values(dbProduct);
 			}
 
-			await db.delete(schema.orders);
-			for (const o of INITIAL_ORDERS) {
-				await db.insert(schema.orders).values(o);
-			}
-
-			return { success: true, message: 'D1 ডেটাবেজ সফলভাবে রিসিড করা হয়েছে!' };
+			return { success: true, message: 'D1 ডেটাবেজের প্রোডাক্ট সফলভাবে ইনিশিয়ালাইজ করা হয়েছে!' };
 		} catch (err: any) {
 			return fail(500, { message: err?.message || 'ডেটাবেজ সিড করতে ব্যর্থ হয়েছে' });
 		}

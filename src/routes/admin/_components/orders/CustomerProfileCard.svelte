@@ -40,13 +40,15 @@
 	let isRegularCustomer = $derived(pastOrders.length > 1);
 
 	let totalSpent = $derived(
-		pastOrders.reduce((acc, o) => acc + (Number(o.total) || 0), 0)
+		Array.isArray(pastOrders) ? pastOrders.reduce((acc, o) => acc + (Number(o.total) || 0), 0) : 0
 	);
 
 	let confirmedCount = $derived(
-		pastOrders.filter((o) =>
-			['confirmed', 'shipped', 'delivered', 'processing'].includes(o.status)
-		).length
+		Array.isArray(pastOrders)
+			? pastOrders.filter((o) =>
+					['confirmed', 'shipped', 'delivered', 'processing'].includes(o.status)
+				).length
+			: 0
 	);
 
 	function getInitials(name: string) {

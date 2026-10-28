@@ -3,6 +3,7 @@
 	import type { Product } from '../types';
 	import ProductCard from './ProductCard.svelte';
 	import QuickViewModal from './QuickViewModal.svelte';
+	import { Button, Badge } from '#lib/components/ui';
 	import { Sparkles } from 'lucide-svelte';
 
 	let activeFilter = $state<string>('all');
@@ -24,10 +25,10 @@
 		<!-- Section Header -->
 		<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
 			<div>
-				<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-semibold uppercase tracking-wider mb-3">
+				<Badge variant="outline" class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border-cyan-500/20 text-cyan-300 text-xs font-semibold uppercase tracking-wider mb-3">
 					<Sparkles class="w-3.5 h-3.5" />
 					Acoustic Hardware & Software
-				</div>
+				</Badge>
 				<h2 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight font-heading">
 					Curated Creator <br class="hidden sm:inline" />
 					<span class="bg-gradient-to-r from-cyan-400 via-indigo-300 to-violet-400 bg-clip-text text-transparent">
@@ -45,12 +46,14 @@
 					{ id: 'studio', label: 'Studio Hardware' },
 					{ id: 'digital', label: 'Digital VST' }
 				] as tab}
-					<button
+					<Button
+						variant="ghost"
+						size="sm"
 						onclick={() => activeFilter = tab.id}
-						class="px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 {activeFilter === tab.id ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-600/30' : 'text-slate-400 hover:text-white hover:bg-white/5'}"
+						class="h-auto px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer {activeFilter === tab.id ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-600/30 hover:bg-violet-600 hover:text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}"
 					>
 						{tab.label}
-					</button>
+					</Button>
 				{/each}
 			</div>
 		</div>

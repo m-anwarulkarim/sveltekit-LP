@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Badge } from '#lib/components/ui';
 	import { Check, Sparkles } from 'lucide-svelte';
 
 	const specs = [
@@ -17,10 +18,10 @@
 	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 		
 		<div class="text-center max-w-3xl mx-auto mb-16">
-			<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-semibold uppercase tracking-wider mb-4">
+			<Badge variant="outline" class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border-cyan-500/20 text-cyan-300 text-xs font-semibold uppercase tracking-wider mb-4">
 				<Sparkles class="w-3.5 h-3.5" />
 				Unfiltered Telemetry
-			</div>
+			</Badge>
 			<h2 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight font-heading mb-4">
 				Engineered Without <br />
 				<span class="bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">

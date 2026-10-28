@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { Button, Input, Card, Badge } from '#lib/components/ui';
 	import {
 		Bell,
@@ -167,7 +167,7 @@
 	</div>
 {/if}
 
-<div class="max-w-5xl mx-auto space-y-6 font-['Hind_Siliguri',sans-serif]">
+<div class="max-w-5xl mx-auto space-y-6 font-['Anek_Bangla',sans-serif]">
 	
 	<!-- Top Header Banner -->
 	<div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">

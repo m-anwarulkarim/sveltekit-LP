@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <rect width="200" height="200" fill="white"/>
+  <ellipse cx="100" cy="180" rx="60" ry="8" fill="#e2e8f0"/>
+  <!-- Speaker Body -->
+  <rect x="40" y="70" width="120" height="90" rx="16" fill="#1e293b" stroke="#0f172a" stroke-width="2"/>
+  <!-- Handle -->
+  <path d="M60 70 C 60 40, 140 40, 140 70" stroke="#334155" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <!-- Dual Drivers -->
+  <circle cx="75" cy="115" r="24" fill="#0f172a" stroke="#0284c7" stroke-width="2"/>
+  <circle cx="75" cy="115" r="10" fill="#38bdf8"/>
+  <circle cx="125" cy="115" r="24" fill="#0f172a" stroke="#0284c7" stroke-width="2"/>
+  <circle cx="125" cy="115" r="10" fill="#38bdf8"/>
+  <text x="100" y="152" text-anchor="middle" font-family="sans-serif" font-weight="900" font-size="7" fill="#64748b">SOUNDCORE</text>
+</svg>

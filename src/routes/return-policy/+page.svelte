@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { StoreLayout } from '#lib';
 	import { Card, CardContent, Badge } from '#lib/components/ui';
 	import { RotateCcw, CheckCircle2, Clock } from 'lucide-svelte';
@@ -12,7 +12,7 @@
 </svelte:head>
 
 <StoreLayout user={data.user}>
-	<div class="max-w-4xl mx-auto px-4 sm:px-6 py-10 lg:py-16 space-y-8 font-['Hind_Siliguri',sans-serif]">
+	<div class="max-w-4xl mx-auto px-4 sm:px-6 py-10 lg:py-16 space-y-8 font-['Anek_Bangla',sans-serif]">
 		
 		<div class="text-center space-y-2">
 			<Badge variant="outline" class="bg-indigo-50 text-[#5845eb] border-indigo-200">
@@ -38,7 +38,7 @@
 					<ul class="list-disc pl-5 space-y-1">
 						<li>পণ্যটি তার আদি প্যাকেজিং সহ অক্ষত থাকতে হবে।</li>
 						<li>ডেলিভারি ম্যানের সামনে পণ্য চেক করে নেওয়া উত্তম।</li>
-						<li>যেকোনো সমস্যার ক্ষেত্রে আমাদের হটলাইন <strong>09678 123 456</strong> নম্বরে অবিলম্বে জানান।</li>
+						<li>যেকোনো সমস্যার ক্ষেত্রে আমাদের হটলাইন <strong>01602867954</strong> নম্বরে অবিলম্বে জানান।</li>
 					</ul>
 				</section>
 

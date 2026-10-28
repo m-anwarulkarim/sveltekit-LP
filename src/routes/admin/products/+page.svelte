@@ -1,19 +1,22 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import type { PageData } from './$types';
-	import type { AdminProduct } from '../_data.ts';
-	import { INITIAL_PRODUCTS } from '../_data.ts';
+	import type { AdminProduct } from '../_data';
 	import { ProductHeader, ProductTable, ProductModal } from '../_components/products';
 	import { ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-svelte';
 
 	let { data }: { data: PageData } = $props();
 
-	// Local state of products (initialized with server layout data or fallback INITIAL_PRODUCTS)
+	// Local state of products (initialized with server layout data)
 	let productItems = $state<AdminProduct[]>(
-		(data?.products && data.products.length > 0
-			? data.products
-			: INITIAL_PRODUCTS) as AdminProduct[]
+		(data?.products || []) as AdminProduct[]
 	);
+
+	$effect(() => {
+		if (data?.products) {
+			productItems = data.products as AdminProduct[];
+		}
+	});
 
 	// Filter & search states
 	let searchQuery = $state('');
@@ -95,12 +98,12 @@
 		return list;
 	});
 
-	// Counts matching the reference screenshot
+	// Dynamic reactive counts derived directly from real database products
 	let counts = $derived({
-		all: 83, // Or productItems.length
-		publish: 79,
-		draft: 4,
-		lowStock: 4
+		all: productItems.length,
+		publish: productItems.filter((p) => p.status === 'published').length,
+		draft: productItems.filter((p) => p.status === 'draft').length,
+		lowStock: productItems.filter((p) => p.isLowStock || (p.stock !== undefined && p.stock <= 5)).length
 	});
 
 	// Pagination
@@ -139,7 +142,7 @@
 	}
 
 	// Bulk Actions
-	function handleBulkAction(action: string) {
+	async function handleBulkAction(action: string) {
 		if (action === 'select_all') {
 			selectedIds = filteredProducts.map((p) => p.id);
 			showToast(`সমস্ত ${selectedIds.length} টি প্রোডাক্ট নির্বাচন করা হয়েছে`);
@@ -160,9 +163,18 @@
 		} else if (action === 'delete') {
 			if (selectedIds.length === 0) return alert('অনুগ্রহ করে অন্তত একটি প্রোডাক্ট নির্বাচন করুন');
 			if (confirm(`আপনি কি নির্বাচিত ${selectedIds.length} টি প্রোডাক্ট মুছতে চান?`)) {
-				productItems = productItems.filter((p) => !selectedIds.includes(p.id));
-				showToast(`${selectedIds.length} টি প্রোডাক্ট মুছে ফেলা হয়েছে`);
+				const idsToDelete = [...selectedIds];
+				productItems = productItems.filter((p) => !idsToDelete.includes(p.id));
 				selectedIds = [];
+				showToast(`${idsToDelete.length} টি প্রোডাক্ট মুছে ফেলা হয়েছে`);
+
+				try {
+					const fd = new FormData();
+					fd.append('productIds', JSON.stringify(idsToDelete));
+					await fetch('?/bulkDelete', { method: 'POST', body: fd });
+				} catch (e) {
+					console.error('Bulk delete failed:', e);
+				}
 			}
 		} else if (action === 'export') {
 			showToast('CSV ফাইল ডাউনলোড সফল হয়েছে!');
@@ -174,7 +186,7 @@
 		goto(`/admin/products/edit/${product.id}`);
 	}
 
-	function handleDuplicateProduct(product: AdminProduct) {
+	async function handleDuplicateProduct(product: AdminProduct) {
 		const newProd: AdminProduct = {
 			...JSON.parse(JSON.stringify(product)),
 			id: `prod-${Date.now()}`,
@@ -182,22 +194,46 @@
 		};
 		productItems = [newProd, ...productItems];
 		showToast(`"${product.name}" সফলভাবে ডুপ্লিকেট করা হয়েছে`);
+
+		try {
+			const fd = new FormData();
+			fd.append('productId', product.id);
+			await fetch('?/duplicateProduct', { method: 'POST', body: fd });
+		} catch (e) {
+			console.error('Duplicate action failed:', e);
+		}
 	}
 
-	function handleDeleteProduct(product: AdminProduct) {
+	async function handleDeleteProduct(product: AdminProduct) {
 		if (confirm(`আপনি কি "${product.name}" মুছে ফেলতে চান?`)) {
 			productItems = productItems.filter((p) => p.id !== product.id);
 			selectedIds = selectedIds.filter((id) => id !== product.id);
 			showToast(`"${product.name}" মুছে ফেলা হয়েছে`);
+
+			try {
+				const fd = new FormData();
+				fd.append('productId', product.id);
+				await fetch('?/deleteProduct', { method: 'POST', body: fd });
+			} catch (e) {
+				console.error('Delete action failed:', e);
+			}
 		}
 	}
 
-	function handleToggleStatus(product: AdminProduct) {
+	async function handleToggleStatus(product: AdminProduct) {
 		const newStatus = product.status === 'published' ? 'draft' : 'published';
 		productItems = productItems.map((p) =>
 			p.id === product.id ? { ...p, status: newStatus, badge: newStatus === 'published' ? 'Published' : 'Draft' } : p
 		);
 		showToast(`"${product.name}" স্ট্যাটাস পরিবর্তন করা হয়েছে`);
+
+		try {
+			const fd = new FormData();
+			fd.append('productId', product.id);
+			await fetch('?/toggleStatus', { method: 'POST', body: fd });
+		} catch (e) {
+			console.error('Toggle status action failed:', e);
+		}
 	}
 
 	function handleSaveProduct(formData: Partial<AdminProduct>) {

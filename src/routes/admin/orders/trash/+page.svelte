@@ -22,6 +22,7 @@
 			if (searchQuery === '') return true;
 			const q = searchQuery.toLowerCase();
 			return (
+				(order.orderNumber || '').toLowerCase().includes(q) ||
 				(order.id || '').toLowerCase().includes(q) ||
 				(order.customerName || '').toLowerCase().includes(q) ||
 				(order.customerEmail || '').includes(q)
@@ -30,7 +31,7 @@
 	);
 
 	let totalTrashedAmount = $derived(
-		trashedOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0)
+		Array.isArray(trashedOrders) ? trashedOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0) : 0
 	);
 </script>
 
@@ -143,7 +144,7 @@
 						{#each filteredOrders as order (order.id)}
 							<tr class="hover:bg-slate-50/60 transition-colors">
 								<td class="py-3.5 px-4 font-mono font-bold text-slate-900">
-									<div class="text-rose-600">#{order.id}</div>
+									<div class="text-rose-600">#{order.orderNumber || order.id.slice(0, 8)}</div>
 									<div class="text-[10px] text-slate-400 font-sans font-normal mt-0.5">
 										{new Date(order.createdAt).toLocaleDateString('bn-BD')}
 									</div>

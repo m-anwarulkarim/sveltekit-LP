@@ -251,7 +251,7 @@
 		<!-- Left Section: Products & Financials (8 cols) -->
 		<div class="lg:col-span-8 space-y-4 flex flex-col">
 			<!-- Row 1: Ordered Items (Left) + Product Upsell (Middle) -->
-			<div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+			<div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
 				<!-- Scope 1: Ordered Items (Left side, scrollable if many items, zero white gap) -->
 				<div>
 					<OrderedItemsTable

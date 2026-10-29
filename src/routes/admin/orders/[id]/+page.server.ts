@@ -89,6 +89,7 @@ export const load: PageServerLoad = async ({ params, parent, platform }) => {
 		courierName: 'Steadfast & Pathao'
 	};
 
+	let courierSettings = { methods: [] as any[], defaultProvider: 'steadfast' as any };
 	try {
 		const db = getDb(platform);
 		const targetPhone = foundOrder.customerPhone || foundOrder.customerEmail;
@@ -100,12 +101,15 @@ export const load: PageServerLoad = async ({ params, parent, platform }) => {
 					delivered: risk.deliveredParcels,
 					cancelled: risk.cancelledParcels,
 					successRate: risk.successRate,
-					courierName: risk.courierName
+					courierName: risk.courierName || 'Steadfast & Pathao'
 				};
 			}
 		}
+
+		// Load configured courier methods
+		courierSettings = await CourierService.getCourierSettings(db);
 	} catch (e) {
-		console.error('Courier stats query error in D1:', e);
+		console.error('Courier stats / settings query error in D1:', e);
 	}
 
 	const initialNotes = orderNotesFromDb.map((n) => ({
@@ -122,7 +126,9 @@ export const load: PageServerLoad = async ({ params, parent, platform }) => {
 		pastOrders,
 		courierStats,
 		initialNotes,
-		availableProducts: INITIAL_PRODUCTS
+		availableProducts: INITIAL_PRODUCTS,
+		courierMethods: courierSettings.methods,
+		defaultCourier: courierSettings.defaultProvider
 	};
 };
 
@@ -214,7 +220,14 @@ export const actions: Actions = {
 			const db = getDb(platform);
 			const result = await CourierService.bookConsignment(db, orderId, provider);
 			if (result.success) {
-				return { success: true, trackingCode: result.trackingCode, message: result.message };
+				return {
+					success: true,
+					trackingCode: result.trackingCode,
+					consignmentId: result.consignmentId,
+					trackingUrl: result.trackingUrl,
+					courierName: result.courierName,
+					message: result.message
+				};
 			} else {
 				return fail(400, { message: result.error || 'বুকিং ব্যর্থ হয়েছে' });
 			}

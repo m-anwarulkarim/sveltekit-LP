@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { deserialize } from '$app/forms';
 	import {
 		ArrowLeft,
 		CheckCircle2,
@@ -126,6 +127,48 @@
 		}
 	});
 
+	// Switch active courier method with shadcn confirmation dialog
+	async function selectActiveCourier(courierId: CourierProviderId) {
+		if (selectedProviderId === courierId && !isAddingNew) {
+			loadProviderToForm(courierId, false);
+			return;
+		}
+
+		const targetCourier = courierMethods.find((m) => m.id === courierId) || ALL_PROVIDERS.find((p) => p.id === courierId);
+		const targetName = targetCourier?.name || 'Courier';
+
+		// Trigger shadcn confirmation modal (No browser native alert)
+		const confirmed = await confirmModal({
+			title: 'কুরিয়ার মেথড পরিবর্তন',
+			message: `আপনি কি সক্রিয় কুরিয়ার মেথড পরিবর্তন করে "${targetName}" নির্বাচন করতে চান? এর ফলে সমস্ত নতুন অর্ডার স্বয়ংক্রিয়ভাবে এই কুরিয়ারে বুকিং হবে।`,
+			confirmText: 'হ্যাঁ, পরিবর্তন করুন',
+			cancelText: 'বাতিল',
+			variant: 'primary',
+			icon: 'help'
+		});
+
+		if (!confirmed) return;
+
+		selectedProviderId = courierId;
+		isAddingNew = false;
+		loadProviderToForm(courierId, false);
+
+		// Update default courier in D1
+		const fd = new FormData();
+		fd.append('id', courierId);
+		try {
+			await fetch('?/setDefault', { method: 'POST', body: fd });
+			defaultProvider = courierId;
+			courierMethods = courierMethods.map((m) => ({
+				...m,
+				isDefault: m.id === courierId
+			}));
+			toast.success(`${targetName} সক্রিয় কুরিয়ার মেথড হিসেবে নির্বাচিত হয়েছে!`);
+		} catch (e) {
+			console.error('Failed to set default courier:', e);
+		}
+	}
+
 	// Handle Save Action
 	async function handleSave() {
 		isSaving = true;
@@ -138,7 +181,7 @@
 		fd.append('providerId', selectedProviderId);
 		fd.append('providerName', providerName);
 		fd.append('specialInstruction', formSpecialInstruction);
-		fd.append('isDefault', String(formIsDefault));
+		fd.append('isDefault', 'true');
 
 		// Provider-specific credentials
 		if (selectedProviderId === 'steadfast') {
@@ -215,13 +258,14 @@
 				method: 'POST',
 				body: fd
 			});
-			const data = (await res.json()) as any;
+			const rawText = await res.text();
+			const result = deserialize(rawText);
 
-			if (data && data.data) {
-				const parsed = JSON.parse(data.data);
-				const isSuccess = Boolean(parsed[1]);
-				const msg = parsed[2] || 'কানেকশন টেস্ট সম্পন্ন হয়েছে';
-				const balance = parsed[3];
+			if (result.type === 'success' && result.data) {
+				const resData = result.data as any;
+				const isSuccess = Boolean(resData.success);
+				const msg = resData.message || 'কানেকশন টেস্ট সম্পন্ন হয়েছে';
+				const balance = resData.balance;
 
 				testFeedback = {
 					success: isSuccess,
@@ -230,10 +274,17 @@
 				};
 
 				if (isSuccess) {
-					toast.success('এপিআই কানেকশন সফল হয়েছে!');
+					toast.success(msg);
 				} else {
 					toast.error(msg);
 				}
+			} else if (result.type === 'failure') {
+				const errorMsg = (result.data as any)?.message || 'কানেকশন টেস্ট ব্যর্থ হয়েছে';
+				testFeedback = {
+					success: false,
+					message: errorMsg
+				};
+				toast.error(errorMsg);
 			} else {
 				testFeedback = {
 					success: true,
@@ -317,50 +368,52 @@
 	<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
 		<!-- Configured Courier Cards -->
 		{#each courierMethods as courier (courier.id)}
+			{@const isSelected = selectedProviderId === courier.id && !isAddingNew}
 			<div
-				onclick={() => loadProviderToForm(courier.id, false)}
-				class="relative p-4 rounded-2xl transition-all cursor-pointer border text-left flex items-center justify-between gap-3 shadow-2xs {selectedProviderId === courier.id && !isAddingNew
-					? 'bg-indigo-50/40 border-[#5845eb] shadow-[0_4px_16px_-4px_rgba(88,69,235,0.2)] ring-1 ring-[#5845eb]/40'
+				onclick={() => selectActiveCourier(courier.id)}
+				class="relative p-4 rounded-2xl transition-all cursor-pointer border text-left flex items-center justify-between gap-3 shadow-2xs group {isSelected
+					? 'bg-white border-[#5845eb] ring-2 ring-[#5845eb]/20 shadow-[0_4px_16px_-4px_rgba(88,69,235,0.15)]'
 					: 'bg-white border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/60'}"
 			>
 				<div class="flex items-center gap-3 min-w-0">
-					<!-- Green Checkmark Circle -->
-					<div class="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-xs">
-						<Check class="w-4 h-4 stroke-[3]" />
-					</div>
+					<!-- Selected Green Checkmark Circle vs Unselected Empty Radio Circle -->
+					{#if isSelected}
+						<div class="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-xs animate-in zoom-in-75 duration-150">
+							<Check class="w-3.5 h-3.5 stroke-[3]" />
+						</div>
+					{:else}
+						<div class="w-6 h-6 rounded-full border-2 border-slate-300 bg-white shrink-0 transition-colors group-hover:border-slate-400"></div>
+					{/if}
 
 					<div class="min-w-0">
 						<div class="flex items-center gap-1.5 flex-wrap">
-							<h4 class="font-bold text-slate-900 text-sm leading-tight truncate">
+							<h4 class="font-bold text-sm leading-tight truncate {isSelected ? 'text-[#5845eb]' : 'text-slate-800'}">
 								{courier.name}
 							</h4>
-							{#if courier.isDefault}
-								<Badge variant="purple" class="text-[10px] font-black px-1.5 py-0.5">
-									Default
-								</Badge>
-							{/if}
 						</div>
-						<div class="flex items-center gap-1 text-[11px] text-slate-500 hover:text-indigo-600 transition-colors pt-0.5">
+						<div class="flex items-center gap-1 text-[11px] {isSelected ? 'text-[#5845eb]/80' : 'text-slate-500'} pt-0.5">
 							<span>courier.showSettingForm</span>
-							<ChevronDown class="w-3 h-3 text-slate-400" />
+							<ChevronDown class="w-3 h-3 {isSelected ? 'text-[#5845eb]' : 'text-slate-400'}" />
 						</div>
 					</div>
 				</div>
 
-				<!-- Card Delete Button (shadcn Ghost Button) -->
-				<Button
-					type="button"
-					variant="ghost"
-					size="icon"
-					onclick={(e) => {
-						e.stopPropagation();
-						handleDelete(courier.id, courier.name);
-					}}
-					class="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-0 shrink-0"
-					title="কুরিয়ারটি মুছে ফেলুন"
-				>
-					<Trash2 class="w-3.5 h-3.5" />
-				</Button>
+				<!-- Card Delete Button (shadcn Ghost Button, appears on hover) -->
+				{#if courierMethods.length > 1}
+					<Button
+						type="button"
+						variant="ghost"
+						size="icon"
+						onclick={(e) => {
+							e.stopPropagation();
+							handleDelete(courier.id, courier.name);
+						}}
+						class="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-0 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+						title="কুরিয়ারটি মুছে ফেলুন"
+					>
+						<Trash2 class="w-3.5 h-3.5" />
+					</Button>
+				{/if}
 			</div>
 		{/each}
 
@@ -694,10 +747,10 @@
 
 			<!-- Set as Default Checkbox + Test Connection Button -->
 			<div class="pt-3 flex items-center justify-between border-t border-slate-100 mt-2 flex-wrap gap-3">
-				<label class="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-slate-700 select-none">
-					<Checkbox bind:checked={formIsDefault} id="is-default-courier" />
-					<span>এই কুরিয়ারটিকে ডিফল্ট মেথড হিসেবে সেট করুন</span>
-				</label>
+				<div class="flex items-center gap-2 text-xs font-bold text-slate-700">
+					<CheckCircle2 class="w-4 h-4 text-emerald-600" />
+					<span>এই কুরিয়ারটি বর্তমানে সক্রিয় ডেলিভারি মেথড হিসেবে নির্বাচিত</span>
+				</div>
 
 				<!-- Test Connection Trigger (shadcn Button) -->
 				<Button

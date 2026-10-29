@@ -4,6 +4,7 @@ import { getDb } from '#lib/server/db/index';
 import { OrderService } from '#lib/server/services/order.service';
 import { addLiveOrder } from '#lib/server/orders-store';
 import { ThemeCustomizationService } from '#lib/server/services/theme-customization.service';
+import { PixelService } from '#lib/server/services/pixel.service';
 
 export const load: PageServerLoad = async (event) => {
 	const parentData = await event.parent();
@@ -19,7 +20,7 @@ export const load: PageServerLoad = async (event) => {
 
 import fs from 'node:fs';
 
-async function handlePlaceOrderAction({ request, platform, getClientAddress, locals }: any) {
+async function handlePlaceOrderAction({ request, platform, getClientAddress, locals, url }: any) {
 	try {
 		const db = getDb(platform);
 
@@ -103,6 +104,22 @@ async function handlePlaceOrderAction({ request, platform, getClientAddress, loc
 			});
 			orderId = result.orderId;
 			orderNumber = result.orderNumber;
+
+			// Dispatch asynchronous server-side Meta Conversions API (CAPI) Purchase event
+			PixelService.sendCAPIPurchase(db, {
+				orderId,
+				orderNumber,
+				customerName,
+				customerPhone,
+				customerEmail: payload.customerEmail || customerPhone,
+				shippingAddress,
+				total,
+				items,
+				currency: 'BDT',
+				ipAddress,
+				userAgent,
+				eventSourceUrl: `${url?.origin || 'https://aura.com.bd'}/checkout`
+			}).catch((err) => console.error('Background CAPI Purchase Error:', err));
 		} catch (err: any) {
 			console.error('Order creation error in D1:', err);
 			return fail(400, {

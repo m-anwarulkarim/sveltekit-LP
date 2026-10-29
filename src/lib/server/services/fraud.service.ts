@@ -12,6 +12,7 @@ export interface FraudRiskAssessment {
 	riskTag: 'Low Risk' | 'Moderate' | 'High Risk';
 	isCached: boolean;
 	requiresAdvancePayment: boolean;
+	courierName?: string;
 }
 
 /**
@@ -47,7 +48,8 @@ export class FraudService {
 				successRate,
 				riskTag: (cached.riskTag as any) || (successRate >= 80 ? 'Low Risk' : successRate >= 50 ? 'Moderate' : 'High Risk'),
 				isCached: true,
-				requiresAdvancePayment: successRate < 50 && cached.totalParcels >= 3
+				requiresAdvancePayment: successRate < 50 && cached.totalParcels >= 3,
+				courierName: 'Steadfast & Pathao'
 			};
 		}
 
@@ -107,7 +109,8 @@ export class FraudService {
 			successRate,
 			riskTag,
 			isCached: false,
-			requiresAdvancePayment: riskTag === 'High Risk'
+			requiresAdvancePayment: riskTag === 'High Risk',
+			courierName: 'Steadfast & Pathao'
 		};
 	}
 

@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import type { PageData } from './$types';
 	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
 	import ProductGallery from './_components/ProductGallery.svelte';
@@ -8,11 +8,26 @@
 	import MobileStickyBuyBar from './_components/MobileStickyBuyBar.svelte';
 	import { ChevronRight, Home } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
+	import { trackMetaEvent } from '#lib/client/meta-pixel';
 
 	let { data }: { data: PageData } = $props();
 
 	const product = $derived(data.product);
 	const relatedProducts = $derived(data.relatedProducts || []);
+
+	// Fire Standard Meta Pixel ViewContent event
+	$effect(() => {
+		if (product && typeof window !== 'undefined') {
+			const matchId = String(product.sku || product.id);
+			trackMetaEvent('ViewContent', {
+				content_name: product.name,
+				content_ids: [matchId],
+				content_type: 'product',
+				value: Number(product.salePrice || product.price || 0),
+				currency: 'BDT'
+			});
+		}
+	});
 </script>
 
 <svelte:head>

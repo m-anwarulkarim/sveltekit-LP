@@ -8,6 +8,7 @@
 		OrderedItemsTable,
 		ProductUpsellSelector,
 		OrderFinancialFooter,
+		OrderCourierCard,
 		CourierFraudCard,
 		CustomerProfileCard,
 		OrderCallNotes,
@@ -23,6 +24,11 @@
 	let customerPhone = $state(data?.order?.customerPhone || data?.order?.customerEmail || '');
 	let altPhone = $state(data?.order?.alternatePhone || data?.order?.altPhone || '');
 	let shippingAddress = $state(data?.order?.shippingAddress || '');
+	let courierProvider = $state(data?.order?.courierProvider || '');
+	let trackingCode = $state(data?.order?.trackingCode || '');
+	let consignmentId = $state(data?.order?.consignmentId || '');
+	let courierStatus = $state(data?.order?.courierStatus || '');
+	let isCourierModalOpen = $state(false);
 	let items = $state<any[]>(
 		Array.isArray(data?.items) && data.items.length > 0
 			? data.items
@@ -62,6 +68,10 @@
 			discount = Number(data.order.discountAmount) || Number(data.order.discount) || 0;
 			deliveryFee = Number(data.order.deliveryCharge) || Number(data.order.deliveryFee) || 60;
 			advancePaid = Number(data.order.advancePayment) || Number(data.order.advancePaid) || 0;
+			courierProvider = data.order.courierProvider || '';
+			trackingCode = data.order.trackingCode || '';
+			consignmentId = data.order.consignmentId || '';
+			courierStatus = data.order.courierStatus || '';
 			createdAt = data.order.createdAt;
 		}
 	});
@@ -167,8 +177,7 @@
 	}
 
 	function handleSendToCourier() {
-		showToast('Steadfast কুরিয়ার API-তে সফলভাবে ট্র্যাকিং এন্ট্রি তৈরি হয়েছে!');
-		handleAddNote('Steadfast কুরিয়ারে বুকিং সম্পন্ন হয়েছে (Tracking ID: CID-' + Math.floor(100000 + Math.random() * 900000) + ')');
+		isCourierModalOpen = true;
 	}
 
 	function handleAddNote(noteText: string) {
@@ -270,6 +279,27 @@
 
 		<!-- Right Section: Intelligence & Customer History (4 cols - Intact) -->
 		<div class="lg:col-span-4 space-y-4 flex flex-col">
+			<!-- Active Courier Consignment & Live Booking -->
+			<OrderCourierCard
+				orderId={orderId}
+				orderNumber={data.order?.orderNumber}
+				customerName={customerName}
+				customerPhone={customerPhone}
+				shippingAddress={shippingAddress}
+				codAmount={totalPayable}
+				bind:courierProvider
+				bind:trackingCode
+				bind:consignmentId
+				bind:courierStatus
+				bind:isModalOpen={isCourierModalOpen}
+				availableCouriers={data.courierMethods}
+				defaultCourier={data.defaultCourier}
+				onBookingSuccess={(res) => {
+					status = 'shipped';
+					handleAddNote(`পার্সেল ${res.courierName}-এ বুকিং সম্পন্ন। ট্র্যাকিং আইডি: ${res.trackingCode}`);
+				}}
+			/>
+
 			<!-- Courier & Fraud Check -->
 			<CourierFraudCard
 				phone={customerPhone}

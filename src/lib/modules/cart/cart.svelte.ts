@@ -1,3 +1,5 @@
+import { trackMetaEvent } from '#lib/client/meta-pixel';
+
 export interface CartItem {
 	id: string;
 	name: string;
@@ -83,6 +85,19 @@ class CartStore {
 		}
 		if (openDrawer) {
 			this.isOpen = true;
+		}
+
+		// Centralized Meta Pixel AddToCart event
+		if (typeof window !== 'undefined') {
+			try {
+				trackMetaEvent('AddToCart', {
+					content_name: product.name,
+					content_ids: [String(product.id)],
+					content_type: 'product',
+					value: Number(product.price) || 0,
+					currency: 'BDT'
+				});
+			} catch {}
 		}
 	}
 

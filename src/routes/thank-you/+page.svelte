@@ -26,17 +26,47 @@
 		ShieldCheck,
 		Sparkles
 	} from 'lucide-svelte';
+	import { trackMetaEvent } from '#lib/client/meta-pixel';
 
 	let { data }: { data: PageData } = $props();
 
 	let order = $state<OrderDetails | null>(null);
 	let isCopied = $state(false);
 
+	const displayOrderId = $derived(data.dbOrder?.orderNumber || order?.orderId || data.orderId || '1001');
+
 	onMount(() => {
 		order = cart.loadLastOrder();
-	});
 
-	const displayOrderId = $derived(data.dbOrder?.orderNumber || order?.orderId || data.orderId || '1001');
+		// Idempotent Browser Purchase Event Tracking (Single fire guard per Order ID)
+		const effectiveOrderId = displayOrderId;
+		if (effectiveOrderId && typeof window !== 'undefined') {
+			const trackKey = `fb_tracked_purchase_${effectiveOrderId}`;
+			if (!sessionStorage.getItem(trackKey)) {
+				sessionStorage.setItem(trackKey, 'true');
+				let items = order?.items || [];
+				if ((!items || items.length === 0) && data.dbOrder?.items) {
+					try {
+						items = typeof data.dbOrder.items === 'string' ? JSON.parse(data.dbOrder.items) : data.dbOrder.items;
+					} catch {
+						items = [];
+					}
+				}
+				const contentIds = items.map((i: any) => String(i.sku || i.id || i.productId));
+				trackMetaEvent(
+					'Purchase',
+					{
+						content_type: 'product',
+						content_ids: contentIds,
+						value: Number(data.dbOrder?.total || order?.total || 0),
+						currency: 'BDT',
+						num_items: items.length
+					},
+					effectiveOrderId
+				);
+			}
+		}
+	});
 
 	function copyOrderId() {
 		navigator.clipboard.writeText(displayOrderId);

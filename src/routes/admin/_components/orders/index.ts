@@ -9,4 +9,5 @@ export { default as OrderCallNotes } from './OrderCallNotes.svelte';
 export { default as OrderVisitorMetaCard } from './OrderVisitorMetaCard.svelte';
 export { default as OrderStatusDropdown } from './OrderStatusDropdown.svelte';
 export { default as ScrollableStatusTabs } from './ScrollableStatusTabs.svelte';
+export { default as OrderCourierCard } from './OrderCourierCard.svelte';
 

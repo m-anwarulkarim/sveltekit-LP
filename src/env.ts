@@ -2,17 +2,14 @@ import { defineEnvVars } from '@sveltejs/kit/env';
 
 /**
  * SvelteKit Environment Variables Definition
+ *
+ * NOTE: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_DATABASE_ID, CLOUDFLARE_D1_TOKEN are
+ * intentionally NOT listed here. They are only used by Drizzle CLI (drizzle.config.ts)
+ * and local Node.js scripts for migrations — NOT by the production Cloudflare Worker.
+ * In the Worker, D1 is accessed via the native `DB` binding (cloudflare:workers env).
+ * Listing them here would cause SvelteKit to treat them as MISSING and crash the server.
  */
 export const variables = defineEnvVars({
-	CLOUDFLARE_ACCOUNT_ID: {
-		description: 'Cloudflare Account ID for accessing D1 database and Cloudflare services.'
-	},
-	CLOUDFLARE_DATABASE_ID: {
-		description: 'Cloudflare D1 Database UUID (e.g. `85e821c2-73e0-4490-b87a-66babacf5720`).'
-	},
-	CLOUDFLARE_D1_TOKEN: {
-		description: 'Cloudflare API Token with D1 read/write permissions for Drizzle migrations.'
-	},
 	ORIGIN: {
 		description: 'The app origin (base URL), e.g. `http://localhost:5173` or `https://lp.haqplus.com`.'
 	},
@@ -23,18 +20,11 @@ export const variables = defineEnvVars({
 });
 
 /**
- * Strongly typed interface for all .env environment variables
+ * Strongly typed interface for runtime environment variables available in the Worker.
+ * Migration-only vars (CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_DATABASE_ID, CLOUDFLARE_D1_TOKEN)
+ * are accessed directly via `process.env` in drizzle.config.ts and scratch scripts.
  */
 export interface EnvVariables {
-	/** Cloudflare Account ID for D1 database and edge services */
-	CLOUDFLARE_ACCOUNT_ID: string;
-
-	/** Cloudflare D1 Database UUID */
-	CLOUDFLARE_DATABASE_ID: string;
-
-	/** Cloudflare API token with D1 permissions for migrations */
-	CLOUDFLARE_D1_TOKEN: string;
-
 	/** Application base URL origin, e.g. http://localhost:5173 */
 	ORIGIN: string;
 

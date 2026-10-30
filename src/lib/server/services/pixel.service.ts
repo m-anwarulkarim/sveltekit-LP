@@ -35,10 +35,11 @@ export interface MetaPixelSettings {
 }
 
 export const DEFAULT_PIXEL_SETTINGS: MetaPixelSettings = {
-	trackingMode: 'native_direct',
-	pixelId: '806385144697838',
+	// Tracking is disabled by default — user must configure from Dashboard > Settings > Facebook Pixel
+	trackingMode: 'disabled',
+	pixelId: '',
 	backupPixelId: '',
-	capiToken: 'EAAQZCaLfr2KUBSw5YGLAS5uUNlyLllbFYrQQeCoMBP83lonTPvPJEMBS02zJOMOmplFSX',
+	capiToken: '',
 	testEventCode: '',
 	defaultCurrency: 'BDT',
 	catalogMatchKey: 'id',

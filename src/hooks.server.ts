@@ -1,5 +1,6 @@
 import type { Handle } from '@sveltejs/kit/hooks';
 import { DEV as dev } from 'esm-env';
+import { env as cfEnv } from 'cloudflare:workers';
 import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
 import { eq } from 'drizzle-orm';
@@ -55,7 +56,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// 1. Sentinel IP Block Check (Ignore static asset requests to keep speed fast)
 	if (!event.url.pathname.startsWith('/_app/') && !event.url.pathname.startsWith('/favicon')) {
 		try {
-			const db = getDb(platform);
+			const db = getDb(cfEnv.DB);
 			const blocked = await db
 				.select({ ip: schema.ipBlocks.ipAddress, reason: schema.ipBlocks.reason })
 				.from(schema.ipBlocks)
@@ -105,7 +106,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	if (botCategory && !isLocalDev) {
 		try {
-			const db = getDb(platform);
+			const db = getDb(cfEnv.DB);
 			const logPromise = db
 				.insert(schema.botLogs)
 				.values({
@@ -121,6 +122,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 			if (platform?.ctx?.waitUntil) {
 				platform.ctx.waitUntil(logPromise);
+			} else if ((cfEnv as any)?.ctx?.waitUntil) {
+				(cfEnv as any).ctx.waitUntil(logPromise);
 			}
 		} catch (err) {
 			console.error('Failed to init db for bot telemetry:', err);

@@ -106,7 +106,7 @@
 	</div>
 
 	<!-- Products List -->
-	<div class="divide-y divide-slate-100 overflow-y-auto max-h-[380px] py-1 pr-1">
+	<div class="divide-y divide-slate-100 overflow-y-auto overscroll-contain max-h-[380px] py-1 pr-1">
 		{#if filteredCatalog.length === 0}
 			<div class="py-10 text-center text-slate-400">
 				<p class="text-xs font-semibold">কোনো পণ্য খুঁজে পাওয়া যায়নি</p>

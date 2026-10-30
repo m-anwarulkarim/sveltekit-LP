@@ -594,39 +594,15 @@
 								<span>Website Information</span>
 							</a>
 
-							<!-- 5. Navbar & Header -->
-							<a
-								href="/admin/customization/navbar"
-								onclick={() => (mobileOpen = false)}
-								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath === '/admin/customization/navbar'
-									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
-									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-							>
-								<span class="w-1.5 h-1.5 rounded-full {currentPath === '/admin/customization/navbar' ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
-								<span>Navbar & Header</span>
-							</a>
-
-							<!-- 6. Footer -->
-							<a
-								href="/admin/customization/footer"
-								onclick={() => (mobileOpen = false)}
-								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath === '/admin/customization/footer'
-									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
-									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
-							>
-								<span class="w-1.5 h-1.5 rounded-full {currentPath === '/admin/customization/footer' ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
-								<span>Footer</span>
-							</a>
-
-							<!-- 7. Theme View -->
+							<!-- 5. Theme View -->
 							<a
 								href="/admin/customization/theme-view"
 								onclick={() => (mobileOpen = false)}
-								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath === '/admin/customization/theme-view'
+								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath === '/admin/customization/theme-view' || currentPath.startsWith('/admin/customization/theme-view')
 									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
 									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
 							>
-								<span class="w-1.5 h-1.5 rounded-full {currentPath === '/admin/customization/theme-view' ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span class="w-1.5 h-1.5 rounded-full {currentPath.startsWith('/admin/customization/theme-view') ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
 								<span>Theme View</span>
 							</a>
 						</div>

@@ -239,8 +239,8 @@
 	<!-- 3. Master Grid (Left 8 cols: Products & Financials | Right 4 cols: Customer Info) -->
 	<div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start print:hidden">
 		
-		<!-- Left Section: Products & Financials (8 cols) -->
-		<div class="lg:col-span-8 space-y-4 flex flex-col">
+		<!-- Left Section: Products & Financials (8 cols - Pure GPU-accelerated Sticky Docking) -->
+		<div class="lg:col-span-8 space-y-4 flex flex-col lg:sticky lg:top-24 self-start">
 			<!-- Row 1: Ordered Items (Left) + Product Upsell (Middle) -->
 			<div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
 				<!-- Scope 1: Ordered Items (Left side, scrollable if many items, zero white gap) -->

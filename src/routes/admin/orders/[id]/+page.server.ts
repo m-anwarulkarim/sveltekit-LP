@@ -141,11 +141,25 @@ export const actions: Actions = {
 		const shippingAddress = formData.get('shippingAddress')?.toString();
 		const status = formData.get('status')?.toString() || 'pending';
 		const total = parseInt(formData.get('total')?.toString() || '0', 10);
+		const discountAmount = parseInt(formData.get('discount')?.toString() || '0', 10);
+		const deliveryCharge = parseInt(formData.get('deliveryFee')?.toString() || '60', 10);
+		const advancePayment = parseInt(formData.get('advancePaid')?.toString() || '0', 10);
 		const itemsJson = formData.get('items')?.toString() || '[]';
 
 		if (!orderId) {
 			return fail(400, { message: 'Order ID required' });
 		}
+
+		let parsedItems: any[] = [];
+		try {
+			parsedItems = JSON.parse(itemsJson);
+		} catch {
+			parsedItems = [];
+		}
+		const calculatedSubtotal = parsedItems.reduce(
+			(acc: number, it: any) => acc + (Number(it.price) * Number(it.quantity) || 0),
+			0
+		);
 
 		try {
 			const db = getDb(platform);
@@ -157,6 +171,10 @@ export const actions: Actions = {
 					customerPhone: customerPhone || '01700000000',
 					shippingAddress: shippingAddress || 'Dhaka',
 					items: itemsJson,
+					subtotal: calculatedSubtotal,
+					discountAmount,
+					deliveryCharge,
+					advancePayment,
 					total,
 					status,
 					updatedAt: new Date()

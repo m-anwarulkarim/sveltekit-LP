@@ -142,6 +142,9 @@ export async function handleCreateManualOrder(request: Request, platform: any) {
 	const shippingAddress = data.get('shippingAddress')?.toString()?.trim();
 	const productName = data.get('productName')?.toString()?.trim() || 'AURA Spectrum X';
 	const total = parseInt(data.get('total')?.toString() || '1200', 10);
+	const discountAmount = parseInt(data.get('discount')?.toString() || '0', 10);
+	const deliveryCharge = parseInt(data.get('deliveryFee')?.toString() || '60', 10);
+	const advancePayment = parseInt(data.get('advancePaid')?.toString() || '0', 10);
 	const status = data.get('status')?.toString() || 'pending';
 
 	if (!customerName || !shippingAddress) {
@@ -160,6 +163,17 @@ export async function handleCreateManualOrder(request: Request, platform: any) {
 				source: 'Manual Entry'
 			}
 		]);
+
+	let parsedItems: any[] = [];
+	try {
+		parsedItems = JSON.parse(items);
+	} catch {
+		parsedItems = [];
+	}
+	const calculatedSubtotal = parsedItems.reduce(
+		(acc: number, it: any) => acc + (Number(it.price) * Number(it.quantity) || 0),
+		0
+	);
 
 	try {
 		const db = getDb(platform);
@@ -182,8 +196,10 @@ export async function handleCreateManualOrder(request: Request, platform: any) {
 			shippingAddress,
 			items,
 			total,
-			subtotal: total,
-			deliveryCharge: 0,
+			subtotal: calculatedSubtotal || total,
+			discountAmount,
+			deliveryCharge,
+			advancePayment,
 			status,
 			orderType: 'manual',
 			source: 'Manual Entry'

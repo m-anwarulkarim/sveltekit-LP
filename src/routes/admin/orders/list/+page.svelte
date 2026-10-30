@@ -18,10 +18,15 @@
 		Trash2,
 		FileEdit,
 		Copy,
-		ExternalLink
+		ExternalLink,
+		ShoppingBag,
+		PhoneCall,
+		MessageSquare,
+		MapPin
 	} from 'lucide-svelte';
 	import OrderStatusDropdown from '../../_components/orders/OrderStatusDropdown.svelte';
 	import ScrollableStatusTabs from '../../_components/orders/ScrollableStatusTabs.svelte';
+	import OrderSourceBadge from '../../_components/orders/OrderSourceBadge.svelte';
 
 	let { data, form }: { data: any; form: any } = $props();
 
@@ -321,17 +326,19 @@
 							</th>
 							<th class="py-3.5 px-4">অর্ডার নং</th>
 							<th class="py-3.5 px-4">কাস্টমার তথ্য</th>
+							<th class="py-3.5 px-4">লোকেশন</th>
 							<th class="py-3.5 px-4">পণ্য ও পরিমাণ</th>
 							<th class="py-3.5 px-4">মোট বিল</th>
 							<th class="py-3.5 px-4">কুরিয়ার ট্র্যাকিং</th>
 							<th class="py-3.5 px-4">স্ট্যাটাস</th>
+							<th class="py-3.5 px-4">সোর্স</th>
 							<th class="py-3.5 px-4 text-right">অ্যাকশন</th>
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-slate-100">
 						{#if filteredOrders.length === 0}
 							<tr>
-								<td colspan="8" class="py-12 text-center text-slate-400">
+								<td colspan="10" class="py-12 text-center text-slate-400">
 									কোনো অর্ডার খুঁজে পাওয়া যায়নি
 								</td>
 							</tr>
@@ -339,6 +346,8 @@
 							{#each filteredOrders as order}
 								{@const isSelected = selectedOrderIds.includes(order.id)}
 								{@const items = parseItems(order.items)}
+								{@const phone = order.customerPhone || order.customerEmail || ''}
+								{@const cleanDigits = (phone || '').replace(/\D/g, '')}
 								<tr class="hover:bg-slate-50/70 transition-colors {isSelected ? 'bg-indigo-50/30' : ''}">
 									
 									<!-- Checkbox -->
@@ -366,33 +375,112 @@
 										</span>
 									</td>
 
-									<!-- Customer Info -->
-									<td class="py-4 px-4 max-w-[200px]">
+									<!-- Customer Info with 1-Click Call, WhatsApp & Copy Actions -->
+									<td class="py-4 px-4 min-w-[170px] max-w-[200px]">
 										<div class="font-bold text-slate-900 text-sm truncate">{order.customerName}</div>
-										<a
-											href="tel:{order.customerPhone || order.customerEmail}"
-											class="text-blue-600 hover:underline font-mono text-xs block mt-0.5"
-										>
-											{order.customerPhone || order.customerEmail}
-										</a>
-										<div class="text-[11px] text-slate-400 truncate mt-0.5" title={order.shippingAddress}>
-											{order.shippingAddress}
+										
+										<div class="flex items-center gap-1.5 mt-1">
+											<!-- Direct Dial Link -->
+											<a
+												href="tel:{phone}"
+												class="text-[#5845eb] hover:text-indigo-800 hover:underline font-mono font-bold text-xs shrink-0"
+												title="সরাসরি ডায়াল করুন: {phone}"
+											>
+												{phone}
+											</a>
+
+											<!-- 1-Click Call Button -->
+											<a
+												href="tel:{phone}"
+												class="w-6 h-6 rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white border border-emerald-200 flex items-center justify-center transition-colors shadow-2xs shrink-0"
+												title="কাস্টমারকে সরাসরি কল দিন"
+											>
+												<PhoneCall class="w-3 h-3" />
+											</a>
+
+											<!-- WhatsApp Quick Message Button -->
+											{#if cleanDigits}
+												<a
+													href="https://wa.me/{cleanDigits.startsWith('88') ? cleanDigits : '88' + cleanDigits}?text={encodeURIComponent(`আসসালামু আলাইকুম ${order.customerName || ''}, আপনার অর্ডারের (${order.orderNumber || ''}) ডেলিভারি সংক্রান্ত বিষয়ে যোগাযোগ করছি।`)}"
+													target="_blank"
+													rel="noopener noreferrer"
+													class="w-6 h-6 rounded-md bg-green-50 text-green-600 hover:bg-green-600 hover:text-white border border-green-200 flex items-center justify-center transition-colors shadow-2xs shrink-0"
+													title="WhatsApp-এ মেসেজ পাঠান"
+												>
+													<MessageSquare class="w-3 h-3" />
+												</a>
+											{/if}
+
+											<!-- Copy Phone Button -->
+											<button
+												type="button"
+												onclick={() => copyToClipboard(phone)}
+												class="w-6 h-6 rounded-md bg-slate-50 text-slate-400 hover:bg-slate-200 hover:text-slate-800 border border-slate-200 flex items-center justify-center transition-colors shadow-2xs cursor-pointer shrink-0"
+												title="নম্বর কপি করুন"
+											>
+												<Copy class="w-3 h-3" />
+											</button>
 										</div>
 									</td>
 
-									<!-- Products -->
+									<!-- Location Column -->
+									<td class="py-4 px-4 max-w-[190px]">
+										<div class="flex items-start gap-1.5">
+											<MapPin class="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
+											<div class="min-w-0">
+												{#if order.deliveryArea === 'inside_dhaka'}
+													<span class="inline-block text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 mb-0.5">
+														ঢাকা সিটি
+													</span>
+												{:else if order.deliveryArea === 'outside_dhaka'}
+													<span class="inline-block text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 mb-0.5">
+														ঢাকার বাইরে
+													</span>
+												{:else if order.deliveryArea === 'sub_dhaka'}
+													<span class="inline-block text-[10px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200 mb-0.5">
+														উপশহর
+													</span>
+												{/if}
+												<p class="text-xs text-slate-700 font-medium line-clamp-2 leading-snug" title={order.shippingAddress}>
+													{order.shippingAddress || 'ঠিকানা দেওয়া হয়নি'}
+												</p>
+											</div>
+										</div>
+									</td>
+
+									<!-- Products with Small Thumbnail Image -->
 									<td class="py-4 px-4">
 										{#if items.length === 0}
 											<span class="text-slate-400 text-xs">আইটেম নেই</span>
 										{:else}
-											<div class="space-y-1">
+											<div class="space-y-1.5">
 												{#each items as item}
-													<div class="font-semibold text-slate-800 truncate max-w-[180px]">
-														{item.name || 'পণ্য আইটেম'}
+													<div class="flex items-center gap-2.5">
+														<!-- Small Product Thumbnail -->
+														<div class="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200/90 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
+															{#if item.image}
+																<img
+																	src={item.image}
+																	alt={item.name}
+																	class="w-full h-full object-cover"
+																	onerror={(e) => {
+																		(e.target as HTMLElement).style.display = 'none';
+																	}}
+																/>
+															{:else}
+																<ShoppingBag class="w-4 h-4 text-slate-400" />
+															{/if}
+														</div>
+
+														<div class="min-w-0">
+															<div class="font-bold text-slate-900 text-xs truncate max-w-[170px]" title={item.name}>
+																{item.name || 'পণ্য আইটেম'}
+															</div>
+															<span class="text-[10px] text-slate-400 font-mono font-medium">
+																{item.quantity || 1} টি × ৳{item.price || 0}
+															</span>
+														</div>
 													</div>
-													<span class="text-[10px] text-slate-400">
-														{item.quantity || 1} টি × ৳{item.price || 0}
-													</span>
 												{/each}
 											</div>
 										{/if}
@@ -443,6 +531,11 @@
 											mode="list"
 											onStatusUpdated={(newSt) => showToast(`স্ট্যাটাস পরিবর্তন করে '${newSt}' করা হয়েছে!`)}
 										/>
+									</td>
+
+									<!-- Source Badge -->
+									<td class="py-4 px-4">
+										<OrderSourceBadge source={order.source} />
 									</td>
 
 									<!-- Actions -->

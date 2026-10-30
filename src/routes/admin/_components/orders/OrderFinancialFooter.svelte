@@ -147,23 +147,34 @@
 		</div>
 
 		<!-- 5. Total Payable -->
-		<div class="p-3 bg-emerald-50/70 rounded-2xl border border-emerald-200/90 flex flex-col justify-between space-y-1 col-span-2 sm:col-span-2 md:col-span-1">
-			<span class="text-[11px] font-black text-emerald-800 uppercase tracking-wider block">
-				সর্বমোট প্রদেয়
-			</span>
-			<div class="text-lg sm:text-xl font-black font-mono text-emerald-700 truncate">
+		<div class="p-3 bg-emerald-50/80 rounded-2xl border-2 border-emerald-300 flex flex-col justify-between space-y-1 col-span-2 sm:col-span-2 md:col-span-1 shadow-2xs">
+			<div class="flex items-center justify-between">
+				<span class="text-[11px] font-black text-emerald-900 uppercase tracking-wider block">
+					সর্বমোট প্রদেয়
+				</span>
+				{#if Number(discount) > 0}
+					<span class="text-[9px] font-bold text-rose-700 bg-rose-100/90 px-1.5 py-0.2 rounded border border-rose-200">
+						-৳{discount} ছাড়
+					</span>
+				{/if}
+			</div>
+			<div class="text-xl sm:text-2xl font-black font-mono text-emerald-700 truncate">
 				৳{totalPayable.toLocaleString('en-US')}
 			</div>
-			<span class="text-[10px] text-emerald-600 font-semibold">ক্যাশ অন ডেলিভারি (COD)</span>
+			<div class="text-[10px] text-emerald-800 font-mono font-bold truncate bg-emerald-100/60 px-1.5 py-0.5 rounded border border-emerald-200/60" title="সূত্র: সাবটোটাল - ডিসকাউন্ট + ডেলিভারি">
+				{Number(subtotal || 0).toLocaleString()} - {Number(discount || 0).toLocaleString()} + {Number(deliveryFee || 0).toLocaleString()} = ৳{totalPayable.toLocaleString()}
+			</div>
 		</div>
 
 	</div>
 
 	<!-- Bottom Action Bar: Print Invoice, Save Changes, Confirm Order (Responsive & Safe) -->
 	<div class="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-		<div class="flex items-center gap-2 text-xs font-bold text-slate-500">
-			<Calculator class="w-4 h-4 text-indigo-600 shrink-0" />
-			<span>হিসাব স্বয়ংক্রিয়ভাবে সমন্বয় হচ্ছে</span>
+		<div class="flex items-center gap-2 text-xs font-bold text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200/80">
+			<Calculator class="w-4 h-4 text-[#5845eb] shrink-0" />
+			<span>
+				হিসাব সূত্র: সাবটোটাল (৳{Number(subtotal || 0).toLocaleString()}) - ছাড় (৳{Number(discount || 0).toLocaleString()}) + ডেলিভারি (৳{Number(deliveryFee || 0).toLocaleString()}) = <b>৳{totalPayable.toLocaleString()}</b>
+			</span>
 		</div>
 
 		<div class="flex flex-wrap items-center justify-end gap-2">

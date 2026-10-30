@@ -1,6 +1,7 @@
 import { drizzle } from 'drizzle-orm/d1';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from './schema';
+import { env as cfEnv } from 'cloudflare:workers';
 
 export type AppDatabase = DrizzleD1Database<typeof schema>;
 
@@ -94,12 +95,25 @@ let cachedHttpDb: AppDatabase | null = null;
  * Guarantees 100% real remote database access everywhere!
  */
 export const getDb = (d1OrPlatform?: any): AppDatabase => {
-	// 1. Native Cloudflare D1 binding (Local Wrangler Proxy in Dev, cached proxy, or Native Binding in Production)
-	const nativeD1 =
+	// 1. Native Cloudflare D1 binding (Local Wrangler Proxy in Dev, cloudflare:workers in Production)
+	let nativeD1 =
 		d1OrPlatform?.env?.DB ||
 		d1OrPlatform?.DB ||
-		(d1OrPlatform?.prepare ? d1OrPlatform : null) ||
-		(typeof globalThis !== 'undefined' ? (globalThis as any).__DEV_D1__ : null);
+		(d1OrPlatform?.prepare ? d1OrPlatform : null);
+
+	if (!nativeD1) {
+		try {
+			if (cfEnv?.DB) {
+				nativeD1 = cfEnv.DB;
+			}
+		} catch {
+			// Ignore if cloudflare:workers env is not accessible
+		}
+	}
+
+	if (!nativeD1 && typeof globalThis !== 'undefined' && (globalThis as any).__DEV_D1__) {
+		nativeD1 = (globalThis as any).__DEV_D1__;
+	}
 
 	if (nativeD1) {
 		return drizzle(nativeD1, { schema });

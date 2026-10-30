@@ -53,9 +53,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 		'127.0.0.1';
 
 	// 1. Sentinel IP Block Check (Ignore static asset requests to keep speed fast)
-	if (platform?.env?.DB && !event.url.pathname.startsWith('/_app/')) {
+	if (!event.url.pathname.startsWith('/_app/') && !event.url.pathname.startsWith('/favicon')) {
 		try {
-			const db = getDb(platform.env.DB);
+			const db = getDb(platform);
 			const blocked = await db
 				.select({ ip: schema.ipBlocks.ipAddress, reason: schema.ipBlocks.reason })
 				.from(schema.ipBlocks)
@@ -103,23 +103,27 @@ export const handle: Handle = async ({ event, resolve }) => {
 		event.url.hostname === 'localhost' ||
 		event.url.hostname === '127.0.0.1';
 
-	if (botCategory && platform?.env?.DB && !isLocalDev) {
-		const db = getDb(platform.env.DB);
-		const logPromise = db
-			.insert(schema.botLogs)
-			.values({
-				id: crypto.randomUUID(),
-				ipAddress: clientIp,
-				userAgent: userAgent.slice(0, 300),
-				botCategory,
-				threatLevel,
-				pathVisited: event.url.pathname,
-				actionTaken: 'allowed'
-			})
-			.catch((err) => console.error('Failed to log bot telemetry:', err));
+	if (botCategory && !isLocalDev) {
+		try {
+			const db = getDb(platform);
+			const logPromise = db
+				.insert(schema.botLogs)
+				.values({
+					id: crypto.randomUUID(),
+					ipAddress: clientIp,
+					userAgent: userAgent.slice(0, 300),
+					botCategory,
+					threatLevel,
+					pathVisited: event.url.pathname,
+					actionTaken: 'allowed'
+				})
+				.catch((err) => console.error('Failed to log bot telemetry:', err));
 
-		if (platform?.ctx?.waitUntil) {
-			platform.ctx.waitUntil(logPromise);
+			if (platform?.ctx?.waitUntil) {
+				platform.ctx.waitUntil(logPromise);
+			}
+		} catch (err) {
+			console.error('Failed to init db for bot telemetry:', err);
 		}
 	}
 

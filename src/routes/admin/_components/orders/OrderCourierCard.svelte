@@ -172,6 +172,32 @@
 					<RotateCw class="w-3 h-3" />
 					<span>রি-বুক / পরিবর্তন</span>
 				</Button>
+
+				<form
+					action="?/resetCourierBooking"
+					method="POST"
+					use:enhance={() => {
+						return async ({ result, update }) => {
+							await update();
+							if (result.type === 'success') {
+								trackingCode = '';
+								consignmentId = '';
+								courierProvider = '';
+								courierStatus = '';
+								toast.success('কুরিয়ার বুকিং রিসেট করা হয়েছে!');
+							}
+						};
+					}}
+					class="col-span-2 pt-1 border-t border-slate-100 text-center"
+				>
+					<input type="hidden" name="orderId" value={orderId} />
+					<button
+						type="submit"
+						class="text-[11px] font-bold text-rose-600 hover:text-rose-800 hover:underline cursor-pointer"
+					>
+						✕ বুকিং বাতিল ও রিসেট করুন
+					</button>
+				</form>
 			</div>
 		</div>
 	{:else}

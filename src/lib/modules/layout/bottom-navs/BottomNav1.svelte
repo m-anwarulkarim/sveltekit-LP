@@ -62,24 +62,13 @@
 	</button>
 
 	<!-- 4. Profile / Login -->
-	{#if user}
-		<a
-			href="/account"
-			class="flex flex-col items-center gap-1 transition-colors {pathname.includes('/account')
-				? 'text-[#2563eb]'
-				: 'text-slate-500 hover:text-slate-900'}"
-		>
-			<User class="w-5 h-5" />
-			<span class="text-[10px] font-bold">অ্যাকাউন্ট</span>
-		</a>
-	{:else}
-		<button
-			type="button"
-			onclick={onOpenAuth}
-			class="flex flex-col items-center gap-1 text-slate-500 hover:text-[#2563eb] transition-colors cursor-pointer"
-		>
-			<User class="w-5 h-5" />
-			<span class="text-[10px] font-bold">লগইন</span>
-		</button>
-	{/if}
+	<a
+		href={user ? "/account" : "/auth/login"}
+		class="flex flex-col items-center gap-1 transition-colors {pathname.includes('/account') || pathname.includes('/auth')
+			? 'text-[#2563eb]'
+			: 'text-slate-500 hover:text-slate-900'}"
+	>
+		<User class="w-5 h-5" />
+		<span class="text-[10px] font-bold">{user ? 'অ্যাকাউন্ট' : 'লগইন'}</span>
+	</a>
 </nav>

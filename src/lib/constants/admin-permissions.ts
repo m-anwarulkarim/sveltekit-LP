@@ -69,9 +69,9 @@ export const ADMIN_MENU_LIST: AdminMenuItem[] = [
 		id: 'coupons',
 		name: 'কুপনস',
 		englishName: 'Coupons',
-		path: '/admin/coupons',
+		path: '/admin/coupon',
 		desc: 'ডিসকাউন্ট কুপন তৈরি, লিমিট ও কুপন কোড ম্যানেজমেন্ট',
-		icon: 'Percent'
+		icon: 'Tag'
 	},
 	{
 		id: 'customers',
@@ -251,7 +251,7 @@ export function getMenuIdFromPath(pathname: string): string | null {
 	if (pathname.startsWith('/admin/catalog')) return 'catalog';
 	if (pathname.startsWith('/admin/landing-pages')) return 'landing-pages';
 	if (pathname.startsWith('/admin/daily-target')) return 'daily-target';
-	if (pathname.startsWith('/admin/coupons')) return 'coupons';
+	if (pathname.startsWith('/admin/coupon')) return 'coupons';
 	if (pathname.startsWith('/admin/customers')) return 'customers';
 	if (pathname.startsWith('/admin/reports')) return 'reports';
 	if (pathname.startsWith('/admin/settings')) return 'settings';

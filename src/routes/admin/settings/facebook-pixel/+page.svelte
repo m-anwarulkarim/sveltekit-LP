@@ -46,7 +46,7 @@
 
 	// Reactive Form State initialized from D1
 	let settings = $state<MetaPixelSettings>({
-		trackingMode: data?.settings?.trackingMode || 'native_direct',
+		trackingMode: data?.settings?.trackingMode || 'disabled',
 		pixelId: data?.settings?.pixelId || '',
 		backupPixelId: data?.settings?.backupPixelId || '',
 		capiToken: data?.settings?.capiToken || '',
@@ -427,7 +427,7 @@
 						</label>
 						<Input
 							type="text"
-							placeholder="যেমন: 806385144697838"
+							placeholder="যেমন: 123456789012345"
 							bind:value={settings.pixelId}
 							class="font-mono text-xs h-11 rounded-xl bg-slate-50/70 focus:bg-white"
 						/>
@@ -550,7 +550,7 @@
 					<Textarea
 						rows={3}
 						bind:value={settings.capiToken}
-						placeholder="EAAQZCaLfr2KUBSw5YGLAS5uUNlyLllbFYrQQeCoMBP83lonTPvPJEMBS02zJOMOmplFSX..."
+						placeholder="EAA..."
 						class="font-mono text-xs leading-relaxed rounded-xl bg-slate-50/70 focus:bg-white {showToken ? '' : 'tracking-widest'}"
 					/>
 					<span class="text-[11px] text-slate-400">Meta Events Manager &gt; Settings &gt; Conversions API &gt; Generate Access Token থেকে কপি করুন</span>

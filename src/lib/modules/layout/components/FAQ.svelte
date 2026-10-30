@@ -9,24 +9,24 @@
 
 	const faqs: FAQItem[] = [
 		{
-			q: 'How does the 30-Day Risk-Free In-Studio Trial work?',
-			a: 'Order any AURA headphone or hardware product. Take 30 days to test it in your studio, home, or daily commute. If you are not completely stunned by the planar acoustics, simply print our prepaid return label for a 100% full refund.'
+			q: 'ডেলিভারি পেতে কতদিন সময় লাগবে?',
+			a: 'ঢাকা সিটির ভেতরে অর্ডার কনফার্মের ১২ থেকে ২৪ ঘণ্টার মধ্যে এবং ঢাকা সিটির বাইরে দেশের যেকোনো প্রান্তে ২৪ থেকে ৪৮ ঘণ্টার মধ্যে বিশ্বস্ত কুরিয়ার সার্ভিসের মাধ্যমে হোম ডেলিভারি পৌঁছে দেওয়া হয়।'
 		},
 		{
-			q: 'Can I connect with both wireless and professional studio DACs?',
-			a: 'Yes! AURA Spectrum X includes a 2.4GHz low-latency USB-C transmitter, Bluetooth 5.4 with LDAC/aptX Lossless, plus a dedicated 4.4mm balanced and 3.5mm oxygen-free copper cable for high-end DAC amplifiers.'
+			q: 'আমি কি ক্যাশ অন ডেলিভারিতে (COD) পণ্য চেক করে নিতে পারব?',
+			a: 'হ্যাঁ, আমাদের প্রতিটি অর্ডারে ক্যাশ অন ডেলিভারি সুবিধা রয়েছে। ডেলিভারি ম্যানের উপস্থিতিতে পার্সেল চেক করে নিশ্চিন্তে মূল্য পরিশোধ করতে পারবেন।'
 		},
 		{
-			q: 'What is the battery life with Neural ANC turned on?',
-			a: 'Spectrum X delivers up to 55 hours of continuous playback with active noise neutralization enabled, and up to 80 hours with ANC off. A 10-minute fast charge over USB-C provides 6 hours of listening time.'
+			q: 'পণ্য পছন্দ না হলে বা ত্রুটি থাকলে রিটার্ন করার নিয়ম কী?',
+			a: 'পণ্য হাতে পাওয়ার ৭ দিনের মধ্যে যদি কোনো ত্রুটি বা অমিল দেখা দেয়, তবে কোনো প্রকার বাড়তি খরচ ছাড়াই দ্রুততম সময়ে ফুল রিফান্ড অথবা ফ্রি রিপ্লেসমেন্ট সুবিধা পাবেন।'
 		},
 		{
-			q: 'How does Better Auth protect my customer account?',
-			a: 'Your account is secured with modern Web Crypto cryptographic standards, HTTP-only cookie tokens, and strict session isolation backed by Cloudflare D1 edge database.'
+			q: 'অর্ডার করার পর পার্সেল ট্র্যাক করব কীভাবে?',
+			a: 'অর্ডার সম্পন্ন হওয়ার পর প্রাপ্ত অর্ডার নম্বর (যেমন: #1001) অথবা আপনার অর্ডারকৃত মোবাইল নম্বর দিয়ে আমাদের "অর্ডার ট্র্যাক" পেজে সার্চ করলেই পার্সেলের বর্তমান অবস্থান ও কুরিয়ার ট্র্যাকিং কোড পেয়ে যাবেন।'
 		},
 		{
-			q: 'Do you ship internationally and what is the shipping time?',
-			a: 'Yes, we provide Free Global Express Air Shipping to North America, Europe, Asia, and Australia. Most orders arrive within 2-4 business days with full door-to-door tracking.'
+			q: 'আপনাদের পণ্যগুলো কি ১০০% অরিজিনাল?',
+			a: 'হ্যাঁ, AURA স্টোরের প্রতিটি পণ্য শতভাগ আসল এবং সর্বোচ্চ কোয়ালিটি যাচাইকৃত। গ্রাহকের সন্তুষ্টি ও নির্ভরতাই আমাদের প্রধান অগ্রাধিকার।'
 		}
 	];
 
@@ -43,10 +43,10 @@
 		<div class="text-center mb-16">
 			<Badge variant="outline" class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border-violet-500/20 text-violet-300 text-xs font-semibold uppercase tracking-wider mb-4">
 				<HelpCircle class="w-3.5 h-3.5" />
-				Common Inquiries
+				প্রয়োজনীয় প্রশ্নোত্তর
 			</Badge>
 			<h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight font-heading">
-				Frequently Asked Questions
+				সাধারণ জিজ্ঞাসা ও সমাধান (FAQ)
 			</h2>
 		</div>
 

@@ -2,6 +2,10 @@
 	import { cart } from '../cart.svelte';
 	import { goto } from '$app/navigation';
 	import { deserialize } from '$app/forms';
+	import { trackMetaEvent } from '#lib/client/meta-pixel';
+	import { trackGtmBeginCheckout } from '#lib/client/gtm';
+	import { getAttributionSource } from '#lib/client/attribution';
+	import { toast } from 'svelte-sonner';
 	import { Button, Badge, Input, Textarea } from '#lib/components/ui';
 	import {
 		Lock,
@@ -15,9 +19,10 @@
 	interface Props {
 		isOpen: boolean;
 		onClose: () => void;
+		enableBkash?: boolean;
 	}
 
-	let { isOpen, onClose }: Props = $props();
+	let { isOpen, onClose, enableBkash = false }: Props = $props();
 
 	let name = $state('');
 	let phone = $state('');
@@ -28,6 +33,60 @@
 
 	function formatTaka(amount: number) {
 		return `৳${amount.toLocaleString('en-BD')}`;
+	}
+
+	$effect(() => {
+		if (isOpen && cart.items.length > 0 && typeof window !== 'undefined') {
+			trackMetaEvent('InitiateCheckout', {
+				content_ids: cart.items.map((i) => String(i.id)),
+				content_type: 'product',
+				num_items: cart.items.length,
+				value: Number(cart.total),
+				currency: 'BDT'
+			});
+
+			trackGtmBeginCheckout({
+				items: cart.items.map((i) => ({
+					item_id: String(i.id),
+					item_name: i.name,
+					price: Number(i.price) || 0,
+					quantity: Number(i.quantity) || 1,
+					item_category: i.category || 'General',
+					item_variant: i.variantName || undefined
+				})),
+				total: Number(cart.total),
+				coupon: cart.couponCode || undefined
+			});
+		}
+	});
+
+	let incompleteTimer: any = null;
+	function triggerIncompleteCapture() {
+		if (incompleteTimer) clearTimeout(incompleteTimer);
+		incompleteTimer = setTimeout(async () => {
+			const cleanPhone = phone.trim().replace(/\D/g, '');
+			if (cleanPhone.length >= 10 && cart.items.length > 0) {
+				try {
+					await fetch('/api/checkout/incomplete', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							customerName: name.trim() || 'অপরিচিত কাস্টমার',
+							customerPhone: phone.trim(),
+							shippingAddress: address.trim() || 'ঠিকানা দেওয়া হয়নি',
+							deliveryArea: city.includes('ঢাকা') ? 'inside_dhaka' : 'outside_dhaka',
+							items: cart.items,
+							subtotal: cart.subtotal,
+							deliveryCharge: city.includes('ঢাকা') ? 60 : 120,
+							total: cart.total,
+							source: getAttributionSource()
+						})
+					});
+				} catch (err) {
+					// silent fallback
+				}
+			}
+		}, 1200);
 	}
 
 	async function handleCheckoutSubmit(e: Event) {
@@ -45,6 +104,7 @@
 			formData.append('paymentMethod', paymentMethod);
 			formData.append('orderNote', '');
 			formData.append('website_url', '');
+			formData.append('source', getAttributionSource());
 			formData.append(
 				'items',
 				JSON.stringify(
@@ -76,32 +136,62 @@
 				const d = result.data as any;
 				confirmedId = d.orderNumber || d.orderId || confirmedId;
 				orderTotal = d.total || orderTotal;
+
+				// Snapshot order details before clearing cart
+				const orderSnapshot = {
+					orderId: confirmedId,
+					customerName: name.trim(),
+					customerPhone: phone.trim(),
+					customerAddress: address.trim(),
+					customerCity: city,
+					paymentMethod: paymentMethod === 'cod' ? 'ক্যাশ অন ডেলিভারি (COD)' : 'বিকাশ অনলাইন পেমেন্ট (bKash)',
+					items: [...cart.items],
+					subtotal: cart.subtotal,
+					deliveryCharge: cart.deliveryCharge,
+					discountAmount: cart.discountAmount,
+					total: orderTotal,
+					createdAt: new Date().toISOString()
+				};
+
+				// If customer chose bKash, initialize bKash PGW URL
+				if (paymentMethod === 'bkash' && d.orderId) {
+					try {
+						const bkashRes = await fetch('/api/payment/bkash/create', {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify({
+								orderId: d.orderId,
+								orderNumber: d.orderNumber || confirmedId,
+								amount: orderTotal,
+								customerPhone: phone.trim()
+							})
+						});
+						const bkashData = await bkashRes.json();
+						if (bkashData.success && bkashData.bkashURL) {
+							cart.setLastOrder(orderSnapshot);
+							cart.clear();
+							isSubmitting = false;
+							onClose();
+							window.location.href = bkashData.bkashURL;
+							return;
+						} else {
+							toast.error(bkashData.message || 'বিকাশ গেটওয়ে সংযোগে সমস্যা হয়েছে');
+						}
+					} catch (bkErr) {
+						console.error('Failed to trigger bKash redirect:', bkErr);
+					}
+				}
+
+				// Save snapshot for thank-you page
+				cart.setLastOrder(orderSnapshot);
+				cart.clear();
+				isSubmitting = false;
+				onClose();
+
+				// Navigate to dedicated Thank You Page
+				goto(`/thank-you?order_id=${confirmedId}`);
+				return;
 			}
-
-			// Snapshot order details before clearing cart
-			const orderSnapshot = {
-				orderId: confirmedId,
-				customerName: name.trim(),
-				customerPhone: phone.trim(),
-				customerAddress: address.trim(),
-				customerCity: city,
-				paymentMethod: paymentMethod === 'cod' ? 'ক্যাশ অন ডেলিভারি (COD)' : 'বিকাশ / নগদ (bKash/Nagad)',
-				items: [...cart.items],
-				subtotal: cart.subtotal,
-				deliveryCharge: cart.deliveryCharge,
-				discountAmount: cart.discountAmount,
-				total: orderTotal,
-				createdAt: new Date().toISOString()
-			};
-
-			// Save snapshot for thank-you page
-			cart.setLastOrder(orderSnapshot);
-			cart.clear();
-			isSubmitting = false;
-			onClose();
-
-			// Navigate to dedicated Thank You Page
-			goto(`/thank-you?order_id=${confirmedId}`);
 		} catch (error) {
 			console.error('Checkout submit error:', error);
 			const fallbackId = `AURA-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -186,6 +276,8 @@
 								type="tel"
 								required
 								bind:value={phone}
+								oninput={triggerIncompleteCapture}
+								onblur={triggerIncompleteCapture}
 								placeholder="017xxxxxxxx"
 								class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 border-slate-200/90 text-xs text-slate-900 font-mono focus-visible:border-[#2563eb] focus-visible:bg-white font-medium"
 							/>
@@ -235,18 +327,21 @@
 
 				<!-- Payment Method Selection -->
 				<div>
-					<label class="block text-xs font-bold text-slate-700 mb-1.5">পেমেন্ট মেথড বেছে নিন</label>
-					<div class="grid grid-cols-2 gap-3">
-						<!-- Cash on Delivery -->
+					<label class="block text-xs font-bold text-slate-700 mb-1.5">পেমেন্ট মেথড</label>
+					<div class="grid {enableBkash ? 'grid-cols-2' : 'grid-cols-1'} gap-3">
+						<!-- Cash on Delivery (Default) -->
 						<button
 							type="button"
 							onclick={() => (paymentMethod = 'cod')}
 							class="p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between {paymentMethod === 'cod'
-								? 'border-[#2563eb] bg-blue-50/50 shadow-2xs'
+								? 'border-[#2563eb] bg-blue-50/50 shadow-2xs ring-1 ring-[#2563eb]'
 								: 'border-slate-200 bg-white hover:bg-slate-50'}"
 						>
 							<div class="flex items-center justify-between mb-1">
-								<span class="text-xs font-bold text-slate-900">ক্যাশ অন ডেলিভারি</span>
+								<div class="flex items-center gap-1.5">
+									<span class="text-xs font-bold text-slate-900">ক্যাশ অন ডেলিভারি (COD)</span>
+									<span class="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.2 rounded-full font-bold">ডিফল্ট</span>
+								</div>
 								{#if paymentMethod === 'cod'}
 									<div class="w-4 h-4 rounded-full bg-[#2563eb] text-white flex items-center justify-center">
 										<Check class="w-3 h-3 stroke-[3]" />
@@ -256,24 +351,26 @@
 							<p class="text-[11px] text-slate-500">পণ্য হাতে পেয়ে মূল্য পরিশোধ করুন</p>
 						</button>
 
-						<!-- bKash / Nagad -->
-						<button
-							type="button"
-							onclick={() => (paymentMethod = 'bkash')}
-							class="p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between {paymentMethod === 'bkash'
-								? 'border-[#2563eb] bg-blue-50/50 shadow-2xs'
-								: 'border-slate-200 bg-white hover:bg-slate-50'}"
-						>
-							<div class="flex items-center justify-between mb-1">
-								<span class="text-xs font-bold text-slate-900">বিকাশ / নগদ</span>
-								{#if paymentMethod === 'bkash'}
-									<div class="w-4 h-4 rounded-full bg-[#2563eb] text-white flex items-center justify-center">
-										<Check class="w-3 h-3 stroke-[3]" />
-									</div>
-								{/if}
-							</div>
-							<p class="text-[11px] text-slate-500">অনলাইন ইনস্ট্যান্ট মোবাইল ব্যাংকিং</p>
-						</button>
+						<!-- bKash (Only if enabled) -->
+						{#if enableBkash}
+							<button
+								type="button"
+								onclick={() => (paymentMethod = 'bkash')}
+								class="p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between {paymentMethod === 'bkash'
+									? 'border-[#2563eb] bg-blue-50/50 shadow-2xs ring-1 ring-[#2563eb]'
+									: 'border-slate-200 bg-white hover:bg-slate-50'}"
+							>
+								<div class="flex items-center justify-between mb-1">
+									<span class="text-xs font-bold text-slate-900">বিকাশ পেমেন্ট</span>
+									{#if paymentMethod === 'bkash'}
+										<div class="w-4 h-4 rounded-full bg-[#2563eb] text-white flex items-center justify-center">
+											<Check class="w-3 h-3 stroke-[3]" />
+										</div>
+									{/if}
+								</div>
+								<p class="text-[11px] text-slate-500">অনলাইন ইনস্ট্যান্ট মোবাইল ব্যাংকিং</p>
+							</button>
+						{/if}
 					</div>
 				</div>
 

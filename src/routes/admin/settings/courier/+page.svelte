@@ -525,7 +525,7 @@
 						<label class="block text-xs font-bold text-slate-600">courier.apiKey (Client ID)</label>
 						<Input
 							type="text"
-							placeholder="5xe7LIra7r"
+							placeholder="যেমন: 5xe7LIra7r"
 							bind:value={formApiKey}
 							class="font-mono text-xs h-11 rounded-xl bg-slate-50/70 focus:bg-white"
 						/>
@@ -536,7 +536,7 @@
 						<div class="relative">
 							<Input
 								type={showSecret ? 'text' : 'password'}
-								placeholder="wVIiULaG6ioJAdANB5SVXYFPtTmq3xR30eNi6CQ3"
+								placeholder="Client Secret Token"
 								bind:value={formSecretKey}
 								class="font-mono text-xs h-11 rounded-xl bg-slate-50/70 focus:bg-white pr-10"
 							/>
@@ -556,7 +556,7 @@
 						<label class="block text-xs font-bold text-slate-600">courier.username (Email)</label>
 						<Input
 							type="text"
-							placeholder="sohagalam82@gmail.com"
+							placeholder="merchant@example.com"
 							bind:value={formUsername}
 							class="font-mono text-xs h-11 rounded-xl bg-slate-50/70 focus:bg-white"
 						/>
@@ -567,7 +567,7 @@
 						<div class="relative">
 							<Input
 								type={showPassword ? 'text' : 'password'}
-								placeholder="Nayon@@1122"
+								placeholder="••••••••"
 								bind:value={formPassword}
 								class="font-mono text-xs h-11 rounded-xl bg-slate-50/70 focus:bg-white pr-10"
 							/>

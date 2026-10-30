@@ -5,10 +5,10 @@
 	let isSaved = $state(false);
 	let saveMessage = $state('GTM & Analytics Settings Saved!');
 
-	let gtmContainerId = $state('GTM-W8L9P2');
-	let ga4MeasurementId = $state('G-XXXXXXXXXX');
-	let enableDataLayer = $state(true);
-	let enableEcommerceEvents = $state(true);
+	let gtmContainerId = $state('');
+	let ga4MeasurementId = $state('');
+	let enableDataLayer = $state(false);
+	let enableEcommerceEvents = $state(false);
 
 	function triggerSave(msg = 'GTM & Analytics Settings Saved!') {
 		isSaved = true;

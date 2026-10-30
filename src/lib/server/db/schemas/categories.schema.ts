@@ -42,6 +42,9 @@ export const brands = sqliteTable(
 		logo: text('logo'),
 		website: text('website'),
 		isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+		isFeatured: integer('is_featured', { mode: 'boolean' }).notNull().default(false),
+		sortOrder: integer('sort_order').notNull().default(0),
+		isTrash: integer('is_trash', { mode: 'boolean' }).notNull().default(false),
 		createdAt: integer('created_at', { mode: 'timestamp_ms' })
 			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
 			.notNull(),

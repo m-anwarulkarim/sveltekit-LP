@@ -27,16 +27,23 @@
 		Sparkles
 	} from 'lucide-svelte';
 	import { trackMetaEvent } from '#lib/client/meta-pixel';
+	import { trackGtmPurchase } from '#lib/client/gtm';
 
 	let { data }: { data: PageData } = $props();
 
 	let order = $state<OrderDetails | null>(null);
 	let isCopied = $state(false);
+	let bKashTrxID = $state('');
 
 	const displayOrderId = $derived(data.dbOrder?.orderNumber || order?.orderId || data.orderId || '1001');
 
 	onMount(() => {
 		order = cart.loadLastOrder();
+
+		if (typeof window !== 'undefined') {
+			const params = new URLSearchParams(window.location.search);
+			bKashTrxID = params.get('trxID') || '';
+		}
 
 		// Idempotent Browser Purchase Event Tracking (Single fire guard per Order ID)
 		const effectiveOrderId = displayOrderId;
@@ -64,6 +71,22 @@
 					},
 					effectiveOrderId
 				);
+
+				// GTM GA4 Purchase Event (Compliant with GA4 standard e-commerce spec)
+				trackGtmPurchase({
+					transaction_id: effectiveOrderId,
+					value: Number(data.dbOrder?.total || order?.total || 0),
+					shipping: Number(data.dbOrder?.deliveryCharge || order?.deliveryCharge || 0),
+					currency: 'BDT',
+					items: items.map((i: any, idx: number) => ({
+						item_id: String(i.sku || i.id || i.productId || `item-${idx + 1}`),
+						item_name: i.name || i.title || 'Product',
+						price: Number(i.price || i.unitPrice || 0),
+						quantity: Number(i.quantity || 1),
+						item_category: i.category || 'General',
+						item_variant: i.variantName || undefined
+					}))
+				});
 			}
 		}
 	});
@@ -174,9 +197,16 @@
 						<span class="text-slate-500">পেমেন্ট মেথড:</span>
 						<Badge variant="outline" class="font-bold text-emerald-700 bg-emerald-50 border-emerald-200 flex items-center gap-1">
 							<ShieldCheck class="w-3.5 h-3.5" />
-							<span>{order?.paymentMethod || 'ক্যাশ অন ডেলিভারি (COD)'}</span>
+							<span>{bKashTrxID ? 'বিকাশ অনলাইন পেমেন্ট (PAID)' : (order?.paymentMethod || 'ক্যাশ অন ডেলিভারি (COD)')}</span>
 						</Badge>
 					</div>
+
+					{#if bKashTrxID}
+						<div class="flex justify-between items-center py-1.5 px-3 rounded-xl bg-pink-50/80 border border-pink-200">
+							<span class="text-[11px] font-bold text-pink-900">bKash TrxID:</span>
+							<span class="font-mono text-xs font-bold text-pink-700">{bKashTrxID}</span>
+						</div>
+					{/if}
 
 					<Separator class="my-2" />
 

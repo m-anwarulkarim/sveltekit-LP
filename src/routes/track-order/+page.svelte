@@ -1,38 +1,27 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import { StoreLayout } from '#lib';
 	import { Button, Input, Card, CardContent, Badge } from '#lib/components/ui';
-	import { Search, Package, Truck, CheckCircle2, Clock, Phone, AlertCircle } from 'lucide-svelte';
+	import { Search, Package, Truck, CheckCircle2, Clock, Phone, AlertCircle, ShoppingBag } from 'lucide-svelte';
 	import type { PageData } from './$types';
+	import { goto } from '$app/navigation';
 
 	let { data }: { data: PageData } = $props();
 
-	let searchQuery = $state('');
-	let trackedOrder = $state<any | null>(null);
-	let hasSearched = $state(false);
+	let searchQuery = $state(data.searchQuery || '');
+	let isLoading = $state(false);
+
+	const trackedOrder = $derived(data.trackedOrder);
+	const notFound = $derived(data.notFound);
 
 	function handleTrack(e: SubmitEvent) {
 		e.preventDefault();
-		if (!searchQuery.trim()) return;
-		hasSearched = true;
-
-		// Mock order result for interactive demo
-		trackedOrder = {
-			id: searchQuery.trim().startsWith('#') ? searchQuery.trim() : `#${searchQuery.trim()}`,
-			date: '২৬ অক্টোবর, ২০২৬',
-			status: 'shipped',
-			statusBangla: 'কুরিয়ারে পাঠানো হয়েছে',
-			customer: 'মোঃ রহিম',
-			phone: '01712-345678',
-			address: 'মিরপুর-১০, ঢাকা',
-			courier: 'Steadfast Courier',
-			trackingCode: 'STEAD-9823412',
-			total: 850,
-			items: [
-				{ name: 'হাইব্রিড কাঁচা মরিচ বীজ (১ প্যাকেট)', price: 180 },
-				{ name: 'উন্নত জাতের লাল শাক বীজ (৩ প্যাকেট)', price: 270 },
-				{ name: 'ভার্মিকম্পোস্ট সার (২ কেজি)', price: 400 }
-			]
-		};
+		const clean = searchQuery.trim();
+		if (!clean) return;
+		isLoading = true;
+		goto(`/track-order?order=${encodeURIComponent(clean)}`, { keepFocus: true, noScroll: true })
+			.finally(() => {
+				isLoading = false;
+			});
 	}
 </script>
 
@@ -80,14 +69,28 @@
 
 					<Button
 						type="submit"
+						disabled={isLoading}
 						class="w-full bg-[#5845eb] hover:bg-[#4936d6] text-white rounded-xl h-12 text-sm font-bold shadow-sm shadow-indigo-600/30 gap-2 cursor-pointer"
 					>
 						<Search class="w-4 h-4" />
-						<span>অর্ডার স্ট্যাটাস খুঁজুন</span>
+						<span>{isLoading ? 'অর্ডার খোঁজা হচ্ছে...' : 'অর্ডার স্ট্যাটাস খুঁজুন'}</span>
 					</Button>
 				</form>
 			</CardContent>
 		</Card>
+
+		<!-- Order Not Found Notice -->
+		{#if notFound}
+			<div class="max-w-2xl mx-auto p-5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 flex items-start gap-3 animate-in fade-in">
+				<AlertCircle class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+				<div class="space-y-1 text-xs">
+					<span class="font-bold block text-sm">কোনো অর্ডার খুঁজে পাওয়া যায়নি</span>
+					<p class="text-amber-700">
+						"{searchQuery}" দিয়ে কোনো সক্রিয় অর্ডার পাওয়া যায়নি। অনুগ্রহ করে আপনার অর্ডার নম্বর (যেমন: #1001) অথবা সঠিক মোবাইল নম্বর দিয়ে পুনরায় চেষ্টা করুন।
+					</p>
+				</div>
+			</div>
+		{/if}
 
 		<!-- Order Result Card -->
 		{#if trackedOrder}

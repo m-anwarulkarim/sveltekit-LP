@@ -65,26 +65,18 @@
 	</button>
 
 	<!-- 4. Profile / Login -->
-	{#if user}
-		<a
-			href="/account"
-			class="flex items-center gap-1.5 px-3 py-2 rounded-2xl transition-all {pathname.includes('/account')
-				? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-500/30'
-				: 'text-slate-400 hover:text-white'}"
-		>
-			<User class="w-4 h-4" />
-			{#if pathname.includes('/account')}
-				<span class="text-xs">অ্যাকাউন্ট</span>
-			{/if}
-		</a>
-	{:else}
-		<button
-			type="button"
-			onclick={onOpenAuth}
-			class="flex items-center gap-1.5 px-3 py-2 rounded-2xl text-slate-400 hover:text-white transition-all cursor-pointer"
-		>
-			<User class="w-4 h-4" />
-		</button>
-	{/if}
+	<a
+		href={user ? "/account" : "/auth/login"}
+		class="flex items-center gap-1.5 px-3 py-2 rounded-2xl transition-all {pathname.includes('/account') || pathname.includes('/auth')
+			? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-500/30'
+			: 'text-slate-400 hover:text-white'}"
+	>
+		<User class="w-4 h-4" />
+		{#if pathname.includes('/account')}
+			<span class="text-xs">অ্যাকাউন্ট</span>
+		{:else if pathname.includes('/auth')}
+			<span class="text-xs">লগইন</span>
+		{/if}
+	</a>
 </nav>
 

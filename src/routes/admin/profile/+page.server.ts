@@ -93,6 +93,14 @@ export const actions: Actions = {
 			});
 		}
 
+		if (avatarUrl.length > 500 * 1024) {
+			return fail(400, {
+				action: 'updateAvatar',
+				success: false,
+				message: 'ছবির সাইজ অনেক বড়। অনুগ্রহ করে ছোট সাইজের ছবি আপলোড করুন।'
+			});
+		}
+
 		try {
 			const db = getDb(platform);
 			const res = await AdminProfileService.updateAvatar(db, adminId, avatarUrl);
@@ -103,10 +111,14 @@ export const actions: Actions = {
 			};
 		} catch (error: any) {
 			console.error('updateAvatar error:', error);
+			let userMsg = error.message || 'ছবি আপডেট ব্যর্থ হয়েছে!';
+			if (userMsg.includes('Failed query') || userMsg.includes('D1_ERROR') || userMsg.includes('data:image')) {
+				userMsg = 'ডাটাবেজে ছবি সংরক্ষণ করতে সমস্যা হয়েছে। ছবির সাইজ খুব বড় হতে পারে।';
+			}
 			return fail(400, {
 				action: 'updateAvatar',
 				success: false,
-				message: error.message || 'ছবি আপডেট ব্যর্থ হয়েছে!'
+				message: userMsg
 			});
 		}
 	},

@@ -35,9 +35,7 @@ export const actions: Actions = {
 
 		try {
 			const db = getDb(platform);
-			const res = await CourierService.bookConsignment(db, orderId, provider, {
-				apiKey: 'steadfast_api_live'
-			});
+			const res = await CourierService.bookConsignment(db, orderId, provider.toLowerCase() as any);
 			if (res.success) {
 				updateLiveOrderStatus(orderId, 'shipped', `${provider} বুকিং: ${res.trackingCode}`);
 				return {
@@ -75,9 +73,7 @@ export const actions: Actions = {
 			let successCount = 0;
 
 			for (const orderId of ids) {
-				const res = await CourierService.bookConsignment(db, orderId, provider, {
-					apiKey: 'steadfast_api_live'
-				});
+				const res = await CourierService.bookConsignment(db, orderId, provider.toLowerCase() as any);
 				if (res.success) {
 					successCount++;
 					updateLiveOrderStatus(orderId, 'shipped', `${provider} বাল্ক বুকিং: ${res.trackingCode}`);

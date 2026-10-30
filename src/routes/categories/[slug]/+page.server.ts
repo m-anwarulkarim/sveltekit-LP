@@ -3,6 +3,7 @@ import { getCategoryBySlug } from '#lib/modules/products/categories.data';
 import type { Product } from '#lib/modules/products/types';
 import { getDb } from '#lib/server/db/index';
 import { CategoryService } from '#lib/server/services/category.service';
+import { BrandService } from '#lib/server/services/brand.service';
 import * as schema from '#lib/server/db/schema';
 import { eq, desc } from 'drizzle-orm';
 
@@ -10,11 +11,37 @@ export const load: PageServerLoad = async (event) => {
 	const slug = event.params.slug;
 	let category: any = null;
 	let allProducts: Product[] = [];
+	let dbSubCategories: any[] = [];
+	let dbBrands: string[] = [];
 
 	try {
 		const db = getDb(event.platform);
-		const dbCat = await CategoryService.getCategory(db, slug);
+		const [dbCat, brandsList] = await Promise.all([
+			CategoryService.getCategory(db, slug),
+			BrandService.listBrands(db)
+		]);
+
+		if (brandsList && brandsList.length > 0) {
+			dbBrands = brandsList.map((b) => b.name);
+		}
+
 		if (dbCat) {
+			// Query real subcategories for this category
+			try {
+				const subs = await db
+					.select()
+					.from(schema.categories)
+					.where(eq(schema.categories.parentId, dbCat.id))
+					.all();
+				dbSubCategories = subs.map((s) => ({
+					id: s.id,
+					name: s.name,
+					slug: s.slug
+				}));
+			} catch (subErr) {
+				console.warn('Failed to fetch subcategories for category:', subErr);
+			}
+
 			category = {
 				id: dbCat.id,
 				slug: dbCat.slug,
@@ -22,7 +49,11 @@ export const load: PageServerLoad = async (event) => {
 				banglaName: dbCat.name,
 				icon: dbCat.icon || '📦',
 				description: dbCat.description || `${dbCat.name} কালেকশন`,
-				subcategories: []
+				subCategories: [
+					{ id: 'all', name: 'সকল পণ্য', slug: 'all' },
+					...dbSubCategories
+				],
+				brands: dbBrands
 			};
 		}
 
@@ -62,20 +93,38 @@ export const load: PageServerLoad = async (event) => {
 				inStock: Boolean(p.inStock)
 			};
 		});
+
+		// If no brands in DB yet, extract unique brands from products
+		if (dbBrands.length === 0) {
+			const extracted = Array.from(new Set(allProducts.map((p) => p.brand).filter(Boolean)));
+			if (extracted.length > 0) {
+				dbBrands = extracted;
+				if (category) category.brands = dbBrands;
+			}
+		}
 	} catch (e) {
 		console.error('Failed to load DB products in category page:', e);
 	}
 
 	if (!category) {
-		category = getCategoryBySlug(slug) || {
-			id: slug,
-			slug,
-			name: slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, ' '),
-			banglaName: slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, ' '),
-			icon: '📦',
-			description: 'কালেকশন ব্রাউজ করুন',
-			subcategories: []
-		};
+		const fallback = getCategoryBySlug(slug);
+		category = fallback
+			? {
+					...fallback,
+					banglaName: fallback.nameBn,
+					subCategories: fallback.subCategories || [{ id: 'all', name: 'সকল', slug: 'all' }],
+					brands: fallback.brands || dbBrands
+			  }
+			: {
+					id: slug,
+					slug,
+					name: slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, ' '),
+					banglaName: slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, ' '),
+					icon: '📦',
+					description: 'কালেকশন ব্রাউজ করুন',
+					subCategories: [{ id: 'all', name: 'সকল', slug: 'all' }],
+					brands: dbBrands
+			  };
 	}
 
 	// Filter products belonging to this category

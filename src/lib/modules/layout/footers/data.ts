@@ -27,9 +27,9 @@ export const DEFAULT_FOOTER_DATA: FooterStoreData = {
 	brandTagline: 'Premium Lifestyle & Creator Essentials Store',
 	aboutText:
 		'AURA is a next-generation lifestyle, skincare and creator essentials e-commerce platform in Bangladesh, delivering authentic products safely and swiftly to your door.',
-	phoneHotline: '01602867954',
+	phoneHotline: '01860-229546',
 	workingHours: '9:00 AM – 11:00 PM (Everyday)',
-	supportEmail: 'support@seedshop.com.bd',
+	supportEmail: 'support@aura.com.bd',
 	officeAddress: 'House-23, Road-12, Dhanmondi, Dhaka-1209, Bangladesh',
 	facebookUrl: 'https://facebook.com',
 	twitterUrl: 'https://x.com',

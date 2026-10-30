@@ -5,12 +5,12 @@
 	let isSaved = $state(false);
 	let saveMessage = $state('ePBX Settings Saved!');
 
-	let enableAutoCall = $state(true);
+	let enableAutoCall = $state(false);
 	let ivrProvider = $state('bangladesh_epbx');
-	let apiUrl = $state('https://api.epbx.com.bd/v1/call');
-	let authToken = $state('epbx_token_83921849');
+	let apiUrl = $state('');
+	let authToken = $state('');
 	let retryAttempts = $state(2);
-	let promptAudioUrl = $state('/audio/order-confirm-ivr.mp3');
+	let promptAudioUrl = $state('');
 
 	function triggerSave(msg = 'ePBX Settings Saved!') {
 		isSaved = true;

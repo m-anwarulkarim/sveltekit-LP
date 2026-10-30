@@ -298,6 +298,8 @@ export class PixelService {
 			currency?: string;
 			ipAddress?: string;
 			userAgent?: string;
+			fbp?: string;
+			fbc?: string;
 			eventSourceUrl?: string;
 		}
 	): Promise<{ success: boolean; message?: string; skipped?: boolean }> {
@@ -355,6 +357,8 @@ export class PixelService {
 						user_data: {
 							client_ip_address: orderData.ipAddress,
 							client_user_agent: orderData.userAgent,
+							...(orderData.fbp ? { fbp: orderData.fbp } : {}),
+							...(orderData.fbc ? { fbc: orderData.fbc } : {}),
 							...(hashedPhone ? { ph: [hashedPhone] } : {}),
 							...(hashedEmail ? { em: [hashedEmail] } : {}),
 							...(hashedFn ? { fn: [hashedFn] } : {}),
@@ -367,6 +371,7 @@ export class PixelService {
 							value: Number(orderData.total) || 0,
 							content_type: settings.contentType || 'product',
 							contents,
+							content_ids: contents.map((c) => c.id),
 							num_items: contents.length
 						}
 					}

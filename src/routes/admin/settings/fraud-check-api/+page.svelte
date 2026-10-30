@@ -5,11 +5,11 @@
 	let isSaved = $state(false);
 	let saveMessage = $state('Fraud Check API Settings Saved!');
 
-	let enableCourierFraudCheck = $state(true);
+	let enableCourierFraudCheck = $state(false);
 	let returnRateThreshold = $state(25);
-	let autoBlockBadIps = $state(true);
-	let steadFastApiKey = $state('sf_fraud_token_8392183');
-	let pathaoSecret = $state('pt_client_secret_99482');
+	let autoBlockBadIps = $state(false);
+	let steadFastApiKey = $state('');
+	let pathaoSecret = $state('');
 
 	function triggerSave(msg = 'Fraud Check API Settings Saved!') {
 		isSaved = true;

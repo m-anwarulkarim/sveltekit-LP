@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import { Button, Badge, Separator } from '#lib/components/ui';
 	import {
 		Phone,
@@ -9,12 +9,22 @@
 		Flame,
 		Sparkles
 	} from 'lucide-svelte';
+	import { page } from '$app/state';
 
 	interface Props {
 		class?: string;
 	}
 
 	let { class: className = '' }: Props = $props();
+
+	const storeConfig = $derived(page.data?.storeConfig);
+	const footerCategories = $derived.by(() => {
+		const dbCats = page.data?.categories;
+		if (Array.isArray(dbCats) && dbCats.length > 0) {
+			return dbCats.slice(0, 5);
+		}
+		return [];
+	});
 </script>
 
 <footer class="w-full bg-white font-['Anek_Bangla',sans-serif] border-t border-slate-200/90 text-slate-700 {className}">
@@ -60,8 +70,8 @@
 							<Phone class="w-4 h-4" />
 						</div>
 						<div class="flex flex-col">
-							<a href="tel:01602867954" class="font-bold text-slate-900 hover:text-[#5845eb] transition-colors">
-								01602867954
+							<a href="tel:{storeConfig?.hotlinePhone || '01860-229546'}" class="font-bold text-slate-900 hover:text-[#5845eb] transition-colors">
+								{storeConfig?.hotlinePhone || '01860-229546'}
 							</a>
 							<span class="text-[11px] text-slate-500 flex items-center gap-1">
 								<Clock class="w-3 h-3 text-slate-400" />
@@ -75,8 +85,8 @@
 						<div class="w-8 h-8 rounded-xl bg-indigo-50 text-[#5845eb] flex items-center justify-center shrink-0 border border-indigo-100">
 							<Mail class="w-4 h-4" />
 						</div>
-						<a href="mailto:support@seedshop.com.bd" class="hover:text-[#5845eb] transition-colors">
-							support@seedshop.com.bd
+						<a href="mailto:support@aura.com.bd" class="hover:text-[#5845eb] transition-colors">
+							support@aura.com.bd
 						</a>
 					</div>
 
@@ -141,52 +151,51 @@
 				</ul>
 			</div>
 
-			<!-- Column 3: Useful Links (lg:col-span-2) -->
+			<!-- Column 3: Categories & Quick Links (lg:col-span-2) -->
 			<div class="lg:col-span-2 space-y-4">
 				<div>
 					<h3 class="text-base font-extrabold text-slate-900 tracking-tight">
-						Useful Links
+						{footerCategories.length > 0 ? 'ক্যাটাগরি সমূহ' : 'Useful Links'}
 					</h3>
 					<div class="w-10 h-0.5 bg-[#5845eb] rounded-full mt-1.5"></div>
 				</div>
 
 				<ul class="space-y-2.5 text-xs sm:text-sm font-medium">
-					<li>
-						<a href="#products" class="flex items-center gap-2 text-slate-600 hover:text-[#5845eb] transition-colors group">
-							<ChevronRight class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#5845eb] group-hover:translate-x-0.5 transition-all" />
-							<span>All Products</span>
-						</a>
-					</li>
-					<li>
-						<a href="/combos" class="flex items-center gap-2 text-slate-600 hover:text-[#5845eb] transition-colors group">
-							<ChevronRight class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#5845eb] group-hover:translate-x-0.5 transition-all" />
-							<span>Combos Products</span>
-						</a>
-					</li>
-					<li>
-						<a href="/account" class="flex items-center gap-2 text-slate-600 hover:text-[#5845eb] transition-colors group">
-							<ChevronRight class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#5845eb] group-hover:translate-x-0.5 transition-all" />
-							<span>My Account</span>
-						</a>
-					</li>
-					<li>
-						<a href="/about" class="flex items-center gap-2 text-slate-600 hover:text-[#5845eb] transition-colors group">
-							<ChevronRight class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#5845eb] group-hover:translate-x-0.5 transition-all" />
-							<span>About Us</span>
-						</a>
-					</li>
-					<li>
-						<a href="/blogs" class="flex items-center gap-2 text-slate-600 hover:text-[#5845eb] transition-colors group">
-							<ChevronRight class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#5845eb] group-hover:translate-x-0.5 transition-all" />
-							<span>Blogs</span>
-						</a>
-					</li>
-					<li>
-						<a href="/faq" class="flex items-center gap-2 text-slate-600 hover:text-[#5845eb] transition-colors group">
-							<ChevronRight class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#5845eb] group-hover:translate-x-0.5 transition-all" />
-							<span>FAQs</span>
-						</a>
-					</li>
+					{#if footerCategories.length > 0}
+						{#each footerCategories as cat}
+							<li>
+								<a href="/categories/{cat.slug}" class="flex items-center gap-2 text-slate-600 hover:text-[#5845eb] transition-colors group">
+									<ChevronRight class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#5845eb] group-hover:translate-x-0.5 transition-all" />
+									<span class="truncate">{cat.name}</span>
+								</a>
+							</li>
+						{/each}
+						<li>
+							<a href="/catalog/all-category" class="flex items-center gap-2 text-[#5845eb] font-bold hover:underline transition-colors group">
+								<ChevronRight class="w-3.5 h-3.5 text-[#5845eb] group-hover:translate-x-0.5 transition-all" />
+								<span>সকল ক্যাটাগরি →</span>
+							</a>
+						</li>
+					{:else}
+						<li>
+							<a href="/catalog/all-product" class="flex items-center gap-2 text-slate-600 hover:text-[#5845eb] transition-colors group">
+								<ChevronRight class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#5845eb] group-hover:translate-x-0.5 transition-all" />
+								<span>সকল পণ্য</span>
+							</a>
+						</li>
+						<li>
+							<a href="/catalog/all-category" class="flex items-center gap-2 text-slate-600 hover:text-[#5845eb] transition-colors group">
+								<ChevronRight class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#5845eb] group-hover:translate-x-0.5 transition-all" />
+								<span>সকল ক্যাটাগরি</span>
+							</a>
+						</li>
+						<li>
+							<a href="/account" class="flex items-center gap-2 text-slate-600 hover:text-[#5845eb] transition-colors group">
+								<ChevronRight class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#5845eb] group-hover:translate-x-0.5 transition-all" />
+								<span>আমার একাউন্ট</span>
+							</a>
+						</li>
+					{/if}
 				</ul>
 			</div>
 

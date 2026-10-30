@@ -5,12 +5,12 @@
 	let isSaved = $state(false);
 	let saveMessage = $state('Bizmation Sync Settings Saved!');
 
-	let enableSync = $state(true);
-	let bizmationStoreId = $state('BIZ_STORE_8392');
-	let apiKey = $state('biz_live_secret_token_99482');
-	let syncInventory = $state(true);
+	let enableSync = $state(false);
+	let bizmationStoreId = $state('');
+	let apiKey = $state('');
+	let syncInventory = $state(false);
 	let syncIntervalMinutes = $state(15);
-	let syncOrdersToAccounting = $state(true);
+	let syncOrdersToAccounting = $state(false);
 
 	function triggerSave(msg = 'Bizmation Sync Settings Saved!') {
 		isSaved = true;

@@ -149,7 +149,7 @@
 
 	<!-- Main Title Header matching Screenshot -->
 	<div>
-		<h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">facebookCatalog.title</h2>
+		<h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">ফেসবুক ক্যাটালগ সেটিংস</h2>
 		<p class="text-xs text-slate-500 mt-0.5">Meta Advantage+ Catalog Ads এবং Facebook & Instagram Shop এর জন্য ডাটাফিড কনফিগারেশন</p>
 	</div>
 
@@ -166,8 +166,8 @@
 					</svg>
 				</div>
 				<div>
-					<h3 class="text-base font-bold text-slate-900 leading-tight">facebookCatalog.enableTitle</h3>
-					<p class="text-xs text-slate-500 mt-0.5">facebookCatalog.enableHint</p>
+					<h3 class="text-base font-bold text-slate-900 leading-tight">Facebook Product Catalog Feed</h3>
+					<p class="text-xs text-slate-500 mt-0.5">স্বয়ংক্রিয়ভাবে মেটা ক্যাটালগে আপনার ওয়েবসাইটের প্রোডাক্ট সিঙ্ক করুন</p>
 				</div>
 			</div>
 
@@ -181,7 +181,7 @@
 		<div class="flex items-center gap-3 select-none">
 			<label class="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-slate-800">
 				<Checkbox bind:checked={isEnabled} id="catalog-enable" class="w-4 h-4 rounded text-[#5845eb] border-slate-300" />
-				<span>facebookCatalog.enableCheckbox</span>
+				<span>ক্যাটালগ ডাটাফিড সক্রিয় করুন (Enable Catalog Feed)</span>
 			</label>
 		</div>
 
@@ -210,7 +210,7 @@
 
 		<!-- Feed URL Input with Blue Copy Button (Matching Screenshot Layout) -->
 		<div class="relative space-y-1.5">
-			<label class="block text-xs font-bold text-slate-700">facebookCatalog.csvUrlLabel</label>
+			<label class="block text-xs font-bold text-slate-700">ক্যাটালগ ফিড URL (Data Feed URL)</label>
 			
 			<div class="relative flex items-center">
 				<Input

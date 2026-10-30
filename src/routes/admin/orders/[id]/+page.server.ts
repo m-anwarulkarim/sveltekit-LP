@@ -3,7 +3,7 @@ import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { error, fail } from '@sveltejs/kit';
-import { INITIAL_PRODUCTS } from '../../_data';
+import { ProductService } from '#lib/server/services/product.service';
 import { OrderService } from '#lib/server/services/order.service';
 import { FraudService } from '#lib/server/services/fraud.service';
 import { CourierService } from '#lib/server/services/courier.service';
@@ -60,7 +60,7 @@ export const load: PageServerLoad = async ({ params, parent, platform }) => {
 		name: it.name || 'পণ্য আইটেম',
 		price: Number(it.price) || 0,
 		quantity: Number(it.quantity) || 1,
-		image: it.image || '/images/products/car-paint-pen.svg',
+		image: it.image || '',
 		variant: it.variant || ''
 	}));
 
@@ -75,18 +75,15 @@ export const load: PageServerLoad = async ({ params, parent, platform }) => {
 			date: o.createdAt ? new Date(o.createdAt).toLocaleDateString('bn-BD') : 'আজ'
 		}));
 
-	// Fraud & Courier Telemetry from FraudService
-	let courierStats = {
-		total: pastOrders.length,
-		delivered: pastOrders.filter((o: any) => o.status === 'delivered').length,
-		cancelled: pastOrders.filter((o: any) => o.status === 'cancelled').length,
-		successRate:
-			pastOrders.length > 0
-				? Math.round(
-						(pastOrders.filter((o: any) => o.status === 'delivered').length / pastOrders.length) * 100
-					)
-				: 100,
-		courierName: 'Steadfast & Pathao'
+	// Fraud & Courier Telemetry from FraudService (Dynamically checking Steadfast / Pathao / Local)
+	let courierStats: any = {
+		total: 0,
+		delivered: 0,
+		cancelled: 0,
+		successRate: 100,
+		courierName: 'কুরিয়ার ডেটা যাচাই হচ্ছে...',
+		badgeLabel: 'COURIER',
+		isConfigured: false
 	};
 
 	let courierSettings = { methods: [] as any[], defaultProvider: 'steadfast' as any };
@@ -101,7 +98,9 @@ export const load: PageServerLoad = async ({ params, parent, platform }) => {
 					delivered: risk.deliveredParcels,
 					cancelled: risk.cancelledParcels,
 					successRate: risk.successRate,
-					courierName: risk.courierName || 'Steadfast & Pathao'
+					courierName: risk.courierName,
+					badgeLabel: risk.badgeLabel,
+					isConfigured: risk.isConfigured
 				};
 			}
 		}
@@ -112,12 +111,35 @@ export const load: PageServerLoad = async ({ params, parent, platform }) => {
 		console.error('Courier stats / settings query error in D1:', e);
 	}
 
-	const initialNotes = orderNotesFromDb.map((n) => ({
-		id: n.id,
-		note: n.note,
-		author: n.adminName || 'Admin',
-		time: n.createdAt ? new Date(n.createdAt).toLocaleTimeString('bn-BD') : 'এখনই'
-	}));
+	// Fetch real database products from D1 for upsell catalog
+	let realProducts: any[] = [];
+	try {
+		const db = getDb(platform);
+		realProducts = await ProductService.listProducts(db);
+	} catch (e) {
+		console.error('Failed to load products from D1 in admin/orders/[id]:', e);
+	}
+
+	const initialNotes = orderNotesFromDb.map((n) => {
+		const d = n.createdAt ? new Date(n.createdAt) : null;
+		return {
+			id: n.id,
+			note: n.note,
+			author: n.adminName || 'Admin Staff',
+			time: d && !isNaN(d.getTime()) ? d.toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' }) : 'এখনই'
+		};
+	});
+
+	const visitorMeta = {
+		source: foundOrder.source || 'Storefront Checkout',
+		fingerprint: foundOrder.deviceFingerprint || 'অনুপলব্ধ',
+		ip: foundOrder.ipAddress || 'রেকর্ড করা হয়নি',
+		device: foundOrder.deviceFingerprint || (foundOrder.userAgent ? (foundOrder.userAgent.includes('Mobile') ? 'মোবাইল ব্রাউজার' : 'ডেস্কটপ ব্রাউজার') : 'ওয়েব ব্রাউজার'),
+		totalVisits: pastOrders.length + 1,
+		activeTime: pastOrders.length === 0 ? 'নতুন গ্রাহক' : `${pastOrders.length + 1}ম অর্ডার`,
+		avgLoad: 'N/A',
+		firstVisit: foundOrder.createdAt ? new Date(foundOrder.createdAt).toLocaleDateString('bn-BD') : 'আজ'
+	};
 
 	return {
 		order: foundOrder,
@@ -126,7 +148,8 @@ export const load: PageServerLoad = async ({ params, parent, platform }) => {
 		pastOrders,
 		courierStats,
 		initialNotes,
-		availableProducts: INITIAL_PRODUCTS,
+		availableProducts: realProducts,
+		visitorMeta,
 		courierMethods: courierSettings.methods,
 		defaultCourier: courierSettings.defaultProvider
 	};
@@ -251,6 +274,115 @@ export const actions: Actions = {
 			}
 		} catch (err: any) {
 			return fail(500, { message: err?.message || 'কুরিয়ার এন্ট্রিতে ত্রুটি' });
+		}
+	},
+
+	resetCourierBooking: async ({ request, platform }) => {
+		const formData = await request.formData();
+		const orderId = formData.get('orderId')?.toString();
+		if (!orderId) return fail(400, { message: 'Order ID required' });
+
+		try {
+			const db = getDb(platform);
+			await db
+				.update(schema.orders)
+				.set({
+					trackingCode: null,
+					consignmentId: null,
+					courierProvider: null,
+					courierStatus: null,
+					status: 'confirmed',
+					updatedAt: new Date()
+				})
+				.where(eq(schema.orders.id, orderId));
+
+			await db.insert(schema.orderNotes).values({
+				id: crypto.randomUUID(),
+				orderId,
+				adminName: 'Admin Staff',
+				note: 'কুরিয়ার বুকিং বাতিল / রিসেট করা হয়েছে (আনবুকড)।',
+				callStatus: 'customer_note'
+			});
+
+			return { success: true, message: 'কুরিয়ার বুকিং সফলভাবে রিসেট করা হয়েছে!' };
+		} catch (err: any) {
+			return fail(500, { message: err?.message || 'রিসেট করতে ব্যর্থ হয়েছে' });
+		}
+	},
+
+	addNote: async ({ request, platform, locals }) => {
+		const formData = await request.formData();
+		const orderId = formData.get('orderId')?.toString();
+		const note = formData.get('note')?.toString()?.trim();
+		const callStatus = formData.get('callStatus')?.toString()?.trim() || null;
+		const adminName = locals.user?.name || 'Admin Staff';
+
+		if (!orderId || !note) {
+			return fail(400, { message: 'Order ID এবং Note আবশ্যক' });
+		}
+
+		try {
+			const db = getDb(platform);
+			const newId = crypto.randomUUID();
+			const now = new Date();
+
+			await db.insert(schema.orderNotes).values({
+				id: newId,
+				orderId,
+				adminUserId: locals.user?.id || null,
+				adminName,
+				note,
+				callStatus,
+				createdAt: now
+			});
+
+			let updatedStatus: string | null = null;
+			if (note.includes('কনফার্ম') || note.includes('রিসিভড')) {
+				updatedStatus = 'confirmed';
+			} else if (note.includes('ধরে নাই') || note.includes('বাজছে')) {
+				updatedStatus = 'no_response';
+			} else if (note.includes('ব্যস্ত') || note.includes('Busy')) {
+				updatedStatus = 'busy';
+			} else if (note.includes('বন্ধ')) {
+				updatedStatus = 'no_response';
+			}
+
+			if (updatedStatus) {
+				await db
+					.update(schema.orders)
+					.set({ status: updatedStatus, updatedAt: now })
+					.where(eq(schema.orders.id, orderId));
+			}
+
+			return {
+				success: true,
+				note: {
+					id: newId,
+					note,
+					author: adminName,
+					time: now.toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' })
+				},
+				updatedStatus,
+				message: 'নোট সফলভাবে ডাটাবেজে সংরক্ষণ করা হয়েছে!'
+			};
+		} catch (err: any) {
+			console.error('Failed to add order note to D1:', err);
+			return fail(500, { message: err?.message || 'Failed to save note' });
+		}
+	},
+
+	deleteNote: async ({ request, platform }) => {
+		const formData = await request.formData();
+		const noteId = formData.get('noteId')?.toString();
+		if (!noteId) return fail(400, { message: 'Note ID required' });
+
+		try {
+			const db = getDb(platform);
+			await db.delete(schema.orderNotes).where(eq(schema.orderNotes.id, noteId));
+			return { success: true, message: 'নোট মুছে ফেলা হয়েছে' };
+		} catch (err: any) {
+			console.error('Failed to delete note:', err);
+			return fail(500, { message: err?.message || 'Failed to delete note' });
 		}
 	}
 };

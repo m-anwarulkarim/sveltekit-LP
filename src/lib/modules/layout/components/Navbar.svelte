@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import { cart } from '#lib/modules/cart/cart.svelte';
 	import { Button, Badge, Separator } from '#lib/components/ui';
 	import {
@@ -17,8 +17,18 @@
 		Sparkles,
 		PhoneCall,
 		LogOut,
-		Flame
+		Flame,
+		Headphones,
+		BookOpen,
+		Watch,
+		ShoppingBag,
+		Laptop,
+		Shirt,
+		Smartphone,
+		Tv,
+		Baby
 	} from 'lucide-svelte';
+	import { page } from '$app/state';
 
 	import SearchAutocomplete from './SearchAutocomplete.svelte';
 	import { CATEGORIES_DATA } from '#lib/modules/products/categories.data.ts';
@@ -30,12 +40,92 @@
 
 	let { user, onOpenAuth }: Props = $props();
 
+	interface NavCatItem {
+		id: string;
+		slug: string;
+		name: string;
+		nameBn: string;
+		icon: string;
+		productsCount?: number;
+	}
+
+	// Real dynamic categories and store configurations from DB / Layout
+	const navCategories = $derived.by<NavCatItem[]>(() => {
+		const dbCats = page.data?.categories;
+		if (Array.isArray(dbCats) && dbCats.length > 0) {
+			return dbCats.map((c: any) => ({
+				id: c.id,
+				slug: c.slug,
+				name: c.name,
+				nameBn: c.name,
+				icon: c.icon || '📦',
+				productsCount: c.productsCount || 0
+			}));
+		}
+		return CATEGORIES_DATA.map((c) => ({
+			id: c.id,
+			slug: c.slug,
+			name: c.name,
+			nameBn: c.nameBn,
+			icon: c.icon,
+			productsCount: 0
+		}));
+	});
+
+	const storeConfig = $derived(page.data?.storeConfig);
+
 	// State
 	let searchQuery = $state('');
 	let isMobileDrawerOpen = $state(false);
 	let isCategoryDropdownOpen = $state(false);
 	let currentLang = $state<'bn' | 'en'>('bn');
 	let activeMobileTab = $state<'home' | 'categories' | 'cart' | 'account'>('home');
+
+	let categoryDropdownTimer: any = null;
+
+	function handleCategoryMouseEnter() {
+		if (categoryDropdownTimer) {
+			clearTimeout(categoryDropdownTimer);
+			categoryDropdownTimer = null;
+		}
+		isCategoryDropdownOpen = true;
+	}
+
+	function handleCategoryMouseLeave() {
+		if (categoryDropdownTimer) clearTimeout(categoryDropdownTimer);
+		categoryDropdownTimer = setTimeout(() => {
+			isCategoryDropdownOpen = false;
+		}, 180);
+	}
+
+	function handleDocumentClick(e: MouseEvent) {
+		const target = e.target as HTMLElement | null;
+		if (isCategoryDropdownOpen && target && !target.closest('.category-dropdown-container')) {
+			isCategoryDropdownOpen = false;
+		}
+	}
+
+	const iconMap: Record<string, any> = {
+		headphones: Headphones,
+		bookopen: BookOpen,
+		watch: Watch,
+		shoppingbag: ShoppingBag,
+		laptop: Laptop,
+		shirt: Shirt,
+		smartphone: Smartphone,
+		tv: Tv,
+		baby: Baby,
+		sparkles: Sparkles,
+		package: Package,
+		layoutgrid: LayoutGrid,
+		home: Home
+	};
+
+	function getCategoryIconComponent(iconName: string) {
+		if (!iconName) return null;
+		const clean = iconName.toLowerCase().replace(/[^a-z0-9]/g, '');
+		return iconMap[clean] || null;
+	}
 
 	function handleSearch(e: SubmitEvent) {
 		e.preventDefault();
@@ -53,12 +143,14 @@
 	}
 </script>
 
+<svelte:window onclick={handleDocumentClick} />
+
 <header class="w-full bg-white font-['Anek_Bangla',sans-serif] selection:bg-[#5845eb]/20 selection:text-[#5845eb] border-b border-slate-100 shadow-xs sticky top-0 z-40">
 	
 	<!-- 1. Top Announcement Bar (Dashboard Theme: Purple Gradient) -->
 	<div class="bg-gradient-to-r from-[#4936d6] via-[#5845eb] to-[#7c3aed] text-white text-xs sm:text-sm font-bold py-2 px-4 text-center tracking-wide flex items-center justify-center gap-2 shadow-xs">
 		<span class="inline-block animate-bounce">🚚</span>
-		<span>৳৬০০+ অর্ডার করলেই ডেলিভারি সম্পূর্ণ ফ্রি!</span>
+		<span>৳{storeConfig?.freeShippingThreshold || 600}+ অর্ডার করলেই ডেলিভারি সম্পূর্ণ ফ্রি!</span>
 	</div>
 
 	<!-- 2. Main Header Row (Desktop & Mobile) -->
@@ -133,8 +225,8 @@
 				{:else}
 					<Button
 						variant="ghost"
-						onclick={onOpenAuth}
-						class="hidden md:inline-flex h-auto items-center gap-2 px-3 py-1.5 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all text-left cursor-pointer group font-normal"
+						href="/auth/login"
+						class="hidden md:inline-flex h-auto items-center gap-2 px-3 py-1.5 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all text-left group font-normal"
 					>
 						<div class="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 group-hover:bg-[#5845eb] group-hover:text-white flex items-center justify-center text-[#5845eb] transition-colors shrink-0">
 							<User class="w-4 h-4 stroke-[2.5]" />
@@ -237,35 +329,53 @@
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 			<div class="flex items-center justify-between h-11">
 				
-				<!-- Left: "সকল ক্যাটাগরি" Dropdown Button -->
-				<div class="relative">
+				<!-- Left: "সকল ক্যাটাগরি" Dropdown Button (Hover & Click Supported) -->
+				<div
+					class="relative category-dropdown-container group/cat"
+					onmouseenter={handleCategoryMouseEnter}
+					onmouseleave={handleCategoryMouseLeave}
+					role="navigation"
+				>
 					<Button
 						variant="ghost"
 						onclick={() => (isCategoryDropdownOpen = !isCategoryDropdownOpen)}
-						class="h-auto p-0 hover:bg-transparent flex items-center gap-2 text-xs font-black tracking-wide text-slate-800 hover:text-[#5845eb] transition-colors py-2 cursor-pointer group"
+						class="h-auto p-0 hover:bg-transparent flex items-center gap-2 text-xs font-black tracking-wide {isCategoryDropdownOpen ? 'text-[#5845eb]' : 'text-slate-800'} hover:text-[#5845eb] transition-colors py-2 cursor-pointer group"
 					>
 						<LayoutGrid class="w-4 h-4 text-pink-600 group-hover:text-[#5845eb] transition-colors" />
 						<span>সকল ক্যাটাগরি</span>
-						<ChevronDown class="w-3 h-3 text-slate-400 group-hover:rotate-180 transition-transform duration-200" />
+						<ChevronDown class="w-3 h-3 text-slate-400 group-hover:text-[#5845eb] {isCategoryDropdownOpen ? 'rotate-180 text-[#5845eb]' : ''} transition-transform duration-200" />
 					</Button>
 
 					<!-- Category Dropdown Menu -->
 					{#if isCategoryDropdownOpen}
-						<div class="absolute left-0 top-full pt-1 w-64 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+						<div class="absolute left-0 top-full pt-1.5 w-64 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
 							<div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xl p-2 space-y-1 max-h-96 overflow-y-auto no-scrollbar">
-								{#each CATEGORIES_DATA as cat}
+								{#each navCategories as cat}
+									{@const IconComp = getCategoryIconComponent(cat.icon)}
 									<a
 										href="/categories/{cat.slug}"
 										onclick={() => (isCategoryDropdownOpen = false)}
-										class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-[#5845eb] hover:bg-indigo-50/60 transition-colors"
+										class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-[#5845eb] hover:bg-indigo-50/60 transition-colors group/item"
 									>
 										<div class="flex items-center gap-2.5">
-											<span class="text-sm">{cat.icon}</span>
-											<span>{cat.nameBn}</span>
+											{#if IconComp}
+												<IconComp class="w-4 h-4 text-slate-500 group-hover/item:text-[#5845eb] transition-colors shrink-0" />
+											{:else if cat.icon && cat.icon.length <= 4}
+												<span class="text-sm shrink-0">{cat.icon}</span>
+											{:else}
+												<LayoutGrid class="w-4 h-4 text-slate-400 group-hover/item:text-[#5845eb] transition-colors shrink-0" />
+											{/if}
+											<span>{cat.nameBn || cat.name}</span>
 										</div>
-										<span class="text-[10px] text-slate-400 font-medium">
-											{cat.name}
-										</span>
+										{#if cat.productsCount !== undefined && cat.productsCount > 0}
+											<span class="text-[10px] text-slate-400 font-medium">
+												{cat.productsCount}
+											</span>
+										{:else if cat.name && cat.name !== cat.nameBn}
+											<span class="text-[10px] text-slate-400 font-medium">
+												{cat.name}
+											</span>
+										{/if}
 									</a>
 								{/each}
 							</div>
@@ -311,14 +421,13 @@
 							<span>একাউন্ট</span>
 						</a>
 					{:else}
-						<Button
-							variant="ghost"
-							onclick={onOpenAuth}
-							class="h-auto p-0 hover:bg-transparent flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-[#5845eb] transition-colors cursor-pointer group"
+						<a
+							href="/auth/login"
+							class="flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-[#5845eb] transition-colors group"
 						>
 							<User class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#5845eb] transition-colors" />
-							<span>একাউন্ট</span>
-						</Button>
+							<span>লগইন</span>
+						</a>
 					{/if}
 
 					<a
@@ -333,7 +442,7 @@
 				<!-- Hot Support Line / Right Quick Contact -->
 				<div class="hidden lg:flex items-center gap-2 text-xs font-bold text-slate-500">
 					<PhoneCall class="w-3.5 h-3.5 text-[#5845eb]" />
-					<span>হটলাইন: <strong class="text-slate-900 font-mono">01860-229546</strong></span>
+					<span>হটলাইন: <strong class="text-slate-900 font-mono">{storeConfig?.hotlinePhone || '01860-229546'}</strong></span>
 				</div>
 			</div>
 		</div>
@@ -411,17 +520,14 @@
 						<span>আমার একাউন্ট</span>
 					</a>
 				{:else}
-					<Button
-						variant="ghost"
-						onclick={() => {
-							isMobileDrawerOpen = false;
-							onOpenAuth();
-						}}
-						class="w-full h-auto justify-start flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-[#5845eb] transition-colors cursor-pointer text-left font-normal"
+					<a
+						href="/auth/login"
+						onclick={() => (isMobileDrawerOpen = false)}
+						class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-[#5845eb] transition-colors"
 					>
 						<User class="w-4 h-4 text-slate-400" />
 						<span>লগইন / রেজিস্টার করুন</span>
-					</Button>
+					</a>
 				{/if}
 			</div>
 
@@ -431,19 +537,32 @@
 					ক্যাটাগরি সমূহ
 				</div>
 				<div class="space-y-0.5 mt-1 max-h-60 overflow-y-auto no-scrollbar">
-					{#each CATEGORIES_DATA as cat}
+					{#each navCategories as cat}
+						{@const IconComp = getCategoryIconComponent(cat.icon)}
 						<a
 							href="/categories/{cat.slug}"
 							onclick={() => (isMobileDrawerOpen = false)}
 							class="flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
 						>
 							<div class="flex items-center gap-2">
-								<span>{cat.icon}</span>
-								<span>{cat.nameBn}</span>
+								{#if IconComp}
+									<IconComp class="w-4 h-4 text-slate-400 shrink-0" />
+								{:else if cat.icon && cat.icon.length <= 4}
+									<span class="text-sm shrink-0">{cat.icon}</span>
+								{:else}
+									<LayoutGrid class="w-4 h-4 text-slate-400 shrink-0" />
+								{/if}
+								<span>{cat.nameBn || cat.name}</span>
 							</div>
-							<span class="text-[10px] text-slate-400">
-								{cat.name}
-							</span>
+							{#if cat.productsCount !== undefined && cat.productsCount > 0}
+								<span class="text-[10px] text-slate-400">
+									{cat.productsCount}
+								</span>
+							{:else if cat.name && cat.name !== cat.nameBn}
+								<span class="text-[10px] text-slate-400">
+									{cat.name}
+								</span>
+							{/if}
 						</a>
 					{/each}
 				</div>
@@ -453,7 +572,7 @@
 		<!-- Drawer Footer Contact -->
 		<div class="p-4 border-t border-slate-100 bg-slate-50/50">
 			<div class="text-xs text-slate-500 font-medium">
-				হটলাইন: <strong class="text-slate-900 font-mono font-bold">01860-229546</strong>
+				হটলাইন: <strong class="text-slate-900 font-mono font-bold">{storeConfig?.hotlinePhone || '01860-229546'}</strong>
 			</div>
 			<div class="text-[11px] text-slate-400 mt-1">
 				সকাল ৯টা - রাত ১০টা পর্যন্ত খোলা
@@ -515,30 +634,14 @@
 	</button>
 
 	<!-- 4. একাউন্ট (Account) -->
-	{#if user}
-		<a
-			href="/account"
-			onclick={() => (activeMobileTab = 'account')}
-			class="flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all {activeMobileTab === 'account'
-				? 'text-[#5845eb] font-bold'
-				: 'text-slate-500 hover:text-slate-800'}"
-		>
-			<User class="w-5 h-5 {activeMobileTab === 'account' ? 'text-[#5845eb] stroke-[2.5]' : 'stroke-[1.8]'}" />
-			<span class="text-[10.5px] mt-0.5 leading-none">একাউন্ট</span>
-		</a>
-	{:else}
-		<button
-			type="button"
-			onclick={() => {
-				activeMobileTab = 'account';
-				onOpenAuth();
-			}}
-			class="flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all cursor-pointer {activeMobileTab === 'account'
-				? 'text-[#5845eb] font-bold'
-				: 'text-slate-500 hover:text-slate-800'}"
-		>
-			<User class="w-5 h-5 {activeMobileTab === 'account' ? 'text-[#5845eb] stroke-[2.5]' : 'stroke-[1.8]'}" />
-			<span class="text-[10.5px] mt-0.5 leading-none">একাউন্ট</span>
-		</button>
-	{/if}
+	<a
+		href={user ? "/account" : "/auth/login"}
+		onclick={() => (activeMobileTab = 'account')}
+		class="flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all {activeMobileTab === 'account'
+			? 'text-[#5845eb] font-bold'
+			: 'text-slate-500 hover:text-slate-800'}"
+	>
+		<User class="w-5 h-5 {activeMobileTab === 'account' ? 'text-[#5845eb] stroke-[2.5]' : 'stroke-[1.8]'}" />
+		<span class="text-[10.5px] mt-0.5 leading-none">{user ? 'একাউন্ট' : 'লগইন'}</span>
+	</a>
 </nav>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/state';
 	import { Button, Badge } from '#lib/components/ui';
 	import {
 		Search,
@@ -19,7 +20,7 @@
 	}
 
 	let {
-		placeholder = 'বীজ বা পছন্দের পণ্য খুঁজুন... (যেমন: oil, noodles, বীজ)',
+		placeholder = 'পছন্দের পণ্য বা ক্যাটাগরি খুঁজুন...',
 		class: className = '',
 		onSearch
 	}: Props = $props();
@@ -32,44 +33,29 @@
 	let searchContainerEl = $state<HTMLDivElement | null>(null);
 	let inputEl = $state<HTMLInputElement | null>(null);
 
-	// Curated Popular Tag Sets (matching user's screenshot & store catalog)
-	const POPULAR_TAG_SETS = [
-		// Set 1: Exact items from user screenshot
-		[
-			{ text: 'ruchi sauce', trending: true },
-			{ text: 'chopstick instant noodles', trending: true },
-			{ text: 'radhuni mustard oil', trending: false },
-			{ text: 'radhuni sunflower oil', trending: false },
-			{ text: 'ruchi pickle', trending: false },
-			{ text: 'radhuni ghee', trending: false },
-			{ text: 'hoco eq34 plus', trending: false },
-			{ text: 'lux body wash', trending: false },
-			{ text: 'vape', trending: false },
-			{ text: 'body wash', trending: false }
-		],
-		// Set 2: Seed & Gardening Specials
-		[
-			{ text: 'হাইব্রিড মরিচ বীজ', trending: true },
-			{ text: 'লাল শাক বীজ', trending: true },
-			{ text: 'দেশি শসা বীজ', trending: false },
-			{ text: 'বারোমাসি টমেটো', trending: false },
-			{ text: 'ভার্মিকম্পোস্ট সার', trending: false },
-			{ text: 'গার্ডেনিং স্প্রেয়ার', trending: false },
-			{ text: 'সূর্যমুখী বীজ', trending: false },
-			{ text: 'কলম আমের চারা', trending: false },
-			{ text: 'ড্রাগন ফ্রুট চারা', trending: false }
-		],
-		// Set 3: Daily Essentials & Combos
-		[
-			{ text: 'স্পেশাল কম্বো অফার', trending: true },
-			{ text: 'অর্গানিক কোকোপিট', trending: true },
-			{ text: 'কাগজি লেবু চারা', trending: false },
-			{ text: 'শীতকালীন সবজি প্যাকেজ', trending: false },
-			{ text: 'বীজ ট্রে ও টব', trending: false },
-			{ text: 'পোকা দমন স্প্রে', trending: false },
-			{ text: 'ধনেপাতা বীজ', trending: false }
-		]
-	];
+	// Dynamic Tag Sets from real database categories
+	const dynamicTagSets = $derived.by(() => {
+		const cats = page.data?.categories;
+		if (Array.isArray(cats) && cats.length > 0) {
+			const tagList = cats.map((c: any, i: number) => ({
+				text: c.name,
+				trending: i < 4
+			}));
+			// Split into chunks of 6-8 tags
+			const sets: { text: string; trending: boolean }[][] = [];
+			for (let i = 0; i < tagList.length; i += 6) {
+				sets.push(tagList.slice(i, i + 6));
+			}
+			return sets.length > 0 ? sets : [tagList];
+		}
+		return [
+			[
+				{ text: 'সকল পণ্য', trending: true },
+				{ text: 'হট ডিলস', trending: true },
+				{ text: 'নতুন কালেকশন', trending: false }
+			]
+		];
+	});
 
 	// Recent searches saved in localStorage
 	let recentSearches = $state<string[]>([]);
@@ -161,7 +147,7 @@
 	function handleRefreshSuggestions() {
 		isRefreshing = true;
 		setTimeout(() => {
-			activeSetIndex = (activeSetIndex + 1) % POPULAR_TAG_SETS.length;
+			activeSetIndex = (activeSetIndex + 1) % dynamicTagSets.length;
 			isRefreshing = false;
 		}, 300);
 	}
@@ -172,13 +158,13 @@
 	}
 
 	// Filtered tags based on user input
-	let currentPopularTags = $derived(POPULAR_TAG_SETS[activeSetIndex]);
+	let currentPopularTags = $derived(dynamicTagSets[activeSetIndex % dynamicTagSets.length] || []);
 	
 	let filteredTags = $derived.by(() => {
 		const q = searchQuery.trim().toLowerCase();
 		if (!q) return currentPopularTags;
 		// If user typed something, search through all sets
-		const all = POPULAR_TAG_SETS.flat();
+		const all = dynamicTagSets.flat();
 		const matches = all.filter((item) => item.text.toLowerCase().includes(q));
 		// Remove duplicates
 		const seen = new Set<string>();

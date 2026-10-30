@@ -439,39 +439,39 @@ export const productsData: Product[] = [
 	}
 ];
 
-// Helper functions for dynamic storefront sections
+// 100% Dynamic Helper functions for real storefront sections
 export function getBestSaleProducts(all: Product[] = productsData): Product[] {
-	return all.filter(
+	if (!all || all.length === 0) return [];
+	const matched = all.filter(
 		(p) =>
 			p.badge === 'Bestseller' ||
 			p.badge === 'Hot Deal' ||
 			p.badge === 'Best Sale' ||
-			(p.discountPercent && p.discountPercent >= 25)
+			(p.discountPercent && p.discountPercent >= 15)
 	);
+	return matched.length >= 4 ? matched : all.slice(0, 8);
 }
 
 export function getNewArrivals(all: Product[] = productsData): Product[] {
-	return all.filter(
+	if (!all || all.length === 0) return [];
+	const matched = all.filter(
 		(p) =>
 			p.badge === 'New Arrival' ||
-			p.badge === 'Gentle' ||
-			p.id === 'soundcore-motion-boom' ||
-			p.id === 'oraimo-smart-trimmer' ||
-			p.id === 'aura-spectrum-x' ||
-			p.id === 'gadget-oraimo-watch4'
+			p.badge === 'Published' ||
+			p.badge === 'New'
 	);
+	return matched.length >= 4 ? matched : all.slice(0, 8);
 }
 
 export function getPopularProducts(all: Product[] = productsData): Product[] {
-	return all.filter(
+	if (!all || all.length === 0) return [];
+	const matched = all.filter(
 		(p) =>
 			p.badge === 'Popular' ||
 			p.badge === 'Top Rated' ||
 			p.badge === 'Trending' ||
-			p.reviewsCount >= 180 ||
-			p.id === 'ordinary-niacinamide-10' ||
-			p.id === 'cerave-hydrating-cleanser' ||
-			p.id === 'boj-sunscreen-spf50' ||
-			p.id === 'book-paradoxical-sajid'
+			(p.reviewsCount && p.reviewsCount > 50) ||
+			(p.rating && p.rating >= 4.5)
 	);
+	return matched.length >= 4 ? matched : all.slice(0, 8);
 }

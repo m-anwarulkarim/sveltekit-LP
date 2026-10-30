@@ -5,7 +5,9 @@
 		TabsList,
 		TabsTrigger,
 		TabsContent,
-		Button
+		Button,
+		Input,
+		Textarea
 	} from '#lib/components/ui';
 	import {
 		FileText,
@@ -14,44 +16,36 @@
 		Truck,
 		Star,
 		CheckCircle2,
-		ShieldCheck
+		ShieldCheck,
+		Send,
+		UserCheck
 	} from 'lucide-svelte';
+	import { enhance } from '$app/forms';
+	import { toast } from '#lib/components/ui';
+
+	interface ReviewItem {
+		id: string;
+		name: string;
+		city: string;
+		rating: number;
+		title?: string;
+		comment: string;
+		verified?: boolean;
+		date: string;
+	}
 
 	interface Props {
 		product: Product;
+		reviews?: ReviewItem[];
 	}
 
-	let { product }: Props = $props();
+	let { product, reviews = [] }: Props = $props();
 
 	type TabId = 'description' | 'specifications' | 'reviews' | 'shipping';
 	let activeTab = $state<TabId>('description');
-
-	const mockReviews = [
-		{
-			id: '1',
-			name: 'তানভীর আহমেদ',
-			city: 'ঢাকা',
-			rating: 5,
-			date: '৩ দিন আগে',
-			comment: '১০০% অরিজিনাল প্রডাক্ট পেয়েছি! প্যাকেজিং খুবই ভালো ছিল এবং একদিনের মধ্যেই ডেলিভারি পেয়েছি। ধন্যবাদ!'
-		},
-		{
-			id: '2',
-			name: 'আরিফুল ইসলাম',
-			city: 'চট্টগ্রাম',
-			rating: 5,
-			date: '১ সপ্তাহ আগে',
-			comment: 'দাম এবং কোয়ালিটি দুটোই অসাধারণ। সরাসরি অথেনটিক সিল দেওয়া ছিল। অবশ্যই রিকমেন্ড করব।'
-		},
-		{
-			id: '3',
-			name: 'মেহেদী হাসান',
-			city: 'সিলেট',
-			rating: 4,
-			date: '২ সপ্তাহ আগে',
-			comment: 'খুবই দ্রুত সার্ভিস। প্রডাক্টের রেজাল্ট ভালো পাচ্ছি। ক্যাশ অন ডেলিভারিতে চেক করে নিতে পেরেছি।'
-		}
-	];
+	let isWritingReview = $state(false);
+	let newRating = $state(5);
+	let isSubmitting = $state(false);
 </script>
 
 <div class="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden font-['Anek_Bangla',sans-serif]">
@@ -189,7 +183,7 @@
 									{/each}
 								</div>
 								<div class="text-xs text-slate-500 font-medium">
-									{product.reviewsCount} জন ক্রেতার রেটিং এর ভিত্তিতে
+									{reviews.length > 0 ? `${reviews.length} জন ক্রেতার রিয়েল রিভিউ` : 'এখনও কোনো রিভিউ যুক্ত হয়নি'}
 								</div>
 							</div>
 						</div>
@@ -197,37 +191,150 @@
 						<Button
 							type="button"
 							variant="default"
+							onclick={() => (isWritingReview = !isWritingReview)}
 							class="h-auto px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors cursor-pointer"
 						>
-							রিভিউ লিখুন
+							{isWritingReview ? 'বাতিল করুন' : 'রিভিউ লিখুন'}
 						</Button>
 					</div>
 
+					<!-- Inline Add Review Form -->
+					{#if isWritingReview}
+						<form
+							method="POST"
+							action="?/addReview"
+							use:enhance={() => {
+								isSubmitting = true;
+								return async ({ result, update }) => {
+									isSubmitting = false;
+									if (result.type === 'success') {
+										toast.success('আপনার রিভিউ সফলভাবে প্রকাশ করা হয়েছে!');
+										isWritingReview = false;
+										await update();
+									} else {
+										toast.error('রিভিউ সেভ করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
+									}
+								};
+							}}
+							class="p-5 rounded-2xl border border-indigo-100 bg-indigo-50/40 space-y-4 animate-in fade-in"
+						>
+							<input type="hidden" name="productId" value={product.id} />
+							<input type="hidden" name="rating" value={newRating} />
+
+							<div class="flex items-center justify-between">
+								<span class="text-xs font-bold text-slate-900">আপনার রেটিং নির্বাচন করুন:</span>
+								<div class="flex items-center gap-1">
+									{#each [1, 2, 3, 4, 5] as star}
+										<button
+											type="button"
+											onclick={() => (newRating = star)}
+											class="p-1 hover:scale-110 transition-transform cursor-pointer"
+											aria-label="{star} Star"
+										>
+											<Star
+												class="w-5 h-5 {star <= newRating ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}"
+											/>
+										</button>
+									{/each}
+								</div>
+							</div>
+
+							<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+								<div>
+									<label class="block text-xs font-semibold text-slate-700 mb-1">আপনার নাম *</label>
+									<Input name="author" placeholder="যেমন: রাশেদ করিম" required class="bg-white rounded-xl text-xs" />
+								</div>
+								<div>
+									<label class="block text-xs font-semibold text-slate-700 mb-1">শিরোনাম (ঐচ্ছিক)</label>
+									<Input name="title" placeholder="যেমন: দারুণ পণ্য ও ফাস্ট ডেলিভারি" class="bg-white rounded-xl text-xs" />
+								</div>
+							</div>
+
+							<div>
+								<label class="block text-xs font-semibold text-slate-700 mb-1">আপনার মতামত ও অভিজ্ঞতা *</label>
+								<Textarea
+									name="content"
+									rows={3}
+									placeholder="পণ্যের গুণগত মান ও আপনার অভিজ্ঞতা সম্পর্কে বিস্তারিত লিখুন..."
+									required
+									class="bg-white rounded-xl text-xs resize-none"
+								/>
+							</div>
+
+							<div class="flex justify-end gap-2 pt-1">
+								<Button
+									type="button"
+									variant="ghost"
+									onclick={() => (isWritingReview = false)}
+									class="text-xs h-auto py-2"
+								>
+									বাতিল
+								</Button>
+								<Button
+									type="submit"
+									disabled={isSubmitting}
+									class="bg-[#5845eb] hover:bg-[#4936d6] text-white text-xs h-auto py-2 px-5 rounded-xl font-bold gap-1.5"
+								>
+									<Send class="w-3.5 h-3.5" />
+									<span>{isSubmitting ? 'পাঠানো হচ্ছে...' : 'রিভিউ প্রকাশ করুন'}</span>
+								</Button>
+							</div>
+						</form>
+					{/if}
+
 					<!-- Customer Review List -->
 					<div class="space-y-3 pt-2">
-						{#each mockReviews as rev}
-							<div class="p-4 rounded-xl border border-slate-100 bg-white shadow-2xs space-y-2">
-								<div class="flex items-center justify-between">
-									<div class="flex items-center gap-2">
-										<div class="w-8 h-8 rounded-full bg-blue-100 text-[#2563eb] font-bold text-xs flex items-center justify-center">
-											{rev.name.charAt(0)}
+						{#if reviews.length > 0}
+							{#each reviews as rev}
+								<div class="p-4 rounded-xl border border-slate-100 bg-white shadow-2xs space-y-2">
+									<div class="flex items-center justify-between">
+										<div class="flex items-center gap-2">
+											<div class="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-100 text-[#5845eb] font-bold text-xs flex items-center justify-center">
+												{rev.name ? rev.name.charAt(0) : 'U'}
+											</div>
+											<div>
+												<div class="flex items-center gap-1.5">
+													<span class="text-xs font-bold text-slate-800 block">{rev.name}</span>
+													{#if rev.verified}
+														<span class="inline-flex items-center gap-0.5 text-[9px] bg-emerald-50 text-emerald-600 px-1.5 py-0.2 rounded-full font-bold">
+															<CheckCircle2 class="w-2.5 h-2.5" /> ভেরিফাইড
+														</span>
+													{/if}
+												</div>
+												<span class="text-[10px] text-slate-400">{rev.city || 'ক্রেতা'} • {rev.date}</span>
+											</div>
 										</div>
-										<div>
-											<span class="text-xs font-bold text-slate-800 block">{rev.name}</span>
-											<span class="text-[10px] text-slate-400">{rev.city} • {rev.date}</span>
+										<div class="flex text-amber-400 gap-0.5">
+											{#each Array(rev.rating || 5) as _}
+												<Star class="w-3 h-3 fill-amber-400 text-amber-400" />
+											{/each}
 										</div>
 									</div>
-									<div class="flex text-amber-400 gap-0.5">
-										{#each Array(rev.rating) as _}
-											<Star class="w-3 h-3 fill-amber-400 text-amber-400" />
-										{/each}
-									</div>
+									{#if rev.title}
+										<div class="text-xs font-bold text-slate-800">{rev.title}</div>
+									{/if}
+									<p class="text-xs text-slate-600 leading-relaxed">
+										"{rev.comment}"
+									</p>
 								</div>
-								<p class="text-xs text-slate-600 leading-relaxed">
-									"{rev.comment}"
+							{/each}
+						{:else}
+							<div class="text-center py-10 px-4 rounded-2xl bg-slate-50 border border-dashed border-slate-200 space-y-2">
+								<MessageSquare class="w-8 h-8 text-slate-300 mx-auto" />
+								<p class="text-sm font-bold text-slate-700">এই পণ্যে এখনও কোনো রিভিউ দেওয়া হয়নি</p>
+								<p class="text-xs text-slate-500 max-w-sm mx-auto">
+									আপনি কি পণ্যটি কিনেছেন? আপনার মূল্যবান অভিজ্ঞতা জানিয়ে প্রথম রিভিউটি আপনি দিন।
 								</p>
+								<Button
+									type="button"
+									variant="outline"
+									onclick={() => (isWritingReview = true)}
+									class="text-xs font-bold mt-2 rounded-xl border-slate-300"
+								>
+									প্রথম রিভিউ দিন
+								</Button>
 							</div>
-						{/each}
+						{/if}
 					</div>
 				</div>
 			</TabsContent>

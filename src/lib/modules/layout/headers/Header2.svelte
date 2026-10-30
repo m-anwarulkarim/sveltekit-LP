@@ -22,6 +22,22 @@
 
 	let { user = null, onOpenAuth = () => {} }: Props = $props();
 
+	// Real dynamic categories and store config
+	const navCategories = $derived.by(() => {
+		const dbCats = page.data?.categories;
+		if (Array.isArray(dbCats) && dbCats.length > 0) {
+			return dbCats.map((c: any) => ({
+				id: c.id,
+				slug: c.slug,
+				name: c.name,
+				icon: c.icon || '📦'
+			}));
+		}
+		return CATEGORIES_DATA;
+	});
+
+	const storeConfig = $derived(page.data?.storeConfig);
+
 	let isMobileMenuOpen = $state(false);
 	let isSearchOpen = $state(false);
 	let searchQuery = $state('');
@@ -116,14 +132,14 @@
 					</span>
 				</a>
 			{:else}
-				<button
-					type="button"
-					onclick={onOpenAuth}
-					class="p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-200/90 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+				<a
+					href="/auth/login"
+					class="p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-200/90 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-1.5 transition-all shadow-2xs"
+					aria-label="লগইন করুন"
 				>
 					<User class="w-4 h-4 text-[#5845eb]" />
 					<span class="hidden md:inline text-xs font-bold text-slate-800">লগইন</span>
-				</button>
+				</a>
 			{/if}
 
 			<!-- Cart Button with Pill Badge & Total Amount -->
@@ -238,7 +254,7 @@
 				<div class="space-y-1 pt-2 border-t border-slate-100">
 					<span class="text-[10px] font-black uppercase tracking-wider text-slate-400">পপুলার ক্যাটাগরি</span>
 					<div class="grid grid-cols-2 gap-2 pt-2">
-						{#each CATEGORIES_DATA.slice(0, 6) as cat}
+						{#each navCategories.slice(0, 8) as cat}
 							<a
 								href="/categories/{cat.slug}"
 								onclick={() => (isMobileMenuOpen = false)}
@@ -255,7 +271,7 @@
 			<div class="p-5 bg-slate-50 border-t border-slate-100 space-y-2 text-xs">
 				<div class="flex items-center gap-2 text-slate-600 font-medium">
 					<Phone class="w-3.5 h-3.5 text-[#5845eb]" />
-					<span>হটলাইন: {DEFAULT_HEADER_DATA.phoneHotline}</span>
+					<span>হটলাইন: {storeConfig?.hotlinePhone || DEFAULT_HEADER_DATA.phoneHotline}</span>
 				</div>
 				<p class="text-[10.5px] text-slate-400">© 2026 {DEFAULT_HEADER_DATA.brandName}. All rights reserved.</p>
 			</div>

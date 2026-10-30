@@ -18,6 +18,7 @@ export interface ClientPixelConfig {
 }
 
 let isPixelInitialized = false;
+let activeConfig: ClientPixelConfig | null = null;
 
 declare global {
 	interface Window {
@@ -31,6 +32,7 @@ declare global {
  */
 export function initMetaPixel(config?: ClientPixelConfig | null): void {
 	if (typeof window === 'undefined' || !config) return;
+	activeConfig = config;
 	if (config.trackingMode !== 'native_direct' || !config.pixelId) return;
 	if (isPixelInitialized) return;
 
@@ -74,16 +76,18 @@ export function initMetaPixel(config?: ClientPixelConfig | null): void {
  * Triggers PageView event on SvelteKit client-side route transitions (afterNavigate)
  */
 export function trackPageView(config?: ClientPixelConfig | null): void {
-	if (typeof window === 'undefined' || !config) return;
-	if (config.trackingMode !== 'native_direct' || !config.pixelId) return;
+	if (typeof window === 'undefined') return;
+	const cfg = config || activeConfig;
+	if (!cfg || cfg.trackingMode !== 'native_direct' || !cfg.pixelId) return;
 
-	if (typeof window.fbq === 'function' && config.events?.pageView !== false) {
+	if (typeof window.fbq === 'function' && cfg.events?.pageView !== false) {
 		window.fbq('track', 'PageView');
 	}
 }
 
 /**
  * Fires a standard Meta event with optional deduplication eventID
+ * Respects event toggles configured in the admin dashboard
  */
 export function trackMetaEvent(
 	eventName: string,
@@ -91,6 +95,15 @@ export function trackMetaEvent(
 	eventId?: string
 ): void {
 	if (typeof window === 'undefined' || typeof window.fbq !== 'function') return;
+
+	// Check if this specific event has been disabled in Dashboard Settings
+	if (activeConfig?.events) {
+		if (eventName === 'PageView' && activeConfig.events.pageView === false) return;
+		if (eventName === 'ViewContent' && activeConfig.events.viewContent === false) return;
+		if (eventName === 'AddToCart' && activeConfig.events.addToCart === false) return;
+		if (eventName === 'InitiateCheckout' && activeConfig.events.initiateCheckout === false) return;
+		if (eventName === 'Purchase' && activeConfig.events.purchase === false) return;
+	}
 
 	if (eventId) {
 		window.fbq('track', eventName, params, { eventID: eventId });

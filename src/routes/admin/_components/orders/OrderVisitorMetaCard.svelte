@@ -31,14 +31,14 @@
 
 	let {
 		meta = {
-			source: 'Facebook Ad',
-			fingerprint: 'fp_aura_9182',
-			ip: '103.162.51.5',
-			device: 'মোবাইল (Android / Chrome)',
-			totalVisits: 2,
-			activeTime: '45 সেকেন্ড',
-			avgLoad: '2.1s',
-			firstVisit: 'আজ, ৯:০৭ AM'
+			source: 'Direct',
+			fingerprint: 'অনুপলব্ধ',
+			ip: 'রেকর্ড নেই',
+			device: 'ওয়েব ব্রাউজার',
+			totalVisits: 1,
+			activeTime: 'N/A',
+			avgLoad: 'N/A',
+			firstVisit: 'আজ'
 		},
 		isBanned = $bindable(false),
 		onToggleBan
@@ -67,7 +67,7 @@
 				<Network class="w-3.5 h-3.5" />
 				<span>IP অ্যাড্রেস:</span>
 			</span>
-			<span class="font-mono font-bold text-slate-900">{meta.ip || '103.162.51.5'}</span>
+			<span class="font-mono font-bold text-slate-900">{meta.ip || 'রেকর্ড নেই'}</span>
 		</div>
 
 		<!-- Device -->
@@ -76,7 +76,7 @@
 				<Smartphone class="w-3.5 h-3.5" />
 				<span>ডিভাইস:</span>
 			</span>
-			<span class="font-semibold text-slate-800 truncate max-w-[170px]">{meta.device || 'Android Phone'}</span>
+			<span class="font-semibold text-slate-800 text-right truncate max-w-[210px] text-[11px]" title={meta.device}>{meta.device || 'ওয়েব ব্রাউজার'}</span>
 		</div>
 
 		<!-- Visits & Session Stats -->

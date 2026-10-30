@@ -5,13 +5,13 @@
 	let isSaved = $state(false);
 	let saveMessage = $state('Chat Settings Saved!');
 
-	let enableWhatsApp = $state(true);
-	let whatsappNumber = $state('+8801860229546');
+	let enableWhatsApp = $state(false);
+	let whatsappNumber = $state('');
 	let whatsappDefaultMessage = $state('হ্যালো! প্রোডাক্ট সম্পর্কে বিস্তারিত জানতে চাই।');
 	let buttonPosition = $state<'bottom-right' | 'bottom-left'>('bottom-right');
 
-	let enableMessenger = $state(true);
-	let messengerPageId = $state('109283910293847');
+	let enableMessenger = $state(false);
+	let messengerPageId = $state('');
 
 	let enableTawkTo = $state(false);
 	let tawkPropertyId = $state('');

@@ -21,4 +21,11 @@ export * from './notification.service';
 export * from './admin-profile.service';
 export * from './customization.service';
 export * from './theme-customization.service';
+export * from './brand.service';
+export * from './review.service';
+export * from './cart.service';
+export * from './coupon.service';
+export * from './gtm.service';
+export * from './landing-page.service';
+export * from './bkash.service';
 

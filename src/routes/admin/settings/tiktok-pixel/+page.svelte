@@ -5,9 +5,9 @@
 	let isSaved = $state(false);
 	let saveMessage = $state('TikTok Pixel Settings Saved!');
 
-	let tiktokPixelId = $state('C9J829XLS8');
+	let tiktokPixelId = $state('');
 	let tiktokAccessToken = $state('');
-	let enableTikTokEventsAPI = $state(true);
+	let enableTikTokEventsAPI = $state(false);
 	let testEventCode = $state('');
 
 	function triggerSave(msg = 'TikTok Pixel Settings Saved!') {

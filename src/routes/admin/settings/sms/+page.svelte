@@ -6,11 +6,11 @@
 	let saveMessage = $state('SMS Gateway Settings Saved!');
 
 	let smsProvider = $state('greenweb');
-	let apiKey = $state('gw_live_9837492837492');
-	let senderId = $state('COLORLIGHT');
-	let sendOnNewOrder = $state(true);
-	let sendOnShipping = $state(true);
-	let sendOnDelivery = $state(true);
+	let apiKey = $state('');
+	let senderId = $state('');
+	let sendOnNewOrder = $state(false);
+	let sendOnShipping = $state(false);
+	let sendOnDelivery = $state(false);
 	let newOrderTemplate = $state('প্রিয় {customer_name}, আপনার অর্ডার #{order_id} সফলভাবে গৃহীত হয়েছে। মোট মূল্য: ৳{amount}। ধন্যবাদ!');
 
 	function triggerSave(msg = 'SMS Gateway Settings Saved!') {

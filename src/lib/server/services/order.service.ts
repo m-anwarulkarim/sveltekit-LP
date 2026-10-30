@@ -14,6 +14,7 @@ export interface OrderCreationContext {
 	ipAddress?: string;
 	userAgent?: string;
 	source?: string;
+	deviceFingerprint?: string;
 }
 
 export interface OrderCreationResult {
@@ -147,8 +148,24 @@ export class OrderService {
 			items: JSON.stringify(data.items),
 			source: context?.source || 'Web Checkout',
 			ipAddress: context?.ipAddress || null,
-			userAgent: context?.userAgent || null
+			userAgent: context?.userAgent || null,
+			deviceFingerprint: context?.deviceFingerprint || null
 		};
+
+		// Clean up previous incomplete drop-off record if customer now completed checkout
+		try {
+			await db
+				.update(schema.orders)
+				.set({ isTrashed: true, recoveryStatus: 'converted' })
+				.where(
+					and(
+						eq(schema.orders.customerPhone, data.customerPhone),
+						eq(schema.orders.status, 'incomplete')
+					)
+				);
+		} catch (e) {
+			// silent fallback
+		}
 
 		// 6. Prepare Normalized Order Items (safely check foreign key)
 		let validProductIds = new Set<string>();

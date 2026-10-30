@@ -125,6 +125,7 @@
 					: (order.orderNumber || '').toLowerCase().includes(q) ||
 						(order.id || '').toLowerCase().includes(q) ||
 						(order.customerName || '').toLowerCase().includes(q) ||
+						(order.customerPhone || '').includes(q) ||
 						(order.customerEmail || '').includes(q) ||
 						(order.notes || '').toLowerCase().includes(q);
 

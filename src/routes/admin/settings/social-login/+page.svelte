@@ -5,13 +5,13 @@
 	let isSaved = $state(false);
 	let saveMessage = $state('Social Login Settings Saved!');
 
-	let enableGoogleLogin = $state(true);
-	let googleClientId = $state('8392183921-aura.apps.googleusercontent.com');
-	let googleClientSecret = $state('GOCSPX-secret_token_83921');
-	let enableFacebookLogin = $state(true);
-	let facebookAppId = $state('938492019482');
-	let facebookAppSecret = $state('fb_secret_key_83921');
-	let enableOneTap = $state(true);
+	let enableGoogleLogin = $state(false);
+	let googleClientId = $state('');
+	let googleClientSecret = $state('');
+	let enableFacebookLogin = $state(false);
+	let facebookAppId = $state('');
+	let facebookAppSecret = $state('');
+	let enableOneTap = $state(false);
 
 	function triggerSave(msg = 'Social Login Settings Saved!') {
 		isSaved = true;

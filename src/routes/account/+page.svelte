@@ -1,163 +1,227 @@
 <script lang="ts">
-	import { Sparkles, User, ShieldCheck, Package, Download, Key, LogOut, ArrowLeft, Radio } from 'lucide-svelte';
+	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
+	import { Button } from '#lib/components/ui/button';
+	import { Card, CardHeader, CardTitle, CardContent } from '#lib/components/ui/card';
+	import { Badge } from '#lib/components/ui/badge';
+	import {
+		User,
+		Package,
+		LogOut,
+		Clock,
+		CheckCircle2,
+		PhoneCall,
+		ArrowRight,
+		ShoppingBag,
+		ShieldCheck,
+		MapPin,
+		Truck
+	} from 'lucide-svelte';
 	import type { PageData } from './$types';
-	import { toast } from 'svelte-sonner';
 
 	let { data }: { data: PageData } = $props();
+
+	function getStatusBadge(status: string) {
+		switch (status?.toLowerCase()) {
+			case 'delivered':
+				return { label: 'ডেলিভার্ড', class: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+			case 'processing':
+			case 'confirmed':
+				return { label: 'প্রসেসিং', class: 'bg-blue-50 text-blue-700 border-blue-200' };
+			case 'cancelled':
+				return { label: 'বাতিল', class: 'bg-rose-50 text-rose-700 border-rose-200' };
+			case 'returned':
+				return { label: 'রিটার্ন', class: 'bg-slate-100 text-slate-700 border-slate-200' };
+			default:
+				return { label: 'পেন্ডিং', class: 'bg-amber-50 text-amber-700 border-amber-200' };
+		}
+	}
+
+	const orderCount = $derived(data.orders?.length || 0);
+	const deliveredCount = $derived(data.orders?.filter((o: any) => o.status === 'delivered')?.length || 0);
+	const pendingCount = $derived(data.orders?.filter((o: any) => o.status !== 'delivered' && o.status !== 'cancelled')?.length || 0);
 </script>
 
 <svelte:head>
-	<title>Member Portal | AURA Acoustics</title>
+	<title>আমার অ্যাকাউন্ট | ড্যাশবোর্ড</title>
+	<meta name="description" content="আপনার গ্রাহক প্রোফাইল এবং সাম্প্রতিক অর্ডারসমূহ।" />
 </svelte:head>
 
-<main class="min-h-screen bg-[#08090f] text-slate-200 py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-	<!-- Background glow -->
-	<div class="absolute top-10 left-1/3 w-[600px] h-[600px] bg-violet-600/10 rounded-full blur-[160px] pointer-events-none -z-10"></div>
-	<div class="absolute bottom-10 right-10 w-[450px] h-[450px] bg-cyan-500/10 rounded-full blur-[140px] pointer-events-none -z-10"></div>
-
-	<div class="max-w-5xl mx-auto space-y-8">
+<StoreLayout user={data.user}>
+	<div class="py-8 sm:py-12 px-4 max-w-5xl mx-auto font-['Anek_Bangla',sans-serif] space-y-6">
 		
-		<!-- Top Bar -->
-		<div class="flex items-center justify-between pb-6 border-b border-white/10">
-			<a href="/" class="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-cyan-400 transition-colors">
-				<ArrowLeft class="w-4 h-4" />
-				<span>Return to Store</span>
-			</a>
-
-			<form action="/auth/login?/signOut" method="POST" class="inline">
-				<button
-					type="submit"
-					class="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-rose-500/10 border border-white/10 hover:border-rose-500/30 text-xs font-semibold text-slate-300 hover:text-rose-400 transition-all"
-				>
-					<LogOut class="w-3.5 h-3.5" />
-					<span>Sign Out</span>
-				</button>
-			</form>
-		</div>
-
-		<!-- User Greeting Card -->
-		<div class="glass-panel rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+		<!-- 1. Customer Welcome Header Card -->
+		<div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
 			<div class="flex items-center gap-4">
-				<div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-violet-600 to-cyan-400 p-[1.5px] shadow-lg shadow-violet-600/30">
-					<div class="w-full h-full bg-[#0d0f1a] rounded-[14px] flex items-center justify-center font-black text-2xl text-white font-heading">
+				<div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#5845eb] to-[#7c3aed] p-0.5 shadow-md shadow-indigo-600/20 shrink-0">
+					<div class="w-full h-full bg-white rounded-[14px] flex items-center justify-center font-black text-2xl text-[#5845eb]">
 						{data.user?.name ? data.user.name.charAt(0).toUpperCase() : 'U'}
 					</div>
 				</div>
 				<div>
-					<div class="flex items-center gap-2">
-						<h1 class="text-xl sm:text-2xl font-extrabold text-white font-heading">{data.user?.name || 'Creator'}</h1>
-						<span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-cyan-500/15 border border-cyan-500/30 text-cyan-300">
-							VIP Member
+					<div class="flex flex-wrap items-center gap-2">
+						<h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+							{data.user?.name || 'সম্মানিত গ্রাহক'}
+						</h1>
+						<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 border border-indigo-100 text-[#5845eb]">
+							ভেরিফাইড কাস্টমার
 						</span>
 					</div>
-					<div class="text-xs text-slate-400 mt-0.5">{data.user?.email}</div>
+					<div class="text-xs text-slate-500 mt-1 font-medium flex items-center gap-2">
+						<span>{data.user?.email}</span>
+						<span>•</span>
+						<span class="text-emerald-600 inline-flex items-center gap-1">
+							<ShieldCheck class="w-3.5 h-3.5" />
+							সুরক্ষিত একাউন্ট
+						</span>
+					</div>
 				</div>
 			</div>
 
-			<div class="flex items-center gap-3 text-xs text-slate-300 bg-white/5 px-4 py-2.5 rounded-2xl border border-white/10">
-				<ShieldCheck class="w-4 h-4 text-emerald-400" />
-				<span>Better Auth Session Validated</span>
+			<!-- Sign Out Action -->
+			<form action="/auth/login?/signOut" method="POST" class="shrink-0 w-full sm:w-auto">
+				<Button
+					type="submit"
+					variant="outline"
+					class="w-full sm:w-auto rounded-xl border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-xs font-bold text-slate-700 flex items-center gap-2 transition-all cursor-pointer"
+				>
+					<LogOut class="w-3.5 h-3.5" />
+					<span>লগআউট করুন</span>
+				</Button>
+			</form>
+		</div>
+
+		<!-- 2. Metrics / Stat Highlights -->
+		<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+			<div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center gap-4">
+				<div class="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#5845eb] shrink-0">
+					<Package class="w-6 h-6" />
+				</div>
+				<div>
+					<div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">মোট অর্ডার</div>
+					<div class="text-2xl font-black text-slate-900 mt-0.5">{orderCount} টি</div>
+				</div>
+			</div>
+
+			<div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center gap-4">
+				<div class="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+					<Clock class="w-6 h-6" />
+				</div>
+				<div>
+					<div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">পেন্ডিং / প্রসেসিং</div>
+					<div class="text-2xl font-black text-slate-900 mt-0.5">{pendingCount} টি</div>
+				</div>
+			</div>
+
+			<div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center gap-4">
+				<div class="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+					<CheckCircle2 class="w-6 h-6" />
+				</div>
+				<div>
+					<div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">ডেলিভারি সম্পন্ন</div>
+					<div class="text-2xl font-black text-slate-900 mt-0.5">{deliveredCount} টি</div>
+				</div>
 			</div>
 		</div>
 
-		<!-- Content Grid -->
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-			
-			<!-- Digital Licenses Card -->
-			<div class="glass-card rounded-2xl p-6 border border-white/10">
-				<div class="flex items-center justify-between mb-4">
-					<div class="flex items-center gap-2.5">
-						<Key class="w-5 h-5 text-cyan-400" />
-						<h2 class="text-base font-bold text-white font-heading">Digital VST Licenses</h2>
-					</div>
-					<span class="text-[11px] text-cyan-400 font-semibold">Active</span>
+		<!-- 3. Orders Section -->
+		<Card class="border border-slate-200/90 shadow-xs rounded-3xl overflow-hidden bg-white">
+			<CardHeader class="border-b border-slate-100 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+				<div>
+					<CardTitle class="text-lg font-black text-slate-900 flex items-center gap-2">
+						<Package class="w-5 h-5 text-[#5845eb]" />
+						<span>সাম্প্রতিক অর্ডারসমূহ</span>
+					</CardTitle>
+					<p class="text-xs text-slate-500 mt-0.5">আপনার সকল ডেলিভারি এবং ট্র্যাকিং তথ্য এখানে দেখুন</p>
 				</div>
+				
+				<a
+					href="/"
+					class="inline-flex items-center gap-1.5 text-xs font-bold text-[#5845eb] hover:underline"
+				>
+					<span>নতুন কেনাকাটা করুন</span>
+					<ArrowRight class="w-3.5 h-3.5" />
+				</a>
+			</CardHeader>
 
-				<div class="p-4 rounded-xl bg-black/40 border border-white/5 space-y-2">
-					<div class="flex items-center justify-between">
-						<span class="text-xs font-bold text-white">AURA Atmos Suite VST3</span>
-						<span class="text-[10px] text-emerald-400 font-mono">AUR-VST-9942</span>
+			<CardContent class="p-0">
+				{#if data.orders && data.orders.length > 0}
+					<div class="divide-y divide-slate-100">
+						{#each data.orders as order}
+							{@const statusInfo = getStatusBadge(order.status)}
+							<div class="p-5 sm:p-6 hover:bg-slate-50/60 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+								<div class="space-y-1.5">
+									<div class="flex items-center gap-2.5">
+										<span class="font-mono font-bold text-sm text-slate-900">
+											{order.orderNumber || `#ORD-${order.id?.slice(0, 8)}`}
+										</span>
+										<span class="px-2 py-0.5 rounded-full text-[10px] font-bold border {statusInfo.class}">
+											{statusInfo.label}
+										</span>
+									</div>
+									<div class="text-xs text-slate-500 flex flex-wrap items-center gap-3">
+										<span>তারিখ: {order.createdAt ? new Date(order.createdAt).toLocaleDateString('bn-BD', { day: 'numeric', month: 'short', year: 'numeric' }) : 'আজ'}</span>
+										{#if order.shippingAddress}
+											<span>•</span>
+											<span class="truncate max-w-xs">{order.shippingAddress}</span>
+										{/if}
+									</div>
+								</div>
+
+								<div class="flex items-center justify-between sm:justify-end gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+									<div class="text-right">
+										<div class="text-sm font-black text-slate-900">৳{order.total || 0}</div>
+										<div class="text-[10px] text-slate-400 capitalize">{order.paymentMethod || 'ক্যাশ অন ডেলিভারি'}</div>
+									</div>
+
+									{#if order.trackingCode}
+										<div class="text-xs bg-indigo-50 text-[#5845eb] px-3 py-1.5 rounded-xl font-mono font-bold border border-indigo-100 flex items-center gap-1">
+											<Truck class="w-3.5 h-3.5" />
+											<span>{order.trackingCode}</span>
+										</div>
+									{/if}
+								</div>
+							</div>
+						{/each}
 					</div>
-					<p class="text-[11px] text-slate-400">AU, VST3, AAX Native 64-bit installer with 120 spatial impulse responses.</p>
-					<button
-						onclick={() => toast.info('Download link generated! Checking Cloudflare CDN token...')}
-						class="flex items-center gap-1.5 mt-2 text-xs font-semibold text-cyan-300 hover:text-cyan-200"
-					>
-						<Download class="w-3.5 h-3.5" />
-						<span>Download Plugin Installer (v2.4)</span>
-					</button>
-				</div>
+				{:else}
+					<!-- Empty State -->
+					<div class="text-center py-12 px-4">
+						<div class="w-16 h-16 rounded-3xl bg-slate-100 flex items-center justify-center text-slate-400 mx-auto mb-4">
+							<ShoppingBag class="w-8 h-8" />
+						</div>
+						<h3 class="text-base font-bold text-slate-800">এখনো কোনো অর্ডার নেই</h3>
+						<p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+							আপনি এখনো কোনো কেনাকাটা করেননি। পছন্দের পণ্য বেছে নিতে আমাদের স্টোর ভিজিট করুন।
+						</p>
+						<div class="mt-6">
+							<Button
+								href="/"
+								class="rounded-xl bg-[#5845eb] hover:bg-[#4936d6] text-white text-xs font-bold px-6 h-10 shadow-sm shadow-indigo-600/30"
+							>
+								শপিং শুরু করুন
+							</Button>
+						</div>
+					</div>
+				{/if}
+			</CardContent>
+		</Card>
+
+		<!-- 4. Need Help / Customer Support Info -->
+		<div class="bg-gradient-to-r from-indigo-50/60 to-purple-50/60 border border-indigo-100/80 rounded-3xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+			<div class="space-y-1">
+				<h4 class="text-sm font-black text-slate-900">অর্ডার সংক্রান্ত কোনো জিজ্ঞাসা বা সহায়তা দরকার?</h4>
+				<p class="text-xs text-slate-600">আমাদের কাস্টমার কেয়ার টিম সবসময় আপনার সহায়তায় প্রস্তুত।</p>
 			</div>
-
-			<!-- Registered Hardware & Firmware Telemetry -->
-			<div class="glass-card rounded-2xl p-6 border border-white/10">
-				<div class="flex items-center justify-between mb-4">
-					<div class="flex items-center gap-2.5">
-						<Radio class="w-5 h-5 text-violet-400" />
-						<h2 class="text-base font-bold text-white font-heading">Connected Hardware</h2>
-					</div>
-					<span class="text-[11px] text-emerald-400 font-semibold">Pairing Synced</span>
-				</div>
-
-				<div class="p-4 rounded-xl bg-black/40 border border-white/5 space-y-2">
-					<div class="flex items-center justify-between">
-						<span class="text-xs font-bold text-white">AURA Spectrum X (Obsidian)</span>
-						<span class="text-[10px] text-violet-300 font-mono">FW: v3.1.8-Edge</span>
-					</div>
-					<p class="text-[11px] text-slate-400">96kHz Lossless 2.4GHz RF profile active. Battery Health: 99%.</p>
-					<div class="pt-1 text-[11px] text-slate-400">
-						Warranty Valid Through: <strong class="text-slate-200">October 2028</strong>
-					</div>
-				</div>
-			</div>
-
-		</div>
-
-		<!-- Recent Orders History Table -->
-		<div class="glass-card rounded-2xl p-6 border border-white/10">
-			<div class="flex items-center gap-2.5 mb-6">
-				<Package class="w-5 h-5 text-cyan-400" />
-				<h2 class="text-base font-bold text-white font-heading">Order & Shipping History</h2>
-			</div>
-
-			<div class="overflow-x-auto">
-				<table class="w-full text-left text-xs">
-					<thead>
-						<tr class="border-b border-white/10 text-slate-400 pb-2">
-							<th class="pb-3 font-semibold">Order ID</th>
-							<th class="pb-3 font-semibold">Item(s)</th>
-							<th class="pb-3 font-semibold">Date</th>
-							<th class="pb-3 font-semibold">Status</th>
-							<th class="pb-3 font-semibold text-right">Amount</th>
-						</tr>
-					</thead>
-					<tbody class="divide-y divide-white/5">
-						<tr>
-							<td class="py-4 font-mono text-cyan-400 font-semibold">AUR-847291</td>
-							<td class="py-4 text-white font-medium">AURA Spectrum X (Obsidian Void)</td>
-							<td class="py-4 text-slate-400">Oct 20, 2026</td>
-							<td class="py-4">
-								<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
-									Dispatched • Express Air
-								</span>
-							</td>
-							<td class="py-4 text-right font-bold text-white font-heading">$349.00</td>
-						</tr>
-						<tr>
-							<td class="py-4 font-mono text-cyan-400 font-semibold">AUR-310542</td>
-							<td class="py-4 text-white font-medium">AURA Atmos Suite VST3 License</td>
-							<td class="py-4 text-slate-400">Oct 12, 2026</td>
-							<td class="py-4">
-								<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-500/15 border border-cyan-500/30 text-cyan-300">
-									Instant Digital Delivered
-								</span>
-							</td>
-							<td class="py-4 text-right font-bold text-white font-heading">$99.00</td>
-						</tr>
-					</tbody>
-				</table>
+			<div class="flex items-center gap-3">
+				<a
+					href="tel:01860229546"
+					class="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 hover:text-[#5845eb] text-xs font-bold flex items-center gap-2 shadow-2xs transition-colors"
+				>
+					<PhoneCall class="w-3.5 h-3.5 text-[#5845eb]" />
+					<span>01860-229546</span>
+				</a>
 			</div>
 		</div>
 
 	</div>
-</main>
+</StoreLayout>

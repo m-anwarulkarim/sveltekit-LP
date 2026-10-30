@@ -73,22 +73,67 @@
 	let avatarFormElement: HTMLFormElement | null = $state(null);
 	let avatarInputUrl = $state('');
 
-	function handleLocalFileSelect(e: Event) {
+	function resizeImageToAvatar(file: File): Promise<string> {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = (e) => {
+				const img = new Image();
+				img.onload = () => {
+					const canvas = document.createElement('canvas');
+					const maxSize = 256;
+					let width = img.width;
+					let height = img.height;
+
+					if (width > height) {
+						if (width > maxSize) {
+							height = Math.round((height * maxSize) / width);
+							width = maxSize;
+						}
+					} else {
+						if (height > maxSize) {
+							width = Math.round((width * maxSize) / height);
+							height = maxSize;
+						}
+					}
+
+					canvas.width = width;
+					canvas.height = height;
+					const ctx = canvas.getContext('2d');
+					if (!ctx) {
+						resolve(e.target?.result as string);
+						return;
+					}
+
+					ctx.drawImage(img, 0, 0, width, height);
+					// Compress to standard JPEG at 82% quality (shrinks megabytes down to ~15-25 KB)
+					const compressedBase64 = canvas.toDataURL('image/jpeg', 0.82);
+					resolve(compressedBase64);
+				};
+				img.onerror = () => reject(new Error('ইমেজ লোড করতে ব্যর্থ হয়েছে'));
+				img.src = e.target?.result as string;
+			};
+			reader.onerror = () => reject(new Error('ফাইল পড়তে ব্যর্থ হয়েছে'));
+			reader.readAsDataURL(file);
+		});
+	}
+
+	async function handleLocalFileSelect(e: Event) {
 		const target = e.target as HTMLInputElement;
 		const file = target.files?.[0];
 		if (file) {
-			if (file.size > 3 * 1024 * 1024) {
-				toast.error('ফাইলের সাইজ ৩ মেগাবাইটের কম হতে হবে!');
+			if (file.size > 10 * 1024 * 1024) {
+				toast.error('ফাইলের সাইজ ১০ মেগাবাইটের কম হতে হবে!');
 				return;
 			}
-			const reader = new FileReader();
-			reader.onload = () => {
-				const base64Url = reader.result as string;
-				avatarInputUrl = base64Url;
-				avatarImage = base64Url;
+			try {
+				const compressedUrl = await resizeImageToAvatar(file);
+				avatarInputUrl = compressedUrl;
+				avatarImage = compressedUrl;
 				submitAvatarForm();
-			};
-			reader.readAsDataURL(file);
+			} catch (err) {
+				console.error('Image processing failed:', err);
+				toast.error('ছবি প্রসেস করতে সমস্যা হয়েছে!');
+			}
 		}
 	}
 

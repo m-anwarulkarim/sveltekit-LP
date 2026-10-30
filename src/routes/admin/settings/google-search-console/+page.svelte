@@ -5,9 +5,9 @@
 	let isSaved = $state(false);
 	let saveMessage = $state('Google Search Console Settings Saved!');
 
-	let verificationMetaTag = $state('google-site-verification=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX');
-	let sitemapUrl = 'https://aura.com.bd/sitemap.xml';
-	let enableAutoSitemap = $state(true);
+	let verificationMetaTag = $state('');
+	let sitemapUrl = '/sitemap.xml';
+	let enableAutoSitemap = $state(false);
 
 	function triggerSave(msg = 'Google Search Console Settings Saved!') {
 		isSaved = true;

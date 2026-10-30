@@ -1,9 +1,14 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
 	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
 	import { cart } from '#lib/modules/cart/cart.svelte';
 	import { goto } from '$app/navigation';
 	import { deserialize } from '$app/forms';
+	import { trackMetaEvent } from '#lib/client/meta-pixel';
+	import { trackGtmBeginCheckout } from '#lib/client/gtm';
+	import { toast } from 'svelte-sonner';
+	import { getAttributionSource } from '#lib/client/attribution';
 	import {
 		Button,
 		Input,
@@ -34,7 +39,10 @@
 		Trash2,
 		Plus,
 		Minus,
-		AlertCircle
+		AlertCircle,
+		User,
+		Mail,
+		FileText
 	} from 'lucide-svelte';
 
 	let { data }: { data: PageData } = $props();
@@ -43,10 +51,29 @@
 	let name = $state('');
 	let phone = $state('');
 	let altPhone = $state('');
+	let email = $state('');
+	let showAltPhone = $state(false);
+	let showNote = $state(false);
+	let showEmail = $state(false);
 	let district = $state<'dhaka' | 'outside'>('dhaka');
 	let address = $state('');
 	let orderNote = $state('');
-	let paymentMethod = $state<'cod' | 'bkash'>('cod');
+
+	let paymentConfig = $derived(
+		data?.paymentConfig || {
+			enableCOD: true,
+			enableBkash: false,
+			enableNagad: false
+		}
+	);
+	let paymentMethod = $state<'cod' | 'bkash' | 'nagad'>('cod');
+
+	$effect(() => {
+		if (!paymentConfig.enableBkash && paymentMethod === 'bkash') {
+			paymentMethod = 'cod';
+		}
+	});
+
 	let couponInput = $state('');
 	let honeypot = $state('');
 	let isSubmitting = $state(false);
@@ -67,9 +94,77 @@
 		Math.max(0, cart.subtotal - cart.discountAmount + deliveryFee)
 	);
 
+	// Fire Meta Pixel & GTM GA4 Standard InitiateCheckout / begin_checkout Events
+	onMount(() => {
+		if (cart.items.length > 0 && typeof window !== 'undefined') {
+			trackMetaEvent('InitiateCheckout', {
+				content_ids: cart.items.map((i) => String(i.id)),
+				content_type: 'product',
+				num_items: cart.items.length,
+				value: Number(grandTotal) || Number(cart.total),
+				currency: 'BDT'
+			});
+
+			trackGtmBeginCheckout({
+				items: cart.items.map((i) => ({
+					item_id: String(i.id),
+					item_name: i.name,
+					price: Number(i.price) || 0,
+					quantity: Number(i.quantity) || 1,
+					item_category: i.category || 'General',
+					item_variant: i.variantName || undefined
+				})),
+				total: Number(grandTotal) || Number(cart.total),
+				coupon: cart.couponCode || undefined
+			});
+		}
+
+		// Detect bKash payment gateway return status / cancellations
+		if (typeof window !== 'undefined') {
+			const urlParams = new URLSearchParams(window.location.search);
+			const err = urlParams.get('error');
+			if (err === 'bkash_cancel' || err === 'bkash_cancelled') {
+				toast.error('বিকাশ পেমেন্ট বাতিল করা হয়েছে। আপনি পুনরায় চেষ্টা করতে পারেন অথবা ক্যাশ অন ডেলিভারি বেছে নিতে পারেন।');
+			} else if (err?.startsWith('bkash_')) {
+				const msg = urlParams.get('message') || 'বিকাশ পেমেন্ট সম্পন্ন করা যায়নি।';
+				toast.error(`${msg} অনুগ্রহ করে আবার চেষ্টা করুন বা ক্যাশ অন ডেলিভারি সিলেক্ট করুন।`);
+			}
+		}
+	});
+
 	function handleApplyCoupon() {
 		if (!couponInput.trim()) return;
 		cart.applyCoupon(couponInput);
+	}
+
+	// Debounced auto-capture of incomplete drop-off checkout leads
+	let incompleteTimer: any = null;
+	function triggerIncompleteCapture() {
+		if (incompleteTimer) clearTimeout(incompleteTimer);
+		incompleteTimer = setTimeout(async () => {
+			const cleanPhone = phone.trim().replace(/\D/g, '');
+			if (cleanPhone.length >= 10 && cart.items.length > 0) {
+				try {
+					await fetch('/api/checkout/incomplete', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							customerName: name.trim() || 'অপরিচিত কাস্টমার',
+							customerPhone: phone.trim(),
+							shippingAddress: address.trim() || 'ঠিকানা দেওয়া হয়নি',
+							deliveryArea: district === 'dhaka' ? 'inside_dhaka' : 'outside_dhaka',
+							items: cart.items,
+							subtotal: cart.subtotal,
+							deliveryCharge: deliveryFee,
+							total: grandTotal,
+							source: getAttributionSource()
+						})
+					});
+				} catch (err) {
+					// silent fallback
+				}
+			}
+		}, 1200);
 	}
 
 	async function handlePlaceOrder(e: Event) {
@@ -119,8 +214,13 @@
 			formData.append('shippingAddress', address.trim());
 			formData.append('deliveryArea', district === 'dhaka' ? 'inside_dhaka' : 'outside_dhaka');
 			formData.append('paymentMethod', paymentMethod);
-			formData.append('orderNote', orderNote.trim());
+			const fullNotes = [];
+			if (orderNote.trim()) fullNotes.push(orderNote.trim());
+			if (altPhone.trim()) fullNotes.push(`বিকল্প নম্বর: ${altPhone.trim()}`);
+			if (email.trim()) fullNotes.push(`ইমেইল: ${email.trim()}`);
+			formData.append('orderNote', fullNotes.join(' | '));
 			formData.append('website_url', honeypot);
+			formData.append('source', getAttributionSource());
 			formData.append(
 				'items',
 				JSON.stringify(
@@ -165,7 +265,7 @@
 					paymentMethod:
 						paymentMethod === 'cod'
 							? 'ক্যাশ অন ডেলিভারি (Cash on Delivery)'
-							: 'বিকাশ / নগদ (bKash/Nagad)',
+							: 'বিকাশ অনলাইন পেমেন্ট (bKash)',
 					items: [...cart.items],
 					subtotal: cart.subtotal,
 					deliveryCharge: deliveryFee,
@@ -173,6 +273,33 @@
 					total: orderData.total || grandTotal,
 					createdAt: new Date().toISOString()
 				};
+
+				// If customer chose bKash, initialize bKash PGW URL
+				if (paymentMethod === 'bkash' && orderData.orderId) {
+					try {
+						const bkashRes = await fetch('/api/payment/bkash/create', {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify({
+								orderId: orderData.orderId,
+								orderNumber: orderData.orderNumber || confirmedId,
+								amount: orderData.total || grandTotal,
+								customerPhone: phone.trim()
+							})
+						});
+						const bkashData = await bkashRes.json();
+						if (bkashData.success && bkashData.bkashURL) {
+							cart.setLastOrder(orderSnapshot);
+							cart.clear();
+							window.location.href = bkashData.bkashURL;
+							return;
+						} else {
+							toast.error(bkashData.message || 'বিকাশ গেটওয়ে সংযোগে সমস্যা হয়েছে');
+						}
+					} catch (bkErr) {
+						console.error('Failed to trigger bKash redirect:', bkErr);
+					}
+				}
 
 				cart.setLastOrder(orderSnapshot);
 				cart.clear();
@@ -336,151 +463,234 @@
 						</div>
 					{/if}
 
-					<!-- Section 1: Customer Delivery Info Card -->
-					<Card class="rounded-2xl sm:rounded-3xl border-slate-200/90 shadow-xs overflow-hidden">
-						<CardHeader class="p-5 sm:p-6 pb-3 border-b border-slate-100">
-							<div class="flex items-center gap-2.5">
-								<div class="w-7 h-7 rounded-xl bg-blue-50 text-[#2563eb] flex items-center justify-center font-bold text-xs">
-									১
+					<!-- Section 1: Customer Delivery Info Card (Exact match to User Mockup) -->
+					<Card class="rounded-2xl sm:rounded-3xl border-slate-200/90 shadow-xs overflow-hidden bg-white">
+						<CardHeader class="p-5 sm:p-6 pb-2 border-b-0">
+							<div class="flex items-center justify-between">
+								<div class="flex items-center gap-2.5">
+									<div class="w-7 h-7 rounded-full bg-[#005f40] text-white flex items-center justify-center font-bold text-xs shrink-0">
+										১
+									</div>
+									<h2 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+										ডেলিভারি ঠিকানা দিন
+									</h2>
 								</div>
-								<CardTitle class="text-sm font-bold text-slate-900 font-['Outfit']">
-									ডেলিভারি তথ্য
-								</CardTitle>
+								<span class="text-xs text-slate-500 font-medium">
+									* আবশ্যক
+								</span>
 							</div>
 						</CardHeader>
 
-						<CardContent class="p-5 sm:p-6 space-y-4">
-							<!-- Name -->
+						<CardContent class="p-5 sm:p-6 pt-2 space-y-4">
+							<!-- নাম * -->
 							<div>
-								<label for="co-name" class="block text-xs font-bold text-slate-700 mb-1.5">
-									আপনার পূর্ণ নাম <span class="text-rose-500">*</span>
-								</label>
-								<Input
-									id="co-name"
-									type="text"
-									required
-									bind:value={name}
-									placeholder="যেমন: সাকিব আল হাসান"
-									class="rounded-xl bg-slate-50 border-slate-200/90 text-xs"
-								/>
-							</div>
-
-							<!-- Phone Numbers -->
-							<div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-								<div>
-									<label for="co-phone" class="block text-xs font-bold text-slate-700 mb-1.5">
-										মোবাইল নম্বর <span class="text-rose-500">*</span>
-									</label>
-									<div class="relative">
-										<Phone class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 z-10" />
-										<Input
-											id="co-phone"
-											type="tel"
-											required
-											bind:value={phone}
-											placeholder="017xxxxxxxx"
-											class="pl-9 rounded-xl bg-slate-50 border-slate-200/90 text-xs font-mono"
-										/>
-									</div>
-								</div>
-
-								<div>
-									<label for="co-altphone" class="block text-xs font-bold text-slate-700 mb-1.5">
-										বিকল্প মোবাইল নম্বর <span class="text-slate-400 font-normal">(ঐচ্ছিক)</span>
-									</label>
-									<div class="relative">
-										<Phone class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 z-10" />
-										<Input
-											id="co-altphone"
-											type="tel"
-											bind:value={altPhone}
-											placeholder="018xxxxxxxx"
-											class="pl-9 rounded-xl bg-slate-50 border-slate-200/90 text-xs font-mono"
-										/>
-									</div>
-								</div>
-							</div>
-
-							<!-- Delivery Area Selection -->
-							<div>
-								<label class="block text-xs font-bold text-slate-700 mb-1.5">
-									ডেলিভারি এরিয়া বেছে নিন <span class="text-rose-500">*</span>
-								</label>
-								<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-									<button
-										type="button"
-										onclick={() => (district = 'dhaka')}
-										class="p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between {district === 'dhaka'
-											? 'border-[#2563eb] bg-blue-50/60 shadow-2xs ring-1 ring-[#2563eb]'
-											: 'border-slate-200 bg-slate-50/50 hover:bg-slate-100'}"
-									>
-										<div>
-											<div class="text-xs font-bold text-slate-900">ঢাকা সিটির ভিতরে</div>
-											<div class="text-[11px] text-slate-500 mt-0.5">ডেলিভারি চার্জ: ৳৬০ (১২-২৪ ঘণ্টা)</div>
-										</div>
-										{#if district === 'dhaka'}
-											<Check class="w-4 h-4 text-[#2563eb] stroke-[3]" />
-										{/if}
-									</button>
-
-									<button
-										type="button"
-										onclick={() => (district = 'outside')}
-										class="p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between {district === 'outside'
-											? 'border-[#2563eb] bg-blue-50/60 shadow-2xs ring-1 ring-[#2563eb]'
-											: 'border-slate-200 bg-slate-50/50 hover:bg-slate-100'}"
-									>
-										<div>
-											<div class="text-xs font-bold text-slate-900">ঢাকার বাহিরে (সারা দেশ)</div>
-											<div class="text-[11px] text-slate-500 mt-0.5">ডেলিভারি চার্জ: ৳১২০ (২৪-৪৮ ঘণ্টা)</div>
-										</div>
-										{#if district === 'outside'}
-											<Check class="w-4 h-4 text-[#2563eb] stroke-[3]" />
-										{/if}
-									</button>
-								</div>
-							</div>
-
-							<!-- Full Delivery Address -->
-							<div>
-								<label for="co-address" class="block text-xs font-bold text-slate-700 mb-1.5">
-									পূর্ণ ডেলিভারি ঠিকানা <span class="text-rose-500">*</span>
+								<label for="co-name" class="block text-xs sm:text-sm font-semibold text-slate-800 mb-1.5">
+									নাম <span class="text-rose-500">*</span>
 								</label>
 								<div class="relative">
-									<MapPin class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3 z-10" />
-									<Textarea
-										id="co-address"
+									<User class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+									<Input
+										id="co-name"
+										type="text"
 										required
-										rows={2}
-										bind:value={address}
-										placeholder="বাসা/ফ্ল্যাট নং, রোড নং, এলাকা, থানা ও জেলার নাম..."
-										class="pl-9 rounded-xl bg-slate-50 border-slate-200/90 text-xs font-medium resize-none"
+										bind:value={name}
+										placeholder="এখানে আপনার নাম লিখুন"
+										class="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-2xl bg-white border-slate-200/90 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-[#2563eb] transition-all"
 									/>
 								</div>
 							</div>
 
-							<!-- Order Note -->
+							<!-- মোবাইল নম্বর * -->
 							<div>
-								<label for="co-note" class="block text-xs font-bold text-slate-700 mb-1.5">
-									বিশেষ নির্দেশনা / নোট <span class="text-slate-400 font-normal">(ঐচ্ছিক)</span>
+								<label for="co-phone" class="block text-xs sm:text-sm font-semibold text-slate-800 mb-1.5">
+									মোবাইল নম্বর <span class="text-rose-500">*</span>
 								</label>
-								<Input
-									id="co-note"
-									type="text"
-									bind:value={orderNote}
-									placeholder="যেমন: ফোন না ধরলে দারোয়ানের কাছে পার্সেলটি রাখুন"
-									class="rounded-xl bg-slate-50 border-slate-200/90 text-xs"
-								/>
+								<div class="relative">
+									<Phone class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+									<Input
+										id="co-phone"
+										type="tel"
+										required
+										bind:value={phone}
+										oninput={triggerIncompleteCapture}
+										onblur={triggerIncompleteCapture}
+										placeholder="01XXXXXXXXX"
+										class="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-2xl bg-white border-slate-200/90 text-xs sm:text-sm text-slate-800 font-mono placeholder:text-slate-400 focus:bg-white focus:border-[#2563eb] transition-all"
+									/>
+								</div>
+							</div>
+
+							<!-- বিস্তারিত ঠিকানা * -->
+							<div>
+								<label for="co-address" class="block text-xs sm:text-sm font-semibold text-slate-800 mb-1.5">
+									বিস্তারিত ঠিকানা <span class="text-rose-500">*</span>
+								</label>
+								<div class="relative">
+									<MapPin class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+									<Input
+										id="co-address"
+										type="text"
+										required
+										bind:value={address}
+										placeholder="এখানে আপনার সম্পূর্ণ ঠিকানা লিখুন"
+										class="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-2xl bg-white border-slate-200/90 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-[#2563eb] transition-all"
+									/>
+								</div>
+							</div>
+
+							<!-- Action Chips Divider -->
+							<div class="border-t border-slate-100 pt-3">
+								<div class="flex flex-wrap items-center gap-2">
+									<!-- + বিকল্প নম্বর -->
+									<button
+										type="button"
+										onclick={() => (showAltPhone = !showAltPhone)}
+										class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border text-xs font-semibold transition-all cursor-pointer shadow-2xs {showAltPhone || altPhone
+											? 'border-emerald-300 bg-emerald-50/80 text-emerald-800'
+											: 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'}"
+									>
+										<span>{showAltPhone ? '✕' : '+'}</span>
+										<span>বিকল্প নম্বর</span>
+									</button>
+
+									<!-- + বিশেষ নির্দেশনা -->
+									<button
+										type="button"
+										onclick={() => (showNote = !showNote)}
+										class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border text-xs font-semibold transition-all cursor-pointer shadow-2xs {showNote || orderNote
+											? 'border-emerald-300 bg-emerald-50/80 text-emerald-800'
+											: 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'}"
+									>
+										<span>{showNote ? '✕' : '+'}</span>
+										<span>বিশেষ নির্দেশনা</span>
+									</button>
+
+									<!-- + ইমেইল এড্রেস -->
+									<button
+										type="button"
+										onclick={() => (showEmail = !showEmail)}
+										class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border text-xs font-semibold transition-all cursor-pointer shadow-2xs {showEmail || email
+											? 'border-emerald-300 bg-emerald-50/80 text-emerald-800'
+											: 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'}"
+									>
+										<span>{showEmail ? '✕' : '+'}</span>
+										<span>ইমেইল এড্রেস</span>
+									</button>
+								</div>
+
+								<!-- Dynamic Expandable Optional Fields -->
+								{#if showAltPhone || altPhone}
+									<div class="mt-3 animate-in fade-in slide-in-from-top-1 duration-200">
+										<label for="co-altphone" class="block text-xs font-bold text-slate-700 mb-1.5">
+											বিকল্প মোবাইল নম্বর <span class="text-slate-400 font-normal">(ঐচ্ছিক)</span>
+										</label>
+										<div class="relative">
+											<Phone class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+											<Input
+												id="co-altphone"
+												type="tel"
+												bind:value={altPhone}
+												placeholder="বিকল্প নম্বর লিখুন (যেমন: 018XXXXXXXX)"
+												class="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 border-slate-200/90 text-xs sm:text-sm font-mono focus:bg-white focus:border-[#2563eb]"
+											/>
+										</div>
+									</div>
+								{/if}
+
+								{#if showNote || orderNote}
+									<div class="mt-3 animate-in fade-in slide-in-from-top-1 duration-200">
+										<label for="co-note" class="block text-xs font-bold text-slate-700 mb-1.5">
+											বিশেষ নির্দেশনা <span class="text-slate-400 font-normal">(ঐচ্ছিক)</span>
+										</label>
+										<div class="relative">
+											<FileText class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+											<Input
+												id="co-note"
+												type="text"
+												bind:value={orderNote}
+												placeholder="ডেলিভারির জন্য কোনো বিশেষ নির্দেশনা থাকলে লিখুন..."
+												class="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 border-slate-200/90 text-xs sm:text-sm focus:bg-white focus:border-[#2563eb]"
+											/>
+										</div>
+									</div>
+								{/if}
+
+								{#if showEmail || email}
+									<div class="mt-3 animate-in fade-in slide-in-from-top-1 duration-200">
+										<label for="co-email" class="block text-xs font-bold text-slate-700 mb-1.5">
+											ইমেইল এড্রেস <span class="text-slate-400 font-normal">(ঐচ্ছিক)</span>
+										</label>
+										<div class="relative">
+											<Mail class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+											<Input
+												id="co-email"
+												type="email"
+												bind:value={email}
+												placeholder="আপনার ইমেইল এড্রেস লিখুন (যেমন: name@example.com)"
+												class="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 border-slate-200/90 text-xs sm:text-sm focus:bg-white focus:border-[#2563eb]"
+											/>
+										</div>
+									</div>
+								{/if}
 							</div>
 						</CardContent>
 					</Card>
 
-					<!-- Section 2: Payment Method Card -->
+					<!-- Section 2: Delivery Area Selection Card -->
+					<Card class="rounded-2xl sm:rounded-3xl border-slate-200/90 shadow-xs overflow-hidden bg-white">
+						<CardHeader class="p-5 sm:p-6 pb-3 border-b border-slate-100">
+							<div class="flex items-center gap-2.5">
+								<div class="w-7 h-7 rounded-xl bg-blue-50 text-[#2563eb] flex items-center justify-center font-bold text-xs">
+									২
+								</div>
+								<CardTitle class="text-sm font-bold text-slate-900 font-['Outfit']">
+									ডেলিভারি এরিয়া বেছে নিন
+								</CardTitle>
+							</div>
+						</CardHeader>
+						<CardContent class="p-5 sm:p-6">
+							<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+								<button
+									type="button"
+									onclick={() => (district = 'dhaka')}
+									class="p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between {district === 'dhaka'
+										? 'border-[#2563eb] bg-blue-50/60 shadow-2xs ring-1 ring-[#2563eb]'
+										: 'border-slate-200 bg-slate-50/50 hover:bg-slate-100'}"
+								>
+									<div>
+										<div class="text-xs font-bold text-slate-900">ঢাকা সিটির ভিতরে</div>
+										<div class="text-[11px] text-slate-500 mt-0.5">ডেলিভারি চার্জ: ৳৬০ (১২-২৪ ঘণ্টা)</div>
+									</div>
+									{#if district === 'dhaka'}
+										<Check class="w-4 h-4 text-[#2563eb] stroke-[3]" />
+									{/if}
+								</button>
+
+								<button
+									type="button"
+									onclick={() => (district = 'outside')}
+									class="p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between {district === 'outside'
+										? 'border-[#2563eb] bg-blue-50/60 shadow-2xs ring-1 ring-[#2563eb]'
+										: 'border-slate-200 bg-slate-50/50 hover:bg-slate-100'}"
+								>
+									<div>
+										<div class="text-xs font-bold text-slate-900">ঢাকার বাহিরে (সারা দেশ)</div>
+										<div class="text-[11px] text-slate-500 mt-0.5">ডেলিভারি চার্জ: ৳১২০ (২৪-৪৮ ঘণ্টা)</div>
+									</div>
+									{#if district === 'outside'}
+										<Check class="w-4 h-4 text-[#2563eb] stroke-[3]" />
+									{/if}
+								</button>
+							</div>
+						</CardContent>
+					</Card>
+
+					<!-- Section 3: Payment Method Card -->
 					<Card class="rounded-2xl sm:rounded-3xl border-slate-200/90 shadow-xs overflow-hidden">
 						<CardHeader class="p-5 sm:p-6 pb-3 border-b border-slate-100">
 							<div class="flex items-center gap-2.5">
 								<div class="w-7 h-7 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs">
-									২
+									৩
 								</div>
 								<CardTitle class="text-sm font-bold text-slate-900 font-['Outfit']">
 									পেমেন্ট মেথড বেছে নিন
@@ -489,7 +699,7 @@
 						</CardHeader>
 
 						<CardContent class="p-5 sm:p-6 space-y-3">
-							<!-- COD Option -->
+							<!-- COD Option (Default and always available) -->
 							<button
 								type="button"
 								onclick={() => (paymentMethod = 'cod')}
@@ -502,8 +712,9 @@
 										<ShieldCheck class="w-5 h-5" />
 									</div>
 									<div>
-										<div class="text-xs font-bold text-slate-900">
-											ক্যাশ অন ডেলিভারি (Cash on Delivery)
+										<div class="text-xs font-bold text-slate-900 flex items-center gap-2">
+											<span>ক্যাশ অন ডেলিভারি (Cash on Delivery)</span>
+											<span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">ডিফল্ট</span>
 										</div>
 										<p class="text-[11px] text-slate-500 mt-0.5">
 											পার্সেল হাতে পেয়ে ডেলিভারি ম্যানের সামনে চেক করে টাকা দিন
@@ -517,33 +728,65 @@
 								{/if}
 							</button>
 
-							<!-- bKash / Nagad -->
-							<button
-								type="button"
-								onclick={() => (paymentMethod = 'bkash')}
-								class="w-full p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between {paymentMethod === 'bkash'
-									? 'border-[#2563eb] bg-blue-50/50 shadow-2xs ring-1 ring-[#2563eb]'
-									: 'border-slate-200 bg-slate-50/50 hover:bg-slate-100'}"
-							>
-								<div class="flex items-center gap-3">
-									<div class="w-9 h-9 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center font-bold shrink-0">
-										<CreditCard class="w-5 h-5" />
-									</div>
-									<div>
-										<div class="text-xs font-bold text-slate-900">
-											বিকাশ / নগদ (bKash / Nagad)
+							<!-- bKash Option (Only shown if enabled by admin in settings) -->
+							{#if paymentConfig.enableBkash}
+								<button
+									type="button"
+									onclick={() => (paymentMethod = 'bkash')}
+									class="w-full p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between {paymentMethod === 'bkash'
+										? 'border-[#2563eb] bg-blue-50/50 shadow-2xs ring-1 ring-[#2563eb]'
+										: 'border-slate-200 bg-slate-50/50 hover:bg-slate-100'}"
+								>
+									<div class="flex items-center gap-3">
+										<div class="w-9 h-9 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center font-bold shrink-0">
+											<CreditCard class="w-5 h-5" />
 										</div>
-										<p class="text-[11px] text-slate-500 mt-0.5">
-											মোবাইল ব্যাংকিংয়ের মাধ্যমে প্রি-পেমেন্ট বা অগ্রিম পরিশোধ
-										</p>
+										<div>
+											<div class="text-xs font-bold text-slate-900">
+												বিকাশ (bKash Payment)
+											</div>
+											<p class="text-[11px] text-slate-500 mt-0.5">
+												বিকাশ অনলাইন গেটওয়ের মাধ্যমে পেমেন্ট সম্পন্ন করুন
+											</p>
+										</div>
 									</div>
-								</div>
-								{#if paymentMethod === 'bkash'}
-									<div class="w-5 h-5 rounded-full bg-[#2563eb] text-white flex items-center justify-center">
-										<Check class="w-3.5 h-3.5 stroke-[3]" />
+									{#if paymentMethod === 'bkash'}
+										<div class="w-5 h-5 rounded-full bg-[#2563eb] text-white flex items-center justify-center">
+											<Check class="w-3.5 h-3.5 stroke-[3]" />
+										</div>
+									{/if}
+								</button>
+							{/if}
+
+							<!-- Nagad Option (Only shown if enabled by admin in settings) -->
+							{#if paymentConfig.enableNagad}
+								<button
+									type="button"
+									onclick={() => (paymentMethod = 'nagad')}
+									class="w-full p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between {paymentMethod === 'nagad'
+										? 'border-[#2563eb] bg-blue-50/50 shadow-2xs ring-1 ring-[#2563eb]'
+										: 'border-slate-200 bg-slate-50/50 hover:bg-slate-100'}"
+								>
+									<div class="flex items-center gap-3">
+										<div class="w-9 h-9 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center font-bold shrink-0">
+											<CreditCard class="w-5 h-5" />
+										</div>
+										<div>
+											<div class="text-xs font-bold text-slate-900">
+												নগদ (Nagad Payment)
+											</div>
+											<p class="text-[11px] text-slate-500 mt-0.5">
+												নগদ অনলাইন গেটওয়ের মাধ্যমে পরিশোধ
+											</p>
+										</div>
 									</div>
-								{/if}
-							</button>
+									{#if paymentMethod === 'nagad'}
+										<div class="w-5 h-5 rounded-full bg-[#2563eb] text-white flex items-center justify-center">
+											<Check class="w-3.5 h-3.5 stroke-[3]" />
+										</div>
+									{/if}
+								</button>
+							{/if}
 						</CardContent>
 					</Card>
 

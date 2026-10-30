@@ -34,29 +34,29 @@ export interface CourierConnectionTestResult {
 
 const DEFAULT_COURIER_METHODS: CourierMethodSetting[] = [
 	{
-		id: 'pathao',
-		name: 'Pathao Courier',
-		isEnabled: true,
-		isDefault: true,
-		credentials: {
-			apiKey: '5xe7LIra7r',
-			secretKey: 'wVIiULaG6ioJAdANB5SVXYFPtTmq3xR30eNi6CQ3',
-			username: 'sohagalam82@gmail.com',
-			password: 'Nayon@@1122',
-			storeId: '339467'
-		},
-		specialInstruction: 'রাইডার নোট: ইনট্যাক্ট পলি খোলা যাবে না। কুরিয়ার পলি খুলে চেক করতে পারবেন।'
-	},
-	{
 		id: 'steadfast',
 		name: 'Steadfast Courier',
-		isEnabled: true,
+		isEnabled: false,
 		isDefault: false,
 		credentials: {
-			apiKey: 'stdf_live_89a47b2c918e001',
-			secretKey: '••••••••••••••••••••••••'
+			apiKey: '',
+			secretKey: ''
 		},
-		specialInstruction: 'সাবধানে ডেলিভারি করুন। কাঁচের পণ্য রয়েছে।'
+		specialInstruction: ''
+	},
+	{
+		id: 'pathao',
+		name: 'Pathao Courier',
+		isEnabled: false,
+		isDefault: false,
+		credentials: {
+			apiKey: '',
+			secretKey: '',
+			username: '',
+			password: '',
+			storeId: ''
+		},
+		specialInstruction: ''
 	}
 ];
 
@@ -76,8 +76,6 @@ export class CourierService {
 				.get();
 
 			if (!settingRow || !settingRow.value) {
-				// Seed initial defaults into D1
-				await this.saveAllSettings(db, DEFAULT_COURIER_METHODS);
 				return {
 					methods: DEFAULT_COURIER_METHODS,
 					defaultProvider: 'steadfast'
@@ -86,14 +84,13 @@ export class CourierService {
 
 			const parsed: CourierMethodSetting[] = JSON.parse(settingRow.value);
 			if (!Array.isArray(parsed) || parsed.length === 0) {
-				await this.saveAllSettings(db, DEFAULT_COURIER_METHODS);
 				return {
 					methods: DEFAULT_COURIER_METHODS,
 					defaultProvider: 'steadfast'
 				};
 			}
 
-			const defaultRow = parsed.find((m) => m.isDefault) || parsed[0];
+			const defaultRow = parsed.find((m) => m.isDefault && m.isEnabled) || parsed.find((m) => m.isEnabled) || parsed[0];
 
 			return {
 				methods: parsed,
@@ -539,13 +536,11 @@ export class CourierService {
 		const { methods, defaultProvider } = await this.getCourierSettings(db);
 		const targetProviderId = preferredProvider || defaultProvider || 'steadfast';
 		const courierConfig =
-			methods.find((m) => m.id === targetProviderId) ||
-			methods[0] ||
-			DEFAULT_COURIER_METHODS.find((m) => m.id === targetProviderId) ||
-			DEFAULT_COURIER_METHODS[0];
+			methods.find((m) => m.id === targetProviderId && m.isEnabled) ||
+			methods.find((m) => m.isEnabled);
 
-		if (!courierConfig) {
-			return { success: false, error: 'কোনো সচল কুরিয়ার কনফিগারেশন পাওয়া যায়নি।' };
+		if (!courierConfig || !courierConfig.isEnabled) {
+			return { success: false, error: 'কোনো সচল কুরিয়ার কনফিগারেশন পাওয়া যায়নি। ড্যাশবোর্ড থেকে কুরিয়ার সক্রিয় করুন।' };
 		}
 
 		const creds = courierConfig.credentials || {};
@@ -562,66 +557,61 @@ export class CourierService {
 			const apiKey = creds.apiKey || '';
 			const secretKey = creds.secretKey || '';
 
-			if (apiKey && secretKey) {
-				try {
-					const res = await fetch('https://portal.packzy.com/api/v1/create_order', {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json',
-							'Api-Key': apiKey,
-							'Secret-Key': secretKey
-						},
-						body: JSON.stringify({
-							invoice: invoiceNo,
-							recipient_name: order.customerName,
-							recipient_phone: recipientPhone,
-							recipient_address: recipientAddress,
-							cod_amount: codAmount,
-							note
-						}),
-						signal: AbortSignal.timeout(10000)
-					});
-
-					const data = (await res.json()) as any;
-					if (res.ok && data.status === 200 && data.consignment) {
-						const tracking = String(data.consignment.tracking_code);
-						const cid = String(data.consignment.consignment_id || data.consignment.id);
-						const trackingUrl = this.getTrackingUrl('steadfast', tracking, cid);
-
-						await this.updateOrderAfterBooking(db, orderId, 'Steadfast Courier', tracking, cid);
-
-						return {
-							success: true,
-							trackingCode: tracking,
-							consignmentId: cid,
-							trackingUrl,
-							courierName: 'Steadfast Courier',
-							message: `Steadfast কুরিয়ারে বুকিং সফল! ট্র্যাকিং কোড: ${tracking}`
-						};
-					}
-
-					if (data.message) {
-						console.warn('Steadfast API warning:', data.message);
-					}
-				} catch (err: any) {
-					console.error('Steadfast live booking fetch error:', err.message);
-				}
+			if (!apiKey || !secretKey) {
+				return {
+					success: false,
+					error: 'Steadfast API Key অথবা Secret Key কনফিগার করা নেই। অনুগ্রহ করে Settings > Courier থেকে আপনার ক্রেডেনশিয়াল যুক্ত করুন।'
+				};
 			}
 
-			// Resilient Fallback with valid Steadfast tracking format
-			const tracking = `STDF-${invoiceNo}-${Math.floor(1000 + Math.random() * 9000)}`;
-			const cid = `CID-${Date.now().toString().slice(-6)}`;
-			const trackingUrl = this.getTrackingUrl('steadfast', tracking, cid);
+			try {
+				const res = await fetch('https://portal.packzy.com/api/v1/create_order', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'Api-Key': apiKey,
+						'Secret-Key': secretKey
+					},
+					body: JSON.stringify({
+						invoice: invoiceNo,
+						recipient_name: order.customerName,
+						recipient_phone: recipientPhone,
+						recipient_address: recipientAddress,
+						cod_amount: codAmount,
+						note
+					}),
+					signal: AbortSignal.timeout(10000)
+				});
 
-			await this.updateOrderAfterBooking(db, orderId, 'Steadfast Courier', tracking, cid);
-			return {
-				success: true,
-				trackingCode: tracking,
-				consignmentId: cid,
-				trackingUrl,
-				courierName: 'Steadfast Courier',
-				message: `Steadfast পার্সেল সফলভাবে এন্ট্রি হয়েছে (ট্র্যাকিং: ${tracking})`
-			};
+				const data = (await res.json()) as any;
+				if (res.ok && data.status === 200 && data.consignment) {
+					const tracking = String(data.consignment.tracking_code);
+					const cid = String(data.consignment.consignment_id || data.consignment.id);
+					const trackingUrl = this.getTrackingUrl('steadfast', tracking, cid);
+
+					await this.updateOrderAfterBooking(db, orderId, 'Steadfast Courier', tracking, cid);
+
+					return {
+						success: true,
+						trackingCode: tracking,
+						consignmentId: cid,
+						trackingUrl,
+						courierName: 'Steadfast Courier',
+						message: `Steadfast কুরিয়ারে বুকিং সফল! ট্র্যাকিং কোড: ${tracking}`
+					};
+				}
+
+				return {
+					success: false,
+					error: `Steadfast বুকিং ব্যর্থ: ${data.message || (data.errors ? JSON.stringify(data.errors) : 'ক্রেডেনশিয়াল বা তথ্য সঠিক নয়')}`
+				};
+			} catch (err: any) {
+				console.error('Steadfast live booking fetch error:', err.message);
+				return {
+					success: false,
+					error: `Steadfast API সার্ভারের সাথে সংযোগ করা যায়নি: ${err.message}`
+				};
+			}
 		}
 
 		// ==========================================
@@ -630,87 +620,93 @@ export class CourierService {
 		if (targetProviderId === 'pathao') {
 			const { apiKey, secretKey, username, password, storeId } = creds;
 
-			if (apiKey && secretKey && username && password) {
-				try {
-					// Step A: Issue Token
-					const tokenRes = await fetch('https://api-hermes.pathao.com/aladdin/api/v1/issue-token', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-						body: JSON.stringify({
-							client_id: apiKey,
-							client_secret: secretKey,
-							username,
-							password,
-							grant_type: 'password'
-						}),
-						signal: AbortSignal.timeout(8000)
-					});
-
-					const tokenData = (await tokenRes.json()) as any;
-					if (tokenRes.ok && tokenData.access_token) {
-						// Step B: Dispatch Order
-						const orderPayload = {
-							store_id: Number(storeId) || 339467,
-							merchant_order_id: invoiceNo,
-							recipient_name: order.customerName,
-							recipient_phone: recipientPhone,
-							recipient_address: recipientAddress,
-							recipient_city: 1, // Default Dhaka
-							recipient_zone: 14,
-							delivery_type: 48,
-							item_type: 2,
-							special_instruction: note,
-							item_quantity: 1,
-							item_weight: 0.5,
-							amount_to_collect: codAmount,
-							item_description: `Order #${invoiceNo}`
-						};
-
-						const createRes = await fetch('https://api-hermes.pathao.com/aladdin/api/v1/orders', {
-							method: 'POST',
-							headers: {
-								Authorization: `Bearer ${tokenData.access_token}`,
-								'Content-Type': 'application/json',
-								Accept: 'application/json'
-							},
-							body: JSON.stringify(orderPayload),
-							signal: AbortSignal.timeout(10000)
-						});
-
-						const createData = (await createRes.json()) as any;
-						if (createRes.ok && (createData.data?.consignment_id || createData.code === 200)) {
-							const cid = String(createData.data?.consignment_id || `PTH-${invoiceNo}`);
-							const tracking = cid;
-							const trackingUrl = this.getTrackingUrl('pathao', tracking, cid);
-
-							await this.updateOrderAfterBooking(db, orderId, 'Pathao Courier', tracking, cid);
-							return {
-								success: true,
-								trackingCode: tracking,
-								consignmentId: cid,
-								trackingUrl,
-								courierName: 'Pathao Courier',
-								message: `Pathao কুরিয়ারে বুকিং সফল! কনসাইনমেন্ট আইডি: ${cid}`
-							};
-						}
-					}
-				} catch (err: any) {
-					console.error('Pathao live booking fetch error:', err.message);
-				}
+			if (!apiKey || !secretKey || !username || !password) {
+				return {
+					success: false,
+					error: 'Pathao কুরিয়ার ক্রেডেনশিয়াল (Client ID, Secret, Username, Password) কনফিগার করা নেই। Settings > Courier থেকে যুক্ত করুন।'
+				};
 			}
 
-			// Fallback with official Pathao tracking pattern
-			const cid = `PT${Math.floor(10000000 + Math.random() * 90000000)}`;
-			const trackingUrl = this.getTrackingUrl('pathao', cid, cid);
-			await this.updateOrderAfterBooking(db, orderId, 'Pathao Courier', cid, cid);
-			return {
-				success: true,
-				trackingCode: cid,
-				consignmentId: cid,
-				trackingUrl,
-				courierName: 'Pathao Courier',
-				message: `Pathao পার্সেল বুকিং সফল হয়েছে (কনসাইনমেন্ট: ${cid})`
-			};
+			try {
+				// Step A: Issue Token
+				const tokenRes = await fetch('https://api-hermes.pathao.com/aladdin/api/v1/issue-token', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+					body: JSON.stringify({
+						client_id: apiKey,
+						client_secret: secretKey,
+						username,
+						password,
+						grant_type: 'password'
+					}),
+					signal: AbortSignal.timeout(8000)
+				});
+
+				const tokenData = (await tokenRes.json()) as any;
+				if (!tokenRes.ok || !tokenData.access_token) {
+					return {
+						success: false,
+						error: `Pathao লগইন ব্যর্থ: ${tokenData.message || 'ইউজারনেম বা পাসওয়ার্ড সঠিক নয়'}`
+					};
+				}
+
+				// Step B: Dispatch Order
+				const orderPayload = {
+					store_id: Number(storeId) || 1,
+					merchant_order_id: invoiceNo,
+					recipient_name: order.customerName,
+					recipient_phone: recipientPhone,
+					recipient_address: recipientAddress,
+					recipient_city: 1, // Default Dhaka
+					recipient_zone: 14,
+					delivery_type: 48,
+					item_type: 2,
+					special_instruction: note,
+					item_quantity: 1,
+					item_weight: 0.5,
+					amount_to_collect: codAmount,
+					item_description: `Order #${invoiceNo}`
+				};
+
+				const createRes = await fetch('https://api-hermes.pathao.com/aladdin/api/v1/orders', {
+					method: 'POST',
+					headers: {
+						Authorization: `Bearer ${tokenData.access_token}`,
+						'Content-Type': 'application/json',
+						Accept: 'application/json'
+					},
+					body: JSON.stringify(orderPayload),
+					signal: AbortSignal.timeout(10000)
+				});
+
+				const createData = (await createRes.json()) as any;
+				if (createRes.ok && (createData.data?.consignment_id || createData.code === 200)) {
+					const cid = String(createData.data?.consignment_id || `PTH-${invoiceNo}`);
+					const tracking = cid;
+					const trackingUrl = this.getTrackingUrl('pathao', tracking, cid);
+
+					await this.updateOrderAfterBooking(db, orderId, 'Pathao Courier', tracking, cid);
+					return {
+						success: true,
+						trackingCode: tracking,
+						consignmentId: cid,
+						trackingUrl,
+						courierName: 'Pathao Courier',
+						message: `Pathao কুরিয়ারে বুকিং সফল! কনসাইনমেন্ট আইডি: ${cid}`
+					};
+				}
+
+				return {
+					success: false,
+					error: `Pathao অর্ডার বুকিং ব্যর্থ: ${createData.message || 'অর্ডার তথ্য যাচাই করুন'}`
+				};
+			} catch (err: any) {
+				console.error('Pathao live booking fetch error:', err.message);
+				return {
+					success: false,
+					error: `Pathao সার্ভারের সাথে সংযোগ করা যায়নি: ${err.message}`
+				};
+			}
 		}
 
 		// ==========================================
@@ -719,61 +715,62 @@ export class CourierService {
 		if (targetProviderId === 'redx') {
 			const token = creds.apiAccessToken || creds.apiKey || '';
 
-			if (token) {
-				try {
-					const res = await fetch('https://openapi.redx.com.bd/v1.0.0-beta/parcels', {
-						method: 'POST',
-						headers: {
-							'API-ACCESS-TOKEN': `Bearer ${token}`,
-							'Content-Type': 'application/json',
-							Accept: 'application/json'
-						},
-						body: JSON.stringify({
-							customer_name: order.customerName,
-							customer_phone: recipientPhone,
-							delivery_area: order.deliveryArea === 'inside_dhaka' ? 'Dhaka' : 'Outside Dhaka',
-							customer_address: recipientAddress,
-							merchant_invoice_id: invoiceNo,
-							cash_collection_amount: codAmount,
-							parcel_weight: 500,
-							instruction: note,
-							value: order.total || codAmount
-						}),
-						signal: AbortSignal.timeout(10000)
-					});
-
-					const data = (await res.json()) as any;
-					if (res.ok && data.tracking_id) {
-						const tracking = String(data.tracking_id);
-						const trackingUrl = this.getTrackingUrl('redx', tracking);
-
-						await this.updateOrderAfterBooking(db, orderId, 'REDX Courier', tracking, tracking);
-						return {
-							success: true,
-							trackingCode: tracking,
-							consignmentId: tracking,
-							trackingUrl,
-							courierName: 'REDX Courier',
-							message: `REDX পার্সেল বুকিং সফল! ট্র্যাকিং আইডি: ${tracking}`
-						};
-					}
-				} catch (err: any) {
-					console.error('REDX live booking error:', err.message);
-				}
+			if (!token) {
+				return {
+					success: false,
+					error: 'REDX API Access Token কনফিগার করা নেই। Settings > Courier থেকে সেটআপ করুন।'
+				};
 			}
 
-			// Fallback with standard REDX tracking format
-			const tracking = `REDX${Math.floor(10000000 + Math.random() * 90000000)}`;
-			const trackingUrl = this.getTrackingUrl('redx', tracking);
-			await this.updateOrderAfterBooking(db, orderId, 'REDX Courier', tracking, tracking);
-			return {
-				success: true,
-				trackingCode: tracking,
-				consignmentId: tracking,
-				trackingUrl,
-				courierName: 'REDX Courier',
-				message: `REDX কুরিয়ারে বুকিং সম্পন্ন হয়েছে (ট্র্যাকিং: ${tracking})`
-			};
+			try {
+				const res = await fetch('https://openapi.redx.com.bd/v1.0.0-beta/parcels', {
+					method: 'POST',
+					headers: {
+						'API-ACCESS-TOKEN': `Bearer ${token}`,
+						'Content-Type': 'application/json',
+						Accept: 'application/json'
+					},
+					body: JSON.stringify({
+						customer_name: order.customerName,
+						customer_phone: recipientPhone,
+						delivery_area: order.deliveryArea === 'inside_dhaka' ? 'Dhaka' : 'Outside Dhaka',
+						customer_address: recipientAddress,
+						merchant_invoice_id: invoiceNo,
+						cash_collection_amount: codAmount,
+						parcel_weight: 500,
+						instruction: note,
+						value: order.total || codAmount
+					}),
+					signal: AbortSignal.timeout(10000)
+				});
+
+				const data = (await res.json()) as any;
+				if (res.ok && data.tracking_id) {
+					const tracking = String(data.tracking_id);
+					const trackingUrl = this.getTrackingUrl('redx', tracking);
+
+					await this.updateOrderAfterBooking(db, orderId, 'REDX Courier', tracking, tracking);
+					return {
+						success: true,
+						trackingCode: tracking,
+						consignmentId: tracking,
+						trackingUrl,
+						courierName: 'REDX Courier',
+						message: `REDX পার্সেল বুকিং সফল! ট্র্যাকিং আইডি: ${tracking}`
+					};
+				}
+
+				return {
+					success: false,
+					error: `REDX বুকিং ব্যর্থ: ${data.message || 'তথ্য সঠিক নয়'}`
+				};
+			} catch (err: any) {
+				console.error('REDX live booking error:', err.message);
+				return {
+					success: false,
+					error: `REDX সার্ভারের সাথে সংযোগে ত্রুটি: ${err.message}`
+				};
+			}
 		}
 
 		// ==========================================
@@ -782,62 +779,63 @@ export class CourierService {
 		if (targetProviderId === 'paperfly') {
 			const { username, password, paperflyKey, storeName } = creds;
 
-			if (username && password && paperflyKey) {
-				try {
-					const basicAuth = btoa(`${username}:${password}`);
-					const res = await fetch('https://api.paperfly.com.bd/OrderPlacement', {
-						method: 'POST',
-						headers: {
-							paperflykey: paperflyKey,
-							Authorization: `Basic ${basicAuth}`,
-							'Content-Type': 'application/json'
-						},
-						body: JSON.stringify({
-							merOrderRef: invoiceNo,
-							pickMerchantName: storeName || 'Aura Store',
-							custname: order.customerName,
-							custphone: recipientPhone,
-							custaddress: recipientAddress,
-							customer_city: order.deliveryArea === 'inside_dhaka' ? 'Dhaka' : 'Outside Dhaka',
-							packagePrice: codAmount,
-							max_weight: '1',
-							remarks: note
-						}),
-						signal: AbortSignal.timeout(10000)
-					});
-
-					const data = (await res.json()) as any;
-					if (res.ok && data.success && data.success.length > 0) {
-						const tracking = String(data.success[0].tracking_number);
-						const trackingUrl = this.getTrackingUrl('paperfly', tracking);
-
-						await this.updateOrderAfterBooking(db, orderId, 'Paperfly', tracking, tracking);
-						return {
-							success: true,
-							trackingCode: tracking,
-							consignmentId: tracking,
-							trackingUrl,
-							courierName: 'Paperfly',
-							message: `Paperfly পার্সেল বুকিং সফল! ট্র্যাকিং: ${tracking}`
-						};
-					}
-				} catch (err: any) {
-					console.error('Paperfly live booking error:', err.message);
-				}
+			if (!username || !password || !paperflyKey) {
+				return {
+					success: false,
+					error: 'Paperfly API কী ও ক্রেডেনশিয়াল কনফিগার করা নেই। Settings > Courier থেকে সেটআপ করুন।'
+				};
 			}
 
-			// Fallback with standard Paperfly tracking format
-			const tracking = `PF${Math.floor(10000000 + Math.random() * 90000000)}`;
-			const trackingUrl = this.getTrackingUrl('paperfly', tracking);
-			await this.updateOrderAfterBooking(db, orderId, 'Paperfly', tracking, tracking);
-			return {
-				success: true,
-				trackingCode: tracking,
-				consignmentId: tracking,
-				trackingUrl,
-				courierName: 'Paperfly',
-				message: `Paperfly পার্সেল বুকিং সম্পন্ন হয়েছে (ট্র্যাকিং: ${tracking})`
-			};
+			try {
+				const basicAuth = btoa(`${username}:${password}`);
+				const res = await fetch('https://api.paperfly.com.bd/OrderPlacement', {
+					method: 'POST',
+					headers: {
+						paperflykey: paperflyKey,
+						Authorization: `Basic ${basicAuth}`,
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						merOrderRef: invoiceNo,
+						pickMerchantName: storeName || 'Aura Store',
+						custname: order.customerName,
+						custphone: recipientPhone,
+						custaddress: recipientAddress,
+						customer_city: order.deliveryArea === 'inside_dhaka' ? 'Dhaka' : 'Outside Dhaka',
+						packagePrice: codAmount,
+						max_weight: '1',
+						remarks: note
+					}),
+					signal: AbortSignal.timeout(10000)
+				});
+
+				const data = (await res.json()) as any;
+				if (res.ok && data.success && data.success.length > 0) {
+					const tracking = String(data.success[0].tracking_number);
+					const trackingUrl = this.getTrackingUrl('paperfly', tracking);
+
+					await this.updateOrderAfterBooking(db, orderId, 'Paperfly', tracking, tracking);
+					return {
+						success: true,
+						trackingCode: tracking,
+						consignmentId: tracking,
+						trackingUrl,
+						courierName: 'Paperfly',
+						message: `Paperfly পার্সেল বুকিং সফল! ট্র্যাকিং: ${tracking}`
+					};
+				}
+
+				return {
+					success: false,
+					error: `Paperfly বুকিং ব্যর্থ: ${data.message || 'তথ্য সঠিক নয়'}`
+				};
+			} catch (err: any) {
+				console.error('Paperfly live booking error:', err.message);
+				return {
+					success: false,
+					error: `Paperfly সার্ভারের সাথে সংযোগে ত্রুটি: ${err.message}`
+				};
+			}
 		}
 
 		// ==========================================
@@ -846,71 +844,67 @@ export class CourierService {
 		if (targetProviderId === 'carrybee') {
 			const { apiKey, secretKey, storeId } = creds;
 
-			if (apiKey && secretKey) {
-				try {
-					const res = await fetch('https://api.carrybee.com/api/v1/orders/create', {
-						method: 'POST',
-						headers: {
-							'Client-Id': apiKey,
-							'Secret-Key': secretKey,
-							'Content-Type': 'application/json',
-							Accept: 'application/json'
-						},
-						body: JSON.stringify({
-							store_id: storeId || '1',
-							merchant_order_id: invoiceNo,
-							recipient_name: order.customerName,
-							recipient_phone: recipientPhone,
-							recipient_address: recipientAddress,
-							cod_amount: codAmount,
-							note
-						}),
-						signal: AbortSignal.timeout(10000)
-					});
-
-					const data = (await res.json()) as any;
-					if (res.ok && (data.tracking_code || data.consignment_id)) {
-						const tracking = String(data.tracking_code || data.consignment_id);
-						const trackingUrl = this.getTrackingUrl('carrybee', tracking);
-
-						await this.updateOrderAfterBooking(db, orderId, 'CarryBee Courier', tracking, tracking);
-						return {
-							success: true,
-							trackingCode: tracking,
-							consignmentId: tracking,
-							trackingUrl,
-							courierName: 'CarryBee Courier',
-							message: `CarryBee পার্সেল বুকিং সফল! ট্র্যাকিং: ${tracking}`
-						};
-					}
-				} catch (err: any) {
-					console.error('CarryBee live booking error:', err.message);
-				}
+			if (!apiKey || !secretKey) {
+				return {
+					success: false,
+					error: 'Carrybee API ক্রেডেনশিয়াল কনফিগার করা নেই। Settings > Courier থেকে সেটআপ করুন।'
+				};
 			}
 
-			// Fallback with standard CarryBee tracking format
-			const tracking = `CB${Math.floor(10000000 + Math.random() * 90000000)}`;
-			const trackingUrl = this.getTrackingUrl('carrybee', tracking);
-			await this.updateOrderAfterBooking(db, orderId, 'CarryBee Courier', tracking, tracking);
-			return {
-				success: true,
-				trackingCode: tracking,
-				consignmentId: tracking,
-				trackingUrl,
-				courierName: 'CarryBee Courier',
-				message: `CarryBee পার্সেল বুকিং সম্পন্ন হয়েছে (ট্র্যাকিং: ${tracking})`
-			};
+			try {
+				const res = await fetch('https://api.carrybee.com/api/v1/orders/create', {
+					method: 'POST',
+					headers: {
+						'Client-Id': apiKey,
+						'Secret-Key': secretKey,
+						'Content-Type': 'application/json',
+						Accept: 'application/json'
+					},
+					body: JSON.stringify({
+						store_id: storeId || '1',
+						merchant_order_id: invoiceNo,
+						recipient_name: order.customerName,
+						recipient_phone: recipientPhone,
+						recipient_address: recipientAddress,
+						cod_amount: codAmount,
+						note
+					}),
+					signal: AbortSignal.timeout(10000)
+				});
+
+				const data = (await res.json()) as any;
+				if (res.ok && (data.tracking_code || data.consignment_id)) {
+					const tracking = String(data.tracking_code || data.consignment_id);
+					const trackingUrl = this.getTrackingUrl('carrybee', tracking);
+
+					await this.updateOrderAfterBooking(db, orderId, 'CarryBee Courier', tracking, tracking);
+					return {
+						success: true,
+						trackingCode: tracking,
+						consignmentId: tracking,
+						trackingUrl,
+						courierName: 'CarryBee Courier',
+						message: `CarryBee পার্সেল বুকিং সফল! ট্র্যাকিং: ${tracking}`
+					};
+				}
+
+				return {
+					success: false,
+					error: `Carrybee বুকিং ব্যর্থ: ${data.message || 'তথ্য সঠিক নয়'}`
+				};
+			} catch (err: any) {
+				console.error('CarryBee live booking error:', err.message);
+				return {
+					success: false,
+					error: `Carrybee সার্ভারের সাথে সংযোগে ত্রুটি: ${err.message}`
+				};
+			}
 		}
 
 		// Default fallback
-		const genericTracking = `CR-${invoiceNo}-${Math.floor(1000 + Math.random() * 9000)}`;
-		await this.updateOrderAfterBooking(db, orderId, courierConfig.name || 'Courier', genericTracking, genericTracking);
 		return {
-			success: true,
-			trackingCode: genericTracking,
-			consignmentId: genericTracking,
-			courierName: courierConfig.name,
-			message: `${courierConfig.name} পার্সেল সফলভাবে এন্ট্রি হয়েছে`
+			success: false,
+			error: `কোনো সক্রিয় কুরিয়ার কনফিগারেশন পাওয়া যায়নি। অনুগ্রহ করে Settings > Courier থেকে API সেটআপ করুন।`
 		};
 	}
 

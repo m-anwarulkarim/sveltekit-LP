@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
+	import { enhance, deserialize } from '$app/forms';
 	import { Card, Button, Badge } from '#lib/components/ui';
 	import { CheckCircle2, Check, Printer } from 'lucide-svelte';
 	import {
@@ -74,9 +74,13 @@
 			courierStatus = data.order.courierStatus || '';
 			createdAt = data.order.createdAt;
 		}
+		if (data?.courierStats) {
+			courierStats = data.courierStats;
+		}
 	});
 
 	// Intelligence & Notes
+	let courierStats = $state(data.courierStats);
 	let callNotes = $state<any[]>(data.initialNotes || []);
 	let isBanned = $state(false);
 	let isSaving = $state(false);
@@ -180,15 +184,71 @@
 		isCourierModalOpen = true;
 	}
 
-	function handleAddNote(noteText: string) {
-		const newNote = {
-			id: 'note-' + Date.now(),
-			note: noteText,
-			author: 'Admin Staff',
-			time: 'এইমাত্র'
-		};
-		callNotes = [newNote, ...callNotes];
-		showToast('নোট যোগ করা হয়েছে!');
+	async function handleAddNote(noteText: string, callStatus?: string) {
+		if (!noteText.trim() || !orderId) return;
+
+		const formData = new FormData();
+		formData.append('orderId', orderId);
+		formData.append('note', noteText.trim());
+		if (callStatus) {
+			formData.append('callStatus', callStatus);
+		}
+
+		try {
+			const res = await fetch('?/addNote', {
+				method: 'POST',
+				body: formData,
+				headers: {
+					'x-sveltekit-action': 'true'
+				}
+			});
+
+			const result = deserialize(await res.text());
+			if (result.type === 'success' && (result.data as any)?.note) {
+				const savedNote = (result.data as any).note;
+				callNotes = [savedNote, ...callNotes];
+				if ((result.data as any)?.updatedStatus) {
+					status = (result.data as any).updatedStatus;
+					showToast(`নোট সংরক্ষিত হয়েছে এবং অর্ডারের স্ট্যাটাস আপডেট হয়েছে!`);
+				} else {
+					showToast('নোট সফলভাবে ডাটাবেজে সংরক্ষণ করা হয়েছে!');
+				}
+			} else if (result.type === 'failure') {
+				showToast((result.data as any)?.message || 'নোট সেভ করতে সমস্যা হয়েছে!');
+			} else {
+				showToast('নোট সংরক্ষিত হয়েছে!');
+			}
+		} catch (err) {
+			console.error('Failed to save order note:', err);
+			showToast('নোট সংরক্ষণ ব্যর্থ হয়েছে!');
+		}
+	}
+
+	async function handleDeleteNote(noteId: string) {
+		if (!noteId) return;
+		const formData = new FormData();
+		formData.append('noteId', noteId);
+
+		try {
+			const res = await fetch('?/deleteNote', {
+				method: 'POST',
+				body: formData,
+				headers: {
+					'x-sveltekit-action': 'true'
+				}
+			});
+
+			const result = deserialize(await res.text());
+			if (result.type === 'success') {
+				callNotes = callNotes.filter((n) => n.id !== noteId);
+				showToast('নোট মুছে ফেলা হয়েছে!');
+			} else {
+				showToast('নোট মুছতে সমস্যা হয়েছে!');
+			}
+		} catch (err) {
+			console.error('Failed to delete note:', err);
+			showToast('নোট মুছতে সমস্যা হয়েছে!');
+		}
 	}
 
 	function handleToggleBan() {
@@ -303,14 +363,14 @@
 			<!-- Courier & Fraud Check -->
 			<CourierFraudCard
 				phone={customerPhone}
-				stats={data.courierStats}
-				onRefresh={() => showToast('কুরিয়ার ফ্রড ডেটা সফলভাবে রিলোড হয়েছে!')}
+				bind:stats={courierStats}
 			/>
 
 			<!-- Call Notes & Timeline -->
 			<OrderCallNotes
 				bind:notes={callNotes}
 				onAddNote={handleAddNote}
+				onDeleteNote={handleDeleteNote}
 			/>
 
 			<!-- Customer Lifetime Profile -->
@@ -324,6 +384,7 @@
 
 			<!-- Visitor & Device Info -->
 			<OrderVisitorMetaCard
+				meta={data.visitorMeta}
 				bind:isBanned
 				onToggleBan={handleToggleBan}
 			/>

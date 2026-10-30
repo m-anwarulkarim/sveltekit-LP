@@ -12,11 +12,12 @@ export interface FacebookCatalogSettings {
 }
 
 export const DEFAULT_CATALOG_SETTINGS: FacebookCatalogSettings = {
-	isEnabled: true,
+	// Catalog feed is disabled by default — user must enable it from Dashboard > Settings > Facebook Catalog
+	isEnabled: false,
 	includeOutOfStock: false,
 	catalogMatchKey: 'id',
 	currency: 'BDT',
-	customStoreName: 'AURA Store'
+	customStoreName: ''
 };
 
 export class CatalogService {

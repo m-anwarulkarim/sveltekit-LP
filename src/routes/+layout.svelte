@@ -6,15 +6,30 @@
 	import { onMount } from 'svelte';
 	import { afterNavigate } from '$app/navigation';
 	import { initMetaPixel, trackPageView } from '#lib/client/meta-pixel';
+	import { initGtm, trackGtmPageView } from '#lib/client/gtm';
+	import { captureAttribution } from '#lib/client/attribution';
+	import { cart } from '#lib/modules/cart/cart.svelte';
 
 	let { data, children }: LayoutProps = $props();
 
 	onMount(() => {
 		initMetaPixel(data?.pixelConfig);
+		initGtm(data?.gtmConfig);
+		captureAttribution();
 	});
 
-	afterNavigate(() => {
-		trackPageView(data?.pixelConfig);
+	$effect(() => {
+		if (data?.user) {
+			cart.syncWithUser(data.user);
+		}
+	});
+
+	afterNavigate(({ type }) => {
+		// Only track on subsequent client transitions; initial load is handled by initMetaPixel / initGtm
+		if (type !== 'enter') {
+			trackPageView(data?.pixelConfig);
+			trackGtmPageView();
+		}
 	});
 </script>
 

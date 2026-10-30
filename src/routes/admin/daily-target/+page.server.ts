@@ -1,39 +1,32 @@
 import type { PageServerLoad, Actions } from './$types';
 import { getDb } from '#lib/server/db/index';
-import { DailyTargetService } from '#lib/server/services/daily-target.service';
-
-export interface TargetViewItem {
-	id: string;
-	title: string;
-	startDate: string;
-	endDate: string;
-	targetAmount: number;
-	consumedAmount: number;
-	status: 'active' | 'upcoming' | 'completed';
-	createdAt?: Date | string | number | null;
-}
+import { DailyTargetService, type TargetViewItem } from '#lib/server/services/daily-target.service';
 
 export const load: PageServerLoad = async ({ parent, platform }) => {
 	const parentData = await parent();
 	let targets: TargetViewItem[] = [];
 
-	if (platform?.env?.DB) {
-		try {
-			const db = getDb(platform.env.DB);
-			const dbTargets = await DailyTargetService.listTargets(db);
-			targets = dbTargets || [];
-		} catch (error) {
-			console.error('Failed to load daily targets from D1:', error);
-		}
+	try {
+		const db = getDb(platform);
+		const dbTargets = await DailyTargetService.listTargets(db);
+		targets = dbTargets || [];
+	} catch (error) {
+		console.error('Failed to load daily targets from D1:', error);
 	}
 
-	// Calculate summary metrics
+	// Calculate comprehensive summary metrics
 	const totalTargets = targets.length;
 	const activeTargets = targets.filter((t) => t.status === 'active').length;
 	const totalTargetAmount = targets.reduce((acc, t) => acc + (t.targetAmount || 0), 0);
 	const totalConsumedAmount = targets.reduce((acc, t) => acc + (t.consumedAmount || 0), 0);
 	const remainingAmount = Math.max(0, totalTargetAmount - totalConsumedAmount);
-	const overallPercent = totalTargetAmount > 0 ? Math.min(100, Math.round((totalConsumedAmount / totalTargetAmount) * 100)) : 0;
+	const overallPercent =
+		totalTargetAmount > 0
+			? Math.min(100, Math.round((totalConsumedAmount / totalTargetAmount) * 100))
+			: 0;
+	const totalOrdersAchieved = targets.reduce((acc, t) => acc + (t.ordersCount || 0), 0);
+	const overallAov =
+		totalOrdersAchieved > 0 ? Math.round(totalConsumedAmount / totalOrdersAchieved) : 0;
 
 	return {
 		...parentData,
@@ -44,7 +37,9 @@ export const load: PageServerLoad = async ({ parent, platform }) => {
 			totalTargetAmount,
 			totalConsumedAmount,
 			remainingAmount,
-			overallPercent
+			overallPercent,
+			totalOrdersAchieved,
+			overallAov
 		}
 	};
 };
@@ -70,39 +65,19 @@ export const actions: Actions = {
 			return { success: false, message: 'সমাপ্তির তারিখ শুরুর তারিখের আগের হতে পারে না!' };
 		}
 
-		if (platform?.env?.DB) {
-			try {
-				const db = getDb(platform.env.DB);
-				await DailyTargetService.createTarget(db, {
-					title,
-					startDate,
-					endDate,
-					targetAmount
-				});
-				return { success: true, message: `নতুন টার্গেট "${title}" সফলভাবে তৈরি হয়েছে!` };
-			} catch (error: any) {
-				console.error('Failed to create target in D1:', error);
-				return { success: false, message: error?.message || 'টার্গেট তৈরিতে ত্রুটি হয়েছে!' };
-			}
-		} else {
-			const today = new Date().toISOString().split('T')[0];
-			let status: 'active' | 'upcoming' | 'completed' = 'active';
-			if (startDate > today) status = 'upcoming';
-			else if (endDate < today) status = 'completed';
-
-			const newTarget: TargetViewItem = {
-				id: 'tgt-' + Date.now(),
+		try {
+			const db = getDb(platform);
+			await DailyTargetService.createTarget(db, {
 				title,
 				startDate,
 				endDate,
-				targetAmount,
-				consumedAmount: 0,
-				status
-			};
-			INITIAL_FALLBACK_TARGETS = [newTarget, ...INITIAL_FALLBACK_TARGETS];
+				targetAmount
+			});
+			return { success: true, message: `নতুন টার্গেট "${title}" সফলভাবে তৈরি হয়েছে!` };
+		} catch (error: any) {
+			console.error('Failed to create target in D1:', error);
+			return { success: false, message: error?.message || 'টার্গেট তৈরিতে ত্রুটি হয়েছে!' };
 		}
-
-		return { success: true, message: `নতুন টার্গেট "${title}" সফলভাবে তৈরি হয়েছে!` };
 	},
 
 	updateTarget: async ({ request, platform }) => {
@@ -112,7 +87,11 @@ export const actions: Actions = {
 		const startDate = data.get('startDate')?.toString()?.trim();
 		const endDate = data.get('endDate')?.toString()?.trim();
 		const targetAmountStr = data.get('targetAmount')?.toString()?.trim();
-		const status = data.get('status')?.toString()?.trim() as 'active' | 'upcoming' | 'completed' | undefined;
+		const status = data.get('status')?.toString()?.trim() as
+			| 'active'
+			| 'upcoming'
+			| 'completed'
+			| undefined;
 
 		if (!id) {
 			return { success: false, message: 'টার্গেট আইডি পাওয়া যায়নি!' };
@@ -127,38 +106,20 @@ export const actions: Actions = {
 			return { success: false, message: 'সমাপ্তির তারিখ শুরুর তারিখের আগের হতে পারে না!' };
 		}
 
-		if (platform?.env?.DB) {
-			try {
-				const db = getDb(platform.env.DB);
-				await DailyTargetService.updateTarget(db, id, {
-					title,
-					startDate,
-					endDate,
-					targetAmount,
-					status
-				});
-				return { success: true, message: 'টার্গেট সফলভাবে আপডেট করা হয়েছে!' };
-			} catch (error: any) {
-				console.error('Failed to update target in D1:', error);
-				return { success: false, message: error?.message || 'টার্গেট আপডেটে ত্রুটি হয়েছে!' };
-			}
-		} else {
-			INITIAL_FALLBACK_TARGETS = INITIAL_FALLBACK_TARGETS.map((t) => {
-				if (t.id === id) {
-					return {
-						...t,
-						title: title ?? t.title,
-						startDate: startDate ?? t.startDate,
-						endDate: endDate ?? t.endDate,
-						targetAmount: targetAmount ?? t.targetAmount,
-						status: status ?? t.status
-					};
-				}
-				return t;
+		try {
+			const db = getDb(platform);
+			await DailyTargetService.updateTarget(db, id, {
+				title,
+				startDate,
+				endDate,
+				targetAmount,
+				status
 			});
+			return { success: true, message: 'টার্গেট সফলভাবে আপডেট করা হয়েছে!' };
+		} catch (error: any) {
+			console.error('Failed to update target in D1:', error);
+			return { success: false, message: error?.message || 'টার্গেট আপডেটে ত্রুটি হয়েছে!' };
 		}
-
-		return { success: true, message: 'টার্গেট সফলভাবে আপডেট করা হয়েছে!' };
 	},
 
 	deleteTarget: async ({ request, platform }) => {
@@ -169,19 +130,13 @@ export const actions: Actions = {
 			return { success: false, message: 'টার্গেট আইডি পাওয়া যায়নি!' };
 		}
 
-		if (platform?.env?.DB) {
-			try {
-				const db = getDb(platform.env.DB);
-				await DailyTargetService.deleteTarget(db, id);
-				return { success: true, message: 'টার্গেটটি সফলভাবে মুছে ফেলা হয়েছে।' };
-			} catch (error: any) {
-				console.error('Failed to delete target in D1:', error);
-				return { success: false, message: error?.message || 'টার্গেট মুছতে ত্রুটি হয়েছে!' };
-			}
-		} else {
-			INITIAL_FALLBACK_TARGETS = INITIAL_FALLBACK_TARGETS.filter((t) => t.id !== id);
+		try {
+			const db = getDb(platform);
+			await DailyTargetService.deleteTarget(db, id);
+			return { success: true, message: 'টার্গেটটি সফলভাবে মুছে ফেলা হয়েছে।' };
+		} catch (error: any) {
+			console.error('Failed to delete target in D1:', error);
+			return { success: false, message: error?.message || 'টার্গেট মুছতে ত্রুটি হয়েছে!' };
 		}
-
-		return { success: true, message: 'টার্গেটটি সফলভাবে মুছে ফেলা হয়েছে।' };
 	}
 };

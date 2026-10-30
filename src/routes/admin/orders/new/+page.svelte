@@ -72,8 +72,10 @@
 				total: 0,
 				delivered: 0,
 				cancelled: 0,
-				successRate: 0,
-				courierName: 'Steadfast & Pathao'
+				successRate: 100,
+				courierName: 'নতুন কাস্টমার (রেকর্ড নেই)',
+				badgeLabel: 'নতুন কাস্টমার',
+				isConfigured: false
 			};
 		}
 		const delivered = matchedPastOrders.filter((o: any) =>

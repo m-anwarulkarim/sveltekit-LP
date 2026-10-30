@@ -5,13 +5,13 @@
 	let isSaved = $state(false);
 	let saveMessage = $state('Advance Payment Settings Saved!');
 
-	let enableAdvancePayment = $state(true);
+	let enableAdvancePayment = $state(false);
 	let advanceType = $state<'fixed' | 'percentage'>('fixed');
-	let advanceAmount = $state(150);
-	let onlyOutsideDhaka = $state(true);
+	let advanceAmount = $state(0);
+	let onlyOutsideDhaka = $state(false);
 	let autoCancelMinutes = $state(30);
-	let bkashNumber = $state('01700000000');
-	let nagadNumber = $state('01800000000');
+	let bkashNumber = $state('');
+	let nagadNumber = $state('');
 	let instructions = $state('অনুগ্রহ করে উল্লিখিত নাম্বারে সেন্ড মানি বা পেমেন্ট করে ট্রানজেকশন আইডি প্রদান করুন।');
 
 	function triggerSave(msg = 'Advance Payment Settings Saved!') {

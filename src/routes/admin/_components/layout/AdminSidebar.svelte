@@ -19,8 +19,7 @@
 		Package,
 		SlidersHorizontal,
 		Activity,
-		ShieldCheck
-	} from 'lucide-svelte';
+		ShieldCheck,		Tag	} from 'lucide-svelte';
 	import { hasMenuAccess } from '#lib/constants/admin-permissions';
 
 	interface Props {
@@ -149,6 +148,7 @@
 	let isDailySummaryActive = $derived(currentPath === '/admin/reports/daily-business-summary' || currentPath === '/admin/reports');
 	let isAssetValuationActive = $derived(currentPath === '/admin/reports/asset-valuation');
 	let isDailyTargetActive = $derived(currentPath.startsWith('/admin/daily-target'));
+	let isCouponActive = $derived(currentPath.startsWith('/admin/coupon'));
 </script>
 
 <aside
@@ -915,6 +915,29 @@
 						<Target class="w-5 h-5 shrink-0 {isDailyTargetActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" />
 						{#if !collapsed}
 							<span>Daily Target</span>
+						{/if}
+					</div>
+				</a>
+			{/if}
+
+			
+			<!-- 11b. Coupon -->
+			{#if hasMenuAccess(currentPermissions, 'coupons')}
+				<a
+					href="/admin/coupon"
+					onclick={() => {
+						mobileOpen = false;
+						closeAllSubmenus();
+					}}
+					class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isCouponActive
+						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
+					title="Coupon"
+				>
+					<div class="flex items-center gap-3.5">
+						<Tag class="w-5 h-5 shrink-0 {isCouponActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" />
+						{#if !collapsed}
+							<span>Coupon</span>
 						{/if}
 					</div>
 				</a>

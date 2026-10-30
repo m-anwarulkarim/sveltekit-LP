@@ -1,9 +1,10 @@
-import type { PageServerLoad } from './$types';
-import { error } from '@sveltejs/kit';
+import type { PageServerLoad, Actions } from './$types';
+import { error, fail } from '@sveltejs/kit';
 import type { Product } from '#lib/modules/products/types';
 import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
 import { SeoService } from '#lib/server/services/seo.service';
+import { ReviewService } from '#lib/server/services/review.service';
 import { eq, desc, ne } from 'drizzle-orm';
 
 export const load: PageServerLoad = async (event) => {
@@ -16,6 +17,7 @@ export const load: PageServerLoad = async (event) => {
 
 	let product: Product | null = null;
 	let relatedProducts: Product[] = [];
+	let productReviews: any[] = [];
 
 	try {
 		const db = getDb(event.platform);
@@ -36,6 +38,9 @@ export const load: PageServerLoad = async (event) => {
 				.orderBy(schema.productSpecs.sortOrder)
 				.all();
 
+			// Fetch real reviews from D1 database
+			productReviews = await ReviewService.listProductReviews(db, rawProduct.id);
+
 			const ratingNum = rawProduct.rating ? (rawProduct.rating > 5 ? rawProduct.rating / 10 : rawProduct.rating) : 5;
 			const discountPercent =
 				rawProduct.originalPrice > rawProduct.price
@@ -53,7 +58,7 @@ export const load: PageServerLoad = async (event) => {
 				price: rawProduct.price,
 				originalPrice: rawProduct.originalPrice || rawProduct.price,
 				rating: ratingNum,
-				reviewsCount: rawProduct.reviewsCount || 100,
+				reviewsCount: productReviews.length > 0 ? productReviews.length : (rawProduct.reviewsCount || 0),
 				discountPercent,
 				deliveryTime: '12-24 HOURS',
 				image: rawProduct.image || '/images/placeholder.svg',
@@ -130,8 +135,41 @@ export const load: PageServerLoad = async (event) => {
 
 	return {
 		product,
+		reviews: productReviews,
 		relatedProducts,
 		productJsonLd,
 		breadcrumbsJsonLd
 	};
+};
+
+export const actions: Actions = {
+	addReview: async ({ request, platform }) => {
+		try {
+			const data = await request.formData();
+			const productId = data.get('productId')?.toString();
+			const author = data.get('author')?.toString()?.trim();
+			const rating = parseInt(data.get('rating')?.toString() || '5');
+			const title = data.get('title')?.toString()?.trim();
+			const content = data.get('content')?.toString()?.trim();
+
+			if (!productId || !author || !content) {
+				return fail(400, { message: 'সবগুলো আবশ্যক তথ্য পূরণ করুন।' });
+			}
+
+			const db = getDb(platform);
+			await ReviewService.addReview(db, {
+				productId,
+				author,
+				rating,
+				title,
+				content,
+				role: 'ভেরিফাইড ক্রেতা'
+			});
+
+			return { success: true, message: 'আপনার রিভিউটি সফলভাবে গৃহীত হয়েছে!' };
+		} catch (err: any) {
+			console.error('Add review error:', err);
+			return fail(500, { message: err?.message || 'রিভিউ যুক্ত করতে সমস্যা হয়েছে।' });
+		}
+	}
 };

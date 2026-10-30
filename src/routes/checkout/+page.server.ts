@@ -5,16 +5,31 @@ import { OrderService } from '#lib/server/services/order.service';
 import { addLiveOrder } from '#lib/server/orders-store';
 import { ThemeCustomizationService } from '#lib/server/services/theme-customization.service';
 import { PixelService } from '#lib/server/services/pixel.service';
+import { SettingsService } from '#lib/server/services/settings.service';
 
 export const load: PageServerLoad = async (event) => {
 	const parentData = await event.parent();
 	const themeConfig = parentData.themeConfig;
 	const isLoginRequired = themeConfig?.pageViews?.checkout === 'checkout_1';
 
+	let paymentConfig = {
+		enableCOD: true,
+		enableBkash: false,
+		enableNagad: false
+	};
+
+	try {
+		const db = getDb(event.platform);
+		paymentConfig = await SettingsService.getPaymentConfig(db);
+	} catch (e) {
+		console.error('Failed to load payment config for checkout:', e);
+	}
+
 	return {
 		user: event.locals.user ?? null,
 		isLoginRequired,
-		activeCheckout: themeConfig?.pageViews?.checkout || 'checkout_2'
+		activeCheckout: themeConfig?.pageViews?.checkout || 'checkout_2',
+		paymentConfig
 	};
 };
 
@@ -77,17 +92,39 @@ async function handlePlaceOrderAction({ request, platform, getClientAddress, loc
 			website_url: honeypot
 		};
 
-		let ipAddress = '127.0.0.1';
-		try {
-			ipAddress = getClientAddress();
-		} catch {
-			// development fallback
+		let ipAddress = request.headers.get('cf-connecting-ip') || '';
+		if (!ipAddress) {
+			try {
+				ipAddress = getClientAddress();
+			} catch {
+				ipAddress = '127.0.0.1';
+			}
 		}
 
 		const userAgent = request.headers.get('user-agent') || undefined;
+		const city = request.headers.get('cf-ipcity') || '';
+		const country = request.headers.get('cf-ipcountry') || 'BD';
+		const locationTag = city ? `${city}, ${country}` : country;
 
-		const mockOrderNumber = OrderService.generateOrderNumber();
-		const mockOrderId = crypto.randomUUID();
+		const lowerUa = (userAgent || '').toLowerCase();
+		let devType = 'Desktop';
+		let osType = 'OS';
+		let browserType = 'Browser';
+		if (/mobile|android|iphone|ipad|ipod/.test(lowerUa)) {
+			devType = /ipad|tablet/.test(lowerUa) ? 'Tablet' : 'Mobile';
+		}
+		if (lowerUa.includes('android')) osType = 'Android';
+		else if (lowerUa.includes('iphone') || lowerUa.includes('ipad')) osType = 'iOS';
+		else if (lowerUa.includes('windows')) osType = 'Windows';
+		else if (lowerUa.includes('macintosh')) osType = 'macOS';
+
+		if (lowerUa.includes('chrome') && !lowerUa.includes('edg')) browserType = 'Chrome';
+		else if (lowerUa.includes('safari') && !lowerUa.includes('chrome')) browserType = 'Safari';
+		else if (lowerUa.includes('firefox')) browserType = 'Firefox';
+
+		const deviceFingerprint = `${devType}: ${osType} (${browserType}) • ${locationTag}`;
+		const source = formData.get('source')?.toString() || 'Storefront Checkout';
+
 		const subtotal = items.reduce((acc: number, item: any) => acc + (item.price || 0) * (item.quantity || 1), 0);
 		const deliveryCharge = deliveryArea === 'inside_dhaka' ? 60 : 120;
 		const total = subtotal + deliveryCharge;
@@ -100,13 +137,18 @@ async function handlePlaceOrderAction({ request, platform, getClientAddress, loc
 			const result = await OrderService.createWebOrder(db, payload, {
 				ipAddress,
 				userAgent,
-				source: 'Storefront Checkout'
+				source,
+				deviceFingerprint
 			});
 			orderId = result.orderId;
 			orderNumber = result.orderNumber;
 
+			// Capture Meta Browser ID (_fbp) and Click ID (_fbc) cookies for 9.0+ EMQ
+			const fbp = cookies.get('_fbp') || undefined;
+			const fbc = cookies.get('_fbc') || undefined;
+
 			// Dispatch asynchronous server-side Meta Conversions API (CAPI) Purchase event
-			PixelService.sendCAPIPurchase(db, {
+			const capiPromise = PixelService.sendCAPIPurchase(db, {
 				orderId,
 				orderNumber,
 				customerName,
@@ -118,8 +160,17 @@ async function handlePlaceOrderAction({ request, platform, getClientAddress, loc
 				currency: 'BDT',
 				ipAddress,
 				userAgent,
-				eventSourceUrl: `${url?.origin || 'https://aura.com.bd'}/checkout`
+				fbp,
+				fbc,
+				eventSourceUrl: `${url?.origin || 'https://lp.haqplus.com'}/checkout`
 			}).catch((err) => console.error('Background CAPI Purchase Error:', err));
+
+			// Ensure Cloudflare Worker execution context does not terminate before CAPI completes
+			if (platform?.ctx?.waitUntil) {
+				platform.ctx.waitUntil(capiPromise);
+			} else if ((platform as any)?.context?.waitUntil) {
+				(platform as any).context.waitUntil(capiPromise);
+			}
 		} catch (err: any) {
 			console.error('Order creation error in D1:', err);
 			return fail(400, {

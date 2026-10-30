@@ -9,21 +9,36 @@
 	import { ChevronRight, Home } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import { trackMetaEvent } from '#lib/client/meta-pixel';
+	import { trackGtmViewItem } from '#lib/client/gtm';
 
 	let { data }: { data: PageData } = $props();
 
 	const product = $derived(data.product);
 	const relatedProducts = $derived(data.relatedProducts || []);
 
-	// Fire Standard Meta Pixel ViewContent event
+	// Fire Standard Meta Pixel ViewContent & GA4 E-Commerce view_item events
 	$effect(() => {
 		if (product && typeof window !== 'undefined') {
 			const matchId = String(product.sku || product.id);
+			const price = Number(product.salePrice || product.price || 0);
+
 			trackMetaEvent('ViewContent', {
 				content_name: product.name,
 				content_ids: [matchId],
 				content_type: 'product',
-				value: Number(product.salePrice || product.price || 0),
+				value: price,
+				currency: 'BDT'
+			});
+
+			trackGtmViewItem({
+				item: {
+					item_id: matchId,
+					item_name: product.name,
+					item_brand: product.brand || 'AURA',
+					item_category: product.category || 'General',
+					price: price,
+					quantity: 1
+				},
 				currency: 'BDT'
 			});
 		}
@@ -92,7 +107,7 @@
 
 		<!-- 3. Tabbed Information & Specifications Section -->
 		<div class="mb-8 sm:mb-12">
-			<ProductTabs {product} />
+			<ProductTabs {product} reviews={data.reviews || []} />
 		</div>
 
 		<!-- 4. Related Products Carousel -->

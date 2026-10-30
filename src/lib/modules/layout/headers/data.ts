@@ -16,7 +16,7 @@ export const DEFAULT_HEADER_DATA: HeaderStoreData = {
 	brandName: 'AURA',
 	announcementText: '৳৬০০+ অর্ডার করলেই ডেলিভারি সম্পূর্ণ ফ্রি!',
 	freeShippingThreshold: 600,
-	phoneHotline: '01602867954',
+	phoneHotline: '01860-229546',
 	menuItems: [
 		{ label: 'হোম', href: '/' },
 		{ label: 'সকল পণ্য', href: '/catalog/all-product' },

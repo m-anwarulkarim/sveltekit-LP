@@ -1,4 +1,4 @@
-import { eq, desc, and, gte, lte, sql } from 'drizzle-orm';
+import { eq, desc, and, gte, lte, sql, notInArray } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from '../db/schema';
 
@@ -22,18 +22,65 @@ export interface DailyBreakdownItem {
 	dayLabel: string;
 	salesAmount: number;
 	ordersCount: number;
+	aov: number;
+}
+
+export interface TargetViewItem {
+	id: string;
+	title: string;
+	startDate: string;
+	endDate: string;
+	targetAmount: number;
+	consumedAmount: number;
+	ordersCount: number;
+	aov: number;
+	remainingAmount: number;
+	percent: number;
+	daysRemaining: number;
+	dailyRequiredRate: number;
+	status: 'active' | 'upcoming' | 'completed';
+	createdAt?: Date | string | number | null;
 }
 
 /**
  * Enterprise Daily Target & Revenue Milestone Service
  */
 export class DailyTargetService {
+	private static isTableInitialized = false;
+
 	/**
-	 * Lists all daily targets with live consumed stats
+	 * Ensures daily_targets table exists in Cloudflare D1
 	 */
-	static async listTargets(db: DrizzleD1Database<typeof schema>) {
+	static async ensureTable(db: DrizzleD1Database<typeof schema>) {
+		if (this.isTableInitialized) return;
 		try {
-			// Auto-seed if empty
+			await db.run(
+				sql.raw(`
+				CREATE TABLE IF NOT EXISTS daily_targets (
+					id TEXT PRIMARY KEY,
+					title TEXT NOT NULL DEFAULT 'Daily Target',
+					start_date TEXT NOT NULL,
+					end_date TEXT NOT NULL,
+					target_amount INTEGER NOT NULL,
+					consumed_amount INTEGER NOT NULL DEFAULT 0,
+					status TEXT NOT NULL DEFAULT 'active',
+					created_at INTEGER NOT NULL,
+					updated_at INTEGER NOT NULL
+				);
+			`)
+			);
+			this.isTableInitialized = true;
+		} catch (e) {
+			console.error('Failed to ensure daily_targets table:', e);
+		}
+	}
+
+	/**
+	 * Lists all daily targets with live consumed stats from real orders
+	 */
+	static async listTargets(db: DrizzleD1Database<typeof schema>): Promise<TargetViewItem[]> {
+		await this.ensureTable(db);
+		try {
 			const countRes = await db
 				.select({ count: sql<number>`count(*)` })
 				.from(schema.dailyTargets)
@@ -50,22 +97,28 @@ export class DailyTargetService {
 				.orderBy(desc(schema.dailyTargets.createdAt))
 				.all();
 
-			// Auto calculate consumed amount from orders if possible
-			const targetsWithProgress = await Promise.all(
+			const todayStr = new Date().toISOString().split('T')[0];
+			const todayMs = new Date().setHours(0, 0, 0, 0);
+
+			// Calculate real progress for each target
+			const targetsWithProgress: TargetViewItem[] = await Promise.all(
 				rows.map(async (target) => {
-					let consumed = target.consumedAmount || 0;
+					let consumed = 0;
+					let ordersCount = 0;
 
 					try {
 						const startMs = new Date(target.startDate).setHours(0, 0, 0, 0);
 						const endMs = new Date(target.endDate).setHours(23, 59, 59, 999);
 
 						if (!isNaN(startMs) && !isNaN(endMs)) {
+							// Filter out cancelled, returned, incomplete, and trashed orders
 							const matchingOrders = await db
 								.select({ total: schema.orders.total })
 								.from(schema.orders)
 								.where(
 									and(
 										eq(schema.orders.isTrashed, false),
+										notInArray(schema.orders.status, ['cancelled', 'returned', 'incomplete']),
 										gte(schema.orders.createdAt, new Date(startMs)),
 										lte(schema.orders.createdAt, new Date(endMs))
 									)
@@ -73,25 +126,39 @@ export class DailyTargetService {
 								.all();
 
 							if (matchingOrders.length > 0) {
-								const calculated = matchingOrders.reduce((sum, o) => sum + (o.total || 0), 0);
-								if (calculated > 0) {
-									consumed = calculated;
-								}
+								consumed = matchingOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+								ordersCount = matchingOrders.length;
 							}
 						}
-					} catch {
-						// Keep current consumed if order query fails
+					} catch (e) {
+						console.error('Failed to query orders for target:', e);
+						consumed = target.consumedAmount || 0;
 					}
 
 					// Dynamic status calculation
-					const today = new Date().toISOString().split('T')[0];
-					let currentStatus = target.status;
-					if (target.startDate > today) {
+					let currentStatus: 'active' | 'upcoming' | 'completed' = 'active';
+					if (target.startDate > todayStr) {
 						currentStatus = 'upcoming';
-					} else if (target.endDate < today) {
+					} else if (target.endDate < todayStr) {
 						currentStatus = 'completed';
 					} else {
 						currentStatus = 'active';
+					}
+
+					const remainingAmount = Math.max(0, target.targetAmount - consumed);
+					const percent =
+						target.targetAmount > 0
+							? Math.min(100, Math.round((consumed / target.targetAmount) * 100))
+							: 0;
+					const aov = ordersCount > 0 ? Math.round(consumed / ordersCount) : 0;
+
+					// Days remaining calculation
+					let daysRemaining = 0;
+					let dailyRequiredRate = 0;
+					if (currentStatus === 'active') {
+						const endMs = new Date(target.endDate).setHours(23, 59, 59, 999);
+						daysRemaining = Math.max(1, Math.ceil((endMs - todayMs) / (1000 * 60 * 60 * 24)));
+						dailyRequiredRate = Math.ceil(remainingAmount / daysRemaining);
 					}
 
 					return {
@@ -101,7 +168,13 @@ export class DailyTargetService {
 						endDate: target.endDate,
 						targetAmount: target.targetAmount,
 						consumedAmount: consumed,
-						status: currentStatus as 'active' | 'upcoming' | 'completed',
+						ordersCount,
+						aov,
+						remainingAmount,
+						percent,
+						daysRemaining,
+						dailyRequiredRate,
+						status: currentStatus,
 						createdAt: target.createdAt
 					};
 				})
@@ -118,6 +191,7 @@ export class DailyTargetService {
 	 * Creates a new daily target
 	 */
 	static async createTarget(db: DrizzleD1Database<typeof schema>, payload: CreateTargetPayload) {
+		await this.ensureTable(db);
 		const today = new Date().toISOString().split('T')[0];
 		let status: 'active' | 'upcoming' | 'completed' = 'active';
 
@@ -151,6 +225,7 @@ export class DailyTargetService {
 		id: string,
 		payload: UpdateTargetPayload
 	) {
+		await this.ensureTable(db);
 		const updateData: Partial<typeof schema.dailyTargets.$inferInsert> = {
 			updatedAt: new Date()
 		};
@@ -173,18 +248,20 @@ export class DailyTargetService {
 	 * Deletes a target by id
 	 */
 	static async deleteTarget(db: DrizzleD1Database<typeof schema>, id: string) {
+		await this.ensureTable(db);
 		await db.delete(schema.dailyTargets).where(eq(schema.dailyTargets.id, id));
 		return { id, success: true };
 	}
 
 	/**
-	 * Computes day-by-day sales breakdown for a target
+	 * Computes day-by-day sales breakdown from real orders in 1 single fast query
 	 */
 	static async getDailyBreakdown(
 		db: DrizzleD1Database<typeof schema>,
 		startDateStr: string,
 		endDateStr: string
 	): Promise<DailyBreakdownItem[]> {
+		await this.ensureTable(db);
 		const result: DailyBreakdownItem[] = [];
 		const start = new Date(startDateStr);
 		const end = new Date(endDateStr);
@@ -193,46 +270,62 @@ export class DailyTargetService {
 			return result;
 		}
 
-		// Cap max days to 30 to avoid excessive loops
-		const maxDays = 30;
-		let current = new Date(start);
+		const startMs = new Date(start).setHours(0, 0, 0, 0);
+		const endMs = new Date(end).setHours(23, 59, 59, 999);
+
+		// Single query to fetch all valid orders in range
+		let orders: { total: number | null; createdAt: Date | null }[] = [];
+		try {
+			orders = await db
+				.select({
+					total: schema.orders.total,
+					createdAt: schema.orders.createdAt
+				})
+				.from(schema.orders)
+				.where(
+					and(
+						eq(schema.orders.isTrashed, false),
+						notInArray(schema.orders.status, ['cancelled', 'returned', 'incomplete']),
+						gte(schema.orders.createdAt, new Date(startMs)),
+						lte(schema.orders.createdAt, new Date(endMs))
+					)
+				)
+				.all();
+		} catch (e) {
+			console.error('Failed to get orders for breakdown:', e);
+		}
+
+		// Group orders by date (YYYY-MM-DD)
+		const dailyMap = new Map<string, { total: number; count: number }>();
+		for (const ord of orders) {
+			if (!ord.createdAt) continue;
+			const dStr = new Date(ord.createdAt).toISOString().split('T')[0];
+			const current = dailyMap.get(dStr) || { total: 0, count: 0 };
+			current.total += ord.total || 0;
+			current.count += 1;
+			dailyMap.set(dStr, current);
+		}
+
+		// Generate calendar list for the range (up to 31 days)
+		const maxDays = 31;
+		let curr = new Date(start);
 		let count = 0;
 
-		while (current <= end && count < maxDays) {
-			const dateStr = current.toISOString().split('T')[0];
-			const dayStartMs = new Date(current).setHours(0, 0, 0, 0);
-			const dayEndMs = new Date(current).setHours(23, 59, 59, 999);
-
-			let daySales = 0;
-			let ordersCount = 0;
-
-			try {
-				const orders = await db
-					.select({ total: schema.orders.total })
-					.from(schema.orders)
-					.where(
-						and(
-							eq(schema.orders.isTrashed, false),
-							gte(schema.orders.createdAt, new Date(dayStartMs)),
-							lte(schema.orders.createdAt, new Date(dayEndMs))
-						)
-					)
-					.all();
-
-				daySales = orders.reduce((sum, o) => sum + (o.total || 0), 0);
-				ordersCount = orders.length;
-			} catch {
-				// Fallback to 0 if db fails
-			}
+		while (curr <= end && count < maxDays) {
+			const dateStr = curr.toISOString().split('T')[0];
+			const dateFormatted = curr.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+			const stats = dailyMap.get(dateStr) || { total: 0, count: 0 };
+			const aov = stats.count > 0 ? Math.round(stats.total / stats.count) : 0;
 
 			result.push({
 				date: dateStr,
-				dayLabel: `Day ${count + 1} (${current.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`,
-				salesAmount: daySales,
-				ordersCount
+				dayLabel: `Day ${count + 1} (${dateFormatted})`,
+				salesAmount: stats.total,
+				ordersCount: stats.count,
+				aov
 			});
 
-			current.setDate(current.getDate() + 1);
+			curr.setDate(curr.getDate() + 1);
 			count++;
 		}
 
@@ -240,33 +333,25 @@ export class DailyTargetService {
 	}
 
 	/**
-	 * Seeds initial realistic targets
+	 * Seeds initial realistic targets if table is empty
 	 */
 	static async seedInitialTargets(db: DrizzleD1Database<typeof schema>) {
+		const today = new Date();
+		const pad = (n: number) => String(n).padStart(2, '0');
+		const formatDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+		const startCurrent = new Date(today);
+		startCurrent.setDate(today.getDate() - 3);
+
+		const endCurrent = new Date(today);
+		endCurrent.setDate(today.getDate() + 7);
+
 		const seeds = [
 			{
-				title: 'Mega Flash Sale Target',
-				startDate: '2026-10-24',
-				endDate: '2026-10-31',
-				targetAmount: 1500000,
-				consumedAmount: 485200,
-				status: 'active'
-			},
-			{
-				title: 'Eid Mega Campaign Target',
-				startDate: '2026-10-15',
-				endDate: '2026-10-23',
-				targetAmount: 2500000,
-				consumedAmount: 2150000,
-				status: 'completed'
-			},
-			{
-				title: 'Winter Season Launch Goal',
-				startDate: '2026-11-01',
-				endDate: '2026-11-15',
-				targetAmount: 3000000,
-				consumedAmount: 0,
-				status: 'upcoming'
+				title: 'Mega Sales Target',
+				startDate: formatDate(startCurrent),
+				endDate: formatDate(endCurrent),
+				targetAmount: 500000
 			}
 		];
 
@@ -278,8 +363,8 @@ export class DailyTargetService {
 					startDate: item.startDate,
 					endDate: item.endDate,
 					targetAmount: item.targetAmount,
-					consumedAmount: item.consumedAmount,
-					status: item.status,
+					consumedAmount: 0,
+					status: 'active',
 					createdAt: new Date(),
 					updatedAt: new Date()
 				});

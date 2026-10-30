@@ -1,92 +1,147 @@
 <script lang="ts">
-	import { Sparkles, Mail, Lock, ArrowRight, ShieldCheck } from 'lucide-svelte';
+	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
+	import { Button } from '#lib/components/ui/button';
+	import { Input } from '#lib/components/ui/input';
+	import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '#lib/components/ui/card';
+	import { Mail, Lock, LogIn, UserPlus, Eye, EyeOff, ShieldCheck, AlertCircle, ArrowLeft } from 'lucide-svelte';
 	import type { ActionData } from './$types';
 
 	let { form }: { form: ActionData } = $props();
+
+	let showPassword = $state(false);
+	let isSubmitting = $state(false);
 </script>
 
 <svelte:head>
-	<title>Sign In | AURA Acoustics</title>
+	<title>লগইন করুন | আপনার একাউন্ট</title>
+	<meta name="description" content="আপনার একাউন্টে লগইন করুন এবং অর্ডার ট্র্যাক করুন।" />
 </svelte:head>
 
-<main class="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[#08090f]">
-	<!-- Ambient Background Glows -->
-	<div class="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-violet-600/15 rounded-full blur-[140px] pointer-events-none -z-10"></div>
-	<div class="absolute bottom-10 right-10 w-[400px] h-[400px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none -z-10"></div>
-
-	<div class="w-full max-w-md bg-[#10121d] border border-white/10 rounded-3xl p-8 sm:p-10 shadow-2xl relative">
-		
-		<!-- Brand Logo -->
-		<a href="/" class="flex items-center justify-center gap-2 mb-6 group">
-			<div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-violet-600 via-indigo-500 to-cyan-400 p-[1.5px] transition-transform group-hover:scale-105">
-				<div class="w-full h-full bg-[#10121d] rounded-[9px] flex items-center justify-center">
-					<Sparkles class="w-4 h-4 text-cyan-400" />
-				</div>
-			</div>
-			<span class="text-xl font-black text-white font-heading">AURA</span>
-		</a>
-
-		<div class="text-center mb-8">
-			<h1 class="text-2xl sm:text-3xl font-extrabold text-white font-heading">Creator Sign In</h1>
-			<p class="text-xs text-slate-400 mt-1">Access your acoustic telemetry, VST licenses, and hardware orders</p>
-		</div>
-
-		{#if form?.message}
-			<div class="mb-6 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs text-center font-medium">
-				{form.message}
-			</div>
-		{/if}
-
-		<form action="?/signInEmail" method="POST" class="space-y-4">
-			<div>
-				<label for="login-email" class="block text-xs font-medium text-slate-300 mb-1">Email Address</label>
-				<div class="relative">
-					<Mail class="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-					<input
-						id="login-email"
-						name="email"
-						type="email"
-						required
-						placeholder="creator@studio.com"
-						class="w-full pl-10 pr-3.5 py-3 rounded-xl bg-black/50 border border-white/10 text-white text-xs focus:border-cyan-400 outline-none"
-					/>
-				</div>
+<StoreLayout>
+	<div class="py-10 sm:py-16 px-4 flex items-center justify-center font-['Anek_Bangla',sans-serif]">
+		<div class="w-full max-w-md">
+			<!-- Back to store button -->
+			<div class="mb-4">
+				<a
+					href="/"
+					class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-[#5845eb] transition-colors"
+				>
+					<ArrowLeft class="w-3.5 h-3.5" />
+					<span>হোমপেজে ফিরে যান</span>
+				</a>
 			</div>
 
-			<div>
-				<label for="login-password" class="block text-xs font-medium text-slate-300 mb-1">Password</label>
-				<div class="relative">
-					<Lock class="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-					<input
-						id="login-password"
-						name="password"
-						type="password"
-						required
-						placeholder="••••••••••••"
-						class="w-full pl-10 pr-3.5 py-3 rounded-xl bg-black/50 border border-white/10 text-white text-xs focus:border-cyan-400 outline-none"
-					/>
-				</div>
-			</div>
+			<Card class="border border-slate-200/90 shadow-sm rounded-3xl overflow-hidden bg-white">
+				<!-- Header Section -->
+				<CardHeader class="text-center pt-8 pb-4 px-6 sm:px-8">
+					<div class="mx-auto w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#5845eb] mb-3 shadow-2xs">
+						<LogIn class="w-6 h-6" />
+					</div>
+					<CardTitle class="text-2xl font-black text-slate-900 tracking-tight">লগইন করুন</CardTitle>
+					<CardDescription class="text-xs text-slate-500 mt-1 font-medium">
+						আপনার অর্ডার ট্র্যাক করতে এবং দ্রুত কেনাকাটা করতে একাউন্টে প্রবেশ করুন
+					</CardDescription>
+				</CardHeader>
 
-			<button
-				type="submit"
-				class="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-500 hover:from-violet-500 hover:to-cyan-400 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-violet-600/30 transition-transform hover:scale-[1.01] active:scale-[0.99]"
-			>
-				<span>Sign In to Account</span>
-				<ArrowRight class="w-4 h-4" />
-			</button>
-		</form>
+				<CardContent class="px-6 sm:px-8 pt-2 pb-6 space-y-4">
+					{#if form?.message}
+						<div class="p-3.5 rounded-2xl bg-rose-50 border border-rose-200/80 text-rose-700 text-xs flex items-center gap-2.5 animate-in fade-in duration-200">
+							<AlertCircle class="w-4 h-4 shrink-0 text-rose-600" />
+							<span>{form.message}</span>
+						</div>
+					{/if}
 
-		<div class="mt-8 pt-6 border-t border-white/10 text-center text-xs text-slate-400">
-			Don't have an acoustic account?
-			<a href="/auth/register" class="text-cyan-400 font-bold hover:underline ml-1">
-				Create one here
-			</a>
-		</div>
+					<form
+						action="?/signInEmail"
+						method="POST"
+						class="space-y-4"
+						onsubmit={() => (isSubmitting = true)}
+					>
+						<!-- Email Input -->
+						<div class="space-y-1.5">
+							<label for="login-email" class="block text-xs font-bold text-slate-700">
+								ইমেইল অ্যাড্রেস <span class="text-rose-500">*</span>
+							</label>
+							<div class="relative">
+								<Mail class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+								<Input
+									id="login-email"
+									name="email"
+									type="email"
+									required
+									placeholder="example@mail.com"
+									class="pl-10 h-11 text-xs rounded-xl border-slate-200 focus-visible:ring-indigo-500"
+								/>
+							</div>
+						</div>
 
-		<div class="flex items-center justify-center gap-2 text-[11px] text-slate-500 mt-4">
-			<ShieldCheck class="w-3.5 h-3.5 text-emerald-400" />
-			<span>Secured with Better Auth & Cloudflare D1</span>
+						<!-- Password Input -->
+						<div class="space-y-1.5">
+							<div class="flex items-center justify-between">
+								<label for="login-password" class="block text-xs font-bold text-slate-700">
+									পাসওয়ার্ড <span class="text-rose-500">*</span>
+								</label>
+							</div>
+							<div class="relative">
+								<Lock class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+								<Input
+									id="login-password"
+									name="password"
+									type={showPassword ? 'text' : 'password'}
+									required
+									placeholder="••••••••"
+									class="pl-10 pr-10 h-11 text-xs rounded-xl border-slate-200 focus-visible:ring-indigo-500"
+								/>
+								<button
+									type="button"
+									onclick={() => (showPassword = !showPassword)}
+									class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-0.5 cursor-pointer"
+									aria-label={showPassword ? 'Hide password' : 'Show password'}
+								>
+									{#if showPassword}
+										<EyeOff class="w-4 h-4" />
+									{:else}
+										<Eye class="w-4 h-4" />
+									{/if}
+								</button>
+							</div>
+						</div>
+
+						<!-- Submit Button -->
+						<Button
+							type="submit"
+							disabled={isSubmitting}
+							class="w-full h-11 rounded-xl bg-[#5845eb] hover:bg-[#4936d6] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm shadow-indigo-600/30 transition-all cursor-pointer mt-2"
+						>
+							{#if isSubmitting}
+								<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+								<span>যাচাই করা হচ্ছে...</span>
+							{:else}
+								<LogIn class="w-4 h-4" />
+								<span>লগইন করুন</span>
+							{/if}
+						</Button>
+					</form>
+				</CardContent>
+
+				<CardFooter class="flex flex-col gap-4 bg-slate-50/70 border-t border-slate-100 px-6 sm:px-8 py-5">
+					<div class="text-center text-xs text-slate-600">
+						নতুন গ্রাহক?
+						<a
+							href="/auth/register"
+							class="text-[#5845eb] font-bold hover:underline inline-flex items-center gap-1 ml-1"
+						>
+							<UserPlus class="w-3.5 h-3.5" />
+							<span>নতুন অ্যাকাউন্ট তৈরি করুন</span>
+						</a>
+					</div>
+
+					<div class="flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
+						<ShieldCheck class="w-3.5 h-3.5 text-emerald-500" />
+						<span>আপনার তথ্য ১০০% এনক্রিপ্টেড এবং নিরাপদ</span>
+					</div>
+				</CardFooter>
+			</Card>
 		</div>
 	</div>
-</main>
+</StoreLayout>

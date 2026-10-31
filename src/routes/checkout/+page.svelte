@@ -83,10 +83,36 @@
 		return `৳${amount.toLocaleString('en-BD')}`;
 	}
 
-	// Dynamic delivery charge based on productSettings, district and storeConfig
+	// Check for active Behavioral Offers from Admin Settings > Manage Offer
+	const onlinePaymentOffer = $derived(
+		data?.manageOffers?.find(
+			(o: any) => o.offerType === 'Online Payment' && o.status === 'active'
+		)
+	);
+	const firstOrderFreeDeliveryOffer = $derived(
+		data?.manageOffers?.find(
+			(o: any) => o.offerType === 'Free Delivery (1st Order)' && o.status === 'active'
+		)
+	);
+
+	const offerDiscount = $derived.by(() => {
+		if (paymentMethod !== 'cod' && onlinePaymentOffer?.discount) {
+			const dStr = String(onlinePaymentOffer.discount).trim();
+			if (dStr.endsWith('%')) {
+				const pct = parseFloat(dStr) || 0;
+				return Math.round((cart.subtotal * pct) / 100);
+			} else {
+				return Math.min(cart.subtotal, parseFloat(dStr) || 0);
+			}
+		}
+		return 0;
+	});
+
+	// Dynamic delivery charge based on productSettings, district, storeConfig and first-order offer
 	const deliveryFee = $derived.by(() => {
 		if (data?.productSettings?.enableDeliveryCharge === false) return 0;
 		if (cart.subtotal === 0) return 0;
+		if (firstOrderFreeDeliveryOffer) return 0; // First order free delivery
 		if (
 			data?.storeConfig?.enableFreeDelivery &&
 			cart.subtotal >= (data?.storeConfig?.freeShippingThreshold || 2000)
@@ -103,7 +129,7 @@
 	});
 
 	const grandTotal = $derived(
-		Math.max(0, cart.subtotal - cart.discountAmount + deliveryFee)
+		Math.max(0, cart.subtotal - cart.discountAmount - offerDiscount + deliveryFee)
 	);
 
 	// Fire Meta Pixel & GTM GA4 Standard InitiateCheckout / begin_checkout Events

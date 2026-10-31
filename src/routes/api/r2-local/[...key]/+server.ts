@@ -28,7 +28,19 @@ export const GET: RequestHandler = async ({ params, platform }) => {
 		}
 	}
 
-	// If not found in local miniflare bucket, fallback to real Cloudflare R2 public CDN
+	// If not found in local miniflare bucket, proxy directly from real Cloudflare R2 public CDN
+	try {
+		const upstream = await fetch(`${R2_DEFAULT_PUBLIC_URL}/${key}`);
+		if (upstream.ok && upstream.body) {
+			const headers = new Headers();
+			headers.set('content-type', upstream.headers.get('content-type') || 'image/png');
+			headers.set('cache-control', 'public, max-age=31536000');
+			return new Response(upstream.body, { status: 200, headers });
+		}
+	} catch (err) {
+		console.error('Failed to proxy R2 image locally:', err);
+	}
+
 	return Response.redirect(`${R2_DEFAULT_PUBLIC_URL}/${key}`, 302);
 };
 

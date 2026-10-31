@@ -19,15 +19,21 @@ export const load: PageServerLoad = async (event) => {
 		enableNagad: false
 	};
 	let advancePaymentConfig = { ...DEFAULT_ADVANCE_PAYMENT };
+	let manageOffers: any[] = [];
+	let orderSettings = null;
 
 	try {
 		const db = getDb(event.platform);
-		const [pCfg, aCfg] = await Promise.all([
+		const [pCfg, aCfg, mOffers, oSettings] = await Promise.all([
 			SettingsService.getPaymentConfig(db),
-			SettingsService.getAdvancePaymentConfig(db)
+			SettingsService.getAdvancePaymentConfig(db),
+			SettingsService.getManageOffers(db),
+			SettingsService.getOrderSettings(db)
 		]);
 		if (pCfg) paymentConfig = pCfg;
 		if (aCfg) advancePaymentConfig = aCfg;
+		if (mOffers) manageOffers = mOffers;
+		if (oSettings) orderSettings = oSettings;
 	} catch (e) {
 		console.error('Failed to load payment config for checkout:', e);
 	}
@@ -37,7 +43,9 @@ export const load: PageServerLoad = async (event) => {
 		isLoginRequired,
 		activeCheckout: themeConfig?.pageViews?.checkout || 'checkout_2',
 		paymentConfig,
-		advancePaymentConfig
+		advancePaymentConfig,
+		manageOffers,
+		orderSettings
 	};
 };
 

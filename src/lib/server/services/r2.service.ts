@@ -59,16 +59,38 @@ export class R2Service {
 					cacheControl: 'public, max-age=31536000, immutable'
 				}
 			});
-			const finalUrl = dev ? `/api/r2-local/${key}` : `${baseUrl}/${key}`;
 			return {
 				key,
-				url: finalUrl,
+				url: `${baseUrl}/${key}`,
 				sizeBytes
 			};
 		}
 
 		// Fallback for local Vite dev if R2 binding isn't directly attached:
-		// Convert buffer to dataUrl so local preview works seamlessly
+		// Save file to static/uploads/ so it has a real persistent URL without inflating D1!
+		try {
+			if (typeof process !== 'undefined') {
+				const fs = await import('node:fs');
+				const path = await import('node:path');
+				const uploadDir = path.resolve('static/uploads', folder);
+				if (!fs.existsSync(uploadDir)) {
+					fs.mkdirSync(uploadDir, { recursive: true });
+				}
+				const filePath = path.resolve(uploadDir, `${Date.now()}-${safeName}`);
+				const uint8 = data instanceof Uint8Array ? data : new Uint8Array(data);
+				fs.writeFileSync(filePath, uint8);
+				const localUrl = `/uploads/${folder}/${path.basename(filePath)}`;
+				return {
+					key,
+					url: localUrl,
+					sizeBytes
+				};
+			}
+		} catch (localErr) {
+			console.error('Failed to write local upload file:', localErr);
+		}
+
+		// Fallback only if filesystem is not writable
 		const uint8 = data instanceof Uint8Array ? data : new Uint8Array(data);
 		const base64 = Buffer.from(uint8).toString('base64');
 		const dataUrl = `data:${mimeType};base64,${base64}`;

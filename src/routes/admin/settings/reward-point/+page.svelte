@@ -1,102 +1,252 @@
 <script lang="ts">
-	import { Button, Card, Input, Switch } from '#lib/components/ui';
-	import { ArrowLeft, CheckCircle2, Check, Award } from 'lucide-svelte';
+	import { Button } from '#lib/components/ui/button';
+	import { ArrowLeft, Save, Headphones, Check, Loader2 } from 'lucide-svelte';
+	import { enhance } from '$app/forms';
+	import { toast } from 'svelte-sonner';
 
-	let isSaved = $state(false);
-	let saveMessage = $state('Reward Point Settings Saved!');
+	let { data }: { data: any } = $props();
 
-	let enableRewards = $state(true);
-	let pointsPer100Tk = $state(1);
-	let pointValueTk = $state(1);
-	let minPointsToRedeem = $state(50);
-	let pointsExpiryDays = $state(90);
+	let isEnabled = $state(data?.rewardConfig?.isEnabled ?? true);
+	let pointsThreshold = $state(data?.rewardConfig?.pointsThreshold ?? 100);
+	let currencyValue = $state(data?.rewardConfig?.currencyValue ?? 10);
+	let calcMethod = $state<'manual' | 'percentage'>(data?.rewardConfig?.calcMethod ?? 'manual');
 
-	function triggerSave(msg = 'Reward Point Settings Saved!') {
-		isSaved = true;
-		saveMessage = msg;
-		setTimeout(() => (isSaved = false), 3000);
-	}
+	$effect(() => {
+		if (data?.rewardConfig) {
+			isEnabled = data.rewardConfig.isEnabled ?? true;
+			pointsThreshold = data.rewardConfig.pointsThreshold ?? 100;
+			currencyValue = data.rewardConfig.currencyValue ?? 10;
+			calcMethod = data.rewardConfig.calcMethod ?? 'manual';
+		}
+	});
+
+	// Dynamic calculation of 1 point value
+	let singlePointValue = $derived.by(() => {
+		const pts = Number(pointsThreshold) || 100;
+		const val = Number(currencyValue) || 10;
+		if (pts <= 0) return '0.00';
+		return (val / pts).toFixed(2);
+	});
+
+	let isSaving = $state(false);
 </script>
 
 <svelte:head>
-	<title>Reward Point Settings | AURA Enterprise</title>
+	<title>Reward Point Settings - Settings - AURA Admin</title>
 </svelte:head>
 
-<div class="space-y-6 max-w-2xl mx-auto p-4 sm:p-6">
-	{#if isSaved}
-		<div class="fixed bottom-6 right-6 z-50 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-bold animate-in fade-in slide-in-from-bottom-4">
-			<CheckCircle2 class="w-4 h-4" />
-			<span>{saveMessage}</span>
-		</div>
-	{/if}
-
+<div class="p-4 sm:p-6 lg:p-8 space-y-7 max-w-5xl mx-auto font-['Anek_Bangla',sans-serif]">
+	<!-- Top Sub-Header Bar (Exact match to Screenshot) -->
 	<div class="flex items-center justify-between gap-4 pb-2">
-		<a href="/admin/settings">
-			<Button variant="outline" size="sm" class="gap-2">
-				<ArrowLeft class="w-4 h-4" />
-				<span>Back to Settings</span>
-			</Button>
-		</a>
+		<div>
+			<h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Reward Point Settings</h1>
+		</div>
 
-		<Button
-			type="button"
-			onclick={() => triggerSave()}
-			class="gap-1.5 bg-[#ef4444] hover:bg-[#dc2626] text-white font-bold"
-		>
-			<Check class="w-4 h-4" />
-			<span>Save Rewards</span>
-		</Button>
+		<div class="flex items-center gap-2">
+			<a
+				href="https://wa.me/8801860229546"
+				target="_blank"
+				class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-2xs transition-colors"
+			>
+				<Headphones class="w-3.5 h-3.5 text-[#5845eb]" />
+				<span>header.support</span>
+			</a>
+		</div>
 	</div>
 
-	<Card class="p-6 space-y-6 bg-white border border-slate-200/90 shadow-2xs rounded-3xl">
-		<div class="flex items-center gap-3 pb-3 border-b border-slate-100">
-			<div class="w-10 h-10 rounded-full bg-[#ef4444] flex items-center justify-center text-white">
-				<Award class="w-5 h-5" />
-			</div>
-			<div>
-				<h3 class="text-base font-bold text-slate-900">Reward Point সিস্টেম</h3>
-				<p class="text-xs text-slate-500">গ্রাহকদের কেনাকাটার ওপর লয়্যালটি পয়েন্ট ও রিডিম রুলস</p>
-			</div>
-		</div>
-
-		<div class="space-y-4">
-			<div class="flex items-center justify-between p-4 rounded-2xl bg-rose-50/50 border border-rose-100">
-				<div>
-					<h4 class="text-xs font-bold text-slate-900">রিওয়ার্ড পয়েন্ট প্রোগ্রাম চালু রাখুন</h4>
-					<p class="text-[11px] text-slate-500">প্রতিটি সফল অর্ডারে গ্রাহক স্বয়ংক্রিয়ভাবে পয়েন্ট পাবেন</p>
-				</div>
-				<Switch bind:checked={enableRewards} />
-			</div>
-
-			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-				<div class="space-y-1.5">
-					<label class="text-xs font-bold text-slate-700">প্রতি ১০০ টাকায় পয়েন্ট অর্জন</label>
-					<Input type="number" bind:value={pointsPer100Tk} class="font-mono text-sm" />
-				</div>
-				<div class="space-y-1.5">
-					<label class="text-xs font-bold text-slate-700">১ পয়েন্টের মূল্য (৳)</label>
-					<Input type="number" bind:value={pointValueTk} class="font-mono text-sm" />
-				</div>
-			</div>
-
-			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-				<div class="space-y-1.5">
-					<label class="text-xs font-bold text-slate-700">রিডিম করার জন্য ন্যূনতম পয়েন্ট</label>
-					<Input type="number" bind:value={minPointsToRedeem} class="font-mono text-sm" />
-				</div>
-				<div class="space-y-1.5">
-					<label class="text-xs font-bold text-slate-700">পয়েন্টের মেয়াদ (দিন)</label>
-					<Input type="number" bind:value={pointsExpiryDays} class="font-mono text-sm" />
-				</div>
-			</div>
-		</div>
-
-		<Button
-			type="button"
-			onclick={() => triggerSave()}
-			class="w-full bg-[#ef4444] hover:bg-[#dc2626] text-white font-bold"
+	<!-- Back to Settings Button (Exact match to Screenshot) -->
+	<div>
+		<a
+			href="/admin/settings"
+			class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-2xs transition-all"
 		>
-			রিওয়ার্ড পয়েন্ট সেটিংস সংরক্ষণ
-		</Button>
-	</Card>
+			<ArrowLeft class="w-4 h-4 text-slate-500" />
+			<span>Back to Settings</span>
+		</a>
+	</div>
+
+	<!-- Main Configuration Form (Exact match to Screenshot) -->
+	<form
+		method="POST"
+		action="?/saveRewardPoint"
+		use:enhance={() => {
+			isSaving = true;
+			return async ({ result, update }) => {
+				isSaving = false;
+				if (result.type === 'success') {
+					toast.success('রিওয়ার্ড পয়েন্ট সেটিংস সফলভাবে সংরক্ষিত হয়েছে');
+				} else {
+					toast.error('সংরক্ষণ ব্যর্থ হয়েছে');
+				}
+				await update();
+			};
+		}}
+		class="space-y-7"
+	>
+		<input type="hidden" name="isEnabled" value={isEnabled ? 'true' : 'false'} />
+		<input type="hidden" name="calcMethod" value={calcMethod} />
+
+		<!-- 1. Section Title: rewardPoint.title -->
+		<div>
+			<h2 class="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+				rewardPoint.title
+			</h2>
+		</div>
+
+		<!-- 2. Enable Label & Checkbox (Exact match to Screenshot with purple filled square) -->
+		<div class="space-y-2">
+			<div class="text-xs font-bold text-slate-800">
+				rewardPoint.enableLabel
+			</div>
+
+			<label class="inline-flex items-center gap-2.5 cursor-pointer select-none">
+				<button
+					type="button"
+					onclick={() => (isEnabled = !isEnabled)}
+					class="w-5 h-5 rounded-md flex items-center justify-center transition-colors {isEnabled
+						? 'bg-[#5845eb] text-white'
+						: 'border border-slate-300 bg-white text-transparent'}"
+					aria-label="Toggle enable reward points"
+				>
+					<Check class="w-3.5 h-3.5 stroke-[3]" />
+				</button>
+				<span class="text-xs font-bold text-slate-900">
+					rewardPoint.enableLabel
+				</span>
+			</label>
+
+			<p class="text-[11px] text-slate-400">
+				rewardPoint.enableHint
+			</p>
+		</div>
+
+		<!-- 3. Value Config Section (Exact match to Screenshot with Floating Labels & "=") -->
+		<div class="space-y-3">
+			<h3 class="text-xs font-bold text-slate-900">
+				rewardPoint.valueConfig
+			</h3>
+
+			<!-- Two Floating Outlined Inputs Row with "=" -->
+			<div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 max-w-xl">
+				<!-- Points Input Box -->
+				<div class="flex-1 space-y-1">
+					<div class="relative rounded-xl border border-[#5845eb] focus-within:ring-2 focus-within:ring-[#5845eb]/10 bg-white">
+						<span class="absolute -top-2.5 left-3 bg-white px-1.5 text-[11px] font-bold text-[#5845eb] select-none">
+							rewardPoint.pointsLabel*
+						</span>
+						<input
+							type="number"
+							name="pointsThreshold"
+							min="1"
+							required
+							bind:value={pointsThreshold}
+							class="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-900 bg-transparent rounded-xl focus:outline-none"
+						/>
+					</div>
+					<p class="text-[10px] text-slate-400 pl-1">
+						rewardPoint.pointsHint
+					</p>
+				</div>
+
+				<!-- Equal Sign "=" -->
+				<div class="text-slate-500 font-bold text-lg select-none text-center self-center sm:self-auto sm:pb-4">
+					=
+				</div>
+
+				<!-- Currency Value Input Box -->
+				<div class="flex-1 space-y-1">
+					<div class="relative rounded-xl border border-slate-300 hover:border-slate-400 focus-within:border-[#5845eb] focus-within:ring-2 focus-within:ring-[#5845eb]/10 bg-white">
+						<span class="absolute -top-2.5 left-3 bg-white px-1.5 text-[11px] font-bold text-slate-500 select-none">
+							rewardPoint.currencyLabel (BDT)*
+						</span>
+						<input
+							type="number"
+							name="currencyValue"
+							min="1"
+							required
+							bind:value={currencyValue}
+							class="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-900 bg-transparent rounded-xl focus:outline-none"
+						/>
+					</div>
+					<p class="text-[10px] text-slate-400 pl-1">
+						rewardPoint.currencyHint
+					</p>
+				</div>
+			</div>
+
+			<!-- Dynamic Calculation Summary Box (Exact match to Screenshot) -->
+			<div class="p-4 bg-slate-100/80 rounded-2xl border border-slate-200/60 max-w-xl space-y-0.5">
+				<div class="text-xs font-black text-slate-900">
+					{pointsThreshold || 0} rewardPoint.points = {currencyValue || 0} BDT
+				</div>
+				<div class="text-[11px] text-slate-500">
+					(1 point = {singlePointValue} BDT)
+				</div>
+			</div>
+		</div>
+
+		<!-- 4. Calculation Method Section (Exact match to Screenshot Radio Buttons) -->
+		<div class="space-y-3 pt-1">
+			<h3 class="text-xs font-bold text-slate-900">
+				rewardPoint.calcMethod
+			</h3>
+
+			<div class="space-y-2.5 max-w-md">
+				<!-- Radio 1: rewardPoint.calcManual -->
+				<label class="flex items-center gap-2.5 cursor-pointer select-none">
+					<button
+						type="button"
+						onclick={() => (calcMethod = 'manual')}
+						class="w-4 h-4 rounded-full border flex items-center justify-center transition-all {calcMethod === 'manual'
+							? 'border-[#5845eb]'
+							: 'border-slate-400'}"
+						aria-label="Select manual calculation"
+					>
+						{#if calcMethod === 'manual'}
+							<span class="w-2 h-2 rounded-full bg-[#5845eb]"></span>
+						{/if}
+					</button>
+					<span class="text-xs font-medium text-slate-800">
+						rewardPoint.calcManual
+					</span>
+				</label>
+
+				<!-- Radio 2: rewardPoint.calcPercentage -->
+				<label class="flex items-center gap-2.5 cursor-pointer select-none">
+					<button
+						type="button"
+						onclick={() => (calcMethod = 'percentage')}
+						class="w-4 h-4 rounded-full border flex items-center justify-center transition-all {calcMethod === 'percentage'
+							? 'border-[#5845eb]'
+							: 'border-slate-400'}"
+						aria-label="Select percentage calculation"
+					>
+						{#if calcMethod === 'percentage'}
+							<span class="w-2 h-2 rounded-full bg-[#5845eb]"></span>
+						{/if}
+					</button>
+					<span class="text-xs font-medium text-slate-800">
+						rewardPoint.calcPercentage
+					</span>
+				</label>
+			</div>
+		</div>
+
+		<!-- 5. Save Button (Exact match to Screenshot with Save Icon & Purple Style) -->
+		<div class="pt-3">
+			<Button
+				type="submit"
+				disabled={isSaving}
+				class="bg-[#5845eb] hover:bg-[#4936d6] text-white font-bold h-10 px-5 rounded-xl shadow-xs text-xs gap-2 cursor-pointer transition-all inline-flex items-center"
+			>
+				{#if isSaving}
+					<Loader2 class="w-4 h-4 animate-spin" />
+					<span>সংরক্ষণ হচ্ছে...</span>
+				{:else}
+					<Save class="w-4 h-4" />
+					<span>rewardPoint.save</span>
+				{/if}
+			</Button>
+		</div>
+	</form>
 </div>

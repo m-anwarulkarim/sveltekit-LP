@@ -130,12 +130,14 @@
 						<span>অর্ডারটি সফলভাবে সম্পন্ন হয়েছে</span>
 					</Badge>
 
-					<h1 class="text-2xl sm:text-3xl font-black text-slate-900 font-['Outfit'] tracking-tight">
-						ধন্যবাদ! আপনার অর্ডারটি গ্রহণ করা হয়েছে
+					<h1 class="text-2xl sm:text-3xl font-black text-slate-900 font-['Outfit'] tracking-tight whitespace-pre-line">
+						{data.orderSettings?.successTitle || 'ধন্যবাদ! আপনার অর্ডারটি গ্রহণ করা হয়েছে'}
 					</h1>
 
-					<p class="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
-						খুব শীঘ্রই আমাদের সাপোর্ট প্রতিনিধি আপনার সাথে ফোনে যোগাযোগ করে অর্ডারটি ভেরিফাই করবেন এবং পার্সেলটি পাঠিয়ে দেবেন।
+					<p class="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium whitespace-pre-line">
+						{data.orderSettings?.successMessageBody
+							? data.orderSettings.successMessageBody.replace('{{orderId}}', displayOrderId)
+							: 'খুব শীঘ্রই আমাদের সাপোর্ট প্রতিনিধি আপনার সাথে ফোনে যোগাযোগ করে অর্ডারটি ভেরিফাই করবেন এবং পার্সেলটি পাঠিয়ে দেবেন।'}
 					</p>
 				</div>
 

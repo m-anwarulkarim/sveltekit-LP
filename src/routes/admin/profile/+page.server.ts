@@ -94,7 +94,7 @@ export const actions: Actions = {
 			});
 		}
 
-		// If base64 data URI is provided, upload directly to R2
+		// If base64 data URI is provided, upload to R2 or local disk storage
 		if (avatarUrl.startsWith('data:')) {
 			try {
 				const r2Res = await R2Service.uploadBase64(avatarUrl, {
@@ -104,8 +104,17 @@ export const actions: Actions = {
 				});
 				avatarUrl = r2Res.url;
 			} catch (e: any) {
-				console.error('Failed to upload avatar to R2:', e);
+				console.error('Failed to upload avatar to storage:', e);
 			}
+		}
+
+		// Prevent storing massive base64 payloads directly into SQLite D1
+		if (avatarUrl.startsWith('data:')) {
+			return fail(400, {
+				action: 'updateAvatar',
+				success: false,
+				message: 'ছবি আপলোড করতে ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।'
+			});
 		}
 
 		try {

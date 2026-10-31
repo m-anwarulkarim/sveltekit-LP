@@ -12,6 +12,21 @@ export interface StoreDeliveryConfig {
 	storeName: string;
 }
 
+export interface ManageOfferItem {
+	id: string;
+	offerType: 'New Registration' | 'Online Payment' | 'Free Delivery (1st Order)';
+	discount: string;
+	status: 'active' | 'inactive';
+	createdAt?: string;
+}
+
+export interface RewardPointConfig {
+	isEnabled: boolean;
+	pointsThreshold: number;
+	currencyValue: number;
+	calcMethod: 'manual' | 'percentage';
+}
+
 export interface WebsiteInfoConfig {
 	websiteName: string;
 	shortDescription: string;
@@ -44,6 +59,101 @@ export const DEFAULT_SOCIAL_LOGIN_CONFIG: SocialLoginConfig = {
 	googleClientId: '',
 	googleClientSecret: '',
 	enableOneTap: false
+};
+
+export interface InvoiceConfig {
+	template: string;
+	disablePrice: boolean;
+	enableCourier: boolean;
+	enableReturnPolicy: boolean;
+}
+
+export const DEFAULT_INVOICE_CONFIG: InvoiceConfig = {
+	template: 'classicDesign',
+	disablePrice: false,
+	enableCourier: true,
+	enableReturnPolicy: true
+};
+
+export interface OrderSettingsConfig {
+	enableOrderNote: boolean;
+	enableIncompleteOrder: boolean;
+	enablePrescriptionOrder: boolean;
+	enableCheckoutOrderModal: boolean;
+	swapPaymentAndOrderItem: boolean;
+
+	enableSL: boolean;
+	enableProductSKU: boolean;
+	enableProductName: boolean;
+	enablePrevOrderCount: boolean;
+	showDashboardProfitCard: boolean;
+	enableHRM: boolean;
+
+	fakeOrderProtection: boolean;
+	enableOrderOTP: boolean;
+	enablePhoneValidation: boolean;
+	phoneMinLength: number;
+	phoneMaxLength: number;
+	blockSingleIP: boolean;
+	ipWiseOrderLimit: boolean;
+
+	enableSMSNotification: boolean;
+	enableEmailNotification: boolean;
+	usePersonalSMTP: boolean;
+
+	deliveryBookingType: 'division' | 'city' | 'sub_area' | 'district';
+	deliveryOptionTitle: string;
+	insideDhakaCustomText: string;
+	outsideDhakaCustomText: string;
+
+	successTitle: string;
+	successMessageBody: string;
+
+	enableCustomStatusWorkflow: boolean;
+
+	requireFullAddress: boolean;
+	showDistrictDropdown: boolean;
+}
+
+export const DEFAULT_ORDER_SETTINGS: OrderSettingsConfig = {
+	enableOrderNote: true,
+	enableIncompleteOrder: true,
+	enablePrescriptionOrder: false,
+	enableCheckoutOrderModal: false,
+	swapPaymentAndOrderItem: true,
+
+	enableSL: true,
+	enableProductSKU: true,
+	enableProductName: true,
+	enablePrevOrderCount: true,
+	showDashboardProfitCard: true,
+	enableHRM: false,
+
+	fakeOrderProtection: true,
+	enableOrderOTP: false,
+	enablePhoneValidation: true,
+	phoneMinLength: 11,
+	phoneMaxLength: 11,
+	blockSingleIP: false,
+	ipWiseOrderLimit: false,
+
+	enableSMSNotification: true,
+	enableEmailNotification: true,
+	usePersonalSMTP: false,
+
+	deliveryBookingType: 'city',
+	deliveryOptionTitle: 'শর্তাবলী: ১। অর্ডারকৃত পণ্য গ্রহণ করার সময় দেখে নিবেন',
+	insideDhakaCustomText: 'Inside Dhaka 70TK',
+	outsideDhakaCustomText: 'Outside Dhaka 120TK',
+
+	successTitle: 'THANK YOU\nYOUR ORDER IS PLACED',
+	successMessageBody:
+		'THANK YOU\nYOUR ORDER IS PLACED\nWe received your order and will begin processing it soon. Your order information appears below:\nYour order Number: {{orderId}}',
+
+	enableCustomStatusWorkflow: false,
+
+	requireFullAddress: true,
+	showDistrictDropdown: true
 };
 
 export interface AdvancePaymentConfig {
@@ -300,6 +410,88 @@ export class SettingsService {
 		}
 
 		return await this.getStoreDeliveryConfig(db);
+	}
+
+	/**
+	 * Resolves behavioral offers configuration (New Registration, Online Payment, Free Delivery)
+	 */
+	static async getManageOffers(db: DrizzleD1Database<typeof schema>): Promise<ManageOfferItem[]> {
+		try {
+			const group = await this.getSettingsGroup(db, 'manage_offer');
+			if (group.offers) {
+				let parsed = typeof group.offers === 'string' ? JSON.parse(group.offers) : group.offers;
+				if (typeof parsed === 'string') {
+					try {
+						parsed = JSON.parse(parsed);
+					} catch {}
+				}
+				if (Array.isArray(parsed)) return parsed;
+			}
+			return [];
+		} catch (e) {
+			console.error('Failed to get manage offers from D1:', e);
+			return [];
+		}
+	}
+
+	/**
+	 * Persists behavioral offers configuration to D1 store_settings
+	 */
+	static async saveManageOffers(
+		db: DrizzleD1Database<typeof schema>,
+		offers: ManageOfferItem[]
+	) {
+		await this.setSetting(db, 'manage_offer', 'offers', offers);
+		return await this.getManageOffers(db);
+	}
+
+	/**
+	 * Resolves reward points configuration from D1 store_settings
+	 */
+	static async getRewardPointConfig(
+		db: DrizzleD1Database<typeof schema>
+	): Promise<RewardPointConfig> {
+		try {
+			const group = await this.getSettingsGroup(db, 'reward_point');
+			return {
+				isEnabled:
+					group.enable_reward_points !== undefined
+						? group.enable_reward_points === 'true' || group.enable_reward_points === true
+						: true,
+				pointsThreshold: Number(group.points_threshold) || 100,
+				currencyValue: Number(group.currency_value) || 10,
+				calcMethod: group.calc_method === 'percentage' ? 'percentage' : 'manual'
+			};
+		} catch (e) {
+			console.error('Failed to get reward point config from D1:', e);
+			return {
+				isEnabled: true,
+				pointsThreshold: 100,
+				currencyValue: 10,
+				calcMethod: 'manual'
+			};
+		}
+	}
+
+	/**
+	 * Persists reward points configuration to D1 store_settings
+	 */
+	static async saveRewardPointConfig(
+		db: DrizzleD1Database<typeof schema>,
+		config: Partial<RewardPointConfig>
+	) {
+		const entries: [string, any][] = [
+			['enable_reward_points', Boolean(config.isEnabled)],
+			['points_threshold', Number(config.pointsThreshold) || 100],
+			['currency_value', Number(config.currencyValue) || 10],
+			['calc_method', config.calcMethod || 'manual']
+		];
+
+		for (const [key, val] of entries) {
+			await this.setSetting(db, 'reward_point', key, val);
+		}
+
+		return await this.getRewardPointConfig(db);
 	}
 
 	/**
@@ -622,6 +814,208 @@ export class SettingsService {
 		}
 
 		return await this.getSocialLoginConfig(db);
+	}
+
+	/**
+	 * Retrieves complete Order Settings configuration from D1
+	 */
+	static async getOrderSettings(db: DrizzleD1Database<typeof schema>): Promise<OrderSettingsConfig> {
+		try {
+			const s = await this.getSettingsGroup(db, 'order_setting');
+			if (!s || Object.keys(s).length === 0) {
+				return { ...DEFAULT_ORDER_SETTINGS };
+			}
+
+			return {
+				enableOrderNote:
+					s.enable_order_note !== undefined
+						? Boolean(s.enable_order_note)
+						: DEFAULT_ORDER_SETTINGS.enableOrderNote,
+				enableIncompleteOrder:
+					s.enable_incomplete_order !== undefined
+						? Boolean(s.enable_incomplete_order)
+						: DEFAULT_ORDER_SETTINGS.enableIncompleteOrder,
+				enablePrescriptionOrder: Boolean(s.enable_prescription_order),
+				enableCheckoutOrderModal: Boolean(s.enable_checkout_order_modal),
+				swapPaymentAndOrderItem:
+					s.swap_payment_and_order_item !== undefined
+						? Boolean(s.swap_payment_and_order_item)
+						: DEFAULT_ORDER_SETTINGS.swapPaymentAndOrderItem,
+
+				enableSL:
+					s.enable_sl !== undefined ? Boolean(s.enable_sl) : DEFAULT_ORDER_SETTINGS.enableSL,
+				enableProductSKU:
+					s.enable_product_sku !== undefined
+						? Boolean(s.enable_product_sku)
+						: DEFAULT_ORDER_SETTINGS.enableProductSKU,
+				enableProductName:
+					s.enable_product_name !== undefined
+						? Boolean(s.enable_product_name)
+						: DEFAULT_ORDER_SETTINGS.enableProductName,
+				enablePrevOrderCount:
+					s.enable_prev_order_count !== undefined
+						? Boolean(s.enable_prev_order_count)
+						: DEFAULT_ORDER_SETTINGS.enablePrevOrderCount,
+				showDashboardProfitCard:
+					s.show_dashboard_profit_card !== undefined
+						? Boolean(s.show_dashboard_profit_card)
+						: DEFAULT_ORDER_SETTINGS.showDashboardProfitCard,
+				enableHRM: Boolean(s.enable_hrm),
+
+				fakeOrderProtection:
+					s.fake_order_protection !== undefined
+						? Boolean(s.fake_order_protection)
+						: DEFAULT_ORDER_SETTINGS.fakeOrderProtection,
+				enableOrderOTP: Boolean(s.enable_order_otp),
+				enablePhoneValidation:
+					s.enable_phone_validation !== undefined
+						? Boolean(s.enable_phone_validation)
+						: DEFAULT_ORDER_SETTINGS.enablePhoneValidation,
+				phoneMinLength: Number(s.phone_min_length) || DEFAULT_ORDER_SETTINGS.phoneMinLength,
+				phoneMaxLength: Number(s.phone_max_length) || DEFAULT_ORDER_SETTINGS.phoneMaxLength,
+				blockSingleIP: Boolean(s.block_single_ip),
+				ipWiseOrderLimit: Boolean(s.ip_wise_order_limit),
+
+				enableSMSNotification:
+					s.enable_sms_notification !== undefined
+						? Boolean(s.enable_sms_notification)
+						: DEFAULT_ORDER_SETTINGS.enableSMSNotification,
+				enableEmailNotification:
+					s.enable_email_notification !== undefined
+						? Boolean(s.enable_email_notification)
+						: DEFAULT_ORDER_SETTINGS.enableEmailNotification,
+				usePersonalSMTP: Boolean(s.use_personal_smtp),
+
+				deliveryBookingType: ['division', 'city', 'sub_area', 'district'].includes(
+					s.delivery_booking_type
+				)
+					? s.delivery_booking_type
+					: 'city',
+				deliveryOptionTitle: String(
+					s.delivery_option_title || DEFAULT_ORDER_SETTINGS.deliveryOptionTitle
+				),
+				insideDhakaCustomText: String(
+					s.inside_dhaka_custom_text || DEFAULT_ORDER_SETTINGS.insideDhakaCustomText
+				),
+				outsideDhakaCustomText: String(
+					s.outside_dhaka_custom_text || DEFAULT_ORDER_SETTINGS.outsideDhakaCustomText
+				),
+
+				successTitle: String(s.success_title || DEFAULT_ORDER_SETTINGS.successTitle),
+				successMessageBody: String(
+					s.success_message_body || DEFAULT_ORDER_SETTINGS.successMessageBody
+				),
+
+				enableCustomStatusWorkflow: Boolean(s.enable_custom_status_workflow),
+
+				requireFullAddress:
+					s.require_full_address !== undefined
+						? Boolean(s.require_full_address)
+						: DEFAULT_ORDER_SETTINGS.requireFullAddress,
+				showDistrictDropdown:
+					s.show_district_dropdown !== undefined
+						? Boolean(s.show_district_dropdown)
+						: DEFAULT_ORDER_SETTINGS.showDistrictDropdown
+			};
+		} catch (e) {
+			console.error('Failed to get order settings:', e);
+			return { ...DEFAULT_ORDER_SETTINGS };
+		}
+	}
+
+	/**
+	 * Persists complete Order Settings configuration into D1
+	 */
+	static async saveOrderSettings(
+		db: DrizzleD1Database<typeof schema>,
+		config: Partial<OrderSettingsConfig>
+	): Promise<OrderSettingsConfig> {
+		const mapping: [string, any][] = [
+			['enable_order_note', Boolean(config.enableOrderNote)],
+			['enable_incomplete_order', Boolean(config.enableIncompleteOrder)],
+			['enable_prescription_order', Boolean(config.enablePrescriptionOrder)],
+			['enable_checkout_order_modal', Boolean(config.enableCheckoutOrderModal)],
+			['swap_payment_and_order_item', Boolean(config.swapPaymentAndOrderItem)],
+
+			['enable_sl', Boolean(config.enableSL)],
+			['enable_product_sku', Boolean(config.enableProductSKU)],
+			['enable_product_name', Boolean(config.enableProductName)],
+			['enable_prev_order_count', Boolean(config.enablePrevOrderCount)],
+			['show_dashboard_profit_card', Boolean(config.showDashboardProfitCard)],
+			['enable_hrm', Boolean(config.enableHRM)],
+
+			['fake_order_protection', Boolean(config.fakeOrderProtection)],
+			['enable_order_otp', Boolean(config.enableOrderOTP)],
+			['enable_phone_validation', Boolean(config.enablePhoneValidation)],
+			['phone_min_length', Number(config.phoneMinLength) || 11],
+			['phone_max_length', Number(config.phoneMaxLength) || 11],
+			['block_single_ip', Boolean(config.blockSingleIP)],
+			['ip_wise_order_limit', Boolean(config.ipWiseOrderLimit)],
+
+			['enable_sms_notification', Boolean(config.enableSMSNotification)],
+			['enable_email_notification', Boolean(config.enableEmailNotification)],
+			['use_personal_smtp', Boolean(config.usePersonalSMTP)],
+
+			['delivery_booking_type', config.deliveryBookingType || 'city'],
+			['delivery_option_title', String(config.deliveryOptionTitle ?? '').trim()],
+			['inside_dhaka_custom_text', String(config.insideDhakaCustomText ?? '').trim()],
+			['outside_dhaka_custom_text', String(config.outsideDhakaCustomText ?? '').trim()],
+
+			['success_title', String(config.successTitle ?? '').trim()],
+			['success_message_body', String(config.successMessageBody ?? '').trim()],
+
+			['enable_custom_status_workflow', Boolean(config.enableCustomStatusWorkflow)],
+
+			['require_full_address', Boolean(config.requireFullAddress)],
+			['show_district_dropdown', Boolean(config.showDistrictDropdown)]
+		];
+
+		for (const [key, val] of mapping) {
+			await this.setSetting(db, 'order_setting', key, val);
+		}
+
+		return await this.getOrderSettings(db);
+	}
+
+	/**
+	 * Resolves active invoice template & printing settings
+	 */
+	static async getInvoiceConfig(
+		db: DrizzleD1Database<typeof schema>
+	): Promise<InvoiceConfig> {
+		try {
+			const s = await this.getSettingsGroup(db, 'invoice');
+			return {
+				template: String(s.template || 'classicDesign'),
+				disablePrice: Boolean(s.disable_price),
+				enableCourier: s.enable_courier !== undefined ? Boolean(s.enable_courier) : true,
+				enableReturnPolicy: s.enable_return_policy !== undefined ? Boolean(s.enable_return_policy) : true
+			};
+		} catch (e) {
+			console.error('Failed to get invoice config from D1:', e);
+			return { ...DEFAULT_INVOICE_CONFIG };
+		}
+	}
+
+	/**
+	 * Persists complete invoice template & printing configuration into D1
+	 */
+	static async saveInvoiceConfig(
+		db: DrizzleD1Database<typeof schema>,
+		config: Partial<InvoiceConfig>
+	) {
+		const mapping: [string, any][] = [
+			['template', String(config.template || 'classicDesign')],
+			['disable_price', Boolean(config.disablePrice)],
+			['enable_courier', config.enableCourier !== undefined ? Boolean(config.enableCourier) : true],
+			['enable_return_policy', config.enableReturnPolicy !== undefined ? Boolean(config.enableReturnPolicy) : true]
+		];
+
+		for (const [key, val] of mapping) {
+			await this.setSetting(db, 'invoice', key, val);
+		}
+
+		return await this.getInvoiceConfig(db);
 	}
 }
 

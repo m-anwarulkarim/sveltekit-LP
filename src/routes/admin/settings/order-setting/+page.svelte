@@ -1,5 +1,8 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import { Button, Card, Badge, Input, Textarea, Switch } from '#lib/components/ui';
+	import { toast } from 'svelte-sonner';
+	import type { OrderSettingsConfig } from '#lib/server/services/settings.service';
 	import {
 		ArrowLeft,
 		CheckCircle2,
@@ -9,96 +12,207 @@
 		Italic,
 		Underline,
 		Link,
-		List
+		List,
+		Loader2
 	} from 'lucide-svelte';
 
-	let isSaved = $state(false);
-	let saveMessage = $state('Order Settings Saved Successfully!');
+	let { data } = $props<{ data: { settings: OrderSettingsConfig } }>();
 
-	function triggerSave(msg = 'Order Settings Saved Successfully!') {
-		isSaved = true;
-		saveMessage = msg;
-		setTimeout(() => (isSaved = false), 3000);
-	}
+	let isSaving = $state(false);
+	let formElement: HTMLFormElement | null = $state(null);
 
 	// 1. General Options
-	let enableOrderNote = $state(true);
-	let enableIncompleteOrder = $state(true);
-	let enablePrescriptionOrder = $state(false);
-	let enableCheckoutOrderModal = $state(false);
-	let swapPaymentAndOrderItem = $state(true);
+	let enableOrderNote = $state(data?.settings?.enableOrderNote ?? true);
+	let enableIncompleteOrder = $state(data?.settings?.enableIncompleteOrder ?? true);
+	let enablePrescriptionOrder = $state(data?.settings?.enablePrescriptionOrder ?? false);
+	let enableCheckoutOrderModal = $state(data?.settings?.enableCheckoutOrderModal ?? false);
+	let swapPaymentAndOrderItem = $state(data?.settings?.swapPaymentAndOrderItem ?? true);
 
 	// 2. Admin Customization
-	let enableSL = $state(true);
-	let enableProductSKU = $state(true);
-	let enableProductName = $state(true);
-	let enablePrevOrderCount = $state(true);
-	let showDashboardProfitCard = $state(true);
-	let enableHRM = $state(false);
+	let enableSL = $state(data?.settings?.enableSL ?? true);
+	let enableProductSKU = $state(data?.settings?.enableProductSKU ?? true);
+	let enableProductName = $state(data?.settings?.enableProductName ?? true);
+	let enablePrevOrderCount = $state(data?.settings?.enablePrevOrderCount ?? true);
+	let showDashboardProfitCard = $state(data?.settings?.showDashboardProfitCard ?? true);
+	let enableHRM = $state(data?.settings?.enableHRM ?? false);
 
 	// 3. Security & Validation
-	let fakeOrderProtection = $state(true);
-	let enableOrderOTP = $state(false);
-	let enablePhoneValidation = $state(true);
-	let phoneMinLength = $state(11);
-	let phoneMaxLength = $state(11);
-	let blockSingleIP = $state(false);
-	let ipWiseOrderLimit = $state(false);
+	let fakeOrderProtection = $state(data?.settings?.fakeOrderProtection ?? true);
+	let enableOrderOTP = $state(data?.settings?.enableOrderOTP ?? false);
+	let enablePhoneValidation = $state(data?.settings?.enablePhoneValidation ?? true);
+	let phoneMinLength = $state(data?.settings?.phoneMinLength ?? 11);
+	let phoneMaxLength = $state(data?.settings?.phoneMaxLength ?? 11);
+	let blockSingleIP = $state(data?.settings?.blockSingleIP ?? false);
+	let ipWiseOrderLimit = $state(data?.settings?.ipWiseOrderLimit ?? false);
 
 	// 4. Order Notification
-	let enableSMSNotification = $state(true);
-	let enableEmailNotification = $state(true);
-	let usePersonalSMTP = $state(false);
+	let enableSMSNotification = $state(data?.settings?.enableSMSNotification ?? true);
+	let enableEmailNotification = $state(data?.settings?.enableEmailNotification ?? true);
+	let usePersonalSMTP = $state(data?.settings?.usePersonalSMTP ?? false);
 
 	// 5. Delivery Settings
-	let deliveryBookingType = $state<'division' | 'city' | 'sub_area' | 'district'>('city');
-	let deliveryOptionTitle = $state('শর্তাবলী: ১। অর্ডারকৃত পণ্য গ্রহণ করার সময় দেখে নিবেন');
-	let insideDhakaCustomText = $state('Inside Dhaka 70TK');
-	let outsideDhakaCustomText = $state('Outside Dhaka 120TK');
+	let deliveryBookingType = $state<'division' | 'city' | 'sub_area' | 'district'>(
+		data?.settings?.deliveryBookingType ?? 'city'
+	);
+	let deliveryOptionTitle = $state(
+		data?.settings?.deliveryOptionTitle ?? 'শর্তাবলী: ১। অর্ডারকৃত পণ্য গ্রহণ করার সময় দেখে নিবেন'
+	);
+	let insideDhakaCustomText = $state(
+		data?.settings?.insideDhakaCustomText ?? 'Inside Dhaka 70TK'
+	);
+	let outsideDhakaCustomText = $state(
+		data?.settings?.outsideDhakaCustomText ?? 'Outside Dhaka 120TK'
+	);
 
 	// 6. Success Page Custom Message
-	let successTitle = $state('THANK YOU\nYOUR ORDER IS PLACED');
+	let successTitle = $state(data?.settings?.successTitle ?? 'THANK YOU\nYOUR ORDER IS PLACED');
 	let successMessageBody = $state(
-		'THANK YOU\nYOUR ORDER IS PLACED\nWe received your order and will begin processing it soon. Your order information appears below:\nYour order Number: {{orderId}}'
+		data?.settings?.successMessageBody ??
+			'THANK YOU\nYOUR ORDER IS PLACED\nWe received your order and will begin processing it soon. Your order information appears below:\nYour order Number: {{orderId}}'
 	);
 
 	// 7. Custom Order Statuses
-	let enableCustomStatusWorkflow = $state(false);
+	let enableCustomStatusWorkflow = $state(
+		data?.settings?.enableCustomStatusWorkflow ?? false
+	);
 
 	// 8. Address Settings
-	let requireFullAddress = $state(true);
-	let showDistrictDropdown = $state(true);
+	let requireFullAddress = $state(data?.settings?.requireFullAddress ?? true);
+	let showDistrictDropdown = $state(data?.settings?.showDistrictDropdown ?? true);
+
+	$effect(() => {
+		if (data?.settings) {
+			const s = data.settings;
+			enableOrderNote = s.enableOrderNote;
+			enableIncompleteOrder = s.enableIncompleteOrder;
+			enablePrescriptionOrder = s.enablePrescriptionOrder;
+			enableCheckoutOrderModal = s.enableCheckoutOrderModal;
+			swapPaymentAndOrderItem = s.swapPaymentAndOrderItem;
+			enableSL = s.enableSL;
+			enableProductSKU = s.enableProductSKU;
+			enableProductName = s.enableProductName;
+			enablePrevOrderCount = s.enablePrevOrderCount;
+			showDashboardProfitCard = s.showDashboardProfitCard;
+			enableHRM = s.enableHRM;
+			fakeOrderProtection = s.fakeOrderProtection;
+			enableOrderOTP = s.enableOrderOTP;
+			enablePhoneValidation = s.enablePhoneValidation;
+			phoneMinLength = s.phoneMinLength;
+			phoneMaxLength = s.phoneMaxLength;
+			blockSingleIP = s.blockSingleIP;
+			ipWiseOrderLimit = s.ipWiseOrderLimit;
+			enableSMSNotification = s.enableSMSNotification;
+			enableEmailNotification = s.enableEmailNotification;
+			usePersonalSMTP = s.usePersonalSMTP;
+			deliveryBookingType = s.deliveryBookingType;
+			deliveryOptionTitle = s.deliveryOptionTitle;
+			insideDhakaCustomText = s.insideDhakaCustomText;
+			outsideDhakaCustomText = s.outsideDhakaCustomText;
+			successTitle = s.successTitle;
+			successMessageBody = s.successMessageBody;
+			enableCustomStatusWorkflow = s.enableCustomStatusWorkflow;
+			requireFullAddress = s.requireFullAddress;
+			showDistrictDropdown = s.showDistrictDropdown;
+		}
+	});
+
+	let payloadJson = $derived(
+		JSON.stringify({
+			enableOrderNote,
+			enableIncompleteOrder,
+			enablePrescriptionOrder,
+			enableCheckoutOrderModal,
+			swapPaymentAndOrderItem,
+			enableSL,
+			enableProductSKU,
+			enableProductName,
+			enablePrevOrderCount,
+			showDashboardProfitCard,
+			enableHRM,
+			fakeOrderProtection,
+			enableOrderOTP,
+			enablePhoneValidation,
+			phoneMinLength,
+			phoneMaxLength,
+			blockSingleIP,
+			ipWiseOrderLimit,
+			enableSMSNotification,
+			enableEmailNotification,
+			usePersonalSMTP,
+			deliveryBookingType,
+			deliveryOptionTitle,
+			insideDhakaCustomText,
+			outsideDhakaCustomText,
+			successTitle,
+			successMessageBody,
+			enableCustomStatusWorkflow,
+			requireFullAddress,
+			showDistrictDropdown
+		})
+	);
+
+	function submitForm() {
+		if (formElement) {
+			formElement.requestSubmit();
+		}
+	}
 </script>
 
 <svelte:head>
 	<title>Order Setting | AURA Enterprise</title>
 </svelte:head>
 
-<div class="space-y-6 max-w-7xl mx-auto">
-	<!-- Toast Message -->
-	{#if isSaved}
-		<div class="fixed bottom-6 right-6 z-50 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-bold animate-in fade-in slide-in-from-bottom-4">
-			<CheckCircle2 class="w-4 h-4" />
-			<span>{saveMessage}</span>
-		</div>
-	{/if}
+<!-- Hidden POST form wired with use:enhance -->
+<form
+	bind:this={formElement}
+	action="?/save"
+	method="POST"
+	use:enhance={() => {
+		isSaving = true;
+		return async ({ result, update }) => {
+			isSaving = false;
+			if (result.type === 'success') {
+				toast.success((result.data as any)?.message || 'অর্ডার সেটিংস সফলভাবে সংরক্ষিত হয়েছে!');
+			} else if (result.type === 'failure') {
+				toast.error((result.data as any)?.message || 'সংরক্ষণ ব্যর্থ হয়েছে!');
+			}
+			await update({ reset: false });
+		};
+	}}
+	class="hidden"
+>
+	<input type="hidden" name="settings" value={payloadJson} />
+</form>
 
-	<!-- Top Action Bar (Back to Settings + Save Changes) -->
+<div class="space-y-6 max-w-7xl mx-auto">
+	<!-- Top Action Bar (Back to Settings + Live Badge + Save Changes) -->
 	<div class="flex items-center justify-between gap-4 pb-2">
-		<a href="/admin/settings">
-			<Button variant="outline" size="sm" class="gap-2">
-				<ArrowLeft class="w-4 h-4" />
-				<span>Back to Settings</span>
-			</Button>
-		</a>
+		<div class="flex items-center gap-3">
+			<a href="/admin/settings">
+				<Button variant="outline" size="sm" class="gap-2">
+					<ArrowLeft class="w-4 h-4" />
+					<span>Back to Settings</span>
+				</Button>
+			</a>
+			<span class="text-xs font-mono px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-bold flex items-center gap-1.5">
+				<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+				<span>Cloudflare D1 Live</span>
+			</span>
+		</div>
 
 		<Button
 			type="button"
-			onclick={() => triggerSave('Order Settings Saved Successfully!')}
-			class="gap-1.5 bg-[#5845eb] hover:bg-[#4936d6] text-white font-bold px-6 py-2.5 rounded-xl shadow-md shadow-indigo-500/20"
+			disabled={isSaving}
+			onclick={submitForm}
+			class="gap-1.5 bg-[#5845eb] hover:bg-[#4936d6] text-white font-bold px-6 py-2.5 rounded-xl shadow-md shadow-indigo-500/20 cursor-pointer"
 		>
-			<Check class="w-4 h-4" />
-			<span>Save Changes</span>
+			{#if isSaving}
+				<Loader2 class="w-4 h-4 animate-spin" />
+				<span>সংরক্ষণ হচ্ছে...</span>
+			{:else}
+				<Check class="w-4 h-4" />
+				<span>Save Changes</span>
+			{/if}
 		</Button>
 	</div>
 
@@ -600,11 +714,17 @@
 				<div class="pt-3 border-t border-slate-100">
 					<Button
 						type="button"
-						onclick={() => triggerSave('Order Settings Saved Successfully!')}
-						class="w-full gap-1.5 bg-[#5845eb] hover:bg-[#4936d6] text-white font-bold text-xs py-2 rounded-xl shadow-xs"
+						disabled={isSaving}
+						onclick={submitForm}
+						class="w-full gap-1.5 bg-[#5845eb] hover:bg-[#4936d6] text-white font-bold text-xs py-2.5 rounded-xl shadow-xs cursor-pointer"
 					>
-						<Check class="w-3.5 h-3.5" />
-						<span>Save Changes</span>
+						{#if isSaving}
+							<Loader2 class="w-3.5 h-3.5 animate-spin" />
+							<span>সংরক্ষণ হচ্ছে...</span>
+						{:else}
+							<Check class="w-3.5 h-3.5" />
+							<span>Save Changes</span>
+						{/if}
 					</Button>
 				</div>
 			</Card>

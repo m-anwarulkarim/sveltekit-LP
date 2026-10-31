@@ -142,17 +142,11 @@
 					avatarImage = uploadData.url;
 					submitAvatarForm();
 				} else {
-					const compressedUrl = await resizeImageToAvatar(file);
-					avatarInputUrl = compressedUrl;
-					avatarImage = compressedUrl;
-					submitAvatarForm();
+					toast.error(uploadData.message || 'ছবি আপলোড করতে ব্যর্থ হয়েছে!');
 				}
 			} catch (err) {
-				console.error('Avatar upload error, using fallback:', err);
-				const compressedUrl = await resizeImageToAvatar(file);
-				avatarInputUrl = compressedUrl;
-				avatarImage = compressedUrl;
-				submitAvatarForm();
+				console.error('Avatar upload error:', err);
+				toast.error('ছবি আপলোড করতে ব্যর্থ হয়েছে! সংযোগ যাচাই করুন।');
 			} finally {
 				isSubmittingAvatar = false;
 			}
@@ -204,9 +198,16 @@
 			<div class="md:col-span-4 lg:col-span-3 flex flex-col items-center text-center space-y-4">
 				
 				<!-- Large Profile Logo / Circular Avatar -->
-				<div class="w-44 h-44 rounded-full bg-black flex items-center justify-center p-3 text-center border-4 border-slate-100 shadow-md relative overflow-hidden group">
+				<div class="w-44 h-44 rounded-full bg-slate-100 flex items-center justify-center text-center border-4 border-slate-200/90 shadow-md relative overflow-hidden group">
 					{#if avatarImage}
-						<img src={avatarImage} alt="Avatar" class="w-full h-full object-cover rounded-full" />
+						<img
+							src={avatarImage}
+							alt="Avatar"
+							class="w-full h-full object-cover rounded-full"
+							onerror={() => {
+								avatarImage = null;
+							}}
+						/>
 					{:else}
 						<!-- Exact "COLOR LIGHT HOUSE" Logo -->
 						<div class="flex flex-col items-center justify-center select-none">

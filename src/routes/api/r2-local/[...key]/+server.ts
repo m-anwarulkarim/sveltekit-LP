@@ -31,3 +31,4 @@ export const GET: RequestHandler = async ({ params, platform }) => {
 	// If not found in local miniflare bucket, fallback to real Cloudflare R2 public CDN
 	return Response.redirect(`${R2_DEFAULT_PUBLIC_URL}/${key}`, 302);
 };
+

@@ -3,8 +3,10 @@ import { getDb } from '#lib/server/db/index';
 import { ReportService } from '#lib/server/services/report.service';
 
 export const load: PageServerLoad = async ({ url, platform }) => {
-	const todayStr = new Date().toISOString().split('T')[0];
-	const startDate = url.searchParams.get('startDate') || todayStr;
+	const now = new Date();
+	const todayStr = now.toISOString().split('T')[0];
+	const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+	const startDate = url.searchParams.get('startDate') || firstOfMonth;
 	const endDate = url.searchParams.get('endDate') || todayStr;
 
 	try {
@@ -37,3 +39,4 @@ export const load: PageServerLoad = async ({ url, platform }) => {
 		};
 	}
 };
+

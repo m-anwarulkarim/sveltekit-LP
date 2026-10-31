@@ -155,9 +155,9 @@ export class ReportService {
 		const endDate = filter.endDate || todayStr;
 
 		try {
-			// Convert to start and end millisecond timestamps
-			const startTs = new Date(`${startDate}T00:00:00.000`).getTime();
-			const endTs = new Date(`${endDate}T23:59:59.999`).getTime();
+			// Convert to Bangladesh Time (UTC+6) start and end millisecond timestamps
+			const startTs = new Date(`${startDate}T00:00:00+06:00`).getTime();
+			const endTs = new Date(`${endDate}T23:59:59.999+06:00`).getTime();
 
 			// Fetch orders within date range (excluding trashed orders)
 			const dbOrders = await db
@@ -173,19 +173,7 @@ export class ReportService {
 				.orderBy(desc(schema.orders.createdAt))
 				.all();
 
-			// If no orders found for exact range, or in initial setup, also check if any orders exist at all
-			// to provide meaningful data if date filter is wider
-			let ordersToProcess = dbOrders;
-			if (ordersToProcess.length === 0 && !filter.startDate) {
-				// Fallback to latest orders to show active summary
-				ordersToProcess = await db
-					.select()
-					.from(schema.orders)
-					.where(eq(schema.orders.isTrashed, false))
-					.orderBy(desc(schema.orders.createdAt))
-					.limit(50)
-					.all();
-			}
+			const ordersToProcess = dbOrders;
 
 			let totalOrdersReceived = ordersToProcess.length;
 			let totalOrdersDelivered = 0;
@@ -286,3 +274,4 @@ export class ReportService {
 		}
 	}
 }
+

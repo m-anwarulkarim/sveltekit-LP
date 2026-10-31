@@ -114,6 +114,49 @@
 	function handleDownloadPDF() {
 		window.print();
 	}
+
+	function exportToCSV() {
+		if (ordersList.length === 0) {
+			toast.error('এক্সপোর্ট করার মতো কোনো অর্ডার নেই');
+			return;
+		}
+
+		const headers = [
+			'Order Number',
+			'Date',
+			'Customer Name',
+			'Phone',
+			'Status',
+			'Total (BDT)',
+			'Advance (BDT)',
+			'Due (BDT)',
+			'Delivery Charge (BDT)',
+			'Courier Cost (BDT)'
+		];
+		const rows = ordersList.map((o) => [
+			`"${o.orderNumber}"`,
+			`"${o.createdAt}"`,
+			`"${o.customerName.replace(/"/g, '""')}"`,
+			`"${o.customerPhone}"`,
+			o.status,
+			o.total,
+			o.advancePayment,
+			o.dueAmount,
+			o.deliveryCharge,
+			o.courierCost
+		]);
+
+		const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+		const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement('a');
+		link.setAttribute('href', url);
+		link.setAttribute('download', `Business_Summary_${startDate}_to_${endDate}.csv`);
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		toast.success('অর্ডার সামারি CSV ফাইলে ডাউনলোড হয়েছে!');
+	}
 </script>
 
 <svelte:head>
@@ -240,6 +283,18 @@
 					Clear
 				</Button>
 
+				<!-- Export CSV Button -->
+				<Button
+					type="button"
+					onclick={exportToCSV}
+					variant="outline"
+					size="sm"
+					class="border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100/70 text-indigo-700 font-bold flex items-center gap-1.5"
+				>
+					<FileDown class="w-4 h-4 text-indigo-600" />
+					<span>Export CSV</span>
+				</Button>
+
 				<!-- Download PDF Button -->
 				<Button
 					type="button"
@@ -290,6 +345,19 @@
 				</div>
 			</div>
 		</div>
+
+		<!-- Zero orders notice if period has no orders -->
+		{#if totalOrdersReceived === 0}
+			<div class="p-4 rounded-xl bg-amber-50/70 border border-amber-200 text-amber-900 flex items-start gap-3 print:hidden">
+				<CalendarDays class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+				<div class="text-xs">
+					<strong class="font-bold">এই সময়ে কোনো অর্ডার নেই:</strong>
+					<span class="text-amber-800 ml-1">
+						নির্বাচিত তারিখের মধ্যে ({startDate} থেকে {endDate}) কোনো অর্ডার পাওয়া যায়নি। পূর্বের অর্ডার দেখতে উপরের <strong>"Yesterday"</strong>, <strong>"Last 7 Days"</strong>, <strong>"This Month"</strong> বা <strong>"All Time"</strong> অপশনে ক্লিক করুন।
+					</span>
+				</div>
+			</div>
+		{/if}
 
 		<!-- 1. Order Overview Section -->
 		<div class="space-y-3">

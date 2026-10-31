@@ -12,7 +12,8 @@
 		Boxes,
 		ChevronLeft,
 		ChevronRight,
-		SlidersHorizontal
+		SlidersHorizontal,
+		FileDown
 	} from 'lucide-svelte';
 	import type { AssetValuationReportData, AssetValuationProduct } from '#lib/server/services/report.service';
 
@@ -83,6 +84,50 @@
 	function goToNextPage() {
 		if (currentPage < totalPages) currentPage++;
 	}
+
+	function exportToCSV() {
+		if (filteredProducts.length === 0) {
+			toast.error('এক্সপোর্ট করার মতো কোনো প্রোডাক্ট নেই');
+			return;
+		}
+
+		const headers = [
+			'Product Name',
+			'SKU',
+			'Variant',
+			'Stock',
+			'Cost Per Unit (BDT)',
+			'Sale Per Unit (BDT)',
+			'Cost Value (BDT)',
+			'Retail Value (BDT)',
+			'Status'
+		];
+		const rows = filteredProducts.map((p) => [
+			`"${p.name.replace(/"/g, '""')}"`,
+			`"${p.sku}"`,
+			`"${p.variant}"`,
+			p.stock,
+			p.costPerUnit,
+			p.salePerUnit,
+			p.totalCost,
+			p.totalRetail,
+			p.status
+		]);
+
+		const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+		const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement('a');
+		link.setAttribute('href', url);
+		link.setAttribute(
+			'download',
+			`Asset_Valuation_Report_${new Date().toISOString().split('T')[0]}.csv`
+		);
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		toast.success('ইনভেন্টরি এসেট রিপোর্ট CSV ফাইলে ডাউনলোড হয়েছে!');
+	}
 </script>
 
 <svelte:head>
@@ -135,6 +180,16 @@
 			>
 				<RefreshCw class="w-3.5 h-3.5 text-slate-500 {isRefreshing ? 'animate-spin' : ''}" />
 				<span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+			</button>
+
+			<!-- Export CSV Button -->
+			<button
+				type="button"
+				onclick={exportToCSV}
+				class="px-3.5 py-2 rounded-xl border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100/70 text-indigo-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+			>
+				<FileDown class="w-3.5 h-3.5 text-indigo-600" />
+				<span>Export CSV</span>
 			</button>
 		</div>
 	</div>

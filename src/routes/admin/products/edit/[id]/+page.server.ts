@@ -85,31 +85,23 @@ export const actions: Actions = {
 			};
 		}
 
-		if (platform?.env?.DB) {
-			try {
-				const db = getDb(platform.env.DB);
-				await ProductService.updateProduct(db, params.id, payload);
-				return { success: true, message: 'প্রোডাক্ট সফলভাবে আপডেট করা হয়েছে!' };
-			} catch (e: any) {
-				console.error('Update product failed in DB:', e);
-				return fail(500, { message: e?.message || 'প্রোডাক্ট আপডেট করতে সমস্যা হয়েছে' });
-			}
+		try {
+			const db = getDb(platform);
+			await ProductService.updateProduct(db, params.id, payload);
+			return { success: true, message: 'প্রোডাক্ট সফলভাবে আপডেট করা হয়েছে!' };
+		} catch (e: any) {
+			console.error('Update product failed in DB:', e);
+			return fail(500, { message: e?.message || 'প্রোডাক্ট আপডেট করতে সমস্যা হয়েছে' });
 		}
-
-		return { success: true, message: 'প্রোডাক্ট সফলভাবে আপডেট সম্পন্ন (Simulation)' };
 	},
 
 	deleteProduct: async ({ platform, params }) => {
-		if (platform?.env?.DB) {
-			try {
-				const db = getDb(platform.env.DB);
-				await ProductService.deleteProduct(db, params.id);
-				return { success: true, message: 'প্রোডাক্ট সফলভাবে মুছে ফেলা হয়েছে!' };
-			} catch (e: any) {
-				return fail(500, { message: e?.message });
-			}
+		try {
+			const db = getDb(platform);
+			await ProductService.deleteProduct(db, params.id);
+			return { success: true, message: 'প্রোডাক্ট সফলভাবে মুছে ফেলা হয়েছে!' };
+		} catch (e: any) {
+			return fail(500, { message: e?.message });
 		}
-
-		return { success: true, message: 'প্রোডাক্ট মুছে ফেলা হয়েছে (Simulation)' };
 	}
 };

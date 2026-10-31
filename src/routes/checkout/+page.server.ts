@@ -6,6 +6,7 @@ import { addLiveOrder } from '#lib/server/orders-store';
 import { ThemeCustomizationService } from '#lib/server/services/theme-customization.service';
 import { PixelService } from '#lib/server/services/pixel.service';
 import { SettingsService } from '#lib/server/services/settings.service';
+import { SecurityService } from '#lib/server/services/security.service';
 
 export const load: PageServerLoad = async (event) => {
 	const parentData = await event.parent();
@@ -79,6 +80,22 @@ async function handlePlaceOrderAction({ request, platform, getClientAddress, loc
 
 		if (!customerName || !customerPhone || !shippingAddress) {
 			return fail(400, { message: 'নাম, মোবাইল নম্বর এবং ঠিকানা পূরণ করা আবশ্যক।' });
+		}
+
+		// Security Sentinel: Check if client IP or customer phone is blacklisted
+		let clientIp = '';
+		try {
+			clientIp = getClientAddress?.() || request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || '';
+		} catch {
+			clientIp = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || '';
+		}
+		if (clientIp.includes(',')) clientIp = clientIp.split(',')[0].trim();
+
+		const blockCheck = await SecurityService.isBlocked(db, clientIp, customerPhone);
+		if (blockCheck.blocked) {
+			return fail(403, {
+				message: 'নিরাপত্তা জনিত কারণে আপনার আইপি অথবা ফোন নম্বর থেকে সাময়িকভাবে অর্ডার গ্রহণ স্থগিত রাখা হয়েছে। প্রয়োজনে কাস্টমার সাপোর্টে যোগাযোগ করুন।'
+			});
 		}
 
 		const payload = {

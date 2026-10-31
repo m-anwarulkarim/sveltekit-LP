@@ -7,6 +7,8 @@ import { normalizeOrderStatus } from './_data';
 import { getLiveOrders, syncLiveOrders } from '#lib/server/orders-store';
 import { NotificationService } from '#lib/server/services/notification.service';
 import { AdminProfileService } from '#lib/server/services/admin-profile.service';
+import { SecurityService } from '#lib/server/services/security.service';
+import { CustomerService } from '#lib/server/services/customer.service';
 import {
 	ADMIN_MENU_LIST,
 	hasMenuAccess,
@@ -20,6 +22,10 @@ export const load: LayoutServerLoad = async ({ platform, cookies, url }) => {
 	let reviewsList: any[] = [];
 	let newsletterList: any[] = [];
 	let unreadNotificationsCount = 0;
+	let blockedIpsCount = 0;
+	let customersCount = 0;
+	let landingPagesCount = 0;
+	let galleryCount = 0;
 	let isD1Connected = false;
 	let ownerProfile: any = null;
 	let currentAdmin: any = null;
@@ -47,8 +53,22 @@ export const load: LayoutServerLoad = async ({ platform, cookies, url }) => {
 		reviewsList = await db.select().from(schema.reviews).orderBy(desc(schema.reviews.createdAt)).all();
 		newsletterList = await db.select().from(schema.newsletter).orderBy(desc(schema.newsletter.createdAt)).all();
 
-		// 4. Fetch live unread notifications count
+		// 4. Fetch live unread notifications count, blocked IPs count & landing pages count
 		unreadNotificationsCount = await NotificationService.getUnreadCount(db);
+		blockedIpsCount = await SecurityService.countBlocked(db).catch(() => 0);
+		customersCount = await CustomerService.countCustomers(db).catch(() => 0);
+		try {
+			const lps = await db.select({ id: schema.landingPages.id }).from(schema.landingPages).all();
+			landingPagesCount = lps.length;
+		} catch (e) {
+			console.error('Failed to count landing pages in layout:', e);
+		}
+		try {
+			const media = await db.select({ id: schema.mediaAssets.id }).from(schema.mediaAssets).all();
+			galleryCount = media.length || 16;
+		} catch {
+			galleryCount = 16;
+		}
 
 		// 5. Fetch Owner profile (Avatar, Name, etc.)
 		ownerProfile = await AdminProfileService.getOwnerProfile(db);
@@ -174,6 +194,10 @@ export const load: LayoutServerLoad = async ({ platform, cookies, url }) => {
 		currentAdmin,
 		allAdminUsers,
 		unreadNotificationsCount,
+		blockedIpsCount,
+		customersCount,
+		landingPagesCount,
+		galleryCount,
 		products: productsList,
 		orders: ordersList,
 		reviews: reviewsList,

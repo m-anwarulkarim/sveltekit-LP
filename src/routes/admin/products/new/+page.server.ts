@@ -59,17 +59,13 @@ export const actions: Actions = {
 			return fail(400, { message: 'প্রোডাক্টের নাম অবশ্যই প্রদান করতে হবে' });
 		}
 
-		if (platform?.env?.DB) {
-			try {
-				const db = getDb(platform.env.DB);
-				const created = await ProductService.createProduct(db, payload);
-				return { success: true, createdProduct: created, message: 'নতুন প্রোডাক্ট সফলভাবে সেভ হয়েছে!' };
-			} catch (e: any) {
-				console.error('Failed to create product in DB:', e);
-				return fail(500, { message: e?.message || 'প্রোডাক্ট তৈরিতে সমস্যা হয়েছে' });
-			}
+		try {
+			const db = getDb(platform);
+			const created = await ProductService.createProduct(db, payload);
+			return { success: true, createdProduct: created, message: 'নতুন প্রোডাক্ট সফলভাবে সেভ হয়েছে!' };
+		} catch (e: any) {
+			console.error('Failed to create product in DB:', e);
+			return fail(500, { message: e?.message || 'প্রোডাক্ট তৈরিতে সমস্যা হয়েছে' });
 		}
-
-		return { success: true, message: 'প্রোডাক্ট সফলভাবে তৈরি হয়েছে (Simulation)' };
 	}
 };

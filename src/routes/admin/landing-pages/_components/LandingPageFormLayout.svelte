@@ -18,7 +18,13 @@
 		Info,
 		Save,
 		Eye,
-		Zap
+		Zap,
+		Image as ImageIcon,
+		UploadCloud,
+		Trash2,
+		Star,
+		Plus,
+		RotateCcw
 	} from 'lucide-svelte';
 
 	interface Props {
@@ -55,6 +61,20 @@
 			: '১০০% প্রিমিয়াম ও অরিজিনাল কোয়ালিটি নিশ্চিত\nপণ্য হাতে পেয়ে চেক করে মূল্য পরিশোধের সুবিধা\nপছন্দ না হলে সাথে সাথে রিটার্ন সুবিধা\nসারা বাংলাদেশে দ্রুততম হোম ডেলিভারি'
 	);
 
+	// Gallery Images for Landing Page Slider
+	let initialImages: string[] = [];
+	if (landingPage?.config?.galleryImages && Array.isArray(landingPage.config.galleryImages)) {
+		initialImages = landingPage.config.galleryImages;
+	} else if (landingPage?.product?.parsedImages?.length > 0) {
+		initialImages = landingPage.product.parsedImages;
+	} else if (landingPage?.product?.image) {
+		initialImages = [landingPage.product.image];
+	}
+
+	let galleryImages = $state<string[]>(initialImages);
+	let newImageUrl = $state('');
+	let isUploadingImage = $state(false);
+
 	let isSubmitting = $state(false);
 
 	// Selected product reference
@@ -69,6 +89,80 @@
 		}
 		return 0;
 	});
+
+	function addImageUrl() {
+		const trimmed = newImageUrl.trim();
+		if (!trimmed) return;
+		if (galleryImages.includes(trimmed)) {
+			toast.info('এই ছবির লিঙ্কটি আগেই যুক্ত করা আছে।');
+			return;
+		}
+		galleryImages = [...galleryImages, trimmed];
+		newImageUrl = '';
+		toast.success('ছবি সফলভাবে যুক্ত হয়েছে!');
+	}
+
+	function handleFileUpload(e: Event) {
+		const target = e.target as HTMLInputElement;
+		const files = target.files;
+		if (!files || files.length === 0) return;
+
+		isUploadingImage = true;
+		let loadedCount = 0;
+		const newUrls: string[] = [];
+
+		for (let i = 0; i < files.length; i++) {
+			const file = files[i];
+			const reader = new FileReader();
+			reader.onload = (event) => {
+				const result = event.target?.result as string;
+				if (result && !galleryImages.includes(result)) {
+					newUrls.push(result);
+				}
+				loadedCount++;
+				if (loadedCount === files.length) {
+					galleryImages = [...galleryImages, ...newUrls];
+					isUploadingImage = false;
+					toast.success(`${newUrls.length} টি ছবি সফলভাবে যোগ হয়েছে!`);
+					target.value = '';
+				}
+			};
+			reader.readAsDataURL(file);
+		}
+	}
+
+	function removeImage(index: number) {
+		galleryImages = galleryImages.filter((_, i) => i !== index);
+		toast.success('ছবি মুছে ফেলা হয়েছে');
+	}
+
+	function makeCoverImage(index: number) {
+		if (index === 0) return;
+		const selected = galleryImages[index];
+		const remaining = galleryImages.filter((_, i) => i !== index);
+		galleryImages = [selected, ...remaining];
+		toast.success('প্রধান কভার ছবি হিসেবে সেট করা হয়েছে!');
+	}
+
+	function loadProductImages() {
+		if (!selectedProduct) return;
+		let prodImages: string[] = [];
+		if (selectedProduct.images) {
+			try {
+				prodImages = typeof selectedProduct.images === 'string' ? JSON.parse(selectedProduct.images) : selectedProduct.images;
+			} catch {
+				prodImages = [selectedProduct.image];
+			}
+		} else if (selectedProduct.image) {
+			prodImages = [selectedProduct.image];
+		}
+
+		if (prodImages.length > 0) {
+			const combined = Array.from(new Set([...galleryImages, ...prodImages]));
+			galleryImages = combined;
+			toast.success(`প্রোডাক্ট থেকে ${prodImages.length}টি ছবি গ্যালারিতে সিঙ্ক হয়েছে!`);
+		}
+	}
 
 	// Auto-fill from Product
 	function handleProductSelect(id: string) {
@@ -89,7 +183,25 @@
 			}
 			if (!customPrice) customPrice = String(prod.price || '');
 			if (!customOriginalPrice) customOriginalPrice = String(prod.originalPrice || Math.round(prod.price * 1.5));
-			toast.info(`'${prod.name}' পণ্যের তথ্য অটো-ফিল করা হয়েছে!`);
+
+			// Auto-populate images if empty
+			if (galleryImages.length === 0) {
+				let prodImages: string[] = [];
+				if (prod.images) {
+					try {
+						prodImages = typeof prod.images === 'string' ? JSON.parse(prod.images) : prod.images;
+					} catch {
+						prodImages = [prod.image];
+					}
+				} else if (prod.image) {
+					prodImages = [prod.image];
+				}
+				if (prodImages.length > 0) {
+					galleryImages = prodImages;
+				}
+			}
+
+			toast.info(`'${prod.name}' পণ্যের তথ্য ও ছবি অটো-ফিল করা হয়েছে!`);
 		}
 	}
 
@@ -132,6 +244,7 @@
 			if (customPrice) formData.append('customPrice', customPrice);
 			if (customOriginalPrice) formData.append('customOriginalPrice', customOriginalPrice);
 			formData.append('bulletPoints', bulletPointsText.trim());
+			formData.append('galleryImages', JSON.stringify(galleryImages));
 
 			if (isEditMode && landingPage?.id) {
 				formData.append('id', landingPage.id);
@@ -369,6 +482,151 @@
 							লাইভ লিংক: <span class="text-indigo-600 font-semibold">https://haqplus.com/lp/{slug || 'your-slug'}</span>
 						</p>
 					</div>
+				</CardContent>
+			</Card>
+
+			<!-- CARD: প্রোডাক্ট ইমেজ গ্যালারি ও স্লাইডার -->
+			<Card class="rounded-3xl border-slate-200/90 shadow-xs overflow-hidden bg-white">
+				<CardHeader class="p-5 sm:p-6 pb-4 border-b border-slate-100 bg-slate-50/50">
+					<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+						<div class="flex items-center gap-2.5">
+							<div class="w-8 h-8 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center shrink-0">
+								<ImageIcon class="w-4.5 h-4.5" />
+							</div>
+							<div>
+								<CardTitle class="text-sm sm:text-base font-bold text-slate-900">
+									প্রোডাক্ট ইমেজ গ্যালারি ও স্লাইডার
+								</CardTitle>
+								<p class="text-[11px] text-slate-500">
+									একাধিক ছবি আপলোড করুন; ল্যান্ডিং পেজে স্বয়ংক্রিয়ভাবে স্লাইডার ও গ্যালারি প্রদর্শিত হবে
+								</p>
+							</div>
+						</div>
+						<div class="flex items-center gap-2">
+							<Badge variant="outline" class="bg-violet-50 text-violet-700 border-violet-200 text-xs font-bold px-2.5 py-0.5 rounded-full">
+								{galleryImages.length} টি ছবি যুক্ত আছে
+							</Badge>
+							{#if selectedProduct}
+								<button
+									type="button"
+									onclick={loadProductImages}
+									class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors cursor-pointer"
+									title="লিংক করা প্রোডাক্ট থেকে ছবি রি-সিঙ্ক করুন"
+								>
+									<RotateCcw class="w-3 h-3" />
+									<span>প্রোডাক্ট ছবি সিঙ্ক</span>
+								</button>
+							{/if}
+						</div>
+					</div>
+				</CardHeader>
+
+				<CardContent class="p-5 sm:p-6 space-y-5">
+					<!-- Upload & URL Input Row -->
+					<div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+						<!-- URL Input -->
+						<div class="sm:col-span-8 flex gap-2">
+							<Input
+								type="url"
+								bind:value={newImageUrl}
+								placeholder="ছবির সরাসরি ওয়েব লিংক (URL) দিন..."
+								class="rounded-2xl border-slate-200 text-xs sm:text-sm py-2 bg-slate-50/50 focus:bg-white flex-1"
+								onkeydown={(e) => {
+									if (e.key === 'Enter') {
+										e.preventDefault();
+										addImageUrl();
+									}
+								}}
+							/>
+							<Button
+								type="button"
+								variant="outline"
+								onclick={addImageUrl}
+								class="rounded-2xl border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 shrink-0 px-3 cursor-pointer"
+							>
+								<Plus class="w-3.5 h-3.5 mr-1" />
+								<span>যোগ করুন</span>
+							</Button>
+						</div>
+
+						<!-- Device Upload Button -->
+						<div class="sm:col-span-4">
+							<label class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-2xl text-xs font-bold cursor-pointer transition-all shadow-xs">
+								<UploadCloud class="w-4 h-4" />
+								<span>{isUploadingImage ? 'লোড হচ্ছে...' : 'ডিভাইস থেকে আপলোড'}</span>
+								<input
+									type="file"
+									accept="image/*"
+									multiple
+									onchange={handleFileUpload}
+									class="hidden"
+									disabled={isUploadingImage}
+								/>
+							</label>
+						</div>
+					</div>
+
+					<!-- Image Grid -->
+					{#if galleryImages.length > 0}
+						<div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3.5 pt-1">
+							{#each galleryImages as img, idx}
+								<div class="group relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 aspect-square shadow-2xs hover:shadow-md transition-all">
+									<img
+										src={img}
+										alt={`Product ${idx + 1}`}
+										class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+									/>
+
+									<!-- Cover Badge -->
+									<div class="absolute top-1.5 left-1.5">
+										{#if idx === 0}
+											<span class="inline-flex items-center gap-1 bg-amber-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-lg shadow-sm">
+												<Star class="w-2.5 h-2.5 fill-current" />
+												<span>কভার ছবি</span>
+											</span>
+										{:else}
+											<span class="bg-black/60 backdrop-blur-xs text-white text-[9px] font-bold px-1.5 py-0.5 rounded-lg">
+												#{idx + 1}
+											</span>
+										{/if}
+									</div>
+
+									<!-- Action Buttons Overlay -->
+									<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 p-2">
+										{#if idx !== 0}
+											<button
+												type="button"
+												onclick={() => makeCoverImage(idx)}
+												class="w-7 h-7 rounded-xl bg-white/90 hover:bg-amber-500 hover:text-white text-slate-800 flex items-center justify-center shadow-sm transition-colors cursor-pointer"
+												title="১ম কভার ছবি হিসেবে সেট করুন"
+											>
+												<Star class="w-3.5 h-3.5" />
+											</button>
+										{/if}
+										<button
+											type="button"
+											onclick={() => removeImage(idx)}
+											class="w-7 h-7 rounded-xl bg-white/90 hover:bg-rose-600 hover:text-white text-rose-600 flex items-center justify-center shadow-sm transition-colors cursor-pointer"
+											title="মুছে ফেলুন"
+										>
+											<Trash2 class="w-3.5 h-3.5" />
+										</button>
+									</div>
+								</div>
+							{/each}
+						</div>
+					{:else}
+						<!-- Empty State Dropzone -->
+						<div class="border-2 border-dashed border-slate-200 rounded-3xl p-8 text-center bg-slate-50/50 space-y-2">
+							<div class="w-12 h-12 rounded-2xl bg-white shadow-2xs border border-slate-200 text-slate-400 mx-auto flex items-center justify-center">
+								<ImageIcon class="w-6 h-6" />
+							</div>
+							<p class="text-xs font-bold text-slate-700">এখনো কোনো ছবি যোগ করা হয়নি</p>
+							<p class="text-[11px] text-slate-400 max-w-sm mx-auto">
+								সরাসরি উপরের ফাইল আপলোড ব্যবহার করুন অথবা ওয়েব লিংক যোগ করুন। একাধিক ছবি যোগ করলে ল্যান্ডিং পেজে স্বয়ংক্রিয় স্লাইডার তৈরি হবে।
+							</p>
+						</div>
+					{/if}
 				</CardContent>
 			</Card>
 

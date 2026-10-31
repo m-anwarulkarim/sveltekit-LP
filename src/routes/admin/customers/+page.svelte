@@ -18,91 +18,200 @@
 		DollarSign,
 		MessageSquare,
 		ExternalLink,
-		FileText
+		FileText,
+		Edit,
+		Trash2,
+		RefreshCw,
+		Download,
+		Truck,
+		Package
 	} from 'lucide-svelte';
 	import type { PageData, ActionData } from './$types';
+	import { toast } from 'svelte-sonner';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	// Local reactive states
+	// Reactive States
 	let searchQuery = $state('');
 	let selectedTab = $state<'all' | 'vip' | 'safe' | 'high_risk' | 'banned'>('all');
-	let isAddModalOpen = $state(false);
-	let selectedCustomerNotes = $state<{ id: string; name: string; notes: string } | null>(null);
 	let copiedEmail = $state<string | null>(null);
+	let isSyncing = $state(false);
 
-	// Toast state
-	let toastMessage = $state<string | null>(null);
-	let toastType = $state<'success' | 'error'>('success');
-
-	$effect(() => {
-		if (form?.message) {
-			toastMessage = form.message;
-			toastType = form.success ? 'success' : 'error';
-			const timer = setTimeout(() => {
-				toastMessage = null;
-			}, 3500);
-			return () => clearTimeout(timer);
-		}
+	// Modals States
+	let isCustomerModalOpen = $state(false);
+	let customerModalMode = $state<'create' | 'edit'>('create');
+	let activeCustomer = $state<any>({
+		id: '',
+		name: '',
+		phone: '',
+		email: '',
+		address: '',
+		city: 'ঢাকা',
+		district: 'ঢাকা',
+		riskLevel: 'safe',
+		internalNotes: ''
 	});
 
-	function showToast(msg: string, type: 'success' | 'error' = 'success') {
-		toastMessage = msg;
-		toastType = type;
-		setTimeout(() => {
-			toastMessage = null;
-		}, 3500);
-	}
+	// Notes Modal
+	let selectedCustomerNotes = $state<{ id: string; name: string; notes: string } | null>(null);
+
+	// Orders History Modal
+	let ordersModalCustomer = $state<any | null>(null);
+	let customerOrders = $state<any[]>([]);
+	let isLoadingOrders = $state(false);
+
+	// Form message watcher
+	$effect(() => {
+		if (form?.message) {
+			if (form.success) {
+				toast.success(form.message);
+			} else {
+				toast.error(form.message);
+			}
+		}
+	});
 
 	function formatTaka(amount: number) {
 		return '৳' + (amount || 0).toLocaleString('en-US');
 	}
 
 	function copyToClipboard(text: string) {
-		navigator.clipboard.writeText(text);
-		copiedEmail = text;
-		showToast(`কপি করা হয়েছে: ${text}`);
-		setTimeout(() => {
-			if (copiedEmail === text) copiedEmail = null;
-		}, 2000);
+		if (typeof navigator !== 'undefined') {
+			navigator.clipboard.writeText(text);
+			copiedEmail = text;
+			toast.success(`কপি করা হয়েছে: ${text}`);
+			setTimeout(() => {
+				if (copiedEmail === text) copiedEmail = null;
+			}, 2000);
+		}
 	}
 
 	function getCleanPhone(phone: string): string {
-		const digits = phone.replace(/[^0-9]/g, '');
+		const digits = (phone || '').replace(/[^0-9]/g, '');
 		if (digits.startsWith('880')) return digits;
 		if (digits.startsWith('0')) return '88' + digits;
 		return '880' + digits;
 	}
 
-	// Filtered customers computed reactively
+	// Filtered Customers derived reactively
 	let filteredCustomers = $derived.by(() => {
 		let list = data.customers || [];
 
-		// Filter by search term
+		// Search filter
 		if (searchQuery.trim()) {
 			const term = searchQuery.toLowerCase().trim();
 			list = list.filter(
-				(c) =>
-					c.name.toLowerCase().includes(term) ||
-					c.phone.includes(term) ||
-					c.address.toLowerCase().includes(term) ||
-					c.city.toLowerCase().includes(term)
+				(c: any) =>
+					(c.name || '').toLowerCase().includes(term) ||
+					(c.phone || '').includes(term) ||
+					(c.address || '').toLowerCase().includes(term) ||
+					(c.city || '').toLowerCase().includes(term) ||
+					(c.email || '').toLowerCase().includes(term)
 			);
 		}
 
-		// Filter by tab
+		// Tab filter
 		if (selectedTab === 'vip') {
-			list = list.filter((c) => c.totalSpent >= 5000 || c.totalOrders >= 4);
+			list = list.filter((c: any) => (c.totalSpent || 0) >= 5000 || (c.totalOrders || 0) >= 4);
 		} else if (selectedTab === 'safe') {
-			list = list.filter((c) => c.riskLevel === 'safe' && !c.isBanned);
+			list = list.filter((c: any) => c.riskLevel === 'safe' && !c.isBanned);
 		} else if (selectedTab === 'high_risk') {
-			list = list.filter((c) => c.riskLevel === 'high_risk' && !c.isBanned);
+			list = list.filter((c: any) => c.riskLevel === 'high_risk' && !c.isBanned);
 		} else if (selectedTab === 'banned') {
-			list = list.filter((c) => c.isBanned);
+			list = list.filter((c: any) => c.isBanned);
 		}
 
 		return list;
 	});
+
+	// Open Modal for Create
+	function openCreateModal() {
+		customerModalMode = 'create';
+		activeCustomer = {
+			id: '',
+			name: '',
+			phone: '',
+			email: '',
+			address: '',
+			city: 'ঢাকা',
+			district: 'ঢাকা',
+			riskLevel: 'safe',
+			internalNotes: ''
+		};
+		isCustomerModalOpen = true;
+	}
+
+	// Open Modal for Edit
+	function openEditModal(cust: any) {
+		customerModalMode = 'edit';
+		activeCustomer = {
+			id: cust.id,
+			name: cust.name || '',
+			phone: cust.phone || '',
+			email: cust.email || '',
+			address: cust.address || '',
+			city: cust.city || 'ঢাকা',
+			district: cust.district || cust.city || 'ঢাকা',
+			riskLevel: cust.riskLevel || 'safe',
+			internalNotes: cust.internalNotes || ''
+		};
+		isCustomerModalOpen = true;
+	}
+
+	// Fetch & View Customer Orders History
+	async function viewCustomerOrders(cust: any) {
+		ordersModalCustomer = cust;
+		isLoadingOrders = true;
+		customerOrders = [];
+
+		try {
+			const res = await fetch(`/api/admin/customers/orders?phone=${encodeURIComponent(cust.phone)}`);
+			const json = await res.json();
+			if (json.success) {
+				customerOrders = json.orders || [];
+			} else {
+				toast.error(json.message || 'অর্ডার হিস্টোরি লোড করা যায়নি');
+			}
+		} catch (e: any) {
+			console.error('Failed to load customer orders:', e);
+			toast.error('অর্ডার হিস্টোরি লোড করতে সার্ভার সমস্যা হয়েছে');
+		} finally {
+			isLoadingOrders = false;
+		}
+	}
+
+	// Export Customer List as CSV
+	function exportCustomersCSV() {
+		const customers = filteredCustomers;
+		if (customers.length === 0) {
+			toast.error('এক্সপোর্ট করার মতো কোনো গ্রাহক নেই!');
+			return;
+		}
+
+		const headers = ['নাম', 'মোবাইল নম্বর', 'ইমেইল', 'ঠিকানা', 'শহর/জেলা', 'মোট অর্ডার', 'মোট ক্রয় (টাকা)', 'সাকসেস রেট (%)', 'রিস্ক লেভেল', 'ব্ল্যাকলিস্ট'];
+		const rows = customers.map((c: any) => [
+			`"${(c.name || '').replace(/"/g, '""')}"`,
+			`"${c.phone || ''}"`,
+			`"${c.email || ''}"`,
+			`"${(c.address || '').replace(/"/g, '""')}"`,
+			`"${c.city || ''}"`,
+			c.totalOrders || 0,
+			c.totalSpent || 0,
+			`${c.successRate || 100}%`,
+			c.riskLevel || 'safe',
+			c.isBanned ? 'ব্যানড' : 'সক্রিয়'
+		]);
+
+		const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+		const encodedUri = encodeURI(csvContent);
+		const link = document.createElement('a');
+		link.setAttribute('href', encodedUri);
+		link.setAttribute('download', `customers_export_${new Date().toISOString().slice(0, 10)}.csv`);
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		toast.success('গ্রাহক তালিকা সফলভাবে CSV ফাইল হিসেবে ডাউনলোড হয়েছে!');
+	}
 
 	const avatarColors = [
 		'bg-blue-100 text-blue-700 border-blue-200',
@@ -115,7 +224,7 @@
 
 	function getAvatarColor(name: string): string {
 		let hash = 0;
-		for (let i = 0; i < name.length; i++) {
+		for (let i = 0; i < (name || '').length; i++) {
 			hash = name.charCodeAt(i) + ((hash << 5) - hash);
 		}
 		return avatarColors[Math.abs(hash) % avatarColors.length];
@@ -123,27 +232,10 @@
 </script>
 
 <div class="space-y-6 max-w-7xl mx-auto pb-12 font-sans">
-	<!-- Toast Notification -->
-	{#if toastMessage}
-		<div
-			class="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-xl shadow-xl text-sm font-medium transition-all transform animate-in fade-in slide-in-from-bottom-3 {toastType ===
-			'success'
-				? 'bg-slate-900 text-white border border-slate-800'
-				: 'bg-rose-600 text-white'}"
-		>
-			{#if toastType === 'success'}
-				<CheckCircle2 class="w-5 h-5 text-emerald-400 shrink-0" />
-			{:else}
-				<AlertTriangle class="w-5 h-5 text-amber-300 shrink-0" />
-			{/if}
-			<span>{toastMessage}</span>
-		</div>
-	{/if}
-
-	<!-- Top Telemetry & KPI Cards -->
+	<!-- Top Telemetry & KPI Cards (Real Data) -->
 	<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
 		<!-- Total Customers -->
-		<div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between">
+		<div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center justify-between">
 			<div>
 				<p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">মোট নিবন্ধিত ক্রেতা</p>
 				<h3 class="text-2xl font-black text-slate-900 mt-1 font-['Outfit']">{data.telemetry?.totalCustomers ?? 0} জন</h3>
@@ -157,7 +249,7 @@
 		</div>
 
 		<!-- VIP Club -->
-		<div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between">
+		<div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center justify-between">
 			<div>
 				<p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">ভিআইপি বায়ার ক্লাব</p>
 				<h3 class="text-2xl font-black text-amber-600 mt-1 font-['Outfit']">{data.telemetry?.vipCustomers ?? 0} জন</h3>
@@ -171,7 +263,7 @@
 		</div>
 
 		<!-- Repeat Revenue -->
-		<div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between">
+		<div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center justify-between">
 			<div>
 				<p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">মোট সংগৃহীত সেলস</p>
 				<h3 class="text-2xl font-black text-slate-900 mt-1 font-['Outfit']">{formatTaka(data.telemetry?.totalSpentAll ?? 0)}</h3>
@@ -185,7 +277,7 @@
 		</div>
 
 		<!-- Risk & Fraud Warning -->
-		<div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between">
+		<div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center justify-between">
 			<div>
 				<p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">হাই-রিস্ক / ব্ল্যাকলিস্ট</p>
 				<h3 class="text-2xl font-black text-rose-600 mt-1 font-['Outfit']">{data.telemetry?.highRiskCount ?? 0} জন</h3>
@@ -200,9 +292,9 @@
 	</div>
 
 	<!-- Main Card: Header & Search Filters -->
-	<div class="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+	<div class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
 		<!-- Header Action Bar -->
-		<div class="p-5 border-b border-slate-200 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+		<div class="p-5 border-b border-slate-200/80 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
 			<div>
 				<h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
 					<Users class="w-5 h-5 text-[#5845eb]" />
@@ -213,27 +305,62 @@
 				</p>
 			</div>
 
-			<div class="flex items-center gap-3">
+			<div class="flex items-center gap-2 flex-wrap">
+				<!-- Sync from Orders Button -->
+				<form
+					method="POST"
+					action="?/syncOrders"
+					use:enhance={() => {
+						isSyncing = true;
+						return async ({ update }) => {
+							await update();
+							isSyncing = false;
+						};
+					}}
+				>
+					<button
+						type="submit"
+						disabled={isSyncing}
+						class="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50"
+						title="রিয়েল অর্ডারের তথ্য থেকে কাস্টমারদের স্ট্যাটস রিফ্রেশ ও সিঙ্ক করুন"
+					>
+						<RefreshCw class="w-3.5 h-3.5 {isSyncing ? 'animate-spin text-indigo-600' : ''}" />
+						<span>{isSyncing ? 'সিঙ্ক হচ্ছে...' : 'অর্ডার সিঙ্ক'}</span>
+					</button>
+				</form>
+
+				<!-- CSV Export Button -->
 				<button
 					type="button"
-					onclick={() => (isAddModalOpen = true)}
-					class="inline-flex items-center gap-2 px-4 py-2 bg-[#5845eb] hover:bg-[#4936d6] text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+					onclick={exportCustomersCSV}
+					class="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer"
+					title="মার্কেটিং ও SMS ক্যাম্পেইনের জন্য কাস্টমার ডাটা CSV ফাইল হিসেবে নামিয়ে নিন"
+				>
+					<Download class="w-3.5 h-3.5" />
+					<span>এক্সপোর্ট CSV</span>
+				</button>
+
+				<!-- Add Customer Button -->
+				<button
+					type="button"
+					onclick={openCreateModal}
+					class="inline-flex items-center gap-1.5 px-4 py-2 bg-[#5845eb] hover:bg-[#4936d6] text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
 				>
 					<Plus class="w-4 h-4" />
-					<span>নতুন কাস্টমার যুক্ত করুন</span>
+					<span>নতুন কাস্টমার</span>
 				</button>
 			</div>
 		</div>
 
 		<!-- Search Bar and Filter Tabs -->
-		<div class="p-4 bg-slate-50/70 border-b border-slate-200 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+		<div class="p-4 bg-slate-50/70 border-b border-slate-200/80 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
 			<!-- Search Box -->
 			<div class="relative flex-1 max-w-md">
 				<Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
 				<input
 					type="text"
 					bind:value={searchQuery}
-					placeholder="নাম, ফোন নম্বর, এলাকা বা শহর দিয়ে খুঁজুন..."
+					placeholder="নাম, ফোন নম্বর, এলাকা, ইমেইল বা শহর দিয়ে খুঁজুন..."
 					class="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5845eb]/20 focus:border-[#5845eb] transition-all shadow-2xs"
 				/>
 				{#if searchQuery}
@@ -313,7 +440,7 @@
 		<div class="overflow-x-auto">
 			<table class="w-full text-left text-xs">
 				<thead>
-					<tr class="border-b border-slate-200 bg-slate-50/90 text-slate-600 font-bold uppercase tracking-wider">
+					<tr class="border-b border-slate-200/80 bg-slate-50/90 text-slate-600 font-bold uppercase tracking-wider">
 						<th class="py-3 px-4">গ্রাহকের প্রোফাইল</th>
 						<th class="py-3 px-4">যোগাযোগ ও ঠিকানা</th>
 						<th class="py-3 px-4 text-center">অর্ডার ও সাকসেস রেট</th>
@@ -327,8 +454,8 @@
 						<tr>
 							<td colspan="6" class="py-14 text-center text-slate-400">
 								<Users class="w-8 h-8 mx-auto mb-2 text-slate-300" />
-								<p class="font-medium">কোনো গ্রাহকের তথ্য খুঁজে পাওয়া যায়নি।</p>
-								<p class="text-[11px] text-slate-400 mt-1">অন্য কোনো ফিল্টার বা অনুসন্ধান শব্দ চেষ্টা করুন।</p>
+								<p class="font-medium text-slate-700">কোনো গ্রাহকের তথ্য পাওয়া যায়নি</p>
+								<p class="text-[11px] text-slate-400 mt-1">নতুন গ্রাহক যুক্ত করুন অথবা "অর্ডার সিঙ্ক" বাটনে ক্লিক করে অর্ডার ডাটা লোড করুন।</p>
 							</td>
 						</tr>
 					{/if}
@@ -343,12 +470,12 @@
 											cust.name
 										)}"
 									>
-										{cust.name.slice(0, 2)}
+										{(cust.name || 'ক').slice(0, 2)}
 									</div>
 									<div>
 										<div class="flex items-center gap-1.5">
 											<span class="font-bold text-slate-900 text-[13px]">{cust.name}</span>
-											{#if cust.totalSpent >= 5000 || cust.totalOrders >= 4}
+											{#if (cust.totalSpent || 0) >= 5000 || (cust.totalOrders || 0) >= 4}
 												<span
 													class="px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-0.5"
 												>
@@ -372,7 +499,7 @@
 										<a
 											href="tel:{cust.phone}"
 											title="সরাসরি কল দিন"
-											class="p-1 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
+											class="p-1 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors cursor-pointer"
 										>
 											<PhoneCall class="w-3 h-3" />
 										</a>
@@ -381,8 +508,8 @@
 											href="https://wa.me/{getCleanPhone(cust.phone)}"
 											target="_blank"
 											rel="noopener noreferrer"
-											title="WhatsApp এ মেসেজ পাঠান"
-											class="p-1 rounded bg-teal-50 text-teal-600 hover:bg-teal-100 transition-colors"
+											title="WhatsApp এ সরাসরি মেসেজ পাঠান"
+											class="p-1 rounded bg-teal-50 text-teal-600 hover:bg-teal-100 transition-colors cursor-pointer"
 										>
 											<MessageSquare class="w-3 h-3" />
 										</a>
@@ -399,11 +526,17 @@
 							<!-- Orders & Success Rate -->
 							<td class="py-3.5 px-4 text-center">
 								<div class="inline-flex flex-col items-center">
-									<span class="font-bold text-slate-900">
-										{cust.totalOrders} টি অর্ডার
-									</span>
+									<button
+										type="button"
+										onclick={() => viewCustomerOrders(cust)}
+										class="font-bold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer flex items-center gap-1"
+										title="এই গ্রাহকের সমস্ত অর্ডার হিস্টোরি বিস্তারিত দেখুন"
+									>
+										<span>{cust.totalOrders ?? 0} টি অর্ডার</span>
+										<ExternalLink class="w-3 h-3 text-indigo-400" />
+									</button>
 									<span class="text-[10px] text-slate-500 mt-0.5">
-										({cust.deliveredOrders} ডেলিভার্ড / {cust.cancelledOrders} বাতিল)
+										({cust.deliveredOrders ?? 0} ডেলিভার্ড / {cust.cancelledOrders ?? 0} বাতিল)
 									</span>
 									<!-- Success Rate Chip -->
 									<div class="mt-1.5 flex items-center gap-1">
@@ -476,6 +609,26 @@
 							<!-- Actions -->
 							<td class="py-3.5 px-4 text-center">
 								<div class="flex items-center justify-center gap-1.5">
+									<!-- Order History Button -->
+									<button
+										type="button"
+										onclick={() => viewCustomerOrders(cust)}
+										title="অর্ডার হিস্টোরি দেখুন"
+										class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+									>
+										<Package class="w-4 h-4" />
+									</button>
+
+									<!-- Edit Customer Modal Button -->
+									<button
+										type="button"
+										onclick={() => openEditModal(cust)}
+										title="গ্রাহকের তথ্য এডিট করুন"
+										class="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+									>
+										<Edit class="w-4 h-4" />
+									</button>
+
 									<!-- Internal Notes Dialog Button -->
 									<button
 										type="button"
@@ -513,6 +666,27 @@
 											{/if}
 										</button>
 									</form>
+
+									<!-- Delete Customer Form -->
+									<form
+										method="POST"
+										action="?/deleteCustomer"
+										use:enhance={({ cancel }) => {
+											if (!confirm(`আপনি কি নিশ্চিত যে গ্রাহক "${cust.name}" এর রেকর্ড মুছে ফেলতে চান?`)) {
+												cancel();
+											}
+										}}
+										class="inline-block"
+									>
+										<input type="hidden" name="id" value={cust.id} />
+										<button
+											type="submit"
+											title="গ্রাহক প্রোফাইল মুছে ফেলুন"
+											class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+										>
+											<Trash2 class="w-4 h-4" />
+										</button>
+									</form>
 								</div>
 							</td>
 						</tr>
@@ -523,8 +697,8 @@
 	</div>
 
 	<!-- Newsletter Subscribers Card -->
-	<div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
-		<div class="p-5 border-b border-slate-200 flex items-center justify-between">
+	<div class="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-2xs">
+		<div class="p-5 border-b border-slate-200/80 flex items-center justify-between">
 			<div>
 				<h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
 					<Award class="w-4 h-4 text-indigo-600" />
@@ -543,7 +717,7 @@
 		<div class="overflow-x-auto">
 			<table class="w-full text-left text-xs">
 				<thead>
-					<tr class="border-b border-slate-200 bg-slate-50 text-slate-600 font-bold uppercase tracking-wider">
+					<tr class="border-b border-slate-200/80 bg-slate-50 text-slate-600 font-bold uppercase tracking-wider">
 						<th class="py-3 px-4">ইমেইল ঠিকানা</th>
 						<th class="py-3 px-4">স্ট্যাটাস</th>
 						<th class="py-3 px-4 text-right">যোগদানের সময়</th>
@@ -576,19 +750,41 @@
 								})}
 							</td>
 							<td class="py-3 px-4 text-center">
-								<button
-									type="button"
-									onclick={() => copyToClipboard(sub.email)}
-									class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold transition-colors cursor-pointer"
-								>
-									{#if copiedEmail === sub.email}
-										<Check class="w-3 h-3 text-emerald-600" />
-										<span class="text-emerald-700">কপি হয়েছে</span>
-									{:else}
-										<Copy class="w-3 h-3 text-slate-500" />
-										<span>ইমেইল কপি</span>
-									{/if}
-								</button>
+								<div class="flex items-center justify-center gap-1.5">
+									<!-- Copy Email -->
+									<button
+										type="button"
+										onclick={() => copyToClipboard(sub.email)}
+										class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold transition-colors cursor-pointer"
+									>
+										{#if copiedEmail === sub.email}
+											<Check class="w-3 h-3 text-emerald-600" />
+											<span class="text-emerald-700">কপি হয়েছে</span>
+										{:else}
+											<Copy class="w-3 h-3 text-slate-500" />
+											<span>ইমেইল কপি</span>
+										{/if}
+									</button>
+
+									<!-- Delete Subscriber -->
+									<form
+										method="POST"
+										action="?/deleteNewsletter"
+										use:enhance={({ cancel }) => {
+											if (!confirm('আপনি কি নিশ্চিত যে এই সাবস্ক্রাইবার মুছে ফেলতে চান?')) cancel();
+										}}
+										class="inline-block"
+									>
+										<input type="hidden" name="id" value={sub.id} />
+										<button
+											type="submit"
+											title="সাবস্ক্রিপশন বাতিল করুন"
+											class="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+										>
+											<Trash2 class="w-3.5 h-3.5" />
+										</button>
+									</form>
+								</div>
 							</td>
 						</tr>
 					{/each}
@@ -597,20 +793,26 @@
 		</div>
 	</div>
 
-	<!-- Add Customer Modal -->
-	{#if isAddModalOpen}
+	<!-- Add / Edit Customer Modal -->
+	{#if isCustomerModalOpen}
 		<div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
 			<div class="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95">
 				<div class="p-5 border-b border-slate-200 flex items-center justify-between">
 					<div class="flex items-center gap-2">
 						<div class="w-8 h-8 rounded-lg bg-indigo-50 text-[#5845eb] flex items-center justify-center">
-							<Plus class="w-4 h-4" />
+							{#if customerModalMode === 'edit'}
+								<Edit class="w-4 h-4" />
+							{:else}
+								<Plus class="w-4 h-4" />
+							{/if}
 						</div>
-						<h3 class="text-base font-bold text-slate-900">নতুন গ্রাহক প্রোফাইল যুক্ত করুন</h3>
+						<h3 class="text-base font-bold text-slate-900">
+							{customerModalMode === 'edit' ? 'গ্রাহকের তথ্য এডিট করুন' : 'নতুন গ্রাহক প্রোফাইল যুক্ত করুন'}
+						</h3>
 					</div>
 					<button
-						onclick={() => (isAddModalOpen = false)}
-						class="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+						onclick={() => (isCustomerModalOpen = false)}
+						class="text-slate-400 hover:text-slate-600 p-1 rounded-lg cursor-pointer"
 					>
 						<X class="w-5 h-5" />
 					</button>
@@ -618,20 +820,25 @@
 
 				<form
 					method="POST"
-					action="?/createCustomer"
+					action="?/saveCustomer"
 					use:enhance={() => {
 						return async ({ update }) => {
 							await update();
-							isAddModalOpen = false;
+							isCustomerModalOpen = false;
 						};
 					}}
 					class="p-6 space-y-4"
 				>
+					{#if customerModalMode === 'edit'}
+						<input type="hidden" name="id" value={activeCustomer.id} />
+					{/if}
+
 					<div>
 						<label for="cust-name" class="block text-xs font-bold text-slate-700 mb-1">গ্রাহকের পূর্ণ নাম *</label>
 						<input
 							id="cust-name"
 							name="name"
+							bind:value={activeCustomer.name}
 							required
 							placeholder="যেমন: তানভীর আহমেদ"
 							class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#5845eb]/20 focus:border-[#5845eb] focus:outline-none"
@@ -644,6 +851,7 @@
 							<input
 								id="cust-phone"
 								name="phone"
+								bind:value={activeCustomer.phone}
 								required
 								placeholder="01XXXXXXXXX"
 								class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:ring-2 focus:ring-[#5845eb]/20 focus:border-[#5845eb] focus:outline-none"
@@ -655,6 +863,7 @@
 								id="cust-email"
 								name="email"
 								type="email"
+								bind:value={activeCustomer.email}
 								placeholder="customer@email.com"
 								class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#5845eb]/20 focus:border-[#5845eb] focus:outline-none"
 							/>
@@ -666,6 +875,7 @@
 						<input
 							id="cust-address"
 							name="address"
+							bind:value={activeCustomer.address}
 							required
 							placeholder="হাউজ, রোড, এলাকা..."
 							class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#5845eb]/20 focus:border-[#5845eb] focus:outline-none"
@@ -678,7 +888,7 @@
 							<input
 								id="cust-city"
 								name="city"
-								value="ঢাকা"
+								bind:value={activeCustomer.city}
 								class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#5845eb]/20 focus:border-[#5845eb] focus:outline-none"
 							/>
 						</div>
@@ -687,6 +897,7 @@
 							<select
 								id="cust-risk"
 								name="riskLevel"
+								bind:value={activeCustomer.riskLevel}
 								class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#5845eb]/20 focus:border-[#5845eb] focus:outline-none"
 							>
 								<option value="safe">নিরাপদ (Safe)</option>
@@ -702,6 +913,7 @@
 							id="cust-notes"
 							name="internalNotes"
 							rows="2"
+							bind:value={activeCustomer.internalNotes}
 							placeholder="গ্রাহক সম্পর্কে যেকোনো স্পেশাল নোট..."
 							class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#5845eb]/20 focus:border-[#5845eb] focus:outline-none"
 						></textarea>
@@ -710,8 +922,8 @@
 					<div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
 						<button
 							type="button"
-							onclick={() => (isAddModalOpen = false)}
-							class="px-4 py-2 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600"
+							onclick={() => (isCustomerModalOpen = false)}
+							class="px-4 py-2 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600 cursor-pointer"
 						>
 							বাতিল
 						</button>
@@ -719,10 +931,135 @@
 							type="submit"
 							class="px-5 py-2 bg-[#5845eb] hover:bg-[#4936d6] text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer"
 						>
-							সেভ করুন
+							{customerModalMode === 'edit' ? 'আপডেট করুন' : 'সেভ করুন'}
 						</button>
 					</div>
 				</form>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Customer Orders History Modal -->
+	{#if ordersModalCustomer}
+		<div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+			<div class="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
+				<!-- Header -->
+				<div class="p-5 border-b border-slate-200 flex items-center justify-between shrink-0">
+					<div class="flex items-center gap-3">
+						<div class="w-10 h-10 rounded-xl bg-indigo-50 text-[#5845eb] flex items-center justify-center">
+							<Package class="w-5 h-5" />
+						</div>
+						<div>
+							<h3 class="text-base font-bold text-slate-900">{ordersModalCustomer.name} - অর্ডার হিস্টোরি</h3>
+							<p class="text-xs text-slate-500 font-mono mt-0.5">
+								{ordersModalCustomer.phone} • মোট ব্যয়: {formatTaka(ordersModalCustomer.totalSpent)}
+							</p>
+						</div>
+					</div>
+					<button
+						onclick={() => (ordersModalCustomer = null)}
+						class="text-slate-400 hover:text-slate-600 p-1 rounded-lg cursor-pointer"
+					>
+						<X class="w-5 h-5" />
+					</button>
+				</div>
+
+				<!-- Orders Body -->
+				<div class="p-5 overflow-y-auto flex-1 space-y-3">
+					{#if isLoadingOrders}
+						<div class="py-12 text-center text-slate-400">
+							<RefreshCw class="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-500" />
+							<p class="text-xs">অর্ডার হিস্টোরি লোড হচ্ছে...</p>
+						</div>
+					{:else if customerOrders.length === 0}
+						<div class="py-12 text-center text-slate-400">
+							<ShoppingBag class="w-8 h-8 mx-auto mb-2 text-slate-300" />
+							<p class="font-medium text-slate-600">কোনো অর্ডার পাওয়া যায়নি</p>
+							<p class="text-[11px] text-slate-400 mt-1">এই মোবাইল নম্বর দিয়ে এখনো কোনো লাইভ অর্ডার রেজিস্টার করা হয়নি।</p>
+						</div>
+					{:else}
+						{#each customerOrders as ord}
+							<div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition-colors">
+								<div class="flex items-center justify-between gap-3 mb-2">
+									<div class="flex items-center gap-2">
+										<a
+											href="/admin/orders/{ord.id}"
+											target="_blank"
+											class="font-mono font-bold text-sm text-indigo-600 hover:underline flex items-center gap-1"
+										>
+											<span>{ord.orderNumber || ord.id}</span>
+											<ExternalLink class="w-3 h-3 text-indigo-400" />
+										</a>
+										<span class="text-[11px] text-slate-400 font-mono">
+											{new Date(ord.createdAt).toLocaleDateString('bn-BD', {
+												year: 'numeric',
+												month: 'short',
+												day: 'numeric'
+											})}
+										</span>
+									</div>
+
+									<div class="flex items-center gap-2">
+										<span
+											class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider {ord.status ===
+											'delivered'
+												? 'bg-emerald-100 text-emerald-800'
+												: ord.status === 'confirmed'
+													? 'bg-blue-100 text-blue-800'
+													: ord.status === 'processing'
+														? 'bg-indigo-100 text-indigo-800'
+														: ord.status === 'shipped'
+															? 'bg-purple-100 text-purple-800'
+															: ord.status === 'cancelled'
+																? 'bg-rose-100 text-rose-800'
+																: 'bg-amber-100 text-amber-800'}"
+										>
+											{ord.status}
+										</span>
+										<span class="font-black text-slate-900 font-['Outfit'] text-sm">
+											{formatTaka(ord.total)}
+										</span>
+									</div>
+								</div>
+
+								<!-- Items List -->
+								{#if Array.isArray(ord.items) && ord.items.length > 0}
+									<div class="mt-2 pt-2 border-t border-slate-200/60 text-xs space-y-1">
+										{#each ord.items as itm}
+											<div class="flex items-center justify-between text-slate-700">
+												<span class="truncate max-w-[340px]">
+													• {itm.name || itm.title || 'পণ্য'} × {itm.quantity || 1}
+												</span>
+												<span class="font-mono font-semibold">{formatTaka(itm.price * (itm.quantity || 1))}</span>
+											</div>
+										{/each}
+									</div>
+								{/if}
+
+								<!-- Delivery Details -->
+								<div class="mt-2 text-[11px] text-slate-500 flex items-center justify-between">
+									<span class="truncate max-w-[320px]">{ord.shippingAddress}</span>
+									{#if ord.trackingCode}
+										<span class="font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
+											{ord.courierProvider || 'Courier'}: {ord.trackingCode}
+										</span>
+									{/if}
+								</div>
+							</div>
+						{/each}
+					{/if}
+				</div>
+
+				<!-- Footer -->
+				<div class="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end shrink-0">
+					<button
+						type="button"
+						onclick={() => (ordersModalCustomer = null)}
+						class="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold cursor-pointer"
+					>
+						বন্ধ করুন
+					</button>
+				</div>
 			</div>
 		</div>
 	{/if}
@@ -741,7 +1078,7 @@
 					</div>
 					<button
 						onclick={() => (selectedCustomerNotes = null)}
-						class="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+						class="text-slate-400 hover:text-slate-600 p-1 rounded-lg cursor-pointer"
 					>
 						<X class="w-5 h-5" />
 					</button>
@@ -764,7 +1101,7 @@
 						<label for="notes-area" class="block text-xs font-bold text-slate-700 mb-1.5">সাপোর্ট নোট</label>
 						<textarea
 							id="notes-area"
-							name="notes"
+							name="internalNotes"
 							rows="4"
 							bind:value={selectedCustomerNotes.notes}
 							placeholder="যেমন: কাস্টমার বিকেলে কল দিতে বলেছেন, কিংবা কুরিয়ার পছন্দ..."
@@ -776,7 +1113,7 @@
 						<button
 							type="button"
 							onclick={() => (selectedCustomerNotes = null)}
-							class="px-4 py-2 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600"
+							class="px-4 py-2 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600 cursor-pointer"
 						>
 							বন্ধ করুন
 						</button>

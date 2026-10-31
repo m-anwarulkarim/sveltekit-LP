@@ -334,7 +334,8 @@ export async function handleConvertIncompleteToOrder(request: Request, platform:
 	try {
 		const db = getDb(platform);
 		const updatePayload: Record<string, any> = {
-			status: 'processing',
+			status: 'confirmed',
+			isTrashed: false,
 			confirmedAt: new Date(),
 			updatedAt: new Date(),
 			recoveryStatus: 'converted'
@@ -348,12 +349,12 @@ export async function handleConvertIncompleteToOrder(request: Request, platform:
 			id: crypto.randomUUID(),
 			orderId,
 			adminName: 'Admin Staff',
-			note: 'ড্রপ-অফ লিড সফলভাবে কনভার্ট করে প্রসেসিং অর্ডারে রূপান্তর করা হয়েছে।',
+			note: 'ড্রপ-অফ লিড সফলভাবে কনভার্ট করে কনফার্মড অর্ডারে রূপান্তর করা হয়েছে।',
 			callStatus: 'call_received'
 		});
 
-		updateLiveOrderStatus(orderId, 'processing');
-		return { success: true, convertedOrder: orderId, newStatus: 'processing' };
+		updateLiveOrderStatus(orderId, 'confirmed');
+		return { success: true, convertedOrder: orderId, newStatus: 'confirmed' };
 	} catch (err: any) {
 		console.error('Failed to convert order in D1:', err);
 		return fail(500, { message: err?.message || 'Failed to convert order' });

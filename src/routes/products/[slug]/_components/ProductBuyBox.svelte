@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import type { Product } from '#lib/modules/products/types.ts';
 	import { cart } from '#lib/modules/cart/cart.svelte';
 	import { Button, Badge, Separator } from '#lib/components/ui';
@@ -11,15 +11,19 @@
 		ShieldCheck,
 		RotateCcw,
 		Truck,
-		CheckCircle2
+		CheckCircle2,
+		Phone,
+		MessageCircle
 	} from 'lucide-svelte';
 
 	interface Props {
 		product: Product;
 		onBuyNow: () => void;
+		productSettings?: any;
+		storeConfig?: any;
 	}
 
-	let { product, onBuyNow }: Props = $props();
+	let { product, onBuyNow, productSettings, storeConfig }: Props = $props();
 
 	// Quantity state
 	let quantity = $state(1);
@@ -289,6 +293,31 @@
 		</Button>
 
 	</div>
+
+	<!-- Call & WhatsApp Order Buttons (Controlled by Product Settings) -->
+	{#if productSettings?.callOrderBtn || productSettings?.whatsappOrderBtn}
+		<div class="grid {productSettings?.callOrderBtn && productSettings?.whatsappOrderBtn ? 'grid-cols-2' : 'grid-cols-1'} gap-2.5 pt-1">
+			{#if productSettings?.callOrderBtn}
+				<a
+					href="tel:{storeConfig?.hotlinePhone || '01860229546'}"
+					class="py-2.5 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center gap-1.5 border border-blue-200 transition-colors shadow-2xs"
+				>
+					<Phone class="w-3.5 h-3.5" />
+					<span>কল দিয়ে অর্ডার করুন</span>
+				</a>
+			{/if}
+			{#if productSettings?.whatsappOrderBtn}
+				<a
+					href="https://wa.me/88{String(storeConfig?.hotlinePhone || '01860229546').replace(/\D/g, '').slice(-11)}?text={encodeURIComponent(`আসসালামু আলাইকুম, আমি ${product.name} অর্ডার করতে চাই।`)}"
+					target="_blank"
+					class="py-2.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5 border border-emerald-200 transition-colors shadow-2xs"
+				>
+					<MessageCircle class="w-3.5 h-3.5" />
+					<span>WhatsApp-এ অর্ডার</span>
+				</a>
+			{/if}
+		</div>
+	{/if}
 
 	<Separator class="my-2" />
 

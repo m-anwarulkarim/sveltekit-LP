@@ -19,21 +19,47 @@ export const load: PageServerLoad = async ({ parent, platform, url }) => {
 		manual: 0
 	};
 
-	if (platform?.env?.DB) {
-		try {
-			const db = getDb(platform.env.DB);
-			const result = await SecurityService.listBlockedIps(db, {
-				search: searchQuery,
-				filterType,
-				limit,
-				offset
+	try {
+		const db = getDb(platform);
+
+		// Seed initial realistic fraud & spam blacklist if empty
+		const existingCount = await SecurityService.countBlocked(db).catch(() => 0);
+		if (existingCount === 0) {
+			await SecurityService.blockIp(db, {
+				ipAddress: '103.114.98.45',
+				phoneNo: '01711223344',
+				type: 'Manual Admin Block',
+				reason: 'Fake Cash on Delivery Orders',
+				isPermanent: true
 			});
-			blockedList = result.items || [];
-			totalCount = result.totalCount || 0;
-			stats = result.stats;
-		} catch (error) {
-			console.error('Failed to load blocked IPs from D1:', error);
+			await SecurityService.blockIp(db, {
+				ipAddress: '180.234.12.90',
+				phoneNo: '01899887766',
+				type: 'Auto Block After 3 Cancelled Orders',
+				reason: 'High Return / Cancellation Abuse',
+				isPermanent: false,
+				blockUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+			});
+			await SecurityService.blockIp(db, {
+				ipAddress: '45.145.22.102',
+				phoneNo: '01912345678',
+				type: 'Auto Bot Attack Block',
+				reason: 'Spam Order Bot Flood',
+				isPermanent: true
+			});
 		}
+
+		const result = await SecurityService.listBlockedIps(db, {
+			search: searchQuery,
+			filterType,
+			limit,
+			offset
+		});
+		blockedList = result.items || [];
+		totalCount = result.totalCount || 0;
+		stats = result.stats;
+	} catch (error) {
+		console.error('Failed to load blocked IPs from D1:', error);
 	}
 
 	return {
@@ -76,38 +102,26 @@ export const actions: Actions = {
 			}
 		}
 
-		if (platform?.env?.DB) {
-			try {
-				const db = getDb(platform.env.DB);
-				const res = await SecurityService.blockIp(db, {
-					ipAddress: ipAddress || '103.45.12.89',
-					phoneNo: phoneNo || undefined,
-					deviceId: deviceId !== '-' ? deviceId : undefined,
-					type,
-					reason,
-					isPermanent,
-					blockUntil
-				});
-				return {
-					success: true,
-					item: res,
-					message: `'${ipAddress || phoneNo}' সফলভাবে ব্লকলিস্টে যুক্ত করা হয়েছে!`
-				};
-			} catch (e: any) {
-				console.error('Failed to block IP in D1:', e);
-				return { success: false, message: e.message || 'আইপি ব্লক করতে সমস্যা হয়েছে' };
-			}
-		}
-
-		return {
-			success: true,
-			item: {
-				id: 'blk-' + Date.now(),
+		try {
+			const db = getDb(platform);
+			const res = await SecurityService.blockIp(db, {
 				ipAddress: ipAddress || '103.45.12.89',
-				phoneNo: phoneNo || '-'
-			},
-			message: `'${ipAddress || phoneNo}' সফলভাবে ব্লকলিস্টে যুক্ত করা হয়েছে!`
-		};
+				phoneNo: phoneNo || undefined,
+				deviceId: deviceId !== '-' ? deviceId : undefined,
+				type,
+				reason,
+				isPermanent,
+				blockUntil
+			});
+			return {
+				success: true,
+				item: res,
+				message: `'${ipAddress || phoneNo}' সফলভাবে ব্লকলিস্টে যুক্ত করা হয়েছে!`
+			};
+		} catch (e: any) {
+			console.error('Failed to block IP in D1:', e);
+			return { success: false, message: e?.message || 'আইপি ব্লক করতে সমস্যা হয়েছে' };
+		}
 	},
 
 	updateBlock: async ({ request, platform }) => {
@@ -141,24 +155,20 @@ export const actions: Actions = {
 			}
 		}
 
-		if (platform?.env?.DB) {
-			try {
-				const db = getDb(platform.env.DB);
-				await SecurityService.updateBlock(db, id, {
-					ipAddress,
-					phoneNo,
-					reason,
-					isPermanent,
-					blockUntil
-				});
-				return { success: true, message: 'ব্লক রেকর্ড সফলভাবে আপডেট করা হয়েছে!' };
-			} catch (e: any) {
-				console.error('Failed to update block in D1:', e);
-				return { success: false, message: e.message };
-			}
+		try {
+			const db = getDb(platform);
+			await SecurityService.updateBlock(db, id, {
+				ipAddress,
+				phoneNo,
+				reason,
+				isPermanent,
+				blockUntil
+			});
+			return { success: true, message: 'ব্লক রেকর্ড সফলভাবে আপডেট করা হয়েছে!' };
+		} catch (e: any) {
+			console.error('Failed to update block in D1:', e);
+			return { success: false, message: e?.message || 'ব্লক আপডেট করতে সমস্যা হয়েছে' };
 		}
-
-		return { success: true, message: 'ব্লক রেকর্ড আপডেট করা হয়েছে!' };
 	},
 
 	unblockIp: async ({ request, platform }) => {
@@ -170,18 +180,14 @@ export const actions: Actions = {
 			return { success: false, message: 'Block ID or IP required' };
 		}
 
-		if (platform?.env?.DB) {
-			try {
-				const db = getDb(platform.env.DB);
-				await SecurityService.unblockIp(db, id || ipAddress);
-				return { success: true, message: `আইপি '${ipAddress || id}' সফলভাবে আনব্লক করা হয়েছে!` };
-			} catch (e: any) {
-				console.error('Failed to unblock IP in D1:', e);
-				return { success: false, message: e.message };
-			}
+		try {
+			const db = getDb(platform);
+			await SecurityService.unblockIp(db, id || ipAddress);
+			return { success: true, message: `আইপি '${ipAddress || id}' সফলভাবে আনব্লক করা হয়েছে!` };
+		} catch (e: any) {
+			console.error('Failed to unblock IP in D1:', e);
+			return { success: false, message: e?.message || 'আনব্লক করতে সমস্যা হয়েছে' };
 		}
-
-		return { success: true, message: `আইপি '${ipAddress || id}' সফলভাবে আনব্লক করা হয়েছে!` };
 	},
 
 	bulkUnblock: async ({ request, platform }) => {
@@ -199,17 +205,13 @@ export const actions: Actions = {
 			return { success: false, message: 'কোনো আইটেম নির্বাচন করা হয়নি।' };
 		}
 
-		if (platform?.env?.DB) {
-			try {
-				const db = getDb(platform.env.DB);
-				await SecurityService.bulkUnblock(db, ids);
-				return { success: true, message: `${ids.length}টি আইটেম সফলভাবে আনব্লক করা হয়েছে!` };
-			} catch (e: any) {
-				console.error('Failed to bulk unblock in D1:', e);
-				return { success: false, message: e.message };
-			}
+		try {
+			const db = getDb(platform);
+			await SecurityService.bulkUnblock(db, ids);
+			return { success: true, message: `${ids.length}টি আইটেম সফলভাবে আনব্লক করা হয়েছে!` };
+		} catch (e: any) {
+			console.error('Failed to bulk unblock in D1:', e);
+			return { success: false, message: e?.message || 'বাল্ক আনব্লক করতে সমস্যা হয়েছে' };
 		}
-
-		return { success: true, message: `${ids.length}টি আইটেম সফলভাবে আনব্লক করা হয়েছে!` };
 	}
 };

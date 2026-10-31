@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Card, Badge, Input, Dialog, confirmSubmit } from '#lib/components/ui';
+	import { Button, Card, Badge, Input, confirmSubmit } from '#lib/components/ui';
 	import { toast } from 'svelte-sonner';
 	import {
 		Search,
@@ -16,12 +16,8 @@
 		Trash2,
 		FileEdit,
 		Sparkles,
-		ExternalLink,
 		X,
-		ShoppingBag,
-		HelpCircle,
-		Send,
-		RefreshCw
+		ShoppingBag
 	} from 'lucide-svelte';
 
 	let { data }: { data: any } = $props();
@@ -29,14 +25,6 @@
 	// Search & Filter State
 	let searchQuery = $state('');
 	let recoveryStatusFilter = $state('all');
-
-	// Modals State
-	let activeOrderForEdit = $state<any | null>(null);
-	let isEditDialogOpen = $state(false);
-
-	let activeOrderForWhatsApp = $state<any | null>(null);
-	let isWhatsAppDialogOpen = $state(false);
-	let customWhatsAppMessage = $state('');
 
 	// Helper to extract items safely
 	function parseOrderItems(itemsJson: any) {
@@ -51,7 +39,7 @@
 	// Filter all incomplete orders
 	let allIncompleteOrders = $derived(
 		(data.orders || [])
-			.filter((o: any) => o.status === 'incomplete')
+			.filter((o: any) => !o.isTrashed && o.status === 'incomplete')
 			.map((order: any) => {
 				const items = parseOrderItems(order.items);
 				const firstItem = items[0] || {};
@@ -133,37 +121,27 @@
 		})
 	);
 
-	// Action triggers
-	function openEditModal(order: any) {
-		activeOrderForEdit = {
-			...order,
-			editName: order.customerName,
-			editPhone: order.customerEmail,
-			editAddress: order.shippingAddress,
-			editTotal: order.total,
-			editRecoveryStatus: order.recoveryStatus,
-			editDropOffStage: order.dropOffStage,
-			editNotes: order.notes
-		};
-		isEditDialogOpen = true;
-	}
+	// Direct 1-Click WhatsApp Trigger (Zero Popups)
+	function sendWhatsAppDirect(order: any) {
+		const rawPhone = order.customerEmail || order.customerPhone || '';
+		const cleanPhone = rawPhone.replace(/[^0-9]/g, '');
+		if (!cleanPhone) {
+			toast.error('গ্রাহকের কোনো মোবাইল নম্বর পাওয়া যায়নি!');
+			return;
+		}
+		const formattedPhone = cleanPhone.startsWith('88')
+			? cleanPhone
+			: cleanPhone.startsWith('01')
+				? `88${cleanPhone}`
+				: cleanPhone;
 
-	function openWhatsAppModal(order: any) {
-		activeOrderForWhatsApp = order;
+		const customerName = order.customerName || 'সম্মানিত গ্রাহক';
 		const productName = order.parsedItems[0]?.name || 'আমাদের পণ্য';
-		const name = order.customerName || 'সম্মানিত গ্রাহক';
-		
-		customWhatsAppMessage = `আসসালামু আলাইকুম ${name} ভাই/ম্যাম, আপনি আমাদের Aura Store-এ ${productName}-এর অর্ডারটি শুরু করেছিলেন কিন্তু সম্পন্ন করেননি। কোনো সহযোগিতার প্রয়োজন হলে আমাদের জানাতে পারেন। অর্ডারটি কনফার্ম করতে চাইলে এই নম্বরে রিপ্লাই দিন। ধন্যবাদ!`;
-		isWhatsAppDialogOpen = true;
-	}
+		const text = `আসসালামু আলাইকুম ${customerName} ভাই/ম্যাম, আপনি আমাদের Aura Store-এ "${productName}"-এর অর্ডারটি শুরু করেছিলেন কিন্তু সম্পন্ন করেননি। কোনো সহযোগিতা বা তথ্যের প্রয়োজন হলে আমাদের জানাতে পারেন। ধন্যবাদ!`;
 
-	function sendWhatsAppMessageDirect() {
-		if (!activeOrderForWhatsApp) return;
-		const phone = (activeOrderForWhatsApp.customerEmail || '').replace(/[^0-9]/g, '');
-		const formattedPhone = phone.startsWith('88') ? phone : phone.startsWith('01') ? `88${phone}` : phone;
-		const url = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(customWhatsAppMessage)}`;
+		const url = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(text)}`;
 		window.open(url, '_blank');
-		isWhatsAppDialogOpen = false;
+		toast.success('হোয়াটসঅ্যাপ ওপেন করা হয়েছে!');
 	}
 
 	// Status badge helper
@@ -202,7 +180,7 @@
 				</span>
 			</div>
 			<p class="text-xs text-slate-500 mt-1">
-				ল্যান্ডিং পেজে ফর্ম পূরণ শুরু করে ড্রপ-অফ করা লিডসমূহ — দ্রুত কল বা হোয়াটসঅ্যাপ রিমাইন্ডার পাঠিয়ে সেলস রিকভার করুন
+				ল্যান্ডিং পেজে ফর্ম পূরণ শুরু করে ড্রপ-অফ করা লিডসমূহ — সরাসরি পূর্ণ পেজে বিস্তারিত দেখুন, কল দিন বা হোয়াটসঅ্যাপ পাঠিয়ে সেলস রিকভার করুন
 			</p>
 		</div>
 
@@ -364,9 +342,14 @@
 							<tr class="hover:bg-slate-50/80 transition-colors group">
 								<!-- 1. Drop Time & ID -->
 								<td class="py-3.5 px-4 whitespace-nowrap">
-									<div class="font-mono font-bold text-indigo-600 hover:underline cursor-pointer">
-										#{order.orderNumber || order.id.slice(0, 8)}
-									</div>
+									<a
+										href="/admin/orders/{order.id}"
+										class="font-mono font-bold text-indigo-600 hover:text-indigo-800 hover:underline inline-flex items-center gap-1 group/id"
+										title="সম্পূর্ণ ডেডিকেটেড অর্ডার পেজে যান"
+									>
+										<span>#{order.orderNumber || order.id.slice(0, 8)}</span>
+										<ArrowUpRight class="w-3.5 h-3.5 opacity-60 group-hover/id:opacity-100 transition-opacity" />
+									</a>
 									<div class="flex items-center gap-1 text-[11px] text-slate-400 mt-0.5">
 										<Clock class="w-3 h-3 text-slate-400" />
 										<span>{order.timeAgo}</span>
@@ -378,14 +361,18 @@
 
 								<!-- 2. Customer Info -->
 								<td class="py-3.5 px-4 min-w-[190px]">
-									<div class="font-bold text-slate-900 flex items-center gap-1.5">
+									<a
+										href="/admin/orders/{order.id}"
+										class="font-bold text-slate-900 hover:text-indigo-600 hover:underline flex items-center gap-1.5"
+										title="গ্রাহকের সম্পূর্ণ অর্ডার বিবরণী খুলুন"
+									>
 										<User class="w-3.5 h-3.5 text-slate-400" />
 										<span>{order.customerName || 'নাম লিখেননি'}</span>
-									</div>
+									</a>
 									<div class="mt-1 flex items-center gap-2 font-mono text-slate-700 font-medium">
-										<span>{order.customerEmail}</span>
+										<span>{order.customerEmail || order.customerPhone}</span>
 										<a
-											href="tel:{order.customerEmail}"
+											href="tel:{order.customerEmail || order.customerPhone}"
 											class="p-1 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
 											title="সরাসরি কল দিন"
 										>
@@ -437,29 +424,33 @@
 								<!-- 6. Follow-up Notes -->
 								<td class="py-3.5 px-4 max-w-[180px]">
 									{#if order.notes}
-										<p class="text-xs text-slate-600 line-clamp-2 bg-slate-50 p-1.5 rounded-lg border border-slate-100" title={order.notes}>
+										<a
+											href="/admin/orders/{order.id}"
+											class="text-xs text-slate-600 line-clamp-2 bg-slate-50 p-1.5 rounded-lg border border-slate-100 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-900 transition-colors block"
+											title={order.notes}
+										>
 											{order.notes}
-										</p>
+										</a>
 									{:else}
-										<button
-											type="button"
-											onclick={() => openEditModal(order)}
+										<a
+											href="/admin/orders/{order.id}"
 											class="text-[11px] text-indigo-600 hover:text-indigo-800 hover:underline font-medium"
+											title="সম্পূর্ণ পেজে গিয়ে নোট লিখুন"
 										>
 											+ নোট লিখুন
-										</button>
+										</a>
 									{/if}
 								</td>
 
 								<!-- 7. High-Impact Action Buttons -->
 								<td class="py-3.5 px-4 text-right whitespace-nowrap">
 									<div class="flex items-center justify-end gap-1.5">
-										<!-- 1-Click WhatsApp Trigger -->
+										<!-- 1-Click Direct WhatsApp Trigger (No Modal) -->
 										<button
 											type="button"
-											onclick={() => openWhatsAppModal(order)}
+											onclick={() => sendWhatsAppDirect(order)}
 											class="px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition-colors flex items-center gap-1 shadow-2xs cursor-pointer text-xs"
-											title="১-ক্লিকে হোয়াটসঅ্যাপ রিমাইন্ডার পাঠান"
+											title="১-ক্লিকে সরাসরি হোয়াটসঅ্যাপে বার্তা পাঠান (কোনো পপআপ ছাড়া)"
 										>
 											<MessageCircle class="w-3.5 h-3.5" />
 											<span class="hidden xl:inline">WhatsApp</span>
@@ -467,7 +458,7 @@
 
 										<!-- Direct Call -->
 										<a
-											href="tel:{order.customerEmail}"
+											href="tel:{order.customerEmail || order.customerPhone}"
 											class="p-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-200"
 											title="সরাসরি ফোন করুন"
 										>
@@ -487,15 +478,14 @@
 											</button>
 										</form>
 
-										<!-- Edit / Details Modal -->
-										<button
-											type="button"
-											onclick={() => openEditModal(order)}
-											class="p-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
-											title="বিস্তারিত তথ্য আপডেট করুন"
+										<!-- Full Order Page Navigation (Replaced Popup Modal) -->
+										<a
+											href="/admin/orders/{order.id}"
+											class="p-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors cursor-pointer"
+											title="সম্পূর্ণ ডেডিকেটেড অর্ডার পেজে বিস্তারিত দেখুন ও এডিট করুন"
 										>
 											<FileEdit class="w-4 h-4" />
-										</button>
+										</a>
 
 										<!-- Discard / Trash -->
 										<form
@@ -537,230 +527,3 @@
 	</Card>
 
 </div>
-
-<!-- 1. Edit & Complete Order Details Modal -->
-{#if isEditDialogOpen && activeOrderForEdit}
-	<Dialog bind:open={isEditDialogOpen}>
-		<div class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-			<div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-				
-				<!-- Modal Header -->
-				<div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-					<div>
-						<h3 class="text-base font-black text-slate-900 flex items-center gap-2">
-							<span>অর্ডার তথ্য সম্পূর্ণ ও আপডেট করুন</span>
-							<span class="font-mono text-xs text-indigo-600">#{activeOrderForEdit.id}</span>
-						</h3>
-						<p class="text-xs text-slate-500 mt-0.5">কাস্টমারের সাথে কথা বলে বাকি থাকা তথ্য পূরণ করুন</p>
-					</div>
-					<button
-						type="button"
-						onclick={() => (isEditDialogOpen = false)}
-						class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-					>
-						<X class="w-4 h-4" />
-					</button>
-				</div>
-
-				<!-- Modal Form -->
-				<form
-					method="POST"
-					action="?/updateIncomplete"
-					use:enhance={() => {
-						isEditDialogOpen = false;
-					}}
-					class="p-6 space-y-4"
-				>
-					<input type="hidden" name="orderId" value={activeOrderForEdit.id} />
-
-					<!-- Customer Name & Phone -->
-					<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-						<div>
-							<label class="block text-xs font-bold text-slate-700 mb-1">কাস্টমার নাম *</label>
-							<Input
-								type="text"
-								name="customerName"
-								bind:value={activeOrderForEdit.editName}
-								placeholder="কাস্টমারের পূর্ণ নাম"
-								required
-								class="text-xs"
-							/>
-						</div>
-						<div>
-							<label class="block text-xs font-bold text-slate-700 mb-1">মোবাইল নম্বর *</label>
-							<Input
-								type="text"
-								name="customerPhone"
-								bind:value={activeOrderForEdit.editPhone}
-								placeholder="017xxxxxxxx"
-								required
-								class="text-xs font-mono"
-							/>
-						</div>
-					</div>
-
-					<!-- Shipping Address -->
-					<div>
-						<label class="block text-xs font-bold text-slate-700 mb-1">ডেলিভারি ঠিকানা *</label>
-						<textarea
-							name="shippingAddress"
-							bind:value={activeOrderForEdit.editAddress}
-							rows="2"
-							placeholder="বাসা নং, রোড নং, এলাকা, থানা ও জেলা উল্লেখ করুন"
-							class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-							required
-						></textarea>
-					</div>
-
-					<!-- Status & Stage -->
-					<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-						<div>
-							<label class="block text-xs font-bold text-slate-700 mb-1">রিকভারি স্ট্যাটাস</label>
-							<select
-								name="recoveryStatus"
-								bind:value={activeOrderForEdit.editRecoveryStatus}
-								class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-							>
-								<option value="uncontacted">🔴 আন-কন্টাক্টেড (নতুন লিড)</option>
-								<option value="called">📞 কল করা হয়েছে</option>
-								<option value="whatsapp_sent">💬 হোয়াটসঅ্যাপ পাঠানো হয়েছে</option>
-								<option value="followup">⏳ ফলো-আপ প্রয়োজন</option>
-								<option value="converted">✅ কনভার্টেড (অর্ডারে রূপান্তর)</option>
-								<option value="lost">❌ আগ্রহী নয় / ড্রপ</option>
-							</select>
-						</div>
-
-						<div>
-							<label class="block text-xs font-bold text-slate-700 mb-1">ড্রপ-অফ পর্যায়</label>
-							<select
-								name="dropOffStage"
-								bind:value={activeOrderForEdit.editDropOffStage}
-								class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-							>
-								<option value="Step 1: মোবাইল নম্বর ইনপুট ড্রপ">Step 1: মোবাইল নম্বর ইনপুট ড্রপ</option>
-								<option value="Step 2: ফর্ম অসম্পূর্ণ">Step 2: ফর্ম অসম্পূর্ণ</option>
-								<option value="Step 2: ঠিকানা অসম্পূর্ণ">Step 2: ঠিকানা অসম্পূর্ণ</option>
-								<option value="Step 3: পেমেন্ট গেটওয়ে ড্রপ">Step 3: পেমেন্ট গেটওয়ে ড্রপ</option>
-								<option value="Step 3: অর্ডার পেজ ক্লোজড">Step 3: অর্ডার পেজ ক্লোজড</option>
-							</select>
-						</div>
-					</div>
-
-					<!-- Total Amount & Notes -->
-					<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-						<div>
-							<label class="block text-xs font-bold text-slate-700 mb-1">মোট বিল (৳)</label>
-							<Input
-								type="number"
-								name="total"
-								bind:value={activeOrderForEdit.editTotal}
-								class="text-xs font-bold"
-							/>
-						</div>
-
-						<div class="sm:col-span-2">
-							<label class="block text-xs font-bold text-slate-700 mb-1">ফলো-আপ নোট / কলার মন্তব্য</label>
-							<Input
-								type="text"
-								name="notes"
-								bind:value={activeOrderForEdit.editNotes}
-								placeholder="যেমন: বিকেলে কল করতে বলেছেন, ফ্রি ডেলিভারি অফার দেওয়া হয়েছে"
-								class="text-xs"
-							/>
-						</div>
-					</div>
-
-					<!-- Modal Footer Actions -->
-					<div class="pt-4 border-t border-slate-100 flex items-center justify-between">
-						<Button
-							type="button"
-							variant="outline"
-							onclick={() => (isEditDialogOpen = false)}
-							class="text-xs"
-						>
-							বাতিল
-						</Button>
-
-						<div class="flex items-center gap-2">
-							<Button
-								type="submit"
-								class="gap-1.5 text-xs font-bold bg-[#5845eb] text-white hover:bg-[#4836d4]"
-							>
-								তথ্য সেভ করুন
-							</Button>
-						</div>
-					</div>
-				</form>
-			</div>
-		</div>
-	</Dialog>
-{/if}
-
-<!-- 2. WhatsApp Personalized Message Preview & Trigger Modal -->
-{#if isWhatsAppDialogOpen && activeOrderForWhatsApp}
-	<Dialog bind:open={isWhatsAppDialogOpen}>
-		<div class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-			<div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-				
-				<!-- Header -->
-				<div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-emerald-50/70">
-					<div class="flex items-center gap-2.5">
-						<div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center">
-							<MessageCircle class="w-4 h-4" />
-						</div>
-						<div>
-							<h3 class="text-base font-black text-slate-900">হোয়াটসঅ্যাপ রিমাইন্ডার পাঠান</h3>
-							<p class="text-xs text-slate-500">গ্রাহক: {activeOrderForWhatsApp.customerName} ({activeOrderForWhatsApp.customerEmail})</p>
-						</div>
-					</div>
-					<button
-						type="button"
-						onclick={() => (isWhatsAppDialogOpen = false)}
-						class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-					>
-						<X class="w-4 h-4" />
-					</button>
-				</div>
-
-				<!-- Content -->
-				<div class="p-6 space-y-4">
-					<div>
-						<label class="block text-xs font-bold text-slate-700 mb-1.5">বার্তা প্রিভিউ (প্রয়োজনে এডিট করতে পারেন):</label>
-						<textarea
-							bind:value={customWhatsAppMessage}
-							rows="5"
-							class="w-full p-3 text-xs border border-emerald-200 rounded-xl bg-emerald-50/30 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 leading-relaxed"
-						></textarea>
-					</div>
-
-					<div class="bg-slate-50 p-3 rounded-xl border border-slate-100 text-[11px] text-slate-500 flex items-center gap-2">
-						<Send class="w-4 h-4 text-emerald-600 shrink-0" />
-						<span>বাটনে চাপ দিলে ব্রাউজারে WhatsApp Web বা মোবাইল অ্যাপে সরাসরি মেসেজটি লোড হবে।</span>
-					</div>
-
-					<!-- Form to record that WhatsApp was sent and trigger open -->
-					<div class="pt-3 border-t border-slate-100 flex items-center justify-between">
-						<Button
-							type="button"
-							variant="outline"
-							onclick={() => (isWhatsAppDialogOpen = false)}
-							class="text-xs"
-						>
-							বন্ধ করুন
-						</Button>
-
-						<Button
-							type="button"
-							onclick={sendWhatsAppMessageDirect}
-							class="gap-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20"
-						>
-							<MessageCircle class="w-4 h-4" />
-							<span>হোয়াটসঅ্যাপে পাঠান</span>
-						</Button>
-					</div>
-				</div>
-			</div>
-		</div>
-	</Dialog>
-{/if}
-

@@ -13,6 +13,7 @@ export interface LandingPageContent {
 	customOriginalPrice?: number;
 	guaranteeText?: string;
 	bannerImage?: string;
+	galleryImages?: string[];
 }
 
 export interface CreateLandingInput {
@@ -32,6 +33,7 @@ export interface CreateLandingInput {
 	features?: Array<{ title: string; desc: string }>;
 	customPrice?: number;
 	customOriginalPrice?: number;
+	galleryImages?: string[];
 }
 
 export class LandingPageService {
@@ -176,7 +178,8 @@ export class LandingPageService {
 				{ title: 'সহজ রিটার্ন', desc: 'কোনো সমস্যা হলে তাৎক্ষণিক সাপোর্ট' }
 			],
 			customPrice: input.customPrice,
-			customOriginalPrice: input.customOriginalPrice
+			customOriginalPrice: input.customOriginalPrice,
+			galleryImages: input.galleryImages || []
 		};
 
 		const cleanSlug = input.slug
@@ -276,7 +279,8 @@ export class LandingPageService {
 			countdownMinutes: input.countdownMinutes !== undefined ? input.countdownMinutes : existing.config.countdownMinutes,
 			bulletPoints: input.bulletPoints !== undefined ? input.bulletPoints : existing.config.bulletPoints,
 			customPrice: input.customPrice !== undefined ? input.customPrice : existing.config.customPrice,
-			customOriginalPrice: input.customOriginalPrice !== undefined ? input.customOriginalPrice : existing.config.customOriginalPrice
+			customOriginalPrice: input.customOriginalPrice !== undefined ? input.customOriginalPrice : existing.config.customOriginalPrice,
+			galleryImages: input.galleryImages !== undefined ? input.galleryImages : (existing.config.galleryImages || [])
 		};
 
 		const cleanSlug = input.slug

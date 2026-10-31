@@ -1,6 +1,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import { getDb } from '#lib/server/db/index';
 import { CustomerService } from '#lib/server/services/customer.service';
+import { fail } from '@sveltejs/kit';
 
 export interface CustomerItem {
 	id: string;
@@ -13,6 +14,7 @@ export interface CustomerItem {
 	totalOrders: number;
 	deliveredOrders: number;
 	cancelledOrders: number;
+	returnedOrders: number;
 	totalSpent: number;
 	successRate: number;
 	riskLevel: 'safe' | 'moderate' | 'high_risk';
@@ -20,6 +22,7 @@ export interface CustomerItem {
 	banReason: string | null;
 	internalNotes: string;
 	createdAt: Date | string | number | null;
+	updatedAt: Date | string | number | null;
 }
 
 export const load: PageServerLoad = async ({ parent, platform, url }) => {
@@ -78,65 +81,7 @@ export const load: PageServerLoad = async ({ parent, platform, url }) => {
 };
 
 export const actions: Actions = {
-	toggleBan: async ({ request, platform }) => {
-		const data = await request.formData();
-		const id = data.get('id')?.toString()?.trim();
-		const banReason =
-			data.get('banReason')?.toString()?.trim() || 'নিরাপত্তা বিবেচনায় অ্যাডমিন কর্তৃক ব্যান করা হয়েছে';
-
-		if (!id) {
-			return { success: false, message: 'গ্রাহকের আইডি পাওয়া যায়নি!' };
-		}
-
-		try {
-			const db = getDb(platform);
-			const res = await CustomerService.toggleBanCustomer(db, id, banReason);
-			const statusText = res.isBanned ? 'ব্যান (ব্ল্যাকলিস্ট)' : 'আনব্যান (সক্রিয়)';
-			return { success: true, message: `গ্রাহককে সফলভাবে ${statusText} করা হয়েছে!` };
-		} catch (error: any) {
-			console.error('Failed to toggle ban in D1:', error);
-			return { success: false, message: error?.message || 'ব্যান স্ট্যাটাস পরিবর্তনে ত্রুটি হয়েছে!' };
-		}
-	},
-
-	updateRisk: async ({ request, platform }) => {
-		const data = await request.formData();
-		const id = data.get('id')?.toString()?.trim();
-		const riskLevel = data.get('riskLevel')?.toString()?.trim() as 'safe' | 'moderate' | 'high_risk';
-
-		if (!id || !riskLevel) {
-			return { success: false, message: 'সঠিক তথ্য প্রদান করুন!' };
-		}
-
-		try {
-			const db = getDb(platform);
-			await CustomerService.updateRiskLevel(db, id, riskLevel);
-			return { success: true, message: 'রিস্ক লেভেল সফলভাবে আপডেট হয়েছে!' };
-		} catch (error: any) {
-			console.error('Failed to update risk in D1:', error);
-			return { success: false, message: error?.message || 'রিস্ক লেভেল পরিবর্তনে ত্রুটি হয়েছে!' };
-		}
-	},
-
-	updateNotes: async ({ request, platform }) => {
-		const data = await request.formData();
-		const id = data.get('id')?.toString()?.trim();
-		const internalNotes = data.get('internalNotes')?.toString()?.trim() || '';
-
-		if (!id) {
-			return { success: false, message: 'গ্রাহকের আইডি পাওয়া যায়নি!' };
-		}
-
-		try {
-			const db = getDb(platform);
-			await CustomerService.updateInternalNotes(db, id, internalNotes);
-			return { success: true, message: 'অভ্যন্তরীণ নোট সফলভাবে সংরক্ষণ করা হয়েছে!' };
-		} catch (error: any) {
-			console.error('Failed to save notes in D1:', error);
-			return { success: false, message: error?.message || 'নোট সংরক্ষণে সমস্যা হয়েছে!' };
-		}
-	},
-
+	// Create or Edit Customer
 	saveCustomer: async ({ request, platform }) => {
 		const data = await request.formData();
 		const id = data.get('id')?.toString()?.trim() || undefined;
@@ -145,12 +90,12 @@ export const actions: Actions = {
 		const email = data.get('email')?.toString()?.trim() || undefined;
 		const address = data.get('address')?.toString()?.trim();
 		const city = data.get('city')?.toString()?.trim() || 'ঢাকা';
-		const district = data.get('district')?.toString()?.trim() || 'ঢাকা';
+		const district = data.get('district')?.toString()?.trim() || city;
 		const riskLevel = (data.get('riskLevel')?.toString()?.trim() as 'safe' | 'moderate' | 'high_risk') || 'safe';
 		const internalNotes = data.get('internalNotes')?.toString()?.trim() || undefined;
 
 		if (!name || !phone || !address) {
-			return { success: false, message: 'নাম, মোবাইল নম্বর এবং ঠিকানা পূরণ করা বাধ্যতামূলক!' };
+			return fail(400, { success: false, message: 'নাম, মোবাইল নম্বর এবং ঠিকানা পূরণ করা বাধ্যতামূলক!' });
 		}
 
 		try {
@@ -173,16 +118,17 @@ export const actions: Actions = {
 			};
 		} catch (error: any) {
 			console.error('Failed to save customer in D1:', error);
-			return { success: false, message: error?.message || 'তথ্য সংরক্ষণে ব্যর্থ হয়েছে!' };
+			return fail(400, { success: false, message: error?.message || 'তথ্য সংরক্ষণে ব্যর্থ হয়েছে!' });
 		}
 	},
 
+	// Delete Customer
 	deleteCustomer: async ({ request, platform }) => {
 		const data = await request.formData();
 		const id = data.get('id')?.toString()?.trim();
 
 		if (!id) {
-			return { success: false, message: 'গ্রাহকের আইডি পাওয়া যায়নি!' };
+			return fail(400, { success: false, message: 'গ্রাহকের আইডি পাওয়া যায়নি!' });
 		}
 
 		try {
@@ -191,7 +137,104 @@ export const actions: Actions = {
 			return { success: true, message: 'গ্রাহক রেকর্ড সফলভাবে মুছে ফেলা হয়েছে!' };
 		} catch (error: any) {
 			console.error('Failed to delete customer in D1:', error);
-			return { success: false, message: error?.message || 'গ্রাহক ডিলিট করতে সমস্যা হয়েছে!' };
+			return fail(500, { success: false, message: error?.message || 'গ্রাহক ডিলিট করতে সমস্যা হয়েছে!' });
+		}
+	},
+
+	// Toggle Ban / Blacklist
+	toggleBan: async ({ request, platform }) => {
+		const data = await request.formData();
+		const id = data.get('id')?.toString()?.trim();
+		const banReason =
+			data.get('banReason')?.toString()?.trim() || 'নিরাপত্তা বিবেচনায় অ্যাডমিন কর্তৃক ব্যান করা হয়েছে';
+
+		if (!id) {
+			return fail(400, { success: false, message: 'গ্রাহকের আইডি পাওয়া যায়নি!' });
+		}
+
+		try {
+			const db = getDb(platform);
+			const res = await CustomerService.toggleBanCustomer(db, id, banReason);
+			const statusText = res.isBanned ? 'ব্যান (ব্ল্যাকলিস্ট)' : 'আনব্যান (সক্রিয়)';
+			return { success: true, message: `গ্রাহককে সফলভাবে ${statusText} করা হয়েছে!` };
+		} catch (error: any) {
+			console.error('Failed to toggle ban in D1:', error);
+			return fail(500, { success: false, message: error?.message || 'ব্যান স্ট্যাটাস পরিবর্তনে ত্রুটি হয়েছে!' });
+		}
+	},
+
+	// Update Risk Level
+	updateRisk: async ({ request, platform }) => {
+		const data = await request.formData();
+		const id = data.get('id')?.toString()?.trim();
+		const riskLevel = data.get('riskLevel')?.toString()?.trim() as 'safe' | 'moderate' | 'high_risk';
+
+		if (!id || !riskLevel) {
+			return fail(400, { success: false, message: 'সঠিক তথ্য প্রদান করুন!' });
+		}
+
+		try {
+			const db = getDb(platform);
+			await CustomerService.updateRiskLevel(db, id, riskLevel);
+			return { success: true, message: 'রিস্ক লেভেল সফলভাবে আপডেট হয়েছে!' };
+		} catch (error: any) {
+			console.error('Failed to update risk in D1:', error);
+			return fail(500, { success: false, message: error?.message || 'রিস্ক লেভেল পরিবর্তনে ত্রুটি হয়েছে!' });
+		}
+	},
+
+	// Update Internal Notes
+	updateNotes: async ({ request, platform }) => {
+		const data = await request.formData();
+		const id = data.get('id')?.toString()?.trim();
+		const internalNotes =
+			data.get('internalNotes')?.toString()?.trim() ?? data.get('notes')?.toString()?.trim() ?? '';
+
+		if (!id) {
+			return fail(400, { success: false, message: 'গ্রাহকের আইডি পাওয়া যায়নি!' });
+		}
+
+		try {
+			const db = getDb(platform);
+			await CustomerService.updateInternalNotes(db, id, internalNotes);
+			return { success: true, message: 'অভ্যন্তরীণ নোট সফলভাবে সংরক্ষণ করা হয়েছে!' };
+		} catch (error: any) {
+			console.error('Failed to save notes in D1:', error);
+			return fail(500, { success: false, message: error?.message || 'নোট সংরক্ষণে সমস্যা হয়েছে!' });
+		}
+	},
+
+	// Sync Customers from Real Orders
+	syncOrders: async ({ platform }) => {
+		try {
+			const db = getDb(platform);
+			const count = await CustomerService.syncFromRealOrders(db);
+			return {
+				success: true,
+				message: `রিয়েল অর্ডার থেকে ${count} জন গ্রাহকের তথ্য সফলভাবে সিঙ্ক ও আপডেট করা হয়েছে!`
+			};
+		} catch (error: any) {
+			console.error('Failed to sync customers from orders:', error);
+			return fail(500, { success: false, message: error?.message || 'অর্ডার সিঙ্কে সমস্যা হয়েছে!' });
+		}
+	},
+
+	// Delete Newsletter Subscriber
+	deleteNewsletter: async ({ request, platform }) => {
+		const data = await request.formData();
+		const id = data.get('id')?.toString()?.trim();
+
+		if (!id) {
+			return fail(400, { success: false, message: 'আইডি পাওয়া যায়নি!' });
+		}
+
+		try {
+			const db = getDb(platform);
+			await CustomerService.deleteNewsletter(db, id);
+			return { success: true, message: 'নিউজলেটার সাবস্ক্রাইবার সফলভাবে মুছে ফেলা হয়েছে!' };
+		} catch (error: any) {
+			console.error('Failed to delete newsletter in D1:', error);
+			return fail(500, { success: false, message: error?.message || 'ডিলিট করতে সমস্যা হয়েছে!' });
 		}
 	}
 };

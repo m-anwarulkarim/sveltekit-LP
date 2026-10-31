@@ -8,7 +8,12 @@ import {
 import { PixelService, DEFAULT_PIXEL_SETTINGS } from '#lib/server/services/pixel.service';
 import { GtmService, DEFAULT_GTM_SETTINGS } from '#lib/server/services/gtm.service';
 import { CategoryService } from '#lib/server/services/category.service';
-import { SettingsService, type StoreDeliveryConfig } from '#lib/server/services/settings.service';
+import {
+	SettingsService,
+	type StoreDeliveryConfig,
+	DEFAULT_PRODUCT_SETTINGS,
+	type ProductSettingsConfig
+} from '#lib/server/services/settings.service';
 
 export const load: LayoutServerLoad = async (event) => {
 	let themeConfig = DEFAULT_THEME_CONFIG;
@@ -33,21 +38,24 @@ export const load: LayoutServerLoad = async (event) => {
 		hotlinePhone: '01860-229546',
 		storeName: 'AURA Store'
 	};
+	let productSettings: ProductSettingsConfig = DEFAULT_PRODUCT_SETTINGS;
 
 	try {
 		const db = getDb(event.platform);
-		const [tc, pc, gtm, cats, sCfg] = await Promise.all([
+		const [tc, pc, gtm, cats, sCfg, pCfg] = await Promise.all([
 			ThemeCustomizationService.getThemeConfig(db).catch(() => DEFAULT_THEME_CONFIG),
 			PixelService.getPublicConfig(db).catch(() => pixelConfig),
 			GtmService.getPublicConfig(db).catch(() => gtmConfig),
 			CategoryService.listCategories(db, { parentId: null, status: 'publish' }).catch(() => []),
-			SettingsService.getStoreDeliveryConfig(db).catch(() => storeConfig)
+			SettingsService.getStoreDeliveryConfig(db).catch(() => storeConfig),
+			SettingsService.getProductSettings(db).catch(() => DEFAULT_PRODUCT_SETTINGS)
 		]);
 		if (tc) themeConfig = tc;
 		if (pc) pixelConfig = pc;
 		if (gtm) gtmConfig = gtm;
 		if (cats && cats.length > 0) categories = cats;
 		if (sCfg) storeConfig = sCfg;
+		if (pCfg) productSettings = pCfg;
 	} catch (err) {
 		console.error('Failed to load database in root layout:', err);
 	}
@@ -60,6 +68,7 @@ export const load: LayoutServerLoad = async (event) => {
 		gtmConfig,
 		categories,
 		storeConfig,
+		productSettings,
 		websiteJsonLd: SeoService.getWebSiteJsonLd(),
 		organizationJsonLd: SeoService.getOrganizationJsonLd()
 	};

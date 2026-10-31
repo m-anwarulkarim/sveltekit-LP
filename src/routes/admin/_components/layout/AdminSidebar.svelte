@@ -12,14 +12,16 @@
 		Headphones,
 		User,
 		LogOut,
-		Info,
 		PanelLeftOpen,
 		BadgeCheck,
 		Target,
 		Package,
 		SlidersHorizontal,
 		Activity,
-		ShieldCheck,		Tag	} from 'lucide-svelte';
+		ShieldCheck,
+		Tag,
+		Eye
+	} from 'lucide-svelte';
 	import { hasMenuAccess } from '#lib/constants/admin-permissions';
 
 	interface Props {
@@ -40,21 +42,6 @@
 
 	// Active admin permissions and details
 	let currentPermissions = $derived(data?.currentAdmin?.permissions || ['*']);
-	let currentAdminUser = $derived(data?.currentAdmin || null);
-	let allAdminsList = $derived(data?.allAdminUsers || []);
-
-	async function switchAdminView(adminId: string) {
-		try {
-			await fetch('/api/admin/auth/switch', {
-				method: 'POST',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ adminId })
-			});
-			window.location.reload();
-		} catch (e) {
-			console.error('Failed to switch admin view:', e);
-		}
-	}
 
 	// Synchronize open submenu with current active route
 	$effect(() => {
@@ -106,22 +93,24 @@
 	// Derived counts from layout data
 	let webOrders = $derived(
 		(data?.orders || []).filter((o: any) =>
+			!o.isTrashed &&
 			['pending', 'no_response', 'no_response_3', 'good_no_response', 'busy', 'hold', 'recall'].includes(o.status)
 		)
 	);
 
 	let incompleteOrders = $derived(
-		(data?.orders || []).filter((o: any) => o.status === 'incomplete')
+		(data?.orders || []).filter((o: any) => !o.isTrashed && o.status === 'incomplete')
 	);
 
 	let orderListOrders = $derived(
 		(data?.orders || []).filter((o: any) =>
+			!o.isTrashed &&
 			['processing', 'confirmed', 'printed', 'entry_done', 'shipped', 'delivered', 'partial_delivered', 'pending_return', 'returned', 'missing'].includes(o.status)
 		)
 	);
 
-	let trashedOrders = $derived((data?.orders || []).filter((o: any) => o.status === 'cancelled'));
-	let preOrders = $derived((data?.orders || []).filter((o: any) => (o.total || 0) > 3000));
+	let trashedOrders = $derived((data?.orders || []).filter((o: any) => o.isTrashed || o.status === 'cancelled'));
+	let preOrders = $derived((data?.orders || []).filter((o: any) => !o.isTrashed && (o.total || 0) > 3000));
 
 	// Active route helpers
 	let currentPath = $derived(page.url.pathname);
@@ -769,7 +758,7 @@
 					</div>
 					{#if !collapsed}
 						<span class="text-xs font-bold px-2 py-0.5 rounded-full {isIpBlockActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
-							44.9k
+							{data?.blockedIpsCount ?? 0}
 						</span>
 					{/if}
 				</a>
@@ -800,7 +789,7 @@
 					</div>
 					{#if !collapsed}
 						<span class="text-xs font-bold px-2 py-0.5 rounded-full {isGalleryActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
-							16
+							{data?.galleryCount ?? 16}
 						</span>
 					{/if}
 				</a>
@@ -831,7 +820,7 @@
 					</div>
 					{#if !collapsed}
 						<span class="text-xs font-bold px-2 py-0.5 rounded-full {isCustomerActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
-							{(data?.newsletter || []).length}
+							{data?.customersCount ?? 0}
 						</span>
 					{/if}
 				</a>
@@ -892,7 +881,7 @@
 					</div>
 					{#if !collapsed}
 						<span class="text-xs font-bold px-2 py-0.5 rounded-full {isLandingPagesActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
-							3
+							{data?.landingPagesCount ?? 0}
 						</span>
 					{/if}
 				</a>
@@ -1129,95 +1118,87 @@
 				</div>
 			</a>
 
-			<!-- 18. Logout -->
-			<button
-				type="button"
-				onclick={async () => {
-					closeAllSubmenus();
-					const confirmed = await confirmModal({
-						title: 'লগআউট নিশ্চিতকরণ',
-						message: 'আপনি কি নিশ্চিত যে আপনার অ্যাডমিন সেশন থেকে লগআউট করতে চান?',
-						confirmText: 'হ্যাঁ, লগআউট করুন',
-						variant: 'destructive',
-						icon: 'alert'
-					});
-					if (confirmed) {
-						toast.success('সফলভাবে লগআউট করা হয়েছে');
-						window.location.href = '/';
-					}
-				}}
-				class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] text-slate-800 hover:text-rose-600 hover:bg-rose-50/60 group cursor-pointer text-left"
-				title="Logout"
-			>
-				<div class="flex items-center gap-3.5">
-					<LogOut class="w-5 h-5 shrink-0 text-slate-800 group-hover:text-rose-600" />
-					{#if !collapsed}
-						<span>Logout</span>
-					{/if}
-				</div>
-			</button>
-
 		</nav>
 	</div>
 
-	<!-- Active Admin Perspective Switcher -->
-	{#if !collapsed && currentAdminUser}
-		<div class="p-3 border-t border-slate-100 bg-slate-50/70">
-			<div class="flex items-center justify-between gap-2">
-				<div class="min-w-0">
-					<div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">বর্তমান অ্যাডমিন ভিউ</div>
-					<div class="text-xs font-black text-slate-800 truncate">{currentAdminUser.name}</div>
-					<div class="text-[10px] text-[#5845eb] font-bold">{currentAdminUser.role}</div>
-				</div>
-				{#if allAdminsList.length > 0}
-					<select
-						value={currentAdminUser.id}
-						onchange={(e) => switchAdminView(e.currentTarget.value)}
-						class="bg-white border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-semibold text-slate-700 focus:outline-none focus:border-[#5845eb] cursor-pointer shadow-2xs max-w-[120px] truncate"
-						title="অ্যাডমিন ভিউ পরিবর্তন করুন"
-					>
-						<option value="owner">👑 Owner (Full)</option>
-						{#each allAdminsList.filter((a: any) => a.role !== 'Owner') as adm}
-							<option value={adm.id}>👤 {adm.name} ({adm.role})</option>
-						{/each}
-					</select>
-				{/if}
-			</div>
-		</div>
-	{/if}
-
-	<!-- Admin Panel Info Card -->
+	<!-- Sidebar Footer: Website & Logout Actions (Exact Match to User Mockup) -->
 	<div class="p-3 border-t border-slate-100 bg-white">
 		{#if !collapsed}
-			<div class="p-3 bg-blue-50/40 rounded-2xl border border-blue-100/80 text-xs text-slate-600 space-y-1">
-				<div class="flex items-center gap-1.5 font-bold text-slate-800 text-[11px]">
-					<Info class="w-3.5 h-3.5 text-blue-600" />
-					<span>ADMIN PANEL</span>
-				</div>
-				<div class="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
-					<span>Current version</span>
-					<span class="font-mono font-bold text-slate-700">v1.0.47</span>
-				</div>
-				<div class="flex items-center justify-between text-[11px] text-slate-500">
-					<span>Last update</span>
-					<span class="font-semibold text-slate-700">20 Aug 2026</span>
-				</div>
-				<div class="pt-1 flex justify-center">
-					<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
-						<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-						<span>Panel up to date</span>
-					</span>
-				</div>
+			<div class="flex items-center gap-2">
+				<!-- ওয়েবসাইট বাটন -->
+				<a
+					href="/"
+					target="_blank"
+					onclick={() => { mobileOpen = false; }}
+					class="flex-1 inline-flex items-center justify-center gap-2 py-2 px-3 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold transition-all shadow-2xs group"
+					title="ওয়েবসাইট দেখুন"
+				>
+					<Eye class="w-4 h-4 text-slate-800 group-hover:scale-105 transition-transform" />
+					<span>ওয়েবসাইট</span>
+				</a>
+
+				<!-- লগআউট বাটন -->
+				<button
+					type="button"
+					onclick={async () => {
+						closeAllSubmenus();
+						const confirmed = await confirmModal({
+							title: 'লগআউট নিশ্চিতকরণ',
+							message: 'আপনি কি নিশ্চিত যে আপনার অ্যাডমিন সেশন থেকে লগআউট করতে চান?',
+							confirmText: 'হ্যাঁ, লগআউট করুন',
+							variant: 'destructive',
+							icon: 'alert'
+						});
+						if (confirmed) {
+							toast.success('সফলভাবে লগআউট করা হয়েছে');
+							window.location.href = '/';
+						}
+					}}
+					class="flex-1 inline-flex items-center justify-center gap-2 py-2 px-3 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold transition-all border border-rose-100/60 cursor-pointer group"
+					title="লগআউট"
+				>
+					<LogOut class="w-4 h-4 text-rose-600 group-hover:scale-105 transition-transform" />
+					<span>লগআউট</span>
+				</button>
 			</div>
 		{:else}
-			<div class="flex justify-center">
+			<div class="flex flex-col items-center gap-2">
+				<a
+					href="/"
+					target="_blank"
+					class="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors shadow-2xs"
+					title="ওয়েবসাইট দেখুন"
+				>
+					<Eye class="w-4.5 h-4.5" />
+				</a>
+				<button
+					type="button"
+					onclick={async () => {
+						closeAllSubmenus();
+						const confirmed = await confirmModal({
+							title: 'লগআউট নিশ্চিতকরণ',
+							message: 'আপনি কি নিশ্চিত যে আপনার অ্যাডমিন সেশন থেকে লগআউট করতে চান?',
+							confirmText: 'হ্যাঁ, লগআউট করুন',
+							variant: 'destructive',
+							icon: 'alert'
+						});
+						if (confirmed) {
+							toast.success('সফলভাবে লগআউট করা হয়েছে');
+							window.location.href = '/';
+						}
+					}}
+					class="w-10 h-10 rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100 flex items-center justify-center transition-colors cursor-pointer border border-rose-100/60 shadow-2xs"
+					title="লগআউট"
+				>
+					<LogOut class="w-4.5 h-4.5" />
+				</button>
 				<button
 					type="button"
 					onclick={() => (collapsed = false)}
-					class="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer"
+					class="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer shadow-2xs"
 					title="সাইডবার খুলুন"
 				>
-					<PanelLeftOpen class="w-5 h-5" />
+					<PanelLeftOpen class="w-4.5 h-4.5" />
 				</button>
 			</div>
 		{/if}

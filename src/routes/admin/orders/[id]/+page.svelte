@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance, deserialize } from '$app/forms';
 	import { Card, Button, Badge } from '#lib/components/ui';
-	import { CheckCircle2, Check, Printer } from 'lucide-svelte';
+	import { CheckCircle2, Check, Printer, AlertCircle, MessageCircle } from 'lucide-svelte';
 	import {
 		OrderDetailsHeader,
 		CustomerQuickBar,
@@ -283,6 +283,48 @@
 			onSendToCourier={handleSendToCourier}
 		/>
 	</div>
+
+	<!-- Incomplete / Abandoned Order Context Banner -->
+	{#if status === 'incomplete'}
+		<div class="print:hidden p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-900 shadow-2xs">
+			<div class="flex items-center gap-3">
+				<div class="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-800 flex items-center justify-center shrink-0">
+					<AlertCircle class="w-5 h-5 text-amber-600" />
+				</div>
+				<div>
+					<div class="flex items-center gap-2">
+						<span class="text-xs sm:text-sm font-bold text-slate-900">ইনকমপ্লিট / ড্রপ-অফ অর্ডার</span>
+						<span class="px-2 py-0.5 rounded-full text-[10px] bg-amber-100 text-amber-800 font-bold border border-amber-300">
+							{data.order?.dropOffStage || 'ফর্ম অসম্পূর্ণ'}
+						</span>
+					</div>
+					<p class="text-[11px] text-amber-800/80 mt-0.5">
+						গ্রাহক ল্যান্ডিং পেজে ফর্ম পূরণ শুরু করার পর অর্ডার ড্রপ করেছেন। নিচের বার থেকে তথ্য হালনাগাদ করে সরাসরি কনফার্ম করুন।
+					</p>
+				</div>
+			</div>
+			<div class="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+				{#if customerPhone}
+					<a
+						href="https://wa.me/{customerPhone.replace(/[^0-9]/g, '').startsWith('88') ? customerPhone.replace(/[^0-9]/g, '') : '88' + customerPhone.replace(/[^0-9]/g, '')}?text={encodeURIComponent(`আসসালামু আলাইকুম ${customerName || 'গ্রাহক'}, Aura Store থেকে যোগাযোগ করছি। আপনার শুরু করা অর্ডারটি কনফার্ম করতে চাইলে আমাদের জানান। ধন্যবাদ!`)}"
+						target="_blank"
+						class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1.5 transition-colors shadow-2xs"
+					>
+						<MessageCircle class="w-3.5 h-3.5" />
+						<span>WhatsApp</span>
+					</a>
+				{/if}
+				<button
+					type="button"
+					onclick={handleConfirm}
+					class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold inline-flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+				>
+					<CheckCircle2 class="w-3.5 h-3.5" />
+					<span>কনফার্ম অর্ডারে রূপান্তর</span>
+				</button>
+			</div>
+		</div>
+	{/if}
 
 	<!-- 2. Customer Quick Edit Bar -->
 	<div class="print:hidden">

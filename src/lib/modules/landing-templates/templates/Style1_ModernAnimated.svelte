@@ -13,7 +13,9 @@
 		RotateCcw,
 		Award,
 		Lock,
-		Heart
+		Heart,
+		ChevronLeft,
+		ChevronRight
 	} from 'lucide-svelte';
 	import LandingCountdown from '../components/LandingCountdown.svelte';
 	import LandingOrderForm from '../components/LandingOrderForm.svelte';
@@ -27,14 +29,52 @@
 	let product = $derived(landingPage?.product || {});
 	let config = $derived(landingPage?.config || {});
 
-	// Images
-	let images: string[] = $derived(
-		product?.parsedImages?.length > 0
-			? product.parsedImages
-			: [product?.image || '/images/placeholder.svg']
-	);
+	// Images: prioritize custom galleryImages from landing page config, then product images
+	let images: string[] = $derived.by(() => {
+		if (config?.galleryImages && Array.isArray(config.galleryImages) && config.galleryImages.length > 0) {
+			return config.galleryImages;
+		}
+		if (product?.parsedImages && Array.isArray(product.parsedImages) && product.parsedImages.length > 0) {
+			return product.parsedImages;
+		}
+		if (product?.image) {
+			return [product.image];
+		}
+		return ['/images/placeholder.svg'];
+	});
+
 	let activeImageIndex = $state(0);
-	let activeImage = $derived(images[activeImageIndex] || images[0]);
+	let activeImage = $derived(images[activeImageIndex] || images[0] || '/images/placeholder.svg');
+
+	function nextImage() {
+		if (images.length <= 1) return;
+		activeImageIndex = (activeImageIndex + 1) % images.length;
+	}
+
+	function prevImage() {
+		if (images.length <= 1) return;
+		activeImageIndex = (activeImageIndex - 1 + images.length) % images.length;
+	}
+
+	// Touch swipe support for mobile
+	let touchStartX = 0;
+	let touchEndX = 0;
+
+	function handleTouchStart(e: TouchEvent) {
+		touchStartX = e.changedTouches[0].screenX;
+	}
+
+	function handleTouchEnd(e: TouchEvent) {
+		touchEndX = e.changedTouches[0].screenX;
+		const diff = touchEndX - touchStartX;
+		if (Math.abs(diff) > 40) {
+			if (diff < 0) {
+				nextImage();
+			} else {
+				prevImage();
+			}
+		}
+	}
 
 	// Pricing
 	let price = $derived(config?.customPrice || product?.price || 1450);
@@ -100,39 +140,94 @@
 
 		<!-- 3. Product Presentation & Pricing Grid -->
 		<section class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start bg-white rounded-3xl p-5 sm:p-8 border border-slate-200/90 shadow-xl">
-			<!-- Left: Product Image Gallery (7 Cols) -->
+			<!-- Left: Product Image Slider & Gallery (7 Cols) -->
 			<div class="lg:col-span-7 space-y-4">
-				<div class="relative aspect-square rounded-2xl bg-slate-50 border border-slate-200/80 overflow-hidden group">
+				<div
+					class="relative aspect-square rounded-2xl bg-slate-50 border border-slate-200/80 overflow-hidden group select-none"
+					ontouchstart={handleTouchStart}
+					ontouchend={handleTouchEnd}
+				>
 					<img
 						src={activeImage}
 						alt={product?.name || landingPage?.title}
-						class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+						class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-102"
 					/>
 
+					<!-- Discount Savings Badge -->
 					{#if savings > 0}
-						<div class="absolute top-3 left-3 bg-rose-600 text-white text-xs font-black px-3 py-1.5 rounded-xl shadow-md uppercase tracking-wider">
+						<div class="absolute top-3.5 left-3.5 bg-rose-600 text-white text-xs font-black px-3 py-1.5 rounded-xl shadow-md uppercase tracking-wider z-10">
 							{formatTaka(savings)} ছাড়
 						</div>
 					{/if}
 
-					<div class="absolute bottom-3 right-3 bg-white/95 backdrop-blur-xs text-emerald-700 text-xs font-bold px-3 py-1 rounded-xl shadow-sm border border-emerald-100 flex items-center gap-1.5">
+					<!-- Slider Counter Badge (when multiple images) -->
+					{#if images.length > 1}
+						<div class="absolute top-3.5 right-3.5 bg-slate-900/80 backdrop-blur-md text-white text-xs font-mono font-bold px-2.5 py-1 rounded-xl shadow-md z-10 flex items-center gap-1">
+							<span>{activeImageIndex + 1}</span>
+							<span class="text-slate-400">/</span>
+							<span>{images.length}</span>
+						</div>
+					{/if}
+
+					<!-- In Stock Status Badge -->
+					<div class="absolute bottom-3.5 right-3.5 bg-white/95 backdrop-blur-xs text-emerald-700 text-xs font-bold px-3 py-1 rounded-xl shadow-sm border border-emerald-100 flex items-center gap-1.5 z-10">
 						<span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
 						<span>ইন-স্টক এভেইলেবল</span>
 					</div>
+
+					<!-- Slider Navigation Arrows (shown when multiple images) -->
+					{#if images.length > 1}
+						<!-- Previous Arrow -->
+						<button
+							type="button"
+							onclick={prevImage}
+							class="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 hover:bg-white text-slate-800 shadow-lg border border-slate-200/60 flex items-center justify-center transition-all opacity-90 sm:opacity-0 group-hover:opacity-100 hover:scale-105 active:scale-95 z-20 cursor-pointer"
+							aria-label="আগের ছবি"
+						>
+							<ChevronLeft class="w-5 h-5 -ml-0.5" />
+						</button>
+
+						<!-- Next Arrow -->
+						<button
+							type="button"
+							onclick={nextImage}
+							class="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 hover:bg-white text-slate-800 shadow-lg border border-slate-200/60 flex items-center justify-center transition-all opacity-90 sm:opacity-0 group-hover:opacity-100 hover:scale-105 active:scale-95 z-20 cursor-pointer"
+							aria-label="পরের ছবি"
+						>
+							<ChevronRight class="w-5 h-5 -mr-0.5" />
+						</button>
+
+						<!-- Slider Dots (Overlay at bottom center) -->
+						<div class="absolute bottom-3.5 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full z-10">
+							{#each images as _, dotIdx}
+								<button
+									type="button"
+									onclick={() => (activeImageIndex = dotIdx)}
+									class="transition-all rounded-full cursor-pointer {activeImageIndex === dotIdx
+										? 'w-5 h-2 bg-white'
+										: 'w-2 h-2 bg-white/50 hover:bg-white/80'}"
+									aria-label={`স্লাইড ${dotIdx + 1}`}
+								></button>
+							{/each}
+						</div>
+					{/if}
 				</div>
 
-				<!-- Thumbnail Selector if multiple images -->
+				<!-- Thumbnail Selector Strip if multiple images -->
 				{#if images.length > 1}
-					<div class="flex items-center gap-3 overflow-x-auto pb-1 no-scrollbar">
+					<div class="flex items-center gap-2.5 overflow-x-auto pb-1 no-scrollbar pt-1">
 						{#each images as img, idx}
 							<button
 								type="button"
 								onclick={() => (activeImageIndex = idx)}
-								class="w-16 h-16 rounded-xl border-2 overflow-hidden transition-all shrink-0 cursor-pointer {activeImageIndex === idx
-									? 'border-emerald-600 ring-2 ring-emerald-500/30'
-									: 'border-slate-200 opacity-70 hover:opacity-100'}"
+								class="relative w-16 h-16 sm:w-18 sm:h-18 rounded-2xl border-2 overflow-hidden transition-all shrink-0 cursor-pointer {activeImageIndex === idx
+									? 'border-emerald-600 ring-2 ring-emerald-500/30 shadow-md scale-102'
+									: 'border-slate-200/90 opacity-60 hover:opacity-100 hover:border-slate-400'}"
 							>
-								<img src={img} alt="Thumb" class="w-full h-full object-cover" />
+								<img src={img} alt={`Thumb ${idx + 1}`} class="w-full h-full object-cover" />
+								{#if activeImageIndex === idx}
+									<div class="absolute inset-0 bg-emerald-600/10 pointer-events-none"></div>
+								{/if}
 							</button>
 						{/each}
 					</div>

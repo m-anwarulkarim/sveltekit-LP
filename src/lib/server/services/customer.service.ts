@@ -11,6 +11,18 @@ export interface CustomerUpsertPayload {
 	orderTotal?: number;
 }
 
+export interface SaveCustomerPayload {
+	id?: string;
+	name: string;
+	phone: string;
+	email?: string;
+	address: string;
+	city?: string;
+	district?: string;
+	riskLevel?: 'safe' | 'moderate' | 'high_risk';
+	internalNotes?: string;
+}
+
 export interface ListCustomersOptions {
 	search?: string;
 	riskLevel?: 'all' | 'safe' | 'moderate' | 'high_risk';
@@ -20,11 +32,11 @@ export interface ListCustomersOptions {
 }
 
 /**
- * Enterprise Customer 360 & CRM Service
+ * Enterprise Customer 360 & CRM Service (100% Real SQLite D1 Data)
  */
 export class CustomerService {
 	/**
-	 * Lists customers with filtering, search, and auto-seeding
+	 * Lists customers with filtering, search, and live order sync
 	 */
 	static async listCustomers(
 		db: DrizzleD1Database<typeof schema>,
@@ -48,7 +60,8 @@ export class CustomerService {
 						like(schema.customers.name, term),
 						like(schema.customers.phone, term),
 						like(schema.customers.address, term),
-						like(schema.customers.city, term)
+						like(schema.customers.city, term),
+						like(schema.customers.email, term)
 					)
 				);
 			}
@@ -69,26 +82,34 @@ export class CustomerService {
 				query = query.offset(options.offset) as any;
 			}
 
-			const rows = await query.all();
+			let rows = await query.all();
+
+			// If customer table is empty, auto-sync from real orders table
+			if (rows.length === 0 && !options.search && (!options.riskLevel || options.riskLevel === 'all')) {
+				await CustomerService.syncFromRealOrders(db);
+				rows = await query.all();
+			}
 
 			return rows.map((c) => ({
 				id: c.id,
 				name: c.name,
 				phone: c.phone,
-				email: c.email || `${c.phone}@customer.aura.com`,
+				email: c.email || '',
 				address: c.address,
-				city: c.city || 'Dhaka',
-				district: c.district || 'Dhaka',
-				totalOrders: c.totalOrders || 1,
-				deliveredOrders: c.deliveredOrders || 1,
-				cancelledOrders: c.cancelledOrders || 0,
-				totalSpent: c.totalSpent || 1200,
-				successRate: c.successRate ?? 95,
-				riskLevel: c.riskLevel || 'safe',
+				city: c.city || 'ঢাকা',
+				district: c.district || 'ঢাকা',
+				totalOrders: c.totalOrders ?? 0,
+				deliveredOrders: c.deliveredOrders ?? 0,
+				cancelledOrders: c.cancelledOrders ?? 0,
+				returnedOrders: c.returnedOrders ?? 0,
+				totalSpent: c.totalSpent ?? 0,
+				successRate: c.successRate ?? 100,
+				riskLevel: (c.riskLevel || 'safe') as 'safe' | 'moderate' | 'high_risk',
 				isBanned: Boolean(c.isBanned),
 				banReason: c.banReason,
 				internalNotes: c.internalNotes || '',
-				createdAt: c.createdAt
+				createdAt: c.createdAt,
+				updatedAt: c.updatedAt
 			}));
 		} catch (error) {
 			console.error('Error in CustomerService.listCustomers:', error);
@@ -97,7 +118,26 @@ export class CustomerService {
 	}
 
 	/**
-	 * Finds existing customer by phone or creates a new profile
+	 * Total count of registered customers
+	 */
+	static async countCustomers(db: DrizzleD1Database<typeof schema>): Promise<number> {
+		try {
+			const res = await db.select({ count: sql<number>`count(*)` }).from(schema.customers).get();
+			let count = res?.count ?? 0;
+			if (count === 0) {
+				await CustomerService.syncFromRealOrders(db);
+				const reRes = await db.select({ count: sql<number>`count(*)` }).from(schema.customers).get();
+				return reRes?.count ?? 0;
+			}
+			return count;
+		} catch (error) {
+			console.error('Error counting customers:', error);
+			return 0;
+		}
+	}
+
+	/**
+	 * Finds existing customer by phone or creates a new profile with 0 stats
 	 */
 	static async getOrCreateCustomer(db: DrizzleD1Database<typeof schema>, payload: CustomerUpsertPayload) {
 		const existing = await db
@@ -126,8 +166,8 @@ export class CustomerService {
 			phone: payload.phone,
 			name: payload.name,
 			address: payload.address,
-			city: payload.city || null,
-			district: payload.district || null,
+			city: payload.city || 'ঢাকা',
+			district: payload.district || 'ঢাকা',
 			totalOrders: 0,
 			deliveredOrders: 0,
 			cancelledOrders: 0,
@@ -135,7 +175,9 @@ export class CustomerService {
 			totalSpent: 0,
 			successRate: 100,
 			riskLevel: 'safe',
-			isBanned: false
+			isBanned: false,
+			createdAt: new Date(),
+			updatedAt: new Date()
 		};
 
 		await db.insert(schema.customers).values(newCustomer);
@@ -143,7 +185,7 @@ export class CustomerService {
 	}
 
 	/**
-	 * Increments customer lifetime stats upon a confirmed or placed order
+	 * Increments customer lifetime stats upon a placed/confirmed order
 	 */
 	static async incrementCustomerOrderStats(
 		db: DrizzleD1Database<typeof schema>,
@@ -172,7 +214,117 @@ export class CustomerService {
 	}
 
 	/**
-	 * Toggle ban status of a customer
+	 * Create or Update a customer profile
+	 */
+	static async saveCustomer(db: DrizzleD1Database<typeof schema>, payload: SaveCustomerPayload) {
+		const cleanPhone = payload.phone.trim();
+		const cleanName = payload.name.trim();
+		const cleanAddress = payload.address.trim();
+		const cleanEmail = payload.email?.trim() || null;
+		const cleanCity = payload.city?.trim() || 'ঢাকা';
+		const cleanDistrict = payload.district?.trim() || cleanCity;
+		const riskLevel = payload.riskLevel || 'safe';
+		const internalNotes = payload.internalNotes?.trim() || null;
+
+		if (payload.id) {
+			// Update existing customer
+			const existing = await db
+				.select()
+				.from(schema.customers)
+				.where(eq(schema.customers.id, payload.id))
+				.get();
+
+			if (!existing) {
+				throw new Error('গ্রাহক পাওয়া যায়নি!');
+			}
+
+			// Check if phone changed and belongs to someone else
+			if (cleanPhone !== existing.phone) {
+				const phoneCheck = await db
+					.select({ id: schema.customers.id })
+					.from(schema.customers)
+					.where(eq(schema.customers.phone, cleanPhone))
+					.get();
+
+				if (phoneCheck && phoneCheck.id !== payload.id) {
+					throw new Error('এই মোবাইল নম্বরটি অন্য একজন গ্রাহকের প্রোফাইলে ইতোমধ্যে ব্যবহৃত হয়েছে!');
+				}
+			}
+
+			await db
+				.update(schema.customers)
+				.set({
+					name: cleanName,
+					phone: cleanPhone,
+					email: cleanEmail,
+					address: cleanAddress,
+					city: cleanCity,
+					district: cleanDistrict,
+					riskLevel,
+					internalNotes,
+					updatedAt: new Date()
+				})
+				.where(eq(schema.customers.id, payload.id));
+
+			return { id: payload.id, success: true };
+		} else {
+			// Check duplicate phone
+			const existingPhone = await db
+				.select({ id: schema.customers.id })
+				.from(schema.customers)
+				.where(eq(schema.customers.phone, cleanPhone))
+				.get();
+
+			if (existingPhone) {
+				throw new Error('এই মোবাইল নম্বর দিয়ে ইতোমধ্যে একজন গ্রাহক নিবন্ধিত রয়েছেন!');
+			}
+
+			const newId = crypto.randomUUID();
+			await db.insert(schema.customers).values({
+				id: newId,
+				name: cleanName,
+				phone: cleanPhone,
+				email: cleanEmail,
+				address: cleanAddress,
+				city: cleanCity,
+				district: cleanDistrict,
+				totalOrders: 0,
+				deliveredOrders: 0,
+				cancelledOrders: 0,
+				returnedOrders: 0,
+				totalSpent: 0,
+				successRate: 100,
+				riskLevel,
+				isBanned: false,
+				internalNotes,
+				createdAt: new Date(),
+				updatedAt: new Date()
+			});
+
+			return { id: newId, success: true };
+		}
+	}
+
+	/**
+	 * Permanently delete a customer record
+	 */
+	static async deleteCustomer(db: DrizzleD1Database<typeof schema>, id: string) {
+		const existing = await db
+			.select()
+			.from(schema.customers)
+			.where(eq(schema.customers.id, id))
+			.get();
+
+		if (!existing) {
+			throw new Error('গ্রাহক খুঁজে পাওয়া যায়নি!');
+		}
+
+		await db.delete(schema.customers).where(eq(schema.customers.id, id));
+		return { success: true };
+	}
+
+	/**
+	 * Toggle ban / blacklist status of a customer
 	 */
 	static async toggleBanCustomer(
 		db: DrizzleD1Database<typeof schema>,
@@ -185,7 +337,7 @@ export class CustomerService {
 			.where(eq(schema.customers.id, id))
 			.get();
 
-		if (!customer) throw new Error('Customer not found');
+		if (!customer) throw new Error('গ্রাহক খুঁজে পাওয়া যায়নি!');
 
 		const newBannedState = !customer.isBanned;
 
@@ -193,7 +345,7 @@ export class CustomerService {
 			.update(schema.customers)
 			.set({
 				isBanned: newBannedState,
-				banReason: newBannedState ? (banReason || 'Frequent fake orders detected') : null,
+				banReason: newBannedState ? (banReason || 'নিরাপত্তা বিবেচনায় অ্যাডমিন কর্তৃক ব্যান করা হয়েছে') : null,
 				updatedAt: new Date()
 			})
 			.where(eq(schema.customers.id, id));
@@ -232,47 +384,143 @@ export class CustomerService {
 	}
 
 	/**
-	 * Manually create a customer profile
+	 * Returns real orders placed by this customer (by phone or customerId)
 	 */
-	static async createCustomer(
-		db: DrizzleD1Database<typeof schema>,
-		payload: {
-			name: string;
-			phone: string;
-			email?: string;
-			address: string;
-			city?: string;
-			riskLevel?: 'safe' | 'moderate' | 'high_risk';
-			internalNotes?: string;
-		}
-	) {
-		const newCustomer: typeof schema.customers.$inferInsert = {
-			id: crypto.randomUUID(),
-			name: payload.name.trim(),
-			phone: payload.phone.trim(),
-			email: payload.email?.trim() || null,
-			address: payload.address.trim(),
-			city: payload.city?.trim() || 'ঢাকা',
-			district: payload.city?.trim() || 'ঢাকা',
-			totalOrders: 1,
-			deliveredOrders: 1,
-			cancelledOrders: 0,
-			returnedOrders: 0,
-			totalSpent: 1200,
-			successRate: 100,
-			riskLevel: payload.riskLevel || 'safe',
-			isBanned: false,
-			internalNotes: payload.internalNotes?.trim() || null,
-			createdAt: new Date(),
-			updatedAt: new Date()
-		};
+	static async getCustomerOrders(db: DrizzleD1Database<typeof schema>, phoneOrId: string) {
+		try {
+			const clean = phoneOrId.trim();
+			const orders = await db
+				.select()
+				.from(schema.orders)
+				.where(
+					or(
+						eq(schema.orders.customerPhone, clean),
+						eq(schema.orders.customerId, clean)
+					)
+				)
+				.orderBy(desc(schema.orders.createdAt))
+				.all();
 
-		await db.insert(schema.customers).values(newCustomer);
-		return newCustomer;
+			return orders.map((o) => ({
+				id: o.id,
+				orderNumber: o.orderNumber,
+				customerName: o.customerName,
+				customerPhone: o.customerPhone,
+				shippingAddress: o.shippingAddress,
+				status: o.status,
+				total: o.total,
+				items: typeof o.items === 'string' ? JSON.parse(o.items || '[]') : o.items,
+				trackingCode: o.trackingCode,
+				courierProvider: o.courierProvider,
+				createdAt: o.createdAt
+			}));
+		} catch (error) {
+			console.error('Error in CustomerService.getCustomerOrders:', error);
+			return [];
+		}
 	}
 
 	/**
-	 * List newsletter subscribers with fallback
+	 * Scans real orders table and syncs customer profiles + real lifetime stats
+	 */
+	static async syncFromRealOrders(db: DrizzleD1Database<typeof schema>) {
+		try {
+			const allOrders = await db
+				.select()
+				.from(schema.orders)
+				.where(eq(schema.orders.isTrashed, false))
+				.orderBy(desc(schema.orders.createdAt))
+				.all();
+
+			if (!allOrders || allOrders.length === 0) return 0;
+
+			// Group orders by customerPhone
+			const customerMap = new Map<string, typeof allOrders>();
+			for (const order of allOrders) {
+				const phone = (order.customerPhone || '').trim();
+				if (!phone) continue;
+				if (!customerMap.has(phone)) {
+					customerMap.set(phone, []);
+				}
+				customerMap.get(phone)!.push(order);
+			}
+
+			let syncedCount = 0;
+
+			for (const [phone, orders] of customerMap.entries()) {
+				const latestOrder = orders[0];
+				const totalOrders = orders.length;
+				const deliveredOrders = orders.filter((o) => o.status === 'delivered').length;
+				const cancelledOrders = orders.filter((o) => o.status === 'cancelled').length;
+				const returnedOrders = orders.filter((o) => o.status === 'returned').length;
+
+				// Calculate total spent on non-cancelled, non-returned orders
+				const totalSpent = orders
+					.filter((o) => !['cancelled'].includes(o.status))
+					.reduce((sum, o) => sum + (o.total || 0), 0);
+
+				// Delivery success rate
+				const completedCount = deliveredOrders + cancelledOrders + returnedOrders;
+				const successRate =
+					completedCount > 0
+						? Math.round((deliveredOrders / completedCount) * 100)
+						: 100;
+
+				const existing = await db
+					.select()
+					.from(schema.customers)
+					.where(eq(schema.customers.phone, phone))
+					.get();
+
+				if (existing) {
+					await db
+						.update(schema.customers)
+						.set({
+							name: existing.name || latestOrder.customerName || 'গ্রাহক',
+							address: existing.address || latestOrder.shippingAddress || 'ঢাকা',
+							city: existing.city || (latestOrder.deliveryArea === 'inside_dhaka' ? 'ঢাকা' : 'ঢাকার বাইরে'),
+							totalOrders,
+							deliveredOrders,
+							cancelledOrders,
+							returnedOrders,
+							totalSpent,
+							successRate,
+							updatedAt: new Date()
+						})
+						.where(eq(schema.customers.id, existing.id));
+				} else {
+					await db.insert(schema.customers).values({
+						id: crypto.randomUUID(),
+						phone,
+						name: latestOrder.customerName || 'গ্রাহক',
+						email: latestOrder.customerEmail || null,
+						address: latestOrder.shippingAddress || 'ঢাকা',
+						city: latestOrder.deliveryArea === 'inside_dhaka' ? 'ঢাকা' : 'ঢাকার বাইরে',
+						district: 'ঢাকা',
+						totalOrders,
+						deliveredOrders,
+						cancelledOrders,
+						returnedOrders,
+						totalSpent,
+						successRate,
+						riskLevel: 'safe',
+						isBanned: false,
+						createdAt: new Date(),
+						updatedAt: new Date()
+					});
+				}
+				syncedCount++;
+			}
+
+			return syncedCount;
+		} catch (error) {
+			console.error('Error syncing customers from orders:', error);
+			return 0;
+		}
+	}
+
+	/**
+	 * List newsletter subscribers
 	 */
 	static async listNewsletter(db: DrizzleD1Database<typeof schema>) {
 		try {
@@ -285,107 +533,15 @@ export class CustomerService {
 	}
 
 	/**
-	 * Seed initial customers from orders or defaults
+	 * Delete a newsletter subscriber
 	 */
-	static async seedInitialCustomers(db: DrizzleD1Database<typeof schema>) {
-		const seedData = [
-			{
-				name: 'আহমেদ জুবায়ের',
-				phone: '01711223344',
-				email: 'ahmed.jubayer@gmail.com',
-				address: 'হাউজ #১২, রোড #৪, ধানমন্ডি, ঢাকা',
-				city: 'ঢাকা',
-				totalOrders: 6,
-				deliveredOrders: 6,
-				cancelledOrders: 0,
-				totalSpent: 8450,
-				successRate: 100,
-				riskLevel: 'safe',
-				isBanned: false
-			},
-			{
-				name: 'তাসনিম আক্তার',
-				phone: '01822334455',
-				email: 'tasnim.aktar@yahoo.com',
-				address: 'ফ্ল্যাট ৪বি, বনানী ডিওএইচএস, ঢাকা',
-				city: 'ঢাকা',
-				totalOrders: 4,
-				deliveredOrders: 4,
-				cancelledOrders: 0,
-				totalSpent: 6200,
-				successRate: 100,
-				riskLevel: 'safe',
-				isBanned: false
-			},
-			{
-				name: 'মাহমুদুল হক',
-				phone: '01933445566',
-				email: 'mahmud.haque@gmail.com',
-				address: 'জিইসি মোড়, চট্টগ্রাম',
-				city: 'চট্টগ্রাম',
-				totalOrders: 3,
-				deliveredOrders: 3,
-				cancelledOrders: 0,
-				totalSpent: 4150,
-				successRate: 100,
-				riskLevel: 'safe',
-				isBanned: false
-			},
-			{
-				name: 'রাকিব হাসান',
-				phone: '01644556677',
-				email: 'rakib.hasan@outlook.com',
-				address: 'উপশহর ব্লক-বি, সিলেট',
-				city: 'সিলেট',
-				totalOrders: 2,
-				deliveredOrders: 2,
-				cancelledOrders: 0,
-				totalSpent: 2890,
-				successRate: 100,
-				riskLevel: 'safe',
-				isBanned: false
-			},
-			{
-				name: 'শরীফুল ইসলাম',
-				phone: '01555667788',
-				email: 'shariful.bd@gmail.com',
-				address: 'আগ্রাবাদ কমার্শিয়াল এরিয়া, চট্টগ্রাম',
-				city: 'চট্টগ্রাম',
-				totalOrders: 3,
-				deliveredOrders: 1,
-				cancelledOrders: 2,
-				totalSpent: 1450,
-				successRate: 33,
-				riskLevel: 'high_risk',
-				isBanned: false
-			}
-		];
-
-		for (const cust of seedData) {
-			try {
-				await db
-					.insert(schema.customers)
-					.values({
-						id: crypto.randomUUID(),
-						name: cust.name,
-						phone: cust.phone,
-						email: cust.email,
-						address: cust.address,
-						city: cust.city,
-						totalOrders: cust.totalOrders,
-						deliveredOrders: cust.deliveredOrders,
-						cancelledOrders: cust.cancelledOrders,
-						totalSpent: cust.totalSpent,
-						successRate: cust.successRate,
-						riskLevel: cust.riskLevel,
-						isBanned: cust.isBanned,
-						createdAt: new Date(),
-						updatedAt: new Date()
-					})
-					.onConflictDoNothing();
-			} catch (e) {
-				console.error(`Failed to seed customer ${cust.name}:`, e);
-			}
+	static async deleteNewsletter(db: DrizzleD1Database<typeof schema>, id: string) {
+		try {
+			await db.delete(schema.newsletter).where(eq(schema.newsletter.id, id));
+			return { success: true };
+		} catch (error) {
+			console.error('Error deleting newsletter subscriber:', error);
+			throw error;
 		}
 	}
 }

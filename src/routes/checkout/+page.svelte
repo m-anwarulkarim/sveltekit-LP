@@ -83,11 +83,14 @@
 		return `৳${amount.toLocaleString('en-BD')}`;
 	}
 
-	// Dynamic delivery charge based on district and threshold
+	// Dynamic delivery charge based on productSettings, district and storeConfig
 	const deliveryFee = $derived.by(() => {
+		if (data?.productSettings?.enableDeliveryCharge === false) return 0;
 		if (cart.subtotal === 0) return 0;
-		if (cart.subtotal >= 600) return 0; // Free delivery over 600 BDT
-		return district === 'dhaka' ? 60 : 120;
+		if (cart.subtotal >= (data?.storeConfig?.freeShippingThreshold || 600)) return 0; // Free delivery over threshold
+		return district === 'dhaka'
+			? (data?.storeConfig?.insideDhakaCharge || 60)
+			: (data?.storeConfig?.outsideDhakaCharge || 120);
 	});
 
 	const grandTotal = $derived(

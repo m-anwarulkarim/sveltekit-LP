@@ -27,6 +27,7 @@
 	} from 'lucide-svelte';
 	import { confirmModal } from '#lib/stores/confirm.svelte';
 	import { toast } from 'svelte-sonner';
+	import { invalidateAll } from '$app/navigation';
 
 	let { data }: { data?: any } = $props();
 
@@ -141,6 +142,7 @@
 				method: 'POST',
 				body: fd
 			});
+			await invalidateAll();
 		} catch (error) {
 			console.error('Failed to unblock on server:', error);
 		}
@@ -173,6 +175,7 @@
 				method: 'POST',
 				body: fd
 			});
+			await invalidateAll();
 		} catch (e) {
 			console.error('Failed to bulk unblock on server:', e);
 		}
@@ -238,6 +241,7 @@
 			manualPhone = '';
 			manualDeviceId = '';
 			showToast(`'${targetIp !== '127.0.0.1' ? targetIp : targetPhone}' সফলভাবে ব্লকলিস্টে যুক্ত করা হয়েছে!`);
+			await invalidateAll();
 		} catch (error) {
 			console.error('Error blocking IP:', error);
 			showToast('আইপি ব্লক করতে সমস্যা হয়েছে');
@@ -281,6 +285,7 @@
 			});
 
 			showToast('ব্লক রেকর্ড সফলভাবে আপডেট করা হয়েছে!');
+			await invalidateAll();
 			editItem = null;
 		} catch (err) {
 			console.error('Failed to update block:', err);

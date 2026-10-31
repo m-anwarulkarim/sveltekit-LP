@@ -56,6 +56,14 @@ export const actions: Actions = {
 				.map((s) => s.trim())
 				.filter(Boolean);
 
+			const galleryImagesRaw = data.get('galleryImages')?.toString() || '[]';
+			let galleryImages: string[] = [];
+			try {
+				galleryImages = JSON.parse(galleryImagesRaw);
+			} catch {
+				galleryImages = [];
+			}
+
 			if (!title) {
 				return fail(400, { message: 'ল্যান্ডিং পেজের শিরোনাম লিখুন' });
 			}
@@ -72,7 +80,8 @@ export const actions: Actions = {
 				countdownMinutes,
 				customPrice,
 				customOriginalPrice,
-				bulletPoints: bulletPoints.length > 0 ? bulletPoints : undefined
+				bulletPoints: bulletPoints.length > 0 ? bulletPoints : undefined,
+				galleryImages
 			});
 
 			return { success: true, message: 'ল্যান্ডিং পেজ সফলভাবে আপডেট করা হয়েছে!' };

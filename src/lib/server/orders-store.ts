@@ -23,6 +23,7 @@ export function updateLiveOrderStatus(orderId: string, newStatus: string, note?:
 			const updated: any = {
 				...o,
 				status: newStatus,
+				isTrashed: false,
 				updatedAt: new Date().toISOString()
 			};
 			if (newStatus === 'confirmed' || newStatus === 'processing') {

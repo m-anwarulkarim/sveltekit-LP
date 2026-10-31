@@ -100,6 +100,8 @@
 				<ProductBuyBox
 					{product}
 					onBuyNow={() => goto('/checkout')}
+					productSettings={data?.productSettings}
+					storeConfig={data?.storeConfig}
 				/>
 			</div>
 

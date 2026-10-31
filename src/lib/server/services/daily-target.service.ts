@@ -81,16 +81,6 @@ export class DailyTargetService {
 	static async listTargets(db: DrizzleD1Database<typeof schema>): Promise<TargetViewItem[]> {
 		await this.ensureTable(db);
 		try {
-			const countRes = await db
-				.select({ count: sql<number>`count(*)` })
-				.from(schema.dailyTargets)
-				.all();
-			const totalInDb = countRes[0]?.count ?? 0;
-
-			if (totalInDb === 0) {
-				await this.seedInitialTargets(db);
-			}
-
 			const rows = await db
 				.select()
 				.from(schema.dailyTargets)
@@ -332,45 +322,5 @@ export class DailyTargetService {
 		return result;
 	}
 
-	/**
-	 * Seeds initial realistic targets if table is empty
-	 */
-	static async seedInitialTargets(db: DrizzleD1Database<typeof schema>) {
-		const today = new Date();
-		const pad = (n: number) => String(n).padStart(2, '0');
-		const formatDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
-		const startCurrent = new Date(today);
-		startCurrent.setDate(today.getDate() - 3);
-
-		const endCurrent = new Date(today);
-		endCurrent.setDate(today.getDate() + 7);
-
-		const seeds = [
-			{
-				title: 'Mega Sales Target',
-				startDate: formatDate(startCurrent),
-				endDate: formatDate(endCurrent),
-				targetAmount: 500000
-			}
-		];
-
-		for (const item of seeds) {
-			try {
-				await db.insert(schema.dailyTargets).values({
-					id: crypto.randomUUID(),
-					title: item.title,
-					startDate: item.startDate,
-					endDate: item.endDate,
-					targetAmount: item.targetAmount,
-					consumedAmount: 0,
-					status: 'active',
-					createdAt: new Date(),
-					updatedAt: new Date()
-				});
-			} catch (e) {
-				console.error(`Failed to seed target ${item.title}:`, e);
-			}
-		}
-	}
 }

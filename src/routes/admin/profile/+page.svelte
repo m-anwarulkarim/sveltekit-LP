@@ -19,12 +19,12 @@
 	// Reactive Profile State
 	let profile = $derived(data?.profile || {});
 	let adminId = $derived(profile.id || '1');
-	let name = $state('Thecolorlighthouse');
-	let username = $state('thecolorlighthouse');
-	let phoneNumber = $state('01780081623');
-	let emailAddress = $state('contact@thecolorlighthouse.com');
+	let name = $state(data?.profile?.name || 'Thecolorlighthouse');
+	let username = $state(data?.profile?.username || 'thecolorlighthouse');
+	let phoneNumber = $state(data?.profile?.phone || '01780081623');
+	let emailAddress = $state(data?.profile?.email || 'contact@thecolorlighthouse.com');
 	let role = $derived(profile.role || 'OWNER');
-	let avatarImage = $state<string | null>(null);
+	let avatarImage = $state<string | null>(data?.profile?.avatarUrl || null);
 
 	// Synchronize when server updates data
 	$effect(() => {

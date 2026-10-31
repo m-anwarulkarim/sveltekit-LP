@@ -199,9 +199,52 @@ class CartStore {
 		return Math.round((this.subtotal * this.discountPercent) / 100);
 	}
 
+	deliveryConfig = $state<{
+		insideDhakaCharge: number;
+		outsideDhakaCharge: number;
+		subAreaCharge?: number;
+		enableFreeDelivery?: boolean;
+		freeShippingThreshold?: number;
+	}>({
+		insideDhakaCharge: 60,
+		outsideDhakaCharge: 120,
+		subAreaCharge: 100,
+		enableFreeDelivery: false,
+		freeShippingThreshold: 2000
+	});
+
+	selectedArea = $state<'inside_dhaka' | 'outside_dhaka' | 'sub_area'>('inside_dhaka');
+
+	setDeliveryConfig(cfg: any) {
+		if (!cfg) return;
+		this.deliveryConfig = {
+			insideDhakaCharge: Number(cfg.insideDhakaCharge) || 60,
+			outsideDhakaCharge: Number(cfg.outsideDhakaCharge) || 120,
+			subAreaCharge: Number(cfg.subAreaCharge) || 100,
+			enableFreeDelivery: Boolean(cfg.enableFreeDelivery),
+			freeShippingThreshold: Number(cfg.freeShippingThreshold) || 2000
+		};
+	}
+
+	setArea(area: 'inside_dhaka' | 'outside_dhaka' | 'sub_area') {
+		this.selectedArea = area;
+	}
+
 	get deliveryCharge() {
 		if (this.subtotal === 0) return 0;
-		return this.subtotal >= 600 ? 0 : 60;
+		if (
+			this.deliveryConfig.enableFreeDelivery &&
+			this.subtotal >= (this.deliveryConfig.freeShippingThreshold || 2000)
+		) {
+			return 0;
+		}
+		if (this.selectedArea === 'outside_dhaka') {
+			return this.deliveryConfig.outsideDhakaCharge || 120;
+		}
+		if (this.selectedArea === 'sub_area') {
+			return this.deliveryConfig.subAreaCharge || 100;
+		}
+		return this.deliveryConfig.insideDhakaCharge || 60;
 	}
 
 	get total() {

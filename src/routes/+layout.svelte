@@ -24,6 +24,9 @@
 		if (data?.user) {
 			cart.syncWithUser(data.user);
 		}
+		if (data?.storeConfig) {
+			cart.setDeliveryConfig(data.storeConfig);
+		}
 	});
 
 	afterNavigate(({ type }) => {

@@ -5,7 +5,7 @@ import { OrderService } from '#lib/server/services/order.service';
 import { addLiveOrder } from '#lib/server/orders-store';
 import { ThemeCustomizationService } from '#lib/server/services/theme-customization.service';
 import { PixelService } from '#lib/server/services/pixel.service';
-import { SettingsService } from '#lib/server/services/settings.service';
+import { SettingsService, DEFAULT_ADVANCE_PAYMENT } from '#lib/server/services/settings.service';
 import { SecurityService } from '#lib/server/services/security.service';
 
 export const load: PageServerLoad = async (event) => {
@@ -18,10 +18,16 @@ export const load: PageServerLoad = async (event) => {
 		enableBkash: false,
 		enableNagad: false
 	};
+	let advancePaymentConfig = { ...DEFAULT_ADVANCE_PAYMENT };
 
 	try {
 		const db = getDb(event.platform);
-		paymentConfig = await SettingsService.getPaymentConfig(db);
+		const [pCfg, aCfg] = await Promise.all([
+			SettingsService.getPaymentConfig(db),
+			SettingsService.getAdvancePaymentConfig(db)
+		]);
+		if (pCfg) paymentConfig = pCfg;
+		if (aCfg) advancePaymentConfig = aCfg;
 	} catch (e) {
 		console.error('Failed to load payment config for checkout:', e);
 	}
@@ -30,7 +36,8 @@ export const load: PageServerLoad = async (event) => {
 		user: event.locals.user ?? null,
 		isLoginRequired,
 		activeCheckout: themeConfig?.pageViews?.checkout || 'checkout_2',
-		paymentConfig
+		paymentConfig,
+		advancePaymentConfig
 	};
 };
 

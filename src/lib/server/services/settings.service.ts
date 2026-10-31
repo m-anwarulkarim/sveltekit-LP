@@ -5,6 +5,8 @@ import * as schema from '../db/schema';
 export interface StoreDeliveryConfig {
 	insideDhakaCharge: number;
 	outsideDhakaCharge: number;
+	subAreaCharge?: number;
+	enableFreeDelivery?: boolean;
 	freeShippingThreshold: number;
 	hotlinePhone: string;
 	storeName: string;
@@ -28,6 +30,44 @@ export const DEFAULT_WEBSITE_INFO: WebsiteInfoConfig = {
 	emails: ['support@aura.com.bd'],
 	logoUrl: '/favicon.svg',
 	faviconUrl: '/favicon.svg'
+};
+
+export interface SocialLoginConfig {
+	enableGoogleLogin: boolean;
+	googleClientId: string;
+	googleClientSecret: string;
+	enableOneTap: boolean;
+}
+
+export const DEFAULT_SOCIAL_LOGIN_CONFIG: SocialLoginConfig = {
+	enableGoogleLogin: false,
+	googleClientId: '',
+	googleClientSecret: '',
+	enableOneTap: false
+};
+
+export interface AdvancePaymentConfig {
+	enableAdvancePayment: boolean;
+	advanceType: 'fixed' | 'percentage';
+	advanceAmount: number;
+	onlyOutsideDhaka: boolean;
+	autoCancelMinutes: number;
+	bkashNumber: string;
+	nagadNumber: string;
+	rocketNumber?: string;
+	instructions: string;
+}
+
+export const DEFAULT_ADVANCE_PAYMENT: AdvancePaymentConfig = {
+	enableAdvancePayment: false,
+	advanceType: 'fixed',
+	advanceAmount: 0,
+	onlyOutsideDhaka: false,
+	autoCancelMinutes: 30,
+	bkashNumber: '',
+	nagadNumber: '',
+	rocketNumber: '',
+	instructions: 'অনুগ্রহ করে উল্লিখিত নাম্বারে সেন্ড মানি বা পেমেন্ট করে ট্রানজেকশন আইডি প্রদান করুন।'
 };
 
 export interface PaymentConfig {
@@ -182,10 +222,32 @@ export class SettingsService {
 	): Promise<StoreDeliveryConfig> {
 		try {
 			const deliverySettings = await this.getSettingsGroup(db, 'delivery');
+			const insideDhaka =
+				deliverySettings.inside_dhaka_charge !== undefined
+					? Number(deliverySettings.inside_dhaka_charge)
+					: 60;
+			const outsideDhaka =
+				deliverySettings.outside_dhaka_charge !== undefined
+					? Number(deliverySettings.outside_dhaka_charge)
+					: 120;
+			const subArea =
+				deliverySettings.sub_area_charge !== undefined
+					? Number(deliverySettings.sub_area_charge)
+					: 100;
+			const enableFree =
+				deliverySettings.enable_free_delivery === 'true' ||
+				deliverySettings.enable_free_delivery === true;
+			const threshold =
+				deliverySettings.free_shipping_threshold !== undefined
+					? Number(deliverySettings.free_shipping_threshold)
+					: 2000;
+
 			return {
-				insideDhakaCharge: Number(deliverySettings.inside_dhaka_charge) || 60,
-				outsideDhakaCharge: Number(deliverySettings.outside_dhaka_charge) || 120,
-				freeShippingThreshold: Number(deliverySettings.free_shipping_threshold) || 600,
+				insideDhakaCharge: insideDhaka,
+				outsideDhakaCharge: outsideDhaka,
+				subAreaCharge: subArea,
+				enableFreeDelivery: enableFree,
+				freeShippingThreshold: threshold,
 				hotlinePhone: String(deliverySettings.hotline_phone || '01860-229546'),
 				storeName: String(deliverySettings.store_name || 'AURA Store')
 			};
@@ -193,11 +255,51 @@ export class SettingsService {
 			return {
 				insideDhakaCharge: 60,
 				outsideDhakaCharge: 120,
-				freeShippingThreshold: 600,
+				subAreaCharge: 100,
+				enableFreeDelivery: false,
+				freeShippingThreshold: 2000,
 				hotlinePhone: '01860-229546',
 				storeName: 'AURA Store'
 			};
 		}
+	}
+
+	/**
+	 * Persists delivery and shipping charge configuration to D1 store_settings
+	 */
+	static async saveStoreDeliveryConfig(
+		db: DrizzleD1Database<typeof schema>,
+		config: Partial<StoreDeliveryConfig>
+	) {
+		const entries: [string, any][] = [];
+
+		if (config.insideDhakaCharge !== undefined) {
+			entries.push(['inside_dhaka_charge', Number(config.insideDhakaCharge) || 0]);
+		}
+		if (config.outsideDhakaCharge !== undefined) {
+			entries.push(['outside_dhaka_charge', Number(config.outsideDhakaCharge) || 0]);
+		}
+		if (config.subAreaCharge !== undefined) {
+			entries.push(['sub_area_charge', Number(config.subAreaCharge) || 0]);
+		}
+		if (config.enableFreeDelivery !== undefined) {
+			entries.push(['enable_free_delivery', Boolean(config.enableFreeDelivery)]);
+		}
+		if (config.freeShippingThreshold !== undefined) {
+			entries.push(['free_shipping_threshold', Number(config.freeShippingThreshold) || 0]);
+		}
+		if (config.hotlinePhone) {
+			entries.push(['hotline_phone', config.hotlinePhone]);
+		}
+		if (config.storeName) {
+			entries.push(['store_name', config.storeName]);
+		}
+
+		for (const [key, val] of entries) {
+			await this.setSetting(db, 'delivery', key, val);
+		}
+
+		return await this.getStoreDeliveryConfig(db);
 	}
 
 	/**
@@ -422,6 +524,104 @@ export class SettingsService {
 		}
 
 		return { success: true };
+	}
+
+	/**
+	 * Resolves active advance payment configuration
+	 */
+	static async getAdvancePaymentConfig(
+		db: DrizzleD1Database<typeof schema>
+	): Promise<AdvancePaymentConfig> {
+		try {
+			const s = await this.getSettingsGroup(db, 'advance_payment');
+			return {
+				enableAdvancePayment: Boolean(s.enable_advance_payment),
+				advanceType: s.advance_type === 'percentage' ? 'percentage' : 'fixed',
+				advanceAmount: Number(s.advance_amount) || 0,
+				onlyOutsideDhaka: Boolean(s.only_outside_dhaka),
+				autoCancelMinutes: Number(s.auto_cancel_minutes) || 30,
+				bkashNumber: String(s.bkash_number || ''),
+				nagadNumber: String(s.nagad_number || ''),
+				rocketNumber: String(s.rocket_number || ''),
+				instructions: String(
+					s.instructions ||
+						'অনুগ্রহ করে উল্লিখিত নাম্বারে সেন্ড মানি বা পেমেন্ট করে ট্রানজেকশন আইডি প্রদান করুন।'
+				)
+			};
+		} catch (e) {
+			console.error('Failed to get advance payment config:', e);
+			return { ...DEFAULT_ADVANCE_PAYMENT };
+		}
+	}
+
+	/**
+	 * Persists complete Advance Payment configuration into D1
+	 */
+	static async saveAdvancePaymentConfig(
+		db: DrizzleD1Database<typeof schema>,
+		config: Partial<AdvancePaymentConfig>
+	) {
+		const mapping: [string, any][] = [
+			['enable_advance_payment', Boolean(config.enableAdvancePayment)],
+			['advance_type', config.advanceType === 'percentage' ? 'percentage' : 'fixed'],
+			['advance_amount', Number(config.advanceAmount) || 0],
+			['only_outside_dhaka', Boolean(config.onlyOutsideDhaka)],
+			['auto_cancel_minutes', Number(config.autoCancelMinutes) || 30],
+			['bkash_number', String(config.bkashNumber || '').trim()],
+			['nagad_number', String(config.nagadNumber || '').trim()],
+			['rocket_number', String(config.rocketNumber || '').trim()],
+			['instructions', String(config.instructions || '').trim()]
+		];
+
+		for (const [key, val] of mapping) {
+			await this.setSetting(db, 'advance_payment', key, val);
+		}
+
+		// Keep product group's enable_advance_payment in sync
+		if (config.enableAdvancePayment !== undefined) {
+			await this.setSetting(db, 'product', 'enable_advance_payment', Boolean(config.enableAdvancePayment));
+		}
+
+		return await this.getAdvancePaymentConfig(db);
+	}
+
+	/**
+	 * Retrieves Social Login (Google) settings from D1
+	 */
+	static async getSocialLoginConfig(db: DrizzleD1Database<typeof schema>): Promise<SocialLoginConfig> {
+		try {
+			const s = await this.getSettingsGroup(db, 'social_login');
+			return {
+				enableGoogleLogin: Boolean(s.enable_google_login),
+				googleClientId: String(s.google_client_id || ''),
+				googleClientSecret: String(s.google_client_secret || ''),
+				enableOneTap: Boolean(s.enable_one_tap)
+			};
+		} catch (e) {
+			console.error('Failed to get social login config:', e);
+			return { ...DEFAULT_SOCIAL_LOGIN_CONFIG };
+		}
+	}
+
+	/**
+	 * Persists Social Login (Google) configuration into D1
+	 */
+	static async saveSocialLoginConfig(
+		db: DrizzleD1Database<typeof schema>,
+		config: Partial<SocialLoginConfig>
+	): Promise<SocialLoginConfig> {
+		const mapping: [string, any][] = [
+			['enable_google_login', Boolean(config.enableGoogleLogin)],
+			['google_client_id', String(config.googleClientId || '').trim()],
+			['google_client_secret', String(config.googleClientSecret || '').trim()],
+			['enable_one_tap', Boolean(config.enableOneTap)]
+		];
+
+		for (const [key, val] of mapping) {
+			await this.setSetting(db, 'social_login', key, val);
+		}
+
+		return await this.getSocialLoginConfig(db);
 	}
 }
 

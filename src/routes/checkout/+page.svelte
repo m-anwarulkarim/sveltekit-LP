@@ -87,10 +87,19 @@
 	const deliveryFee = $derived.by(() => {
 		if (data?.productSettings?.enableDeliveryCharge === false) return 0;
 		if (cart.subtotal === 0) return 0;
-		if (cart.subtotal >= (data?.storeConfig?.freeShippingThreshold || 600)) return 0; // Free delivery over threshold
-		return district === 'dhaka'
-			? (data?.storeConfig?.insideDhakaCharge || 60)
-			: (data?.storeConfig?.outsideDhakaCharge || 120);
+		if (
+			data?.storeConfig?.enableFreeDelivery &&
+			cart.subtotal >= (data?.storeConfig?.freeShippingThreshold || 2000)
+		) {
+			return 0; // Free delivery over threshold
+		}
+		if (district === 'dhaka') {
+			return data?.storeConfig?.insideDhakaCharge ?? 60;
+		}
+		if (district === 'sub_area' || district === 'savar' || district === 'gazipur' || district === 'narayanganj') {
+			return data?.storeConfig?.subAreaCharge ?? 100;
+		}
+		return data?.storeConfig?.outsideDhakaCharge ?? 120;
 	});
 
 	const grandTotal = $derived(

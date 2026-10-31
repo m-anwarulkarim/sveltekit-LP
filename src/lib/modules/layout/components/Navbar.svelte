@@ -172,24 +172,28 @@
 
 				<!-- Brand Identity -->
 				<a href="/" class="flex items-center gap-2.5 group">
-					<div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#5845eb] via-[#7c3aed] to-[#9333ea] p-[1.5px] shadow-sm shadow-indigo-600/20 group-hover:scale-105 transition-transform shrink-0">
-						<div class="w-full h-full bg-white rounded-[14px] flex items-center justify-center">
-							<Flame class="w-5 h-5 text-[#5845eb]" />
+					{#if page.data?.websiteInfo?.logoUrl}
+						<img src={page.data.websiteInfo.logoUrl} alt={page.data.websiteInfo.websiteName || 'AURA'} class="h-8 sm:h-9 max-w-[130px] sm:max-w-[170px] object-contain" />
+					{:else}
+						<div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#5845eb] via-[#7c3aed] to-[#9333ea] p-[1.5px] shadow-sm shadow-indigo-600/20 group-hover:scale-105 transition-transform shrink-0">
+							<div class="w-full h-full bg-white rounded-[14px] flex items-center justify-center">
+								<Flame class="w-5 h-5 text-[#5845eb]" />
+							</div>
 						</div>
-					</div>
-					<div class="flex flex-col">
-						<div class="flex items-center gap-1.5 leading-tight">
-							<span class="font-black text-lg sm:text-xl text-slate-900 font-['Outfit'] tracking-tight">
-								AURA
+						<div class="flex flex-col">
+							<div class="flex items-center gap-1.5 leading-tight">
+								<span class="font-black text-lg sm:text-xl text-slate-900 font-['Outfit'] tracking-tight">
+									{page.data?.websiteInfo?.websiteName || 'AURA'}
+								</span>
+								<Badge variant="purple" class="hidden sm:inline-block px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-indigo-50 text-[#5845eb] border border-indigo-200">
+									ORIGINAL
+								</Badge>
+							</div>
+							<span class="text-[10.5px] text-slate-500 font-medium -mt-0.5 hidden xs:block">
+								{page.data?.websiteInfo?.shortDescription || 'Next-Gen E-Commerce'}
 							</span>
-							<Badge variant="purple" class="hidden sm:inline-block px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-indigo-50 text-[#5845eb] border border-indigo-200">
-								ORIGINAL
-							</Badge>
 						</div>
-						<span class="text-[10.5px] text-slate-500 font-medium -mt-0.5 hidden xs:block">
-							Next-Gen E-Commerce
-						</span>
-					</div>
+					{/if}
 				</a>
 			</div>
 

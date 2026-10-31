@@ -223,7 +223,10 @@
 
 					<!-- SLIDE TYPE 1: EXACT CARTUP "BIG BRAND DAYS" (MATCHING USER REFERENCE IMAGE 2) -->
 					{:else if slide.type === 'brand-campaign'}
-						<div class="w-full h-full flex items-center justify-between px-3.5 sm:px-8 md:px-12 relative z-10">
+						<a
+							href={slide.linkUrl}
+							class="w-full h-full flex items-center justify-between px-3.5 sm:px-8 md:px-12 relative z-10 cursor-pointer block select-none group"
+						>
 							
 							<!-- Left Side: 3D "BIG BRAND DAYS", Deals ribbon & Free Delivery -->
 							<div class="max-w-[48%] sm:max-w-[44%] md:max-w-[40%] flex flex-col justify-center items-start space-y-1.5 sm:space-y-3">
@@ -347,11 +350,14 @@
 
 							</div>
 
-						</div>
+						</a>
 
 					<!-- SLIDE TYPE 2: PRODUCT SHOWCASE WITH HIGH-CONVERSION RIBBONS -->
 					{:else}
-						<div class="w-full h-full flex items-center justify-between px-3.5 sm:px-8 md:px-12 relative z-10">
+						<a
+							href={slide.linkUrl}
+							class="w-full h-full flex items-center justify-between px-3.5 sm:px-8 md:px-12 relative z-10 cursor-pointer block select-none group"
+						>
 							
 							<!-- Left Side: Copy & Promotional Ribbons -->
 							<div class="max-w-[60%] sm:max-w-md space-y-1 sm:space-y-2">
@@ -402,7 +408,7 @@
 								</div>
 							</div>
 
-						</div>
+						</a>
 					{/if}
 
 				</div>

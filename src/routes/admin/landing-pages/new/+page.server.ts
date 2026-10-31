@@ -54,6 +54,20 @@ export const actions: Actions = {
 				galleryImages = [];
 			}
 
+			const packagesRaw = data.get('packages')?.toString() || '[]';
+			let packages: any[] = [];
+			try {
+				packages = JSON.parse(packagesRaw);
+			} catch {
+				packages = [];
+			}
+
+			const trustBox1Title = data.get('trustBox1Title')?.toString() || undefined;
+			const trustBox1Desc = data.get('trustBox1Desc')?.toString() || undefined;
+			const trustBox2Title = data.get('trustBox2Title')?.toString() || undefined;
+			const trustBox2Desc = data.get('trustBox2Desc')?.toString() || undefined;
+			const contactPhone = data.get('contactPhone')?.toString() || undefined;
+
 			if (!title) {
 				return fail(400, { message: 'ল্যান্ডিং পেজের শিরোনাম লিখুন' });
 			}
@@ -67,12 +81,16 @@ export const actions: Actions = {
 				if (!slug) slug = `offer-${Date.now()}`;
 			}
 
+			const template = data.get('template')?.toString() || 'style_1_animated';
+			const status = (data.get('status')?.toString() || 'Published') as 'Published' | 'Draft';
+
 			await LandingPageService.createLandingPage(db, {
 				title,
 				slug,
 				productId,
 				tag,
-				template: 'style_1_animated',
+				template,
+				status,
 				headline,
 				subheadline,
 				offerBadge,
@@ -80,6 +98,12 @@ export const actions: Actions = {
 				customPrice,
 				customOriginalPrice,
 				bulletPoints: bulletPoints.length > 0 ? bulletPoints : undefined,
+				packages: packages,
+				trustBox1Title,
+				trustBox1Desc,
+				trustBox2Title,
+				trustBox2Desc,
+				contactPhone,
 				galleryImages
 			});
 

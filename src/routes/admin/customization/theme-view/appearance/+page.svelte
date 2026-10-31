@@ -7,28 +7,22 @@
 	let { data, form }: { data: any; form: any } = $props();
 
 	// Initialize reactive states from server data
-	let appearance = $derived(data?.themeConfig?.appearance || {
-		colors: { primary: '#e8007c', secondary: '#00c153', tertiary: '#ff00ae' },
-		dashboardStyle: 'professional',
-		searchKeywords: 'lipstick, foundation, face serum, moisturizer',
-		checkoutLanguage: 'bangla'
-	});
-
-	let primaryColor = $state(appearance.colors.primary);
-	let secondaryColor = $state(appearance.colors.secondary);
-	let tertiaryColor = $state(appearance.colors.tertiary);
-	let dashboardStyle = $state(appearance.dashboardStyle);
-	let searchKeywords = $state(appearance.searchKeywords);
-	let checkoutLanguage = $state(appearance.checkoutLanguage);
+	let primaryColor = $state(data?.themeConfig?.appearance?.colors?.primary || '#e8007c');
+	let secondaryColor = $state(data?.themeConfig?.appearance?.colors?.secondary || '#00c153');
+	let tertiaryColor = $state(data?.themeConfig?.appearance?.colors?.tertiary || '#ff00ae');
+	let dashboardStyle = $state(data?.themeConfig?.appearance?.dashboardStyle || 'professional');
+	let searchKeywords = $state(data?.themeConfig?.appearance?.searchKeywords || 'lipstick, foundation, face serum, moisturizer');
+	let checkoutLanguage = $state(data?.themeConfig?.appearance?.checkoutLanguage || 'bangla');
 
 	$effect(() => {
-		if (appearance) {
-			primaryColor = appearance.colors.primary;
-			secondaryColor = appearance.colors.secondary;
-			tertiaryColor = appearance.colors.tertiary;
-			dashboardStyle = appearance.dashboardStyle;
-			searchKeywords = appearance.searchKeywords;
-			checkoutLanguage = appearance.checkoutLanguage;
+		if (data?.themeConfig?.appearance) {
+			const app = data.themeConfig.appearance;
+			primaryColor = app.colors?.primary || '#e8007c';
+			secondaryColor = app.colors?.secondary || '#00c153';
+			tertiaryColor = app.colors?.tertiary || '#ff00ae';
+			dashboardStyle = app.dashboardStyle || 'professional';
+			searchKeywords = app.searchKeywords || '';
+			checkoutLanguage = app.checkoutLanguage || 'bangla';
 		}
 	});
 
@@ -242,6 +236,23 @@
 				<span>Italian Checkout</span>
 			</button>
 		</div>
+	</div>
+
+	<!-- Bottom Save Bar (Spans full width) -->
+	<div class="lg:col-span-2 flex items-center justify-end gap-3 pt-2">
+		<button
+			type="submit"
+			disabled={isSubmitting}
+			class="rounded-2xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white px-6 py-2.5 text-xs font-bold flex items-center gap-2 shadow-md shadow-blue-500/25 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+		>
+			{#if isSubmitting}
+				<Loader2 class="w-4 h-4 animate-spin" />
+				<span>সংরক্ষণ হচ্ছে...</span>
+			{:else}
+				<Check class="w-4 h-4 stroke-[2.5]" />
+				<span>অ্যাপিয়ারেন্স সেভ করুন</span>
+			{/if}
+		</button>
 	</div>
 </form>
 

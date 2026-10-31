@@ -2,6 +2,7 @@ import type { PageServerLoad, Actions } from './$types';
 import { fail } from '@sveltejs/kit';
 import { getDb } from '#lib/server/db/index';
 import { AdminProfileService } from '#lib/server/services/admin-profile.service';
+import { R2Service } from '#lib/server/services/r2.service';
 
 export const load: PageServerLoad = async ({ platform }) => {
 	try {
@@ -83,7 +84,7 @@ export const actions: Actions = {
 	updateAvatar: async ({ request, platform }) => {
 		const data = await request.formData();
 		const adminId = data.get('adminId')?.toString()?.trim();
-		const avatarUrl = data.get('avatarUrl')?.toString()?.trim();
+		let avatarUrl = data.get('avatarUrl')?.toString()?.trim();
 
 		if (!adminId || !avatarUrl) {
 			return fail(400, {
@@ -93,12 +94,18 @@ export const actions: Actions = {
 			});
 		}
 
-		if (avatarUrl.length > 500 * 1024) {
-			return fail(400, {
-				action: 'updateAvatar',
-				success: false,
-				message: 'ছবির সাইজ অনেক বড়। অনুগ্রহ করে ছোট সাইজের ছবি আপলোড করুন।'
-			});
+		// If base64 data URI is provided, upload directly to R2
+		if (avatarUrl.startsWith('data:')) {
+			try {
+				const r2Res = await R2Service.uploadBase64(avatarUrl, {
+					platform,
+					folder: 'avatars',
+					filename: `admin-${adminId}.png`
+				});
+				avatarUrl = r2Res.url;
+			} catch (e: any) {
+				console.error('Failed to upload avatar to R2:', e);
+			}
 		}
 
 		try {

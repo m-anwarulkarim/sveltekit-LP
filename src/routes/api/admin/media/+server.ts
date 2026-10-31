@@ -1,6 +1,7 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { getDb } from '#lib/server/db/index';
 import { MediaService } from '#lib/server/services/media.service';
+import { R2Service } from '#lib/server/services/r2.service';
 
 export const GET: RequestHandler = async ({ platform, url }) => {
 	const folder = url.searchParams.get('folder') || undefined;
@@ -20,10 +21,25 @@ export const GET: RequestHandler = async ({ platform, url }) => {
 export const POST: RequestHandler = async ({ request, platform }) => {
 	try {
 		const body = await request.json();
-		const { name, url, folder = 'products', size = '100 KB', dimensions = '800 x 800', mimeType } = body;
+		let { name, url, folder = 'products', size = '100 KB', dimensions = '800 x 800', mimeType } = body;
 
 		if (!url) {
 			return json({ success: false, message: 'Image URL is required' }, { status: 400 });
+		}
+
+		// If base64 data URI, upload directly to R2 to prevent D1 database bloat
+		if (url.startsWith('data:')) {
+			try {
+				const r2Res = await R2Service.uploadBase64(url, {
+					platform,
+					folder,
+					filename: name || 'image.png'
+				});
+				url = r2Res.url;
+				size = `${Math.round(r2Res.sizeBytes / 1024)} KB`;
+			} catch (e) {
+				console.error('Failed to upload base64 to R2, proceeding with url:', e);
+			}
 		}
 
 		const db = getDb(platform);

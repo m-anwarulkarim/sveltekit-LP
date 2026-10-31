@@ -284,6 +284,11 @@ export class ThemeCustomizationService {
 		preset: {
 			id: string;
 			name: string;
+			colors?: {
+				primary: string;
+				secondary: string;
+				tertiary: string;
+			};
 			components: {
 				header: string;
 				showcase: string;
@@ -300,6 +305,17 @@ export class ThemeCustomizationService {
 			productCard: preset.components.productCard,
 			footer: preset.components.footer
 		};
+
+		if (preset.colors) {
+			const updatedAppearance = {
+				...current.appearance,
+				colors: {
+					...current.appearance.colors,
+					...preset.colors
+				}
+			};
+			await this.setSetting(db, 'appearance', updatedAppearance);
+		}
 
 		const nowString = new Date().toLocaleString('en-US', {
 			month: 'short',

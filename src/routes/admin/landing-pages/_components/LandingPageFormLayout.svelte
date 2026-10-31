@@ -1,7 +1,12 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { Button, Input, Card, CardHeader, CardTitle, CardContent, Badge, Separator } from '#lib/components/ui';
 	import { toast } from 'svelte-sonner';
+	import ThemeComponentPreviewModal from '../../customization/theme-view/_components/ThemeComponentPreviewModal.svelte';
+	import Style1_ModernAnimated from '#lib/modules/landing-templates/templates/Style1_ModernAnimated.svelte';
+	import Style2_DirectCheckout from '#lib/modules/landing-templates/templates/Style2_DirectCheckout.svelte';
+	import Style3_LighthouseFunnel from '#lib/modules/landing-templates/templates/Style3_LighthouseFunnel.svelte';
 	import {
 		ArrowLeft,
 		Sparkles,
@@ -24,7 +29,9 @@
 		Trash2,
 		Star,
 		Plus,
-		RotateCcw
+		RotateCcw,
+		ShieldCheck,
+		Gift
 	} from 'lucide-svelte';
 
 	interface Props {
@@ -40,7 +47,11 @@
 	let slug = $state(landingPage?.slug || '');
 	let productId = $state(landingPage?.productId || '');
 	let tag = $state(landingPage?.tag || 'স্পেশাল অফার 🔥');
-	let template = $state(landingPage?.template || 'style_1_animated');
+	let template = $state(
+		landingPage?.template ||
+		(page?.url?.searchParams?.get('template') as string) ||
+		'style_1_animated'
+	);
 	let status = $state<'Published' | 'Draft'>(landingPage?.status || 'Published');
 
 	// Content config
@@ -61,17 +72,248 @@
 			: '১০০% প্রিমিয়াম ও অরিজিনাল কোয়ালিটি নিশ্চিত\nপণ্য হাতে পেয়ে চেক করে মূল্য পরিশোধের সুবিধা\nপছন্দ না হলে সাথে সাথে রিটার্ন সুবিধা\nসারা বাংলাদেশে দ্রুততম হোম ডেলিভারি'
 	);
 
-	// Gallery Images for Landing Page Slider
-	let initialImages: string[] = [];
-	if (landingPage?.config?.galleryImages && Array.isArray(landingPage.config.galleryImages)) {
-		initialImages = landingPage.config.galleryImages;
-	} else if (landingPage?.product?.parsedImages?.length > 0) {
-		initialImages = landingPage.product.parsedImages;
-	} else if (landingPage?.product?.image) {
-		initialImages = [landingPage.product.image];
+	// Style 2: Dedicated 4 Bullets & 3 Packages
+	let initialBullets = [
+		'১০০% খাঁটি ও সর্বোচ্চ প্রিমিয়াম কোয়ালিটি নিশ্চিত',
+		'সরাসরি ক্যাশ অন ডেলিভারি — পণ্য দেখে মূল্য পরিশোধ',
+		'পণ্য পছন্দ না হলে তাৎক্ষণিক রিটার্ন বা পরিবর্তন সুবিধা',
+		'সমগ্র বাংলাদেশে দ্রুততম হোম ডেলিভারি সুবিধা'
+	];
+	if (landingPage?.config?.bulletPoints && Array.isArray(landingPage.config.bulletPoints) && landingPage.config.bulletPoints.length > 0) {
+		initialBullets = landingPage.config.bulletPoints.slice(0, 4);
+		while (initialBullets.length < 4) initialBullets.push('');
+	}
+	let style2Bullets = $state<string[]>(initialBullets);
+
+	let initialPackages: any[] = [];
+	if (landingPage?.config?.packages && Array.isArray(landingPage.config.packages)) {
+		initialPackages = landingPage.config.packages;
+	} else if (
+		landingPage?.template === 'style_2_direct' ||
+		landingPage?.template === 'style_3_lighthouse' ||
+		page?.url?.searchParams?.get('template') === 'style_2_direct' ||
+		page?.url?.searchParams?.get('template') === 'style_3_lighthouse'
+	) {
+		initialPackages = [
+			{
+				id: 'pack_1',
+				title: '১টি প্যাকেট',
+				subtitle: 'স্ট্যান্ডার্ড প্যাকেজ',
+				freeGift: '+ ১০ পিস ফ্রি!',
+				price: 200,
+				originalPrice: 250,
+				deliveryFee: 45,
+				freeDelivery: false,
+				tag: '',
+				popular: false
+			},
+			{
+				id: 'pack_2',
+				title: '২টি প্যাকেট',
+				subtitle: 'জনপ্রিয় কম্বো (ফ্রি ডেলিভারি)',
+				freeGift: '+ ২০ পিস ফ্রি!',
+				price: 350,
+				originalPrice: 500,
+				deliveryFee: 0,
+				freeDelivery: true,
+				tag: '🔥 সেরা অফার',
+				popular: true
+			},
+			{
+				id: 'pack_3',
+				title: '৩টি প্যাকেট',
+				subtitle: 'মেগা সেভার প্যাক (ফ্রি ডেলিভারি)',
+				freeGift: '+ ৪০ পিস ফ্রি!',
+				price: 445,
+				originalPrice: 750,
+				deliveryFee: 0,
+				freeDelivery: true,
+				tag: '🚀 সর্বোচ্চ সাশ্রয়ী',
+				popular: false
+			}
+		];
+	}
+	let style2Packages = $state<any[]>(initialPackages);
+
+	function addPackage() {
+		if (style2Packages.length >= 3) {
+			toast.info('সর্বোচ্চ ৩টি প্যাকেজ যোগ করা যাবে');
+			return;
+		}
+		const idx = style2Packages.length + 1;
+		const base = Number(customPrice) || 200;
+		const origBase = Math.round(base * 1.3);
+		const newPack = {
+			id: `pack_${Date.now()}_${idx}`,
+			title: `${idx}টি প্যাকেট`,
+			subtitle: idx === 1 ? 'স্ট্যান্ডার্ড প্যাকেজ' : idx === 2 ? 'জনপ্রিয় কম্বো' : 'মেগা সেভার কম্বো',
+			freeGift: idx > 1 ? `+ ${idx * 10} পিস গিফট ফ্রি!` : '',
+			price: Math.round(base * idx * (idx === 1 ? 1 : idx === 2 ? 0.9 : 0.85)),
+			originalPrice: origBase * idx,
+			deliveryFee: idx === 1 ? 45 : 0,
+			freeDelivery: idx > 1,
+			tag: idx === 2 ? '🔥 সেরা অফার' : idx === 3 ? '🚀 মেগা সেভার' : '',
+			popular: idx === 2
+		};
+		style2Packages = [...style2Packages, newPack];
+		toast.success(`প্যাকেজ ${idx} সফলভাবে যোগ করা হয়েছে!`);
 	}
 
-	let galleryImages = $state<string[]>(initialImages);
+	function removePackage(idx: number) {
+		style2Packages = style2Packages.filter((_, i) => i !== idx);
+		toast.info('প্যাকেজটি মুছে ফেলা হয়েছে।');
+	}
+
+	function resetToDefaultPrice() {
+		style2Packages = [];
+		toast.info('সকল প্যাকেজ মুছে দেওয়া হয়েছে — এখন ডিফল্ট একক মূল্য প্রযোজ্য হবে।');
+	}
+
+	let trustBox1Title = $state(landingPage?.config?.trustBox1Title || 'নিশ্চিন্তে অর্ডার করুন');
+	let trustBox1Desc = $state(
+		landingPage?.config?.trustBox1Desc ||
+			'কোনো অগ্রিম টাকা দিতে হবে না। অর্ডার প্লেস করার পর আমাদের প্রতিনিধি ফোনে কথা বলে কনফার্ম করবেন এবং পণ্য হাতে পেয়ে দেখে টাকা পরিশোধ করবেন।'
+	);
+	let trustBox2Title = $state(landingPage?.config?.trustBox2Title || '🤝 আমাদের প্রতিশ্রুতি');
+	let trustBox2Desc = $state(
+		landingPage?.config?.trustBox2Desc ||
+			'আমরা সর্বোচ্চ কোয়ালিটি এবং সন্তুষ্টি নিশ্চিত করি। কোনো সমস্যা প্রমাণিত হলে সম্পূর্ণ পরিবর্তন অথবা মানিব্যাক গ্যারান্টি।'
+	);
+	let contactPhone = $state(landingPage?.config?.contactPhone || '01712345678');
+
+	// Template Preview Modal State
+	let isPreviewModalOpen = $state(false);
+	let previewModalTemplate = $state<'style_1_animated' | 'style_2_direct' | 'style_3_lighthouse'>('style_3_lighthouse');
+
+	let currentSelectedProduct = $derived(
+		products.find((p: any) => p.id === productId) || products[0] || null
+	);
+
+	let previewLandingPage = $derived.by(() => {
+		const prod = currentSelectedProduct || {
+			id: 'sample-product',
+			name: headline || 'প্রিমিয়াম অর্গানিক পণ্য',
+			price: Number(customPrice) || 200,
+			originalPrice: Number(customOriginalPrice) || 300,
+			image: galleryImages[0] || 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=600&auto=format&fit=crop&q=80',
+			parsedImages: galleryImages.length > 0 ? galleryImages : [
+				'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=600&auto=format&fit=crop&q=80',
+				'https://images.unsplash.com/photo-1589156280159-27698a70f29e?w=600&auto=format&fit=crop&q=80'
+			]
+		};
+
+		const displayImgs = galleryImages.length > 0
+			? galleryImages
+			: (prod.parsedImages?.length ? prod.parsedImages : (prod.image ? [prod.image] : []));
+
+		return {
+			id: landingPage?.id || 'preview-lp',
+			title: title || `${prod.name} - বিশেষ অফার`,
+			slug: slug || 'preview-slug',
+			productId: prod.id,
+			template: previewModalTemplate,
+			tag: tag || 'স্পেশাল অফার 🔥',
+			status: 'Published',
+			isPreview: true,
+			product: prod,
+			config: {
+				headline: headline || prod.name,
+				subheadline: subheadline || 'সীমিত সময়ের জন্য আকর্ষণীয় বিশেষ ছাড়ে আজই আপনার পছন্দের পণ্যটি সংগ্রহ করুন!',
+				customPrice: Number(customPrice) || prod.price || 200,
+				customOriginalPrice: Number(customOriginalPrice) || prod.originalPrice || 300,
+				galleryImages: displayImgs,
+				bulletPoints: style2Bullets.filter(Boolean).length > 0 ? style2Bullets : [
+					'১০০% খাঁটি ও অরিজিনাল কোয়ালিটি নিশ্চিত',
+					'নরম তুলতুলে সুস্বাদু শাঁস ও রোগবালাই প্রতিরোধ ক্ষমতা বেশি',
+					'ছাদবাগান ও বাণিজ্যিকভাবে চাষের জন্য অত্যন্ত উপযোগী',
+					'অঙ্কুরোদগম হার ৯০% এর বেশি পরীক্ষিত ও প্রমাণিত'
+				],
+				packages: style2Packages,
+				trustBox1Title: trustBox1Title || 'নিশ্চিন্তে অর্ডার করুন',
+				trustBox1Desc: trustBox1Desc || 'কোনো অগ্রিম টাকা দিতে হবে না। অর্ডার প্লেস করার পর আমাদের প্রতিনিধি ফোনে কথা বলে কনফার্ম করবেন এবং পণ্য হাতে পেয়ে দেখে টাকা পরিশোধ করবেন।',
+				trustBox2Title: trustBox2Title || '🤝 আমাদের প্রতিশ্রুতি',
+				trustBox2Desc: trustBox2Desc || 'আমরা সর্বোচ্চ কোয়ালিটি এবং সন্তুষ্টি নিশ্চিত করি। কোনো সমস্যা প্রমাণিত হলে সম্পূর্ণ পরিবর্তন অথবা মানিব্যাক গ্যারান্টি।',
+				contactPhone: contactPhone || '01712345678'
+			}
+		};
+	});
+
+	function openTemplatePreview(tpl: 'style_1_animated' | 'style_2_direct' | 'style_3_lighthouse') {
+		previewModalTemplate = tpl;
+		isPreviewModalOpen = true;
+	}
+
+	function activatePreviewedTemplate() {
+		template = previewModalTemplate;
+		isPreviewModalOpen = false;
+		const name =
+			previewModalTemplate === 'style_3_lighthouse'
+				? 'Style 3: Lighthouse Funnel'
+				: previewModalTemplate === 'style_2_direct'
+					? 'Style 2: Sarder Seed Direct'
+					: 'Style 1: Modern Animated';
+		toast.success(`${name} সক্রিয় করা হয়েছে!`);
+	}
+
+	function autoCalculatePackages(base: number) {
+		if (!base || base <= 0) return;
+		const origBase = Math.round(base * 1.25);
+		style2Packages = [
+			{
+				id: 'pack_1',
+				title: style2Packages[0]?.title || '১টি প্যাকেট',
+				subtitle: style2Packages[0]?.subtitle || 'স্ট্যান্ডার্ড প্যাকেজ',
+				freeGift: style2Packages[0]?.freeGift || '',
+				price: base,
+				originalPrice: origBase,
+				deliveryFee: 45,
+				freeDelivery: false,
+				tag: style2Packages[0]?.tag || '',
+				popular: false
+			},
+			{
+				id: 'pack_2',
+				title: style2Packages[1]?.title || '২টি প্যাকেট',
+				subtitle: style2Packages[1]?.subtitle || 'জনপ্রিয় কম্বো (ফ্রি ডেলিভারি)',
+				freeGift: style2Packages[1]?.freeGift || '+ ২০ পিস গিফট ফ্রি!',
+				price: Math.round(base * 1.75),
+				originalPrice: origBase * 2,
+				deliveryFee: 0,
+				freeDelivery: true,
+				tag: style2Packages[1]?.tag || '🔥 সেরা অফার',
+				popular: true
+			},
+			{
+				id: 'pack_3',
+				title: style2Packages[2]?.title || '৩টি প্যাকেট',
+				subtitle: style2Packages[2]?.subtitle || 'মেগা সেভার প্যাক (ফ্রি ডেলিভারি)',
+				freeGift: style2Packages[2]?.freeGift || '+ ৪০ পিস গিফট ফ্রি!',
+				price: Math.round(base * 2.225),
+				originalPrice: origBase * 3,
+				deliveryFee: 0,
+				freeDelivery: true,
+				tag: style2Packages[2]?.tag || '🚀 সর্বোচ্চ সাশ্রয়ী',
+				popular: false
+			}
+		];
+		toast.success('৩টি প্যাকেজের দাম ও অফার অটো-ক্যালকুলেট করা হয়েছে!');
+	}
+
+	// Gallery Images for Landing Page Slider
+	function getInitialImages(): string[] {
+		if (landingPage?.config?.galleryImages && Array.isArray(landingPage.config.galleryImages)) {
+			return landingPage.config.galleryImages;
+		}
+		if (landingPage?.product?.parsedImages?.length > 0) {
+			return landingPage.product.parsedImages;
+		}
+		if (landingPage?.product?.image) {
+			return [landingPage.product.image];
+		}
+		return [];
+	}
+
+	let galleryImages = $state<string[]>(getInitialImages());
 	let newImageUrl = $state('');
 	let isUploadingImage = $state(false);
 
@@ -144,23 +386,37 @@
 		toast.success('প্রধান কভার ছবি হিসেবে সেট করা হয়েছে!');
 	}
 
+	function extractProductImages(prod: any): string[] {
+		if (!prod) return [];
+		let res: string[] = [];
+		if (Array.isArray(prod.parsedImages) && prod.parsedImages.length > 0) {
+			res = prod.parsedImages;
+		} else if (Array.isArray(prod.galleryImages) && prod.galleryImages.length > 0) {
+			res = prod.galleryImages;
+		} else if (typeof prod.parsed_images === 'string') {
+			try {
+				res = JSON.parse(prod.parsed_images);
+			} catch {}
+		} else if (typeof prod.gallery_images === 'string') {
+			try {
+				res = JSON.parse(prod.gallery_images);
+			} catch {}
+		}
+		if (prod.image && !res.includes(prod.image)) {
+			res = [prod.image, ...res];
+		}
+		return res.filter(Boolean);
+	}
+
 	function loadProductImages() {
 		if (!selectedProduct) return;
-		let prodImages: string[] = [];
-		if (selectedProduct.images) {
-			try {
-				prodImages = typeof selectedProduct.images === 'string' ? JSON.parse(selectedProduct.images) : selectedProduct.images;
-			} catch {
-				prodImages = [selectedProduct.image];
-			}
-		} else if (selectedProduct.image) {
-			prodImages = [selectedProduct.image];
-		}
-
+		const prodImages = extractProductImages(selectedProduct);
 		if (prodImages.length > 0) {
 			const combined = Array.from(new Set([...galleryImages, ...prodImages]));
 			galleryImages = combined;
 			toast.success(`প্রোডাক্ট থেকে ${prodImages.length}টি ছবি গ্যালারিতে সিঙ্ক হয়েছে!`);
+		} else {
+			toast.info('এই প্রোডাক্টে কোনো অতিরিক্ত ছবি পাওয়া যায়নি।');
 		}
 	}
 
@@ -181,25 +437,17 @@
 					.replace(/-+/g, '-')
 					.replace(/^-|-$/g, '');
 			}
-			if (!customPrice) customPrice = String(prod.price || '');
-			if (!customOriginalPrice) customOriginalPrice = String(prod.originalPrice || Math.round(prod.price * 1.5));
+			customPrice = String(prod.price || '');
+			customOriginalPrice = String(prod.originalPrice || Math.round((prod.price || 100) * 1.5));
 
-			// Auto-populate images if empty
-			if (galleryImages.length === 0) {
-				let prodImages: string[] = [];
-				if (prod.images) {
-					try {
-						prodImages = typeof prod.images === 'string' ? JSON.parse(prod.images) : prod.images;
-					} catch {
-						prodImages = [prod.image];
-					}
-				} else if (prod.image) {
-					prodImages = [prod.image];
-				}
-				if (prodImages.length > 0) {
-					galleryImages = prodImages;
-				}
+			// Auto-populate images
+			const prodImages = extractProductImages(prod);
+			if (prodImages.length > 0) {
+				galleryImages = [...prodImages];
 			}
+
+			// Auto-calculate Style 2 Packages based on the selected product's real price
+			autoCalculatePackages(Number(prod.price) || 200);
 
 			toast.info(`'${prod.name}' পণ্যের তথ্য ও ছবি অটো-ফিল করা হয়েছে!`);
 		}
@@ -243,8 +491,21 @@
 			formData.append('countdownMinutes', String(countdownMinutes || 35));
 			if (customPrice) formData.append('customPrice', customPrice);
 			if (customOriginalPrice) formData.append('customOriginalPrice', customOriginalPrice);
-			formData.append('bulletPoints', bulletPointsText.trim());
+			
+			const bulletsToSave =
+				template === 'style_2_direct'
+					? style2Bullets.filter((b) => b && b.trim()).join('\n')
+					: bulletPointsText.trim();
+			formData.append('bulletPoints', bulletsToSave);
 			formData.append('galleryImages', JSON.stringify(galleryImages));
+
+			// Style 2: Packages & Trust boxes
+			formData.append('packages', JSON.stringify(style2Packages));
+			formData.append('trustBox1Title', trustBox1Title.trim());
+			formData.append('trustBox1Desc', trustBox1Desc.trim());
+			formData.append('trustBox2Title', trustBox2Title.trim());
+			formData.append('trustBox2Desc', trustBox2Desc.trim());
+			formData.append('contactPhone', contactPhone.trim());
 
 			if (isEditMode && landingPage?.id) {
 				formData.append('id', landingPage.id);
@@ -291,7 +552,7 @@
 						{isEditMode ? 'ল্যান্ডিং পেজ সম্পাদনা করুন' : 'নতুন অ্যানিমেটেড ল্যান্ডিং পেজ তৈরি করুন'}
 					</h1>
 					<Badge variant="outline" class="hidden sm:inline-flex bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full">
-						{template === 'style_1_animated' ? 'Style 1: Modern Animated' : template}
+						{template === 'style_3_lighthouse' ? 'Style 3: Lighthouse Funnel' : template === 'style_2_direct' ? 'Style 2: Sarder Seed Direct' : 'Style 1: Modern Animated'}
 					</Badge>
 				</div>
 				<p class="text-xs text-slate-500 mt-0.5">
@@ -692,101 +953,350 @@
 						/>
 					</div>
 
-					<!-- পণ্যটির বিশেষ বৈশিষ্ট্যসমূহ (বুলেট পয়েন্ট) -->
-					<div>
-						<label for="lp-bulletpoints" class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
-							<span>পণ্যটির বিশেষ বৈশিষ্ট্যসমূহ (প্রতি লাইনে ১টি পয়েন্ট)</span>
-							<span class="text-[11px] text-slate-400 font-normal">Enter চেপে নতুন পয়েন্ট লিখুন</span>
-						</label>
-						<textarea
-							id="lp-bulletpoints"
-							rows="4"
-							bind:value={bulletPointsText}
-							placeholder="১০০% প্রিমিয়াম ও অরিজিনাল কোয়ালিটি&#10;পণ্য হাতে পেয়ে চেক করে মূল্য পরিশোধের সুবিধা&#10;পছন্দ না হলে সাথে সাথে রিটার্ন সুবিধা&#10;সারাদেশে দ্রুততম হোম ডেলিভারি"
-							class="w-full bg-slate-50/50 border border-slate-200 rounded-2xl p-3.5 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#5845eb] transition-all font-sans leading-relaxed"
-						></textarea>
-					</div>
-				</CardContent>
-			</Card>
-
-			<!-- CARD 3: প্রাইসিং ও টাইমার -->
-			<Card class="rounded-3xl border-slate-200/90 shadow-xs overflow-hidden bg-white">
-				<CardHeader class="p-5 sm:p-6 pb-4 border-b border-slate-100 bg-slate-50/50">
-					<div class="flex items-center gap-2.5">
-						<div class="w-8 h-8 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-							<Flame class="w-4.5 h-4.5" />
-						</div>
-						<div>
-							<CardTitle class="text-sm sm:text-base font-bold text-slate-900">
-								অফার প্রাইসিং ও আর্জেন্সি টাইমার
-							</CardTitle>
+					<!-- পণ্যটির বিশেষ বৈশিষ্ট্যসমূহ -->
+					{#if template === 'style_2_direct'}
+						<div class="space-y-3 pt-2">
+							<div class="flex items-center justify-between">
+								<span class="block text-xs font-bold text-slate-800">
+									৪টি মূল আকর্ষণ ও বৈশিষ্ট্য (সবুজ টিকমার্ক বুলেট পয়েন্ট)
+								</span>
+								<span class="text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+									সর্দার সিড স্টাইল
+								</span>
+							</div>
 							<p class="text-[11px] text-slate-500">
-								বিশেষ ডিসকাউন্ট এবং লাইভ কাউন্টডাউন টাইমার দিয়ে সেলস বাড়ান
+								ল্যান্ডিং পেজের শিরোনামের নিচে এই ৪টি পয়েন্ট বড় করে সবুজ টিকমার্কে প্রদর্শিত হবে:
 							</p>
-						</div>
-					</div>
-				</CardHeader>
-
-				<CardContent class="p-5 sm:p-6">
-					<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-						<!-- অফার প্রাইস -->
-						<div>
-							<label for="lp-customprice" class="block text-xs font-bold text-slate-700 mb-1.5">
-								অফার প্রাইস (৳) <span class="text-rose-500">*</span>
-							</label>
-							<div class="relative">
-								<span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">৳</span>
-								<Input
-									id="lp-customprice"
-									type="number"
-									bind:value={customPrice}
-									placeholder="যেমন: ১৪৫০"
-									class="rounded-2xl border-slate-200 text-xs sm:text-sm pl-8 py-2.5 font-bold text-emerald-600 bg-slate-50/50 focus:bg-white"
-								/>
+							<div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+								{#each style2Bullets as _, bIdx}
+									<div class="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200 focus-within:border-emerald-600 focus-within:bg-white transition-all">
+										<CheckCircle2 class="w-4 h-4 text-emerald-600 shrink-0" />
+										<input
+											type="text"
+											bind:value={style2Bullets[bIdx]}
+											placeholder={`ফিচার ${bIdx + 1}...`}
+											class="w-full text-xs text-slate-800 bg-transparent focus:outline-none"
+										/>
+									</div>
+								{/each}
 							</div>
 						</div>
-
-						<!-- রেগুলার প্রাইস -->
+					{:else}
 						<div>
-							<label for="lp-regprice" class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
-								<span>রেগুলার প্রাইস (৳)</span>
-								{#if discountPercent > 0}
-									<span class="text-[10px] bg-rose-100 text-rose-700 font-black px-1.5 py-0.2 rounded">
-										{discountPercent}% OFF
-									</span>
-								{/if}
+							<label for="lp-bulletpoints" class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+								<span>পণ্যটির বিশেষ বৈশিষ্ট্যসমূহ (প্রতি লাইনে ১টি পয়েন্ট)</span>
+								<span class="text-[11px] text-slate-400 font-normal">Enter চেপে নতুন পয়েন্ট লিখুন</span>
 							</label>
-							<div class="relative">
-								<span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">৳</span>
-								<Input
-									id="lp-regprice"
-									type="number"
-									bind:value={customOriginalPrice}
-									placeholder="যেমন: ২৮০০"
-									class="rounded-2xl border-slate-200 text-xs sm:text-sm pl-8 py-2.5 text-slate-500 bg-slate-50/50 focus:bg-white"
-								/>
-							</div>
+							<textarea
+								id="lp-bulletpoints"
+								rows="4"
+								bind:value={bulletPointsText}
+								placeholder="১০০% প্রিমিয়াম ও অরিজিনাল কোয়ালিটি&#10;পণ্য হাতে পেয়ে চেক করে মূল্য পরিশোধের সুবিধা&#10;পছন্দ না হলে সাথে সাথে রিটার্ন সুবিধা&#10;সারাদেশে দ্রুততম হোম ডেলিভারি"
+								class="w-full bg-slate-50/50 border border-slate-200 rounded-2xl p-3.5 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#5845eb] transition-all font-sans leading-relaxed"
+							></textarea>
 						</div>
-
-						<!-- টাইমার (মিনিট) -->
-						<div>
-							<label for="lp-timer" class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-								<Clock class="w-3.5 h-3.5 text-amber-500" />
-								<span>কাউন্টডাউন টাইমার (মিনিট)</span>
-							</label>
-							<Input
-								id="lp-timer"
-								type="number"
-								min="5"
-								max="1440"
-								bind:value={countdownMinutes}
-								placeholder="35"
-								class="rounded-2xl border-slate-200 text-xs sm:text-sm py-2.5 font-mono bg-slate-50/50 focus:bg-white"
-							/>
-						</div>
-					</div>
+					{/if}
 				</CardContent>
 			</Card>
+
+			{#if template === 'style_2_direct' || template === 'style_3_lighthouse'}
+				<!-- CARD 3: ডাইনামিক প্যাকেজ অফার ও বান্ডেল প্রাইসিং (০, ১, ২ বা ৩টি প্যাকেজ) -->
+				<Card class="rounded-3xl border-emerald-500/80 shadow-xs overflow-hidden bg-white">
+					<CardHeader class="p-5 sm:p-6 pb-4 border-b border-emerald-100 bg-emerald-50/40">
+						<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+							<div class="flex items-center gap-2.5">
+								<div class="w-8 h-8 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+									<Layers class="w-4.5 h-4.5" />
+								</div>
+								<div>
+									<CardTitle class="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+										<span>প্যাকেজ অফার ও বান্ডেল প্রাইসিং</span>
+										<Badge variant="outline" class="bg-emerald-100 text-emerald-800 border-emerald-300 text-[10px] font-bold">
+											{style2Packages.length === 0 ? 'ডিফল্ট একক মূল্য' : `${style2Packages.length}টি প্যাকেজ সক্রিয়`}
+										</Badge>
+									</CardTitle>
+									<p class="text-[11px] text-slate-500">
+										{style2Packages.length === 0
+											? 'কোনো প্যাকেজ না দিলে সাধারণ একক মূল্য দেখাবে। ১, ২ বা ৩টি প্যাকেজ তৈরি করতে পারেন।'
+											: `বর্তমানে ${style2Packages.length}টি প্যাকেজ কনফিগার করা রয়েছে।`}
+									</p>
+								</div>
+							</div>
+
+							<div class="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+								{#if style2Packages.length < 3}
+									<Button
+										type="button"
+										size="sm"
+										class="text-xs font-bold gap-1 bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-2xs rounded-xl"
+										onclick={addPackage}
+									>
+										<Plus class="w-3.5 h-3.5" />
+										<span>+ প্যাকেজ যোগ করুন</span>
+									</Button>
+								{/if}
+
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									class="text-xs font-bold gap-1 text-emerald-800 border-emerald-200 bg-white hover:bg-emerald-50 cursor-pointer shadow-2xs rounded-xl"
+									onclick={() => autoCalculatePackages(Number(customPrice) || Number(selectedProduct?.price) || 200)}
+								>
+									<Sparkles class="w-3.5 h-3.5 text-emerald-600" />
+									<span>⚡ ৩টি প্যাকেজ অটো-ক্যালকুলেট</span>
+								</Button>
+
+								{#if style2Packages.length > 0}
+									<Button
+										type="button"
+										variant="ghost"
+										size="sm"
+										class="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 cursor-pointer rounded-xl"
+										onclick={resetToDefaultPrice}
+										title="সব প্যাকেজ মুছে একক মূল্যে ফেরত যান"
+									>
+										<Trash2 class="w-3.5 h-3.5" />
+										<span>সব মুছুন</span>
+									</Button>
+								{/if}
+							</div>
+						</div>
+					</CardHeader>
+
+					<CardContent class="p-5 sm:p-6 space-y-4">
+						<!-- Base Price Anchor -->
+						<div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+							<div class="text-xs text-slate-700">
+								<span class="font-bold">মূল পণ্যের একক বেইজ প্রাইস:</span>
+								<span class="text-slate-500 ml-1">প্যাকেজ না থাকলে এই মূল্যটিই সরাসরি প্রদর্শিত হবে</span>
+							</div>
+							<div class="flex items-center gap-2">
+								<div class="relative w-32">
+									<span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">৳</span>
+									<Input
+										type="number"
+										bind:value={customPrice}
+										placeholder="200"
+										class="pl-7 h-9 text-xs font-bold text-emerald-700 rounded-xl bg-white"
+										oninput={() => {
+											if (customPrice && style2Packages.length === 3) autoCalculatePackages(Number(customPrice));
+										}}
+									/>
+								</div>
+							</div>
+						</div>
+
+						{#if style2Packages.length === 0}
+							<!-- 0 Packages: Single Default Price Message Box -->
+							<div class="p-6 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-center space-y-2">
+								<div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto font-black text-base">
+									📦
+								</div>
+								<h4 class="text-xs sm:text-sm font-black text-slate-800">
+									বর্তমানে কোনো আলাদা প্যাকেজ সক্রিয় নেই
+								</h4>
+								<p class="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
+									ল্যান্ডিং পেজে একক মূল্যে (৳{customPrice || selectedProduct?.price || '...'}) সরাসরি ১টি পণ্য সিলেক্ট করা থাকবে। আপনি চাইলে ওপরের <strong>"+ প্যাকেজ যোগ করুন"</strong> বাটনে ক্লিক করে ১টি, ২টি বা ৩টি প্যাকেজ তৈরি করতে পারেন।
+								</p>
+							</div>
+						{:else}
+							<!-- Dynamic 1, 2, or 3 Package Cards -->
+							<div class="grid grid-cols-1 {style2Packages.length === 2 ? 'md:grid-cols-2' : style2Packages.length === 3 ? 'md:grid-cols-3' : 'max-w-md'} gap-3.5">
+								{#each style2Packages as pkg, idx}
+									<div class="rounded-2xl p-4 border-2 transition-all space-y-3 relative {idx === 1 && style2Packages.length > 1 ? 'border-emerald-500/80 bg-emerald-50/30 shadow-2xs' : 'border-slate-200 bg-slate-50/60'}">
+										<div class="flex items-center justify-between">
+											<span class="text-xs font-black text-slate-900 flex items-center gap-1.5">
+												<span>প্যাকেজ {['১', '২', '৩'][idx] || (idx + 1)}</span>
+												{#if idx === 1 && style2Packages.length > 1}
+													<span class="text-[9px] font-black uppercase text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">জনপ্রিয়</span>
+												{/if}
+											</span>
+											<button
+												type="button"
+												onclick={() => removePackage(idx)}
+												class="w-6 h-6 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition-colors cursor-pointer"
+												title="এই প্যাকেজটি মুছুন"
+											>
+												<Trash2 class="w-3.5 h-3.5" />
+											</button>
+										</div>
+
+										<div class="space-y-1">
+											<label for="pkg-title-{idx}" class="text-[11px] font-bold text-slate-600 block">প্যাকেজ নাম</label>
+											<Input id="pkg-title-{idx}" bind:value={pkg.title} placeholder={`${idx + 1}টি প্যাকেট`} class="h-8 text-xs rounded-xl bg-white" />
+										</div>
+
+										<div class="space-y-1">
+											<label for="pkg-sub-{idx}" class="text-[11px] font-bold text-slate-600 block">সাবটাইটেল</label>
+											<Input id="pkg-sub-{idx}" bind:value={pkg.subtitle} placeholder="জনপ্রিয় কম্বো" class="h-8 text-xs rounded-xl bg-white" />
+										</div>
+
+										<div class="space-y-1">
+											<label for="pkg-gift-{idx}" class="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
+												<Gift class="w-3 h-3" />
+												<span>ফ্রি উপহার / গিফট ট্যাগ</span>
+											</label>
+											<Input id="pkg-gift-{idx}" bind:value={pkg.freeGift} placeholder="+ ১০ পিস বেল্ট ফ্রি!" class="h-8 text-xs rounded-xl bg-white border-emerald-200" />
+										</div>
+
+										<div class="space-y-1">
+											<label for="pkg-tag-{idx}" class="text-[11px] font-bold text-slate-600 block">ব্যাজ লেবেল</label>
+											<Input id="pkg-tag-{idx}" bind:value={pkg.tag} placeholder="🔥 সেরা অফার" class="h-8 text-xs rounded-xl bg-white" />
+										</div>
+
+										<div class="grid grid-cols-2 gap-2 pt-1">
+											<div class="space-y-1">
+												<label for="pkg-price-{idx}" class="text-[10px] font-bold text-slate-600 block">অফার মূল্য (৳)</label>
+												<Input id="pkg-price-{idx}" type="number" bind:value={pkg.price} class="h-8 text-xs font-bold text-emerald-700 rounded-xl bg-white" />
+											</div>
+											<div class="space-y-1">
+												<label for="pkg-orig-{idx}" class="text-[10px] font-bold text-slate-600 block">রেগুলার মূল্য (৳)</label>
+												<Input id="pkg-orig-{idx}" type="number" bind:value={pkg.originalPrice} class="h-8 text-xs rounded-xl bg-white text-slate-400" />
+											</div>
+										</div>
+
+										<div class="pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs">
+											<label class="flex items-center gap-1.5 cursor-pointer font-bold text-slate-700">
+												<input type="checkbox" bind:checked={pkg.freeDelivery} class="rounded text-emerald-600 focus:ring-emerald-500" />
+												<span>ফ্রি ডেলিভারি</span>
+											</label>
+
+											{#if !pkg.freeDelivery}
+												<div class="flex items-center gap-1">
+													<span class="text-[10px] text-slate-500">চার্জ:</span>
+													<Input type="number" bind:value={pkg.deliveryFee} class="w-16 h-7 text-[11px] rounded-lg bg-white" />
+												</div>
+											{/if}
+										</div>
+									</div>
+								{/each}
+							</div>
+						{/if}
+					</CardContent>
+				</Card>
+
+				<!-- CARD 4 FOR STYLE 2: ট্রাস্ট গ্যারান্টি ও হটলাইন -->
+				<Card class="rounded-3xl border-slate-200/90 shadow-xs overflow-hidden bg-white">
+					<CardHeader class="p-5 sm:p-6 pb-4 border-b border-slate-100 bg-slate-50/50">
+						<div class="flex items-center gap-2.5">
+							<div class="w-8 h-8 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+								<ShieldCheck class="w-4.5 h-4.5" />
+							</div>
+							<div>
+								<CardTitle class="text-sm sm:text-base font-bold text-slate-900">
+									নিশ্চয়তা ও ট্রাস্ট বক্স সেটিংস
+								</CardTitle>
+								<p class="text-[11px] text-slate-500">
+									গ্রাহকের ভরসা বাড়ানোর জন্য ২টি গ্যারান্টি বক্স ও হটলাইন নম্বর
+								</p>
+							</div>
+						</div>
+					</CardHeader>
+
+					<CardContent class="p-5 sm:p-6 space-y-4">
+						<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+							<div class="space-y-2 p-3.5 rounded-2xl bg-emerald-50/40 border border-emerald-100">
+								<label for="tb1-title" class="block text-xs font-bold text-emerald-950">ট্রাস্ট বক্স ১ শিরোনাম</label>
+								<Input id="tb1-title" bind:value={trustBox1Title} class="h-9 text-xs rounded-xl bg-white" />
+								<label for="tb1-desc" class="block text-xs font-bold text-emerald-950 pt-1">ট্রাস্ট বক্স ১ বিবরণ</label>
+								<textarea id="tb1-desc" bind:value={trustBox1Desc} rows={3} class="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-white resize-none"></textarea>
+							</div>
+
+							<div class="space-y-2 p-3.5 rounded-2xl bg-amber-50/40 border border-amber-100">
+								<label for="tb2-title" class="block text-xs font-bold text-amber-950">ট্রাস্ট বক্স ২ শিরোনাম</label>
+								<Input id="tb2-title" bind:value={trustBox2Title} class="h-9 text-xs rounded-xl bg-white" />
+								<label for="tb2-desc" class="block text-xs font-bold text-amber-950 pt-1">ট্রাস্ট বক্স ২ বিবরণ</label>
+								<textarea id="tb2-desc" bind:value={trustBox2Desc} rows={3} class="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-white resize-none"></textarea>
+							</div>
+						</div>
+
+						<div class="pt-1">
+							<label for="lp-helpline" class="block text-xs font-bold text-slate-700 mb-1.5">সরাসরি হটলাইন / ফোন নম্বর</label>
+							<Input id="lp-helpline" bind:value={contactPhone} placeholder="01712345678" class="h-10 text-xs sm:text-sm rounded-xl max-w-sm" />
+						</div>
+					</CardContent>
+				</Card>
+			{:else}
+				<!-- CARD 3: প্রাইসিং ও টাইমার (Style 1 Animated) -->
+				<Card class="rounded-3xl border-slate-200/90 shadow-xs overflow-hidden bg-white">
+					<CardHeader class="p-5 sm:p-6 pb-4 border-b border-slate-100 bg-slate-50/50">
+						<div class="flex items-center gap-2.5">
+							<div class="w-8 h-8 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+								<Flame class="w-4.5 h-4.5" />
+							</div>
+							<div>
+								<CardTitle class="text-sm sm:text-base font-bold text-slate-900">
+									অফার প্রাইসিং ও আর্জেন্সি টাইমার
+								</CardTitle>
+								<p class="text-[11px] text-slate-500">
+									বিশেষ ডিসকাউন্ট এবং লাইভ কাউন্টডাউন টাইমার দিয়ে সেলস বাড়ান
+								</p>
+							</div>
+						</div>
+					</CardHeader>
+
+					<CardContent class="p-5 sm:p-6">
+						<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+							<!-- অফার প্রাইস -->
+							<div>
+								<label for="lp-customprice" class="block text-xs font-bold text-slate-700 mb-1.5">
+									অফার প্রাইস (৳) <span class="text-rose-500">*</span>
+								</label>
+								<div class="relative">
+									<span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">৳</span>
+									<Input
+										id="lp-customprice"
+										type="number"
+										bind:value={customPrice}
+										placeholder="যেমন: ১৪৫০"
+										class="rounded-2xl border-slate-200 text-xs sm:text-sm pl-8 py-2.5 font-bold text-emerald-600 bg-slate-50/50 focus:bg-white"
+									/>
+								</div>
+							</div>
+
+							<!-- রেগুলার প্রাইস -->
+							<div>
+								<label for="lp-regprice" class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+									<span>রেগুলার প্রাইস (৳)</span>
+									{#if discountPercent > 0}
+										<span class="text-[10px] bg-rose-100 text-rose-700 font-black px-1.5 py-0.2 rounded">
+											{discountPercent}% OFF
+										</span>
+									{/if}
+								</label>
+								<div class="relative">
+									<span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">৳</span>
+									<Input
+										id="lp-regprice"
+										type="number"
+										bind:value={customOriginalPrice}
+										placeholder="যেমন: ২৮০০"
+										class="rounded-2xl border-slate-200 text-xs sm:text-sm pl-8 py-2.5 text-slate-500 bg-slate-50/50 focus:bg-white"
+									/>
+								</div>
+							</div>
+
+							<!-- টাইমার (মিনিট) -->
+							<div>
+								<label for="lp-timer" class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+									<Clock class="w-3.5 h-3.5 text-amber-500" />
+									<span>কাউন্টডাউন টাইমার (মিনিট)</span>
+								</label>
+								<Input
+									id="lp-timer"
+									type="number"
+									min="5"
+									max="1440"
+									bind:value={countdownMinutes}
+									placeholder="35"
+									class="rounded-2xl border-slate-200 text-xs sm:text-sm py-2.5 font-mono bg-slate-50/50 focus:bg-white"
+								/>
+							</div>
+						</div>
+					</CardContent>
+				</Card>
+			{/if}
 
 		</div>
 
@@ -805,33 +1315,166 @@
 				</CardHeader>
 
 				<CardContent class="p-5 space-y-4">
-					<!-- Style 1: Modern Animated (Active) -->
-					<div class="p-4 rounded-2xl border-2 border-[#5845eb] bg-indigo-50/30 space-y-2">
+					<!-- Style 1: Modern Animated -->
+					<div
+						role="button"
+						tabindex="0"
+						onclick={() => (template = 'style_1_animated')}
+						onkeydown={(e) => e.key === 'Enter' && (template = 'style_1_animated')}
+						class="w-full text-left p-4 rounded-2xl border-2 transition-all cursor-pointer space-y-2.5 {template === 'style_1_animated' ? 'border-[#5845eb] bg-indigo-50/40 ring-2 ring-[#5845eb]/20 shadow-xs' : 'border-slate-200 bg-white hover:border-slate-300'}"
+					>
 						<div class="flex items-center justify-between">
 							<span class="text-xs font-black text-slate-900 flex items-center gap-1.5">
-								<Sparkles class="w-3.5 h-3.5 text-[#5845eb]" />
+								<Sparkles class="w-3.5 h-3.5 {template === 'style_1_animated' ? 'text-[#5845eb]' : 'text-slate-400'}" />
 								<span>Style 1: Modern Animated</span>
 							</span>
-							<span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-[#5845eb] text-white">
-								সক্রিয়
-							</span>
+							{#if template === 'style_1_animated'}
+								<span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-[#5845eb] text-white">
+									সক্রিয়
+								</span>
+							{:else}
+								<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 text-slate-600">
+									নির্বাচন করুন
+								</span>
+							{/if}
 						</div>
 						<p class="text-[11px] text-slate-600 leading-relaxed">
-							অ্যানিমেটেড পালসিং আর্জেন্সি ব্যাজ, লাইভ টিকিং টাইমার, ইমেজ গ্যালারি, কাস্টমার রিভিউ এবং স্টিকি মোবাইল অর্ডার বার অন্তর্ভুক্ত।
+							অ্যানিমেটেড আর্জেন্সি কাউন্টডাউন, ইমেজ ক্যারোসেল, কাস্টমার রিভিউ ও স্টিকি মোবাইল অর্ডার বার।
 						</p>
+
+						<!-- Feature Badges -->
+						<div class="flex flex-wrap gap-1 pt-0.5">
+							<span class="px-1.5 py-0.5 rounded-md bg-indigo-100/70 text-indigo-700 text-[9.5px] font-bold">⏰ কাউন্টডাউন</span>
+							<span class="px-1.5 py-0.5 rounded-md bg-indigo-100/70 text-indigo-700 text-[9.5px] font-bold">📷 ফটো ক্যারোসেল</span>
+							<span class="px-1.5 py-0.5 rounded-md bg-indigo-100/70 text-indigo-700 text-[9.5px] font-bold">⭐ রিভিউ গ্রিড</span>
+							<span class="px-1.5 py-0.5 rounded-md bg-indigo-100/70 text-indigo-700 text-[9.5px] font-bold">🛍️ স্টিকি বার</span>
+						</div>
+
+						<!-- Action Footer with Preview Button -->
+						<div class="pt-2 flex items-center justify-between border-t border-slate-100/80">
+							<span class="text-[10px] font-medium text-slate-500">
+								{template === 'style_1_animated' ? '✓ বর্তমানে সিলেক্টেড' : 'ক্লিক করে সিলেক্ট করুন'}
+							</span>
+							<button
+								type="button"
+								onclick={(e) => {
+									e.stopPropagation();
+									openTemplatePreview('style_1_animated');
+								}}
+								class="px-2.5 py-1 rounded-xl bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 text-indigo-600 text-[11px] font-bold flex items-center gap-1 shadow-2xs transition-all cursor-pointer"
+							>
+								<Eye class="w-3 h-3 text-indigo-600" />
+								<span>প্রিভিউ দেখুন</span>
+							</button>
+						</div>
 					</div>
 
-					<!-- Future Styles (Folder ready) -->
-					<div class="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-1 opacity-75">
+					<!-- Style 2: Sarder Seed Direct Checkout -->
+					<div
+						role="button"
+						tabindex="0"
+						onclick={() => (template = 'style_2_direct')}
+						onkeydown={(e) => e.key === 'Enter' && (template = 'style_2_direct')}
+						class="w-full text-left p-4 rounded-2xl border-2 transition-all cursor-pointer space-y-2.5 {template === 'style_2_direct' ? 'border-emerald-600 bg-emerald-50/40 ring-2 ring-emerald-600/20 shadow-xs' : 'border-slate-200 bg-white hover:border-slate-300'}"
+					>
 						<div class="flex items-center justify-between">
-							<span class="text-xs font-bold text-slate-700">Style 2: Minimalist Clean</span>
-							<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-200 text-slate-600">
-								শীঘ্রই আসছে
+							<span class="text-xs font-black text-slate-900 flex items-center gap-1.5">
+								<CheckCircle2 class="w-3.5 h-3.5 {template === 'style_2_direct' ? 'text-emerald-600' : 'text-slate-400'}" />
+								<span>Style 2: Sarder Seed Direct</span>
 							</span>
+							{#if template === 'style_2_direct'}
+								<span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-600 text-white">
+									সক্রিয়
+								</span>
+							{:else}
+								<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 text-slate-600">
+									নির্বাচন করুন
+								</span>
+							{/if}
 						</div>
-						<p class="text-[10.5px] text-slate-500">
-							নতুন টেমপ্লেট যোগ করতে `src/lib/modules/landing-templates/templates/` এ ফাইল যোগ করুন।
+						<p class="text-[11px] text-slate-600 leading-relaxed">
+							sarderseed.com স্টাইলে ১, ২ ও ৩ প্যাকেট বান্ডেল নির্বাচন, ফ্রি ডেলিভারি অফার, ৩-স্টেপ চেকআউট এবং ট্রাস্ট গ্যারান্টি।
 						</p>
+
+						<!-- Feature Badges -->
+						<div class="flex flex-wrap gap-1 pt-0.5">
+							<span class="px-1.5 py-0.5 rounded-md bg-emerald-100/70 text-emerald-800 text-[9.5px] font-bold">✓ ৪টি চেকমার্ক বুলেট</span>
+							<span class="px-1.5 py-0.5 rounded-md bg-emerald-100/70 text-emerald-800 text-[9.5px] font-bold">📦 ৩টি বান্ডেল অফার</span>
+							<span class="px-1.5 py-0.5 rounded-md bg-emerald-100/70 text-emerald-800 text-[9.5px] font-bold">🚚 ফ্রি ডেলিভারি</span>
+							<span class="px-1.5 py-0.5 rounded-md bg-emerald-100/70 text-emerald-800 text-[9.5px] font-bold">📋 ১-পেজ চেকআউট</span>
+						</div>
+
+						<!-- Action Footer with Preview Button -->
+						<div class="pt-2 flex items-center justify-between border-t border-slate-100/80">
+							<span class="text-[10px] font-medium text-slate-500">
+								{template === 'style_2_direct' ? '✓ বর্তমানে সিলেক্টেড' : 'ক্লিক করে সিলেক্ট করুন'}
+							</span>
+							<button
+								type="button"
+								onclick={(e) => {
+									e.stopPropagation();
+									openTemplatePreview('style_2_direct');
+								}}
+								class="px-2.5 py-1 rounded-xl bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 text-emerald-700 text-[11px] font-bold flex items-center gap-1 shadow-2xs transition-all cursor-pointer"
+							>
+								<Eye class="w-3 h-3 text-emerald-600" />
+								<span>প্রিভিউ দেখুন</span>
+							</button>
+						</div>
+					</div>
+
+					<!-- Style 3: The Color Lighthouse Funnel -->
+					<div
+						role="button"
+						tabindex="0"
+						onclick={() => (template = 'style_3_lighthouse')}
+						onkeydown={(e) => e.key === 'Enter' && (template = 'style_3_lighthouse')}
+						class="w-full text-left p-4 rounded-2xl border-2 transition-all cursor-pointer space-y-2.5 {template === 'style_3_lighthouse' ? 'border-[#e8007c] bg-[#e8007c]/5 ring-2 ring-[#e8007c]/20 shadow-xs' : 'border-slate-200 bg-white hover:border-slate-300'}"
+					>
+						<div class="flex items-center justify-between">
+							<span class="text-xs font-black text-slate-900 flex items-center gap-1.5">
+								<Sparkles class="w-3.5 h-3.5 {template === 'style_3_lighthouse' ? 'text-[#e8007c]' : 'text-slate-400'}" />
+								<span>Style 3: Lighthouse Funnel</span>
+							</span>
+							{#if template === 'style_3_lighthouse'}
+								<span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-[#e8007c] text-white">
+									সক্রিয়
+								</span>
+							{:else}
+								<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 text-slate-600">
+									নির্বাচন করুন
+								</span>
+							{/if}
+						</div>
+						<p class="text-[11px] text-slate-600 leading-relaxed">
+							thecolorlighthouse.com স্টাইলে ম্যাজেন্টা থিম, স্প্লিট ২-কলাম চেকআউট, সেভিংস ডিসপ্লে, বেনিফিট শোকেস ও ইন্টারেক্টিভ FAQ।
+						</p>
+
+						<!-- Feature Badges -->
+						<div class="flex flex-wrap gap-1 pt-0.5">
+							<span class="px-1.5 py-0.5 rounded-md bg-[#e8007c]/10 text-[#e8007c] text-[9.5px] font-bold">🎁 ফ্রি গিফট ট্যাগ</span>
+							<span class="px-1.5 py-0.5 rounded-md bg-[#e8007c]/10 text-[#e8007c] text-[9.5px] font-bold">💰 সেভ টাকা ক্যালকুলেশন</span>
+							<span class="px-1.5 py-0.5 rounded-md bg-[#e8007c]/10 text-[#e8007c] text-[9.5px] font-bold">📋 স্প্লিট চেকআউট সামারি</span>
+							<span class="px-1.5 py-0.5 rounded-md bg-[#e8007c]/10 text-[#e8007c] text-[9.5px] font-bold">❓ ইন্টারেক্টিভ FAQ</span>
+						</div>
+
+						<!-- Action Footer with Preview Button -->
+						<div class="pt-2 flex items-center justify-between border-t border-slate-100/80">
+							<span class="text-[10px] font-medium text-slate-500">
+								{template === 'style_3_lighthouse' ? '✓ বর্তমানে সিলেক্টেড' : 'ক্লিক করে সিলেক্ট করুন'}
+							</span>
+							<button
+								type="button"
+								onclick={(e) => {
+									e.stopPropagation();
+									openTemplatePreview('style_3_lighthouse');
+								}}
+								class="px-2.5 py-1 rounded-xl bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-[#e8007c] text-[11px] font-bold flex items-center gap-1 shadow-2xs transition-all cursor-pointer"
+							>
+								<Eye class="w-3 h-3 text-[#e8007c]" />
+								<span>প্রিভিউ দেখুন</span>
+							</button>
+						</div>
 					</div>
 
 					<Separator class="bg-slate-100" />
@@ -870,26 +1513,49 @@
 							<span class="text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full">
 								{tag || 'স্পেশাল অফার'}
 							</span>
-							<span class="text-[10px] font-bold text-amber-600 flex items-center gap-1">
-								<Clock class="w-3 h-3" />
-								<span>{countdownMinutes} মি. বাকি</span>
-							</span>
+							{#if template === 'style_2_direct'}
+								<span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+									৩টি প্যাকেজ সক্রিয়
+								</span>
+							{:else}
+								<span class="text-[10px] font-bold text-amber-600 flex items-center gap-1">
+									<Clock class="w-3 h-3" />
+									<span>{countdownMinutes} মি. বাকি</span>
+								</span>
+							{/if}
 						</div>
 
 						<h4 class="text-xs font-bold text-slate-900 line-clamp-2">
 							{headline || title || 'আপনার আকর্ষনীয় প্রোডাক্টের হেডলাইন'}
 						</h4>
 
-						<div class="flex items-baseline gap-2 pt-1 border-t border-slate-100">
-							<span class="text-base font-black text-[#5845eb]">
-								৳{customPrice || selectedProduct?.price || '৯৯৯'}
-							</span>
-							{#if customOriginalPrice || selectedProduct?.originalPrice}
-								<span class="text-xs text-slate-400 line-through">
-									৳{customOriginalPrice || selectedProduct?.originalPrice}
+						{#if template === 'style_2_direct'}
+							<div class="space-y-1.5 pt-1 border-t border-slate-100 text-[11px]">
+								<div class="flex justify-between items-center text-slate-600">
+									<span>{style2Packages[0].title || '১ প্যাকেট'}</span>
+									<span class="font-bold text-slate-800">৳{style2Packages[0].price}</span>
+								</div>
+								<div class="flex justify-between items-center text-emerald-700 font-bold bg-emerald-50/70 p-1 rounded-lg">
+									<span>{style2Packages[1].title || '২ প্যাকেট'} (ফ্রি শিপিং)</span>
+									<span>৳{style2Packages[1].price}</span>
+								</div>
+								<div class="flex justify-between items-center text-indigo-700 font-bold bg-indigo-50/70 p-1 rounded-lg">
+									<span>{style2Packages[2].title || '৩ প্যাকেট'} (ফ্রি শিপিং)</span>
+									<span>৳{style2Packages[2].price}</span>
+								</div>
+							</div>
+						{:else}
+							<div class="flex items-baseline gap-2 pt-1 border-t border-slate-100">
+								<span class="text-base font-black text-[#5845eb]">
+									৳{customPrice || selectedProduct?.price || '৯৯৯'}
 								</span>
-							{/if}
-						</div>
+								{#if customOriginalPrice || selectedProduct?.originalPrice}
+									<span class="text-xs text-slate-400 line-through">
+										৳{customOriginalPrice || selectedProduct?.originalPrice}
+									</span>
+								{/if}
+							</div>
+						{/if}
 					</div>
 
 					<div class="p-3 bg-amber-50/60 rounded-2xl border border-amber-200/60 flex items-start gap-2 text-[11px] text-amber-900">
@@ -905,4 +1571,34 @@
 
 	</div>
 </form>
+
+<!-- Full Interactive Template Preview Modal -->
+<ThemeComponentPreviewModal
+	isOpen={isPreviewModalOpen}
+	title={previewModalTemplate === 'style_3_lighthouse'
+		? 'Style 3: The Color Lighthouse Funnel'
+		: previewModalTemplate === 'style_2_direct'
+			? 'Style 2: Sarder Seed Direct Checkout'
+			: 'Style 1: Modern Animated Landing'}
+	subtitle={previewModalTemplate === 'style_3_lighthouse'
+		? 'thecolorlighthouse.com স্টাইলে ম্যাজেন্টা থিম, স্প্লিট ২-কলাম চেকআউট, বেনিফিট শোকেস ও ইন্টারেক্টিভ FAQ'
+		: previewModalTemplate === 'style_2_direct'
+			? 'sarderseed.com স্টাইলে প্যাকেজ বান্ডেল, ৪টি বুলেট পয়েন্ট ও ১-পেজ সরাসরি চেকআউট প্রিভিউ'
+			: 'আর্জেন্সি কাউন্টডাউন, ফটো ক্যারোসেল, কাস্টমার রিভিউ ও স্টিকি মোবাইল অর্ডার বার প্রিভিউ'}
+	isActive={template === previewModalTemplate}
+	activateLabel="এই টেমপ্লেটটি সক্রিয় করুন"
+	defaultViewport="desktop"
+	onClose={() => (isPreviewModalOpen = false)}
+	onActivate={activatePreviewedTemplate}
+>
+	{#if previewModalTemplate === 'style_3_lighthouse'}
+		<Style3_LighthouseFunnel landingPage={previewLandingPage} />
+	{:else}
+		{#if previewModalTemplate === 'style_2_direct'}
+			<Style2_DirectCheckout landingPage={previewLandingPage} />
+		{:else}
+			<Style1_ModernAnimated landingPage={previewLandingPage} />
+		{/if}
+	{/if}
+</ThemeComponentPreviewModal>
 

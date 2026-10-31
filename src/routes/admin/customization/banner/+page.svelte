@@ -273,7 +273,7 @@
 	</div>
 
 	<!-- Table Card (Exact match to Screenshot 2) -->
-	<div class="bg-white border border-slate-200/90 rounded-3xl shadow-xs overflow-hidden min-h-[260px]">
+	<div class="bg-white border border-slate-200/90 rounded-3xl shadow-xs min-h-[360px] pb-12">
 		<div class="overflow-x-auto no-scrollbar">
 			<table class="w-full text-left border-collapse">
 				<thead>
@@ -299,6 +299,7 @@
 				<tbody class="divide-y divide-slate-100 text-slate-700 text-xs font-medium">
 					{#each filteredBanners as item, index (item.id)}
 						{@const isSelected = selectedIds.includes(item.id)}
+						{@const isNearBottom = index >= filteredBanners.length - 1 || filteredBanners.length <= 2}
 						<tr class="hover:bg-slate-50/70 transition-colors {isSelected ? 'bg-indigo-50/30' : ''}">
 							<!-- Checkbox -->
 							<td class="py-4 pl-5 pr-2">
@@ -352,7 +353,11 @@
 								</button>
 
 								{#if activeActionId === item.id}
-									<div class="absolute right-6 {index >= filteredBanners.length - 2 && filteredBanners.length > 2 ? 'bottom-12 top-auto origin-bottom-right' : 'top-12'} w-36 bg-white border border-slate-200/90 rounded-2xl shadow-xl py-1.5 z-50 text-xs font-medium text-left animate-in fade-in zoom-in-95 duration-100">
+									<div
+										class="absolute right-6 {isNearBottom
+											? 'bottom-11 top-auto origin-bottom-right'
+											: 'top-11 origin-top-right'} w-40 bg-white border border-slate-200/90 rounded-2xl shadow-xl py-1.5 z-50 text-xs font-medium text-left animate-in fade-in zoom-in-95 duration-100"
+									>
 										<a
 											href="/admin/customization/banner/edit-banner/{item.id}"
 											class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"

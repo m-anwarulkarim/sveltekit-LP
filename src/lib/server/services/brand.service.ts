@@ -36,6 +36,37 @@ function slugify(text: string): string {
 
 export class BrandService {
 	/**
+	 * Get a brand by ID
+	 */
+	static async getBrandById(db: DrizzleD1Database<typeof schema>, id: string): Promise<BrandItem | null> {
+		try {
+			const rows = await db
+				.select()
+				.from(schema.brands)
+				.where(eq(schema.brands.id, id))
+				.limit(1)
+				.all();
+			if (!rows.length) return null;
+			const b = rows[0];
+			return {
+				id: b.id,
+				name: b.name,
+				slug: b.slug,
+				logo: b.logo,
+				website: b.website,
+				isActive: Boolean(b.isActive),
+				isFeatured: Boolean(b.isFeatured),
+				sortOrder: b.sortOrder,
+				isTrash: Boolean(b.isTrash),
+				createdAt: b.createdAt
+			};
+		} catch (error) {
+			console.error('Error in BrandService.getBrandById:', error);
+			return null;
+		}
+	}
+
+	/**
 	 * Lists active brands for storefront display
 	 */
 	static async listBrands(db: DrizzleD1Database<typeof schema>, limit = 50): Promise<BrandItem[]> {

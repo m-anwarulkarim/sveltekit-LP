@@ -18,6 +18,7 @@
 	let { class: className = '' }: Props = $props();
 
 	const storeConfig = $derived(page.data?.storeConfig);
+	const websiteInfo = $derived(page.data?.websiteInfo);
 	const footerCategories = $derived.by(() => {
 		const dbCats = page.data?.categories;
 		if (Array.isArray(dbCats) && dbCats.length > 0) {
@@ -37,41 +38,45 @@
 			<div class="lg:col-span-4 space-y-4">
 				<!-- Brand Header -->
 				<a href="/" class="flex items-center gap-3 group">
-					<div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#5845eb] via-[#7c3aed] to-[#9333ea] p-[1.5px] shadow-sm shadow-indigo-600/20 group-hover:scale-105 transition-transform shrink-0">
-						<div class="w-full h-full bg-white rounded-[14px] flex items-center justify-center">
-							<Flame class="w-6 h-6 text-[#5845eb]" />
+					{#if websiteInfo?.logoUrl}
+						<img src={websiteInfo.logoUrl} alt={websiteInfo?.websiteName || 'Logo'} class="h-8 max-w-[160px] object-contain" />
+					{:else}
+						<div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#5845eb] via-[#7c3aed] to-[#9333ea] p-[1.5px] shadow-sm shadow-indigo-600/20 group-hover:scale-105 transition-transform shrink-0">
+							<div class="w-full h-full bg-white rounded-[14px] flex items-center justify-center">
+								<Flame class="w-6 h-6 text-[#5845eb]" />
+							</div>
 						</div>
-					</div>
-					<div class="flex flex-col">
-						<div class="flex items-center gap-1.5 leading-tight">
-							<span class="font-black text-xl text-slate-900 font-['Outfit'] tracking-tight">
-								AURA
+						<div class="flex flex-col">
+							<div class="flex items-center gap-1.5 leading-tight">
+								<span class="font-black text-xl text-slate-900 font-['Outfit'] tracking-tight">
+									{websiteInfo?.websiteName || 'AURA'}
+								</span>
+								<Badge variant="purple" class="px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-widest bg-indigo-50 text-[#5845eb] border border-indigo-200">
+									ORIGINAL
+								</Badge>
+							</div>
+							<span class="text-[11px] text-slate-500 font-medium -mt-0.5">
+								{websiteInfo?.shortDescription || 'Premium Online Store & E-Commerce'}
 							</span>
-							<Badge variant="purple" class="px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-widest bg-indigo-50 text-[#5845eb] border border-indigo-200">
-								ORIGINAL
-							</Badge>
 						</div>
-						<span class="text-[11px] text-slate-500 font-medium -mt-0.5">
-							Premium Online Store & E-Commerce
-						</span>
-					</div>
+					{/if}
 				</a>
 
 				<!-- Description -->
 				<p class="text-xs sm:text-[13px] text-slate-600 leading-relaxed max-w-sm">
-					AURA is a next-generation e-commerce platform offering premium lifestyle, audio, home essentials, and innovative products delivered safely to your door.
+					{websiteInfo?.shortDescription || 'AURA is a next-generation e-commerce platform offering premium lifestyle, audio, home essentials, and innovative products delivered safely to your door.'}
 				</p>
 
 				<!-- Contact Details -->
 				<div class="space-y-3 pt-2 text-xs sm:text-[13px] text-slate-700 font-medium">
-					<!-- Phone -->
+					<!-- Phone / WhatsApp -->
 					<div class="flex items-start gap-3">
 						<div class="w-8 h-8 rounded-xl bg-indigo-50 text-[#5845eb] flex items-center justify-center shrink-0 border border-indigo-100">
 							<Phone class="w-4 h-4" />
 						</div>
 						<div class="flex flex-col">
-							<a href="tel:{storeConfig?.hotlinePhone || '01860-229546'}" class="font-bold text-slate-900 hover:text-[#5845eb] transition-colors">
-								{storeConfig?.hotlinePhone || '01860-229546'}
+							<a href="tel:{websiteInfo?.whatsappNumber || storeConfig?.hotlinePhone || '01860-229546'}" class="font-bold text-slate-900 hover:text-[#5845eb] transition-colors">
+								{websiteInfo?.whatsappNumber || storeConfig?.hotlinePhone || '01860-229546'}
 							</a>
 							<span class="text-[11px] text-slate-500 flex items-center gap-1">
 								<Clock class="w-3 h-3 text-slate-400" />
@@ -85,8 +90,8 @@
 						<div class="w-8 h-8 rounded-xl bg-indigo-50 text-[#5845eb] flex items-center justify-center shrink-0 border border-indigo-100">
 							<Mail class="w-4 h-4" />
 						</div>
-						<a href="mailto:support@aura.com.bd" class="hover:text-[#5845eb] transition-colors">
-							support@aura.com.bd
+						<a href="mailto:{websiteInfo?.emails?.[0] || 'support@aura.com.bd'}" class="hover:text-[#5845eb] transition-colors">
+							{websiteInfo?.emails?.[0] || 'support@aura.com.bd'}
 						</a>
 					</div>
 
@@ -96,7 +101,7 @@
 							<MapPin class="w-4 h-4" />
 						</div>
 						<span class="leading-snug text-slate-600">
-							হাউজ-২৩, রোড-১২, ধানমন্ডি, ঢাকা-১২০৯, বাংলাদেশ
+							{websiteInfo?.addresses?.[0] || 'হাউজ-২৩, রোড-১২, ধানমন্ডি, ঢাকা-১২০৯, বাংলাদেশ'}
 						</span>
 					</div>
 				</div>

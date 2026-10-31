@@ -8,22 +8,28 @@ import {
 import { PixelService, DEFAULT_PIXEL_SETTINGS } from '#lib/server/services/pixel.service';
 import { GtmService, DEFAULT_GTM_SETTINGS } from '#lib/server/services/gtm.service';
 import { CategoryService } from '#lib/server/services/category.service';
+import { CustomizationService } from '#lib/server/services/customization.service';
 import {
 	SettingsService,
 	type StoreDeliveryConfig,
 	DEFAULT_PRODUCT_SETTINGS,
-	type ProductSettingsConfig
+	type ProductSettingsConfig,
+	DEFAULT_WEBSITE_INFO,
+	type WebsiteInfoConfig
 } from '#lib/server/services/settings.service';
 
 export const load: LayoutServerLoad = async (event) => {
 	let themeConfig = DEFAULT_THEME_CONFIG;
-	let pixelConfig = {
+	let pixelConfig: Awaited<ReturnType<typeof PixelService.getPublicConfig>> = {
 		pixelId: DEFAULT_PIXEL_SETTINGS.pixelId,
 		backupPixelId: DEFAULT_PIXEL_SETTINGS.backupPixelId || '',
 		trackingMode: DEFAULT_PIXEL_SETTINGS.trackingMode,
-		events: DEFAULT_PIXEL_SETTINGS.events
+		defaultCurrency: DEFAULT_PIXEL_SETTINGS.defaultCurrency,
+		catalogMatchKey: DEFAULT_PIXEL_SETTINGS.catalogMatchKey,
+		events: DEFAULT_PIXEL_SETTINGS.events,
+		advancedMatching: DEFAULT_PIXEL_SETTINGS.advancedMatching.enabled
 	};
-	let gtmConfig = {
+	let gtmConfig: Awaited<ReturnType<typeof GtmService.getPublicConfig>> = {
 		isEnabled: DEFAULT_GTM_SETTINGS.isEnabled,
 		gtmId: DEFAULT_GTM_SETTINGS.gtmId,
 		ga4MeasurementId: DEFAULT_GTM_SETTINGS.ga4MeasurementId,
@@ -39,16 +45,20 @@ export const load: LayoutServerLoad = async (event) => {
 		storeName: 'AURA Store'
 	};
 	let productSettings: ProductSettingsConfig = DEFAULT_PRODUCT_SETTINGS;
+	let websiteInfo: WebsiteInfoConfig = DEFAULT_WEBSITE_INFO;
+	let activePopup: any = null;
 
 	try {
 		const db = getDb(event.platform);
-		const [tc, pc, gtm, cats, sCfg, pCfg] = await Promise.all([
+		const [tc, pc, gtm, cats, sCfg, pCfg, wInfo, popup] = await Promise.all([
 			ThemeCustomizationService.getThemeConfig(db).catch(() => DEFAULT_THEME_CONFIG),
 			PixelService.getPublicConfig(db).catch(() => pixelConfig),
 			GtmService.getPublicConfig(db).catch(() => gtmConfig),
 			CategoryService.listCategories(db, { parentId: null, status: 'publish' }).catch(() => []),
 			SettingsService.getStoreDeliveryConfig(db).catch(() => storeConfig),
-			SettingsService.getProductSettings(db).catch(() => DEFAULT_PRODUCT_SETTINGS)
+			SettingsService.getProductSettings(db).catch(() => DEFAULT_PRODUCT_SETTINGS),
+			SettingsService.getWebsiteInfo(db).catch(() => DEFAULT_WEBSITE_INFO),
+			CustomizationService.getActivePopupForStorefront(db).catch(() => null)
 		]);
 		if (tc) themeConfig = tc;
 		if (pc) pixelConfig = pc;
@@ -56,6 +66,8 @@ export const load: LayoutServerLoad = async (event) => {
 		if (cats && cats.length > 0) categories = cats;
 		if (sCfg) storeConfig = sCfg;
 		if (pCfg) productSettings = pCfg;
+		if (wInfo) websiteInfo = wInfo;
+		if (popup) activePopup = popup;
 	} catch (err) {
 		console.error('Failed to load database in root layout:', err);
 	}
@@ -69,6 +81,8 @@ export const load: LayoutServerLoad = async (event) => {
 		categories,
 		storeConfig,
 		productSettings,
+		websiteInfo,
+		activePopup,
 		websiteJsonLd: SeoService.getWebSiteJsonLd(),
 		organizationJsonLd: SeoService.getOrganizationJsonLd()
 	};

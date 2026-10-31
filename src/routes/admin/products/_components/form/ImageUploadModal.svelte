@@ -168,25 +168,28 @@
 			const finalUrls: string[] = [];
 
 			for (const item of uploadedFiles) {
-				finalUrls.push(item.preview);
-
-				// If save to gallery is checked, persist to D1 MediaAssets
-				if (saveToGallery) {
+				if (item.file) {
 					try {
-						await fetch('/api/admin/media', {
+						const formData = new FormData();
+						formData.append('file', item.file);
+						formData.append('folder', 'products');
+
+						const res = await fetch('/api/admin/media/upload', {
 							method: 'POST',
-							headers: { 'Content-Type': 'application/json' },
-							body: JSON.stringify({
-								name: item.name,
-								url: item.preview,
-								folder: 'products',
-								size: item.size
-							})
+							body: formData
 						});
+						const data = await res.json();
+						if (data.success && data.url) {
+							finalUrls.push(data.url);
+							continue;
+						}
 					} catch (err) {
-						console.error('Failed to auto-save to gallery:', err);
+						console.error('Failed to upload product image to R2:', err);
 					}
 				}
+
+				// Fallback to preview if upload endpoint was unavailable
+				finalUrls.push(item.preview);
 			}
 
 			isUploading = false;

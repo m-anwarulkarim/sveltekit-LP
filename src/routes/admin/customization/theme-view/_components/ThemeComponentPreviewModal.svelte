@@ -166,7 +166,7 @@
 					</div>
 				{:else}
 					<!-- Full Desktop Canvas -->
-					<div class="w-full bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+					<div class="w-full bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden relative transform translate-z-0">
 						{@render children()}
 					</div>
 				{/if}

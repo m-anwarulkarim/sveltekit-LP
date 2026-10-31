@@ -19,6 +19,16 @@ export const actions: Actions = {
 		const productCard = data.get('productCard')?.toString() || 'product_card_3';
 		const footer = data.get('footer')?.toString() || 'footer_1';
 
+		const rawColors = data.get('colors')?.toString();
+		let colors: { primary: string; secondary: string; tertiary: string } | undefined = undefined;
+		if (rawColors) {
+			try {
+				colors = JSON.parse(rawColors);
+			} catch {
+				// silent fallback
+			}
+		}
+
 		if (!presetName) {
 			return {
 				success: false,
@@ -31,6 +41,7 @@ export const actions: Actions = {
 			const res = await ThemeCustomizationService.applyDesignPreset(db, {
 				id: presetId,
 				name: presetName,
+				colors,
 				components: {
 					header,
 					showcase,

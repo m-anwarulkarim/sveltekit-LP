@@ -43,6 +43,7 @@
 	let deliveryFee = $derived(district === 'dhaka' ? 60 : 120);
 	let subtotal = $derived(price * quantity);
 	let grandTotal = $derived(subtotal + deliveryFee);
+	let isPreview = $derived(landingPage?.isPreview || false);
 
 	function formatTaka(amount: number) {
 		return `৳${amount.toLocaleString('en-BD')}`;
@@ -50,6 +51,11 @@
 
 	async function handleSubmit(e: SubmitEvent) {
 		e.preventDefault();
+
+		if (isPreview) {
+			toast.info('এটি প্রিভিউ মোড — কোনো আসল অর্ডার প্লেস করা হয়নি।');
+			return;
+		}
 
 		const cleanPhone = phone.trim().replace(/\D/g, '');
 		if (!name.trim()) {
@@ -89,7 +95,7 @@
 				body: fd
 			});
 
-			const res = await response.json();
+			const res: any = await response.json();
 
 			if (response.ok && res?.data?.success) {
 				const orderId = res.data.orderId || res.data.orderNumber;

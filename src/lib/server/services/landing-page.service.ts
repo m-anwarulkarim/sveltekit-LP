@@ -2,16 +2,34 @@ import { eq, desc, and } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from '../db/schema';
 
+export interface Style2Package {
+	id?: string;
+	title: string;
+	subtitle?: string;
+	price: number;
+	originalPrice?: number;
+	deliveryFee?: number;
+	freeDelivery?: boolean;
+	tag?: string;
+	popular?: boolean;
+}
+
 export interface LandingPageContent {
 	headline?: string;
 	subheadline?: string;
 	offerBadge?: string;
 	countdownMinutes?: number;
 	bulletPoints?: string[];
+	packages?: Style2Package[];
 	features?: Array<{ title: string; desc: string; icon?: string }>;
 	customPrice?: number;
 	customOriginalPrice?: number;
 	guaranteeText?: string;
+	trustBox1Title?: string;
+	trustBox1Desc?: string;
+	trustBox2Title?: string;
+	trustBox2Desc?: string;
+	contactPhone?: string;
 	bannerImage?: string;
 	galleryImages?: string[];
 }
@@ -30,6 +48,12 @@ export interface CreateLandingInput {
 	offerBadge?: string;
 	countdownMinutes?: number;
 	bulletPoints?: string[];
+	packages?: Style2Package[];
+	trustBox1Title?: string;
+	trustBox1Desc?: string;
+	trustBox2Title?: string;
+	trustBox2Desc?: string;
+	contactPhone?: string;
 	features?: Array<{ title: string; desc: string }>;
 	customPrice?: number;
 	customOriginalPrice?: number;
@@ -56,10 +80,9 @@ export class LandingPageService {
 			console.error('Error fetching landing pages from DB:', e);
 		}
 
-		// If no landing pages exist yet, seed initial high-converting demo pages
+		// If no landing pages exist, return empty array (do not force auto-seed)
 		if (rows.length === 0) {
-			await this.seedDemoPages(db);
-			return await this.listLandingPages(db);
+			return [];
 		}
 
 		return rows.map(({ landing, product }) => {
@@ -172,6 +195,12 @@ export class LandingPageService {
 				'পণ্য হাতে পেয়ে চেক করে মূল্য পরিশোধ',
 				'সারাদেশে দ্রুততম হোম ডেলিভারি'
 			],
+			packages: input.packages || undefined,
+			trustBox1Title: input.trustBox1Title,
+			trustBox1Desc: input.trustBox1Desc,
+			trustBox2Title: input.trustBox2Title,
+			trustBox2Desc: input.trustBox2Desc,
+			contactPhone: input.contactPhone,
 			features: input.features || [
 				{ title: 'দ্রুত ডেলিভারি', desc: '২৪ থেকে ৪৮ ঘণ্টার মধ্যে ডেলিভারি' },
 				{ title: 'মানসম্মত পণ্য', desc: 'অরিজিনাল এবং প্রিমিয়াম উপাদান' },
@@ -278,6 +307,12 @@ export class LandingPageService {
 			offerBadge: input.offerBadge !== undefined ? input.offerBadge : existing.config.offerBadge,
 			countdownMinutes: input.countdownMinutes !== undefined ? input.countdownMinutes : existing.config.countdownMinutes,
 			bulletPoints: input.bulletPoints !== undefined ? input.bulletPoints : existing.config.bulletPoints,
+			packages: input.packages !== undefined ? input.packages : existing.config.packages,
+			trustBox1Title: input.trustBox1Title !== undefined ? input.trustBox1Title : existing.config.trustBox1Title,
+			trustBox1Desc: input.trustBox1Desc !== undefined ? input.trustBox1Desc : existing.config.trustBox1Desc,
+			trustBox2Title: input.trustBox2Title !== undefined ? input.trustBox2Title : existing.config.trustBox2Title,
+			trustBox2Desc: input.trustBox2Desc !== undefined ? input.trustBox2Desc : existing.config.trustBox2Desc,
+			contactPhone: input.contactPhone !== undefined ? input.contactPhone : existing.config.contactPhone,
 			customPrice: input.customPrice !== undefined ? input.customPrice : existing.config.customPrice,
 			customOriginalPrice: input.customOriginalPrice !== undefined ? input.customOriginalPrice : existing.config.customOriginalPrice,
 			galleryImages: input.galleryImages !== undefined ? input.galleryImages : (existing.config.galleryImages || [])

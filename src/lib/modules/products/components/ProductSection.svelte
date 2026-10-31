@@ -1,7 +1,8 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import { onMount } from 'svelte';
 	import type { Product } from '../types';
-	import ProductCard from './ProductCard.svelte';
+	import DynamicProductCard from '#lib/modules/layout/product-cards/DynamicProductCard.svelte';
+	import { page } from '$app/state';
 	import { Button } from '#lib/components/ui';
 	import {
 		ChevronLeft,
@@ -148,7 +149,7 @@
 			>
 				{#each products as product (product.id)}
 					<div class="w-[calc((100%-10px)/2)] sm:w-48 md:w-52 shrink-0 flex snap-start">
-						<ProductCard {product} />
+						<DynamicProductCard {product} activeCard={page.data?.themeConfig?.views?.productCard} />
 					</div>
 				{/each}
 			</div>

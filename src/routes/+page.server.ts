@@ -8,6 +8,7 @@ export const load: PageServerLoad = async (event) => {
 	let dbProducts: any[] = [];
 	let dbCarousels: any[] = [];
 	let dbCategories: any[] = [];
+	let dbBanners: any[] = [];
 
 	try {
 		const db = getDb(event.platform);
@@ -60,6 +61,12 @@ export const load: PageServerLoad = async (event) => {
 		} catch (catErr) {
 			console.error('Failed to load categories for storefront:', catErr);
 		}
+
+		try {
+			dbBanners = await CustomizationService.getActiveBannersForStorefront(db);
+		} catch (banErr) {
+			console.error('Failed to load banners for storefront:', banErr);
+		}
 	} catch (e) {
 		console.error('Failed to load storefront products from D1:', e);
 	}
@@ -68,6 +75,7 @@ export const load: PageServerLoad = async (event) => {
 		user: event.locals.user ?? null,
 		dbProducts,
 		dbCarousels,
-		dbCategories
+		dbCategories,
+		dbBanners
 	};
 };

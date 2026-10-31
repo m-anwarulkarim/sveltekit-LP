@@ -163,10 +163,15 @@
 		</div>
 
 		<div class="flex items-center gap-2 text-xs font-bold text-slate-500">
-			<span>টেমপ্লেট স্টাইল:</span>
-			<span class="px-2.5 py-1 rounded-xl bg-purple-50 text-purple-700 border border-purple-200">
-				Style 1: Modern Animated High-Conversion
-			</span>
+			<span>সক্রিয় থিম:</span>
+			<div class="flex items-center gap-1.5">
+				<span class="px-2.5 py-1 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 text-[11px] font-bold">
+					Style 1: Modern
+				</span>
+				<span class="px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold">
+					Style 2: Sarder Seed
+				</span>
+			</div>
 		</div>
 	</div>
 
@@ -179,8 +184,7 @@
 				নতুন ল্যান্ডিং পেজ তৈরি করতে উপরের "নতুন ল্যান্ডিং পেজ তৈরি করুন" বাটনে ক্লিক করুন।
 			</p>
 			<Button
-				type="button"
-				onclick={() => (isCreateModalOpen = true)}
+				href="/admin/landing-pages/new"
 				class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs mt-2"
 			>
 				<Plus class="w-4 h-4 mr-1.5" />
@@ -246,9 +250,19 @@
 									<Eye class="w-3.5 h-3.5 text-slate-400" />
 									<span>ভিউ: <strong>{lp.views || 0}</strong></span>
 								</span>
-								<span class="px-2 py-0.5 rounded-md bg-emerald-100/70 text-emerald-800 font-bold text-[10px]">
-									Style 1: Animated
-								</span>
+								{#if lp.template === 'style_3_lighthouse'}
+									<span class="px-2 py-0.5 rounded-md bg-rose-100/90 text-[#e8007c] font-bold text-[10px] border border-rose-200">
+										Style 3: Lighthouse
+									</span>
+								{:else if lp.template === 'style_2_direct'}
+									<span class="px-2 py-0.5 rounded-md bg-emerald-100/90 text-emerald-800 font-bold text-[10px] border border-emerald-200">
+										Style 2: Sarder Seed
+									</span>
+								{:else}
+									<span class="px-2 py-0.5 rounded-md bg-indigo-100/90 text-indigo-800 font-bold text-[10px] border border-indigo-200">
+										Style 1: Modern
+									</span>
+								{/if}
 							</div>
 
 							<div>

@@ -43,16 +43,6 @@
 		toast.success(msg);
 	}
 
-	// Modal state
-	let isModalOpen = $state(false);
-	let isEditing = $state(false);
-	let editingId = $state<string | null>(null);
-	let formName = $state('');
-	let formDate = $state('Oct 28, 2026');
-	let formHomeShow = $state<'Yes' | 'No'>('Yes');
-	let formPriority = $state<string | number>('-');
-	let formStatus = $state<'publish' | 'draft'>('publish');
-
 	let openActionMenuId = $state<string | null>(null);
 
 	// Derived counts
@@ -104,92 +94,7 @@
 		}
 	}
 
-	function openAddModal() {
-		isEditing = false;
-		editingId = null;
-		formName = '';
-		formDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-		formHomeShow = 'Yes';
-		formPriority = '-';
-		formStatus = 'publish';
-		isModalOpen = true;
-	}
 
-	function openEditModal(tag: CatalogTag) {
-		isEditing = true;
-		editingId = tag.id;
-		formName = tag.name;
-		formDate = tag.date;
-		formHomeShow = tag.homeShow;
-		formPriority = tag.priority;
-		formStatus = tag.status;
-		openActionMenuId = null;
-		isModalOpen = true;
-	}
-
-	async function handleSave() {
-		if (!formName.trim()) {
-			showToast('ট্যাগের নাম প্রদান করা আবশ্যক!');
-			return;
-		}
-
-		isSaving = true;
-		const formData = new FormData();
-		formData.append('name', formName.trim());
-		formData.append('homeShow', formHomeShow);
-		formData.append('priority', String(formPriority));
-		formData.append('status', formStatus);
-
-		try {
-			if (isEditing && editingId) {
-				formData.append('id', editingId);
-				await fetch('?/updateTag', {
-					method: 'POST',
-					body: formData
-				});
-
-				tags = tags.map((t) =>
-					t.id === editingId
-						? {
-								...t,
-								name: formName.trim(),
-								date: formDate,
-								homeShow: formHomeShow,
-								priority: formPriority,
-								status: formStatus
-							}
-						: t
-				);
-				showToast('ট্যাগ সফলভাবে আপডেট করা হয়েছে!');
-			} else {
-				const response = await fetch('?/createTag', {
-					method: 'POST',
-					body: formData
-				});
-				const result = await response.json();
-				const newId = result?.data?.tag?.id || 'tag-' + Date.now();
-
-				const newTag: CatalogTag = {
-					id: newId,
-					sl: tags.length + 1,
-					name: formName.trim(),
-					date: formDate,
-					homeShow: formHomeShow,
-					status: formStatus,
-					priority: formPriority
-				};
-				tags = [newTag, ...tags];
-				showToast('নতুন ট্যাগ সফলভাবে তৈরি করা হয়েছে!');
-			}
-			isModalOpen = false;
-			await invalidateAll();
-		} catch (error) {
-			console.error('Error saving tag:', error);
-			showToast('ট্যাগ সংরক্ষণে ত্রুটি হয়েছে');
-		} finally {
-			isSaving = false;
-		}
-	}
 
 	async function toggleStatus(tag: CatalogTag) {
 		const newStatus = tag.status === 'publish' ? 'draft' : 'publish';
@@ -315,14 +220,13 @@
 			{/if}
 
 			<!-- + Add Tag Button -->
-			<button
-				type="button"
-				onclick={openAddModal}
+			<a
+				href="/admin/catalog/tags/new"
 				class="bg-[#5845eb] hover:bg-[#4a39cf] text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
 			>
 				<Plus class="w-4 h-4" />
 				<span>Add Tag</span>
-			</button>
+			</a>
 		</div>
 	</div>
 
@@ -458,14 +362,13 @@
 
 									{#if openActionMenuId === tag.id}
 										<div class="absolute right-4 {idx >= paginatedItems.length - 2 && paginatedItems.length > 2 ? 'bottom-10 top-auto origin-bottom-right' : 'top-10'} w-36 bg-white border border-slate-200 rounded-xl shadow-lg z-30 py-1 text-left text-xs animate-in fade-in duration-100">
-											<button
-												type="button"
-												onclick={() => openEditModal(tag)}
+											<a
+												href="/admin/catalog/tags/edit/{tag.id}"
 												class="w-full px-3 py-2 flex items-center gap-2 text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
 											>
 												<Edit3 class="w-3.5 h-3.5 text-slate-500" />
 												<span>Edit</span>
-											</button>
+											</a>
 
 											<button
 												type="button"
@@ -542,109 +445,3 @@
 	</div>
 </div>
 
-<!-- Add / Edit Tag Modal -->
-{#if isModalOpen}
-	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
-		<div class="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-slate-100 overflow-hidden">
-			<div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-				<h3 class="font-bold text-slate-900 text-sm">
-					{isEditing ? 'Edit Tag' : 'Add New Tag'}
-				</h3>
-				<button
-					type="button"
-					onclick={() => (isModalOpen = false)}
-					class="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
-					aria-label="Close modal"
-				>
-					<X class="w-4 h-4" />
-				</button>
-			</div>
-
-			<div class="p-6 space-y-4 text-xs">
-				<div class="space-y-1.5">
-					<label for="tag-name" class="font-bold text-slate-700 block">Tag Name *</label>
-					<input
-						id="tag-name"
-						type="text"
-						bind:value={formName}
-						placeholder="উদাঃ Flash Deals, Best Sale Products"
-						class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb]"
-					/>
-				</div>
-
-				<div class="grid grid-cols-2 gap-4">
-					<div class="space-y-1.5">
-						<label for="tag-home" class="font-bold text-slate-700 block">Home Show</label>
-						<select
-							id="tag-home"
-							bind:value={formHomeShow}
-							class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb] bg-white cursor-pointer"
-						>
-							<option value="Yes">Yes</option>
-							<option value="No">No</option>
-						</select>
-					</div>
-
-					<div class="space-y-1.5">
-						<label for="tag-priority" class="font-bold text-slate-700 block">Priority</label>
-						<input
-							id="tag-priority"
-							type="text"
-							bind:value={formPriority}
-							placeholder="-"
-							class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb]"
-						/>
-					</div>
-				</div>
-
-				<div class="grid grid-cols-2 gap-4">
-					<div class="space-y-1.5">
-						<label for="tag-date" class="font-bold text-slate-700 block">Date</label>
-						<input
-							id="tag-date"
-							type="text"
-							bind:value={formDate}
-							placeholder="Aug 25, 2026"
-							class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb]"
-						/>
-					</div>
-
-					<div class="space-y-1.5">
-						<label for="tag-status" class="font-bold text-slate-700 block">Status</label>
-						<select
-							id="tag-status"
-							bind:value={formStatus}
-							class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb] bg-white cursor-pointer"
-						>
-							<option value="publish">Publish</option>
-							<option value="draft">Draft</option>
-						</select>
-					</div>
-				</div>
-			</div>
-
-			<div class="flex items-center justify-end gap-2 px-6 py-4 bg-slate-50 border-t border-slate-100">
-				<button
-					type="button"
-					onclick={() => (isModalOpen = false)}
-					class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-200/60 cursor-pointer"
-				>
-					Cancel
-				</button>
-				<button
-					type="button"
-					disabled={isSaving}
-					onclick={handleSave}
-					class="px-4 py-2 rounded-xl text-xs font-bold bg-[#5845eb] text-white hover:bg-[#4a39cf] shadow-sm shadow-indigo-600/20 flex items-center gap-2 cursor-pointer disabled:opacity-50"
-				>
-					{#if isSaving}
-						<Loader2 class="w-3.5 h-3.5 animate-spin" />
-						<span>সংরক্ষণ হচ্ছে...</span>
-					{:else}
-						<span>{isEditing ? 'Save Changes' : 'Create Tag'}</span>
-					{/if}
-				</button>
-			</div>
-		</div>
-	</div>
-{/if}

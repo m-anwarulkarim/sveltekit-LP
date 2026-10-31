@@ -3,6 +3,8 @@
 	import favicon from '#lib/assets/favicon.svg';
 	import type { LayoutProps } from './$types';
 	import { Toaster, GlobalConfirmDialog } from '#lib/components/ui';
+	import PromotionalPopup from '#lib/components/storefront/PromotionalPopup.svelte';
+	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { afterNavigate } from '$app/navigation';
 	import { initMetaPixel, trackPageView } from '#lib/client/meta-pixel';
@@ -34,9 +36,16 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" type="image/svg+xml" href={favicon} />
-	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-	<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+	{#if data?.themeConfig?.appearance?.colors}
+		{@html `<style>:root { --brand-primary: ${data.themeConfig.appearance.colors.primary || '#e8007c'}; --brand-secondary: ${data.themeConfig.appearance.colors.secondary || '#00c153'}; --brand-tertiary: ${data.themeConfig.appearance.colors.tertiary || '#ff00ae'}; }</style>`}
+	{/if}
+	{#if data?.websiteInfo?.faviconUrl}
+		<link rel="icon" href={data.websiteInfo.faviconUrl} />
+	{:else}
+		<link rel="icon" type="image/svg+xml" href={favicon} />
+		<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+	{/if}
 	{#if data?.websiteJsonLd}
 		<!-- Google Structured Data: WebSite Schema -->
 		{@html `<script type="application/ld+json">${JSON.stringify(data.websiteJsonLd)}</script>`}
@@ -60,6 +69,10 @@
 </svelte:head>
 
 {@render children()}
+
+{#if data?.activePopup && !page.url.pathname.startsWith('/admin') && !page.url.pathname.startsWith('/lp/')}
+	<PromotionalPopup popup={data.activePopup} />
+{/if}
 
 <Toaster />
 <GlobalConfirmDialog />

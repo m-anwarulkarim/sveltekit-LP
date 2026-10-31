@@ -36,19 +36,6 @@
 	let currentPage = $state(1);
 	let itemsPerPage = 10;
 
-	// Modal state
-	let isModalOpen = $state(false);
-	let isEditing = $state(false);
-	let editingId = $state<string | null>(null);
-	let formName = $state('');
-	let formSlug = $state('');
-	let formLogo = $state('');
-	let formWebsite = $state('');
-	let formHomeShow = $state<'Yes' | 'No'>('No');
-	let formPriority = $state<string | number>(0);
-	let formStatus = $state<'publish' | 'draft'>('publish');
-	let isSubmitting = $state(false);
-
 	let openActionMenuId = $state<string | null>(null);
 
 	// Derived counts directly from database
@@ -117,79 +104,7 @@
 		}
 	}
 
-	function openAddModal() {
-		isEditing = false;
-		editingId = null;
-		formName = '';
-		formSlug = '';
-		formLogo = '';
-		formWebsite = '';
-		formHomeShow = 'No';
-		formPriority = 0;
-		formStatus = 'publish';
-		isModalOpen = true;
-	}
 
-	function openEditModal(brand: BrandItem) {
-		isEditing = true;
-		editingId = brand.id;
-		formName = brand.name;
-		formSlug = brand.slug;
-		formLogo = brand.logo || '';
-		formWebsite = brand.website || '';
-		formHomeShow = brand.isFeatured ? 'Yes' : 'No';
-		formPriority = brand.sortOrder ?? 0;
-		formStatus = brand.isActive ? 'publish' : 'draft';
-		openActionMenuId = null;
-		isModalOpen = true;
-	}
-
-	async function handleSave() {
-		if (!formName.trim()) {
-			toast.error('ব্র্যান্ডের নাম প্রদান করুন');
-			return;
-		}
-
-		isSubmitting = true;
-		const fd = new FormData();
-		fd.append('name', formName.trim());
-		if (formSlug.trim()) fd.append('slug', formSlug.trim());
-		if (formLogo.trim()) fd.append('logo', formLogo.trim());
-		if (formWebsite.trim()) fd.append('website', formWebsite.trim());
-		fd.append('homeShow', formHomeShow);
-		fd.append('priority', String(formPriority));
-		fd.append('status', formStatus);
-
-		const actionName = isEditing && editingId ? '?/updateBrand' : '?/createBrand';
-		if (isEditing && editingId) {
-			fd.append('id', editingId);
-		}
-
-		try {
-			const res = await fetch(actionName, {
-				method: 'POST',
-				body: fd
-			});
-			const result = (await res.json()) as any;
-
-			if (result.type === 'success' || result.status === 200) {
-				await invalidateAll();
-				toast.success(
-					isEditing
-						? 'ব্র্যান্ড সফলভাবে আপডেট করা হয়েছে!'
-						: 'নতুন ব্র্যান্ড সফলভাবে তৈরি করা হয়েছে!'
-				);
-				isModalOpen = false;
-			} else {
-				toast.error(result?.data?.message || 'সংরক্ষণ ব্যর্থ হয়েছে');
-			}
-		} catch (err) {
-			console.error(err);
-			toast.error('সার্ভারে যোগাযোগ করতে সমস্যা হয়েছে');
-		} finally {
-			isSubmitting = false;
-		}
-	}
 
 	async function toggleStatus(brand: BrandItem) {
 		const fd = new FormData();
@@ -332,14 +247,13 @@
 		</div>
 
 		<!-- + Add Brand Button -->
-		<button
-			type="button"
-			onclick={openAddModal}
+		<a
+			href="/admin/catalog/brands/new"
 			class="bg-[#5845eb] hover:bg-[#4a39cf] text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
 		>
 			<Plus class="w-4 h-4" />
 			<span>Add Brand</span>
-		</button>
+		</a>
 	</div>
 
 	<!-- Filter Capsules: All Data, Publish, Draft, Trash -->
@@ -572,14 +486,13 @@
 
 									{#if openActionMenuId === brand.id}
 										<div class="absolute right-4 {idx >= paginatedItems.length - 2 && paginatedItems.length > 2 ? 'bottom-10 top-auto origin-bottom-right' : 'top-10'} w-40 bg-white border border-slate-200 rounded-xl shadow-xl z-30 py-1 text-left text-xs animate-in fade-in">
-											<button
-												type="button"
-												onclick={() => openEditModal(brand)}
+											<a
+												href="/admin/catalog/brands/edit/{brand.id}"
 												class="w-full px-3 py-1.5 flex items-center gap-2 text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
 											>
 												<Edit3 class="w-3.5 h-3.5 text-slate-500" />
 												<span>Edit Brand</span>
-											</button>
+											</a>
 
 											{#if !brand.isTrash}
 												<button
@@ -661,130 +574,3 @@
 	</div>
 </div>
 
-<!-- Add / Edit Brand Modal -->
-{#if isModalOpen}
-	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
-		<div class="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-100 overflow-hidden">
-			<div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/60">
-				<div>
-					<h3 class="font-bold text-slate-900 text-sm">
-						{isEditing ? 'Edit Brand' : 'Add New Brand'}
-					</h3>
-					<p class="text-[11px] text-slate-500">
-						{isEditing ? 'বিদ্যমান ব্র্যান্ডের তথ্য আপডেট করুন' : 'নতুন ব্র্যান্ডের নাম ও প্যারামিটার যুক্ত করুন'}
-					</p>
-				</div>
-				<button
-					type="button"
-					onclick={() => (isModalOpen = false)}
-					class="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
-				>
-					<X class="w-4 h-4" />
-				</button>
-			</div>
-
-			<div class="p-6 space-y-4 text-xs">
-				<div class="space-y-1.5">
-					<label for="brand-name" class="font-bold text-slate-700 block">
-						Brand Name <span class="text-red-500">*</span>
-					</label>
-					<input
-						id="brand-name"
-						type="text"
-						bind:value={formName}
-						placeholder="উদাঃ Samsung, Apple, COSRX"
-						class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb] shadow-2xs"
-					/>
-				</div>
-
-				<div class="space-y-1.5">
-					<label for="brand-slug" class="font-bold text-slate-700 block">
-						Custom Slug (ঐচ্ছিক)
-					</label>
-					<input
-						id="brand-slug"
-						type="text"
-						bind:value={formSlug}
-						placeholder="খালি রাখলে স্বয়ংক্রিয় তৈরি হবে"
-						class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb] font-mono shadow-2xs"
-					/>
-				</div>
-
-				<div class="space-y-1.5">
-					<label for="brand-logo" class="font-bold text-slate-700 block">
-						Logo Image URL (ঐচ্ছিক)
-					</label>
-					<input
-						id="brand-logo"
-						type="text"
-						bind:value={formLogo}
-						placeholder="https://example.com/logo.png"
-						class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb] shadow-2xs"
-					/>
-				</div>
-
-				<div class="grid grid-cols-2 gap-4">
-					<div class="space-y-1.5">
-						<label for="brand-home" class="font-bold text-slate-700 block">Home Show</label>
-						<select
-							id="brand-home"
-							bind:value={formHomeShow}
-							class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb] bg-white shadow-2xs"
-						>
-							<option value="Yes">Yes</option>
-							<option value="No">No</option>
-						</select>
-					</div>
-
-					<div class="space-y-1.5">
-						<label for="brand-priority" class="font-bold text-slate-700 block">Priority (Order)</label>
-						<input
-							id="brand-priority"
-							type="number"
-							bind:value={formPriority}
-							placeholder="0"
-							class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb] shadow-2xs"
-						/>
-					</div>
-				</div>
-
-				<div class="space-y-1.5">
-					<label for="brand-status" class="font-bold text-slate-700 block">Status</label>
-					<select
-						id="brand-status"
-						bind:value={formStatus}
-						class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb] bg-white shadow-2xs"
-					>
-						<option value="publish">Publish (Active)</option>
-						<option value="draft">Draft (Inactive)</option>
-					</select>
-				</div>
-			</div>
-
-			<div class="flex items-center justify-end gap-2 px-6 py-4 bg-slate-50 border-t border-slate-100">
-				<button
-					type="button"
-					onclick={() => (isModalOpen = false)}
-					disabled={isSubmitting}
-					class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-200/60 transition-colors cursor-pointer"
-				>
-					বাতিল
-				</button>
-				<button
-					type="button"
-					onclick={handleSave}
-					disabled={isSubmitting}
-					class="px-5 py-2 rounded-xl text-xs font-bold bg-[#5845eb] text-white hover:bg-[#4a39cf] shadow-md shadow-indigo-600/20 transition-all flex items-center gap-1.5 cursor-pointer"
-				>
-					{#if isSubmitting}
-						<RotateCw class="w-3.5 h-3.5 animate-spin" />
-						<span>সংরক্ষণ হচ্ছে...</span>
-					{:else}
-						<CheckCircle2 class="w-3.5 h-3.5" />
-						<span>{isEditing ? 'Save Changes' : 'Create Brand'}</span>
-					{/if}
-				</button>
-			</div>
-		</div>
-	</div>
-{/if}

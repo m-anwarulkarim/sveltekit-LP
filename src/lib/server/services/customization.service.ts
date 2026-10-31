@@ -24,6 +24,15 @@ export interface BannerInput {
 	status?: string;
 }
 
+export interface PopupInput {
+	title: string;
+	triggerType?: 'on_load' | 'exit_intent' | 'delay_seconds';
+	delaySeconds?: number;
+	imageUrl?: string;
+	targetUrl?: string;
+	status?: string;
+}
+
 export class CustomizationService {
 	// ================= CAROUSELS ================= //
 
@@ -274,13 +283,45 @@ export class CustomizationService {
 		return { success: true };
 	}
 
+	static async getActiveBannersForStorefront(
+		db: DrizzleD1Database<typeof schema>,
+		placement?: string
+	) {
+		const countRes = await db
+			.select({ count: sql<number>`count(*)` })
+			.from(schema.banners)
+			.all();
+		const total = countRes[0]?.count ?? 0;
+		if (total === 0) {
+			await this.seedInitialBanners(db);
+		}
+
+		if (placement) {
+			return await db
+				.select()
+				.from(schema.banners)
+				.where(
+					sql`${schema.banners.status} = 'Publish' AND ${schema.banners.placement} = ${placement}`
+				)
+				.orderBy(asc(schema.banners.sortOrder), desc(schema.banners.createdAt))
+				.all();
+		}
+
+		return await db
+			.select()
+			.from(schema.banners)
+			.where(eq(schema.banners.status, 'Publish'))
+			.orderBy(asc(schema.banners.sortOrder), desc(schema.banners.createdAt))
+			.all();
+	}
+
 	private static async seedInitialBanners(db: DrizzleD1Database<typeof schema>) {
 		const defaults = [
 			{
 				id: 'ban-1',
 				title: 'bannar1',
 				image: '/images/banners/banner-home.svg',
-				targetUrl: '/home',
+				targetUrl: '/catalog/all-product',
 				urlType: 'Internal',
 				placement: 'Home Page Top Banner',
 				displayOptions: 'Show on Home',
@@ -291,7 +332,7 @@ export class CustomizationService {
 				id: 'ban-2',
 				title: 'bannar2',
 				image: '/images/banners/banner-combo.svg',
-				targetUrl: '/category/beauty',
+				targetUrl: '/catalog/all-product?filter=best-sale',
 				urlType: 'Internal',
 				placement: 'Category Middle Banner',
 				displayOptions: 'Show on Home',
@@ -303,6 +344,113 @@ export class CustomizationService {
 		for (const d of defaults) {
 			await db.insert(schema.banners).values(d as any);
 		}
+	}
+
+	// ================= POPUPS ================= //
+
+	static async listPopups(db: DrizzleD1Database<typeof schema>) {
+		const countRes = await db
+			.select({ count: sql<number>`count(*)` })
+			.from(schema.popups)
+			.all();
+		const total = countRes[0]?.count ?? 0;
+
+		if (total === 0) {
+			await this.seedInitialPopups(db);
+		}
+
+		return await db
+			.select()
+			.from(schema.popups)
+			.orderBy(desc(schema.popups.createdAt))
+			.all();
+	}
+
+	static async getPopupById(db: DrizzleD1Database<typeof schema>, id: string) {
+		const rows = await db
+			.select()
+			.from(schema.popups)
+			.where(eq(schema.popups.id, id))
+			.limit(1)
+			.all();
+		return rows[0] || null;
+	}
+
+	static async createPopup(db: DrizzleD1Database<typeof schema>, input: PopupInput) {
+		const id = crypto.randomUUID();
+		const normalizedStatus =
+			input.status === 'DRAFT' || input.status === 'inactive' ? 'inactive' : 'active';
+		const newRecord = {
+			id,
+			title: input.title,
+			triggerType: input.triggerType || 'on_load',
+			delaySeconds: Number(input.delaySeconds) || 5,
+			imageUrl: input.imageUrl || '/images/banners/banner-combo.svg',
+			targetUrl: input.targetUrl || '/catalog/all-product',
+			status: normalizedStatus
+		};
+
+		await db.insert(schema.popups).values(newRecord as any);
+		return newRecord;
+	}
+
+	static async updatePopup(
+		db: DrizzleD1Database<typeof schema>,
+		id: string,
+		input: Partial<PopupInput>
+	) {
+		const updateData: any = {};
+		if (input.title !== undefined) updateData.title = input.title;
+		if (input.triggerType !== undefined) updateData.triggerType = input.triggerType;
+		if (input.delaySeconds !== undefined) updateData.delaySeconds = Number(input.delaySeconds) || 5;
+		if (input.imageUrl !== undefined) updateData.imageUrl = input.imageUrl;
+		if (input.targetUrl !== undefined) updateData.targetUrl = input.targetUrl;
+		if (input.status !== undefined) {
+			updateData.status =
+				input.status === 'DRAFT' || input.status === 'inactive' ? 'inactive' : 'active';
+		}
+
+		await db.update(schema.popups).set(updateData).where(eq(schema.popups.id, id));
+		return await this.getPopupById(db, id);
+	}
+
+	static async deletePopup(db: DrizzleD1Database<typeof schema>, id: string) {
+		await db.delete(schema.popups).where(eq(schema.popups.id, id));
+		return { success: true };
+	}
+
+	static async getActivePopupForStorefront(db: DrizzleD1Database<typeof schema>) {
+		const countRes = await db
+			.select({ count: sql<number>`count(*)` })
+			.from(schema.popups)
+			.all();
+		if ((countRes[0]?.count ?? 0) === 0) {
+			await this.seedInitialPopups(db);
+		}
+
+		const rows = await db
+			.select()
+			.from(schema.popups)
+			.where(sql`${schema.popups.status} = 'active' OR ${schema.popups.status} = 'PUBLISH'`)
+			.orderBy(desc(schema.popups.createdAt))
+			.limit(1)
+			.all();
+
+		return rows[0] || null;
+	}
+
+	private static async seedInitialPopups(db: DrizzleD1Database<typeof schema>) {
+		const defaultPopup = {
+			id: 'pop-1',
+			title: 'স্পেশাল ডিসকাউন্ট অফার! ১০% ছাড় উপভোগ করুন',
+			triggerType: 'delay_seconds',
+			delaySeconds: 4,
+			imageUrl: '/images/banners/banner-combo.svg',
+			targetUrl: '/catalog/all-product',
+			status: 'active'
+		};
+
+		await db.insert(schema.popups).values(defaultPopup as any);
 	}
 }
 

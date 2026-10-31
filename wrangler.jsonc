@@ -6,12 +6,19 @@
 	"compatibility_flags": ["nodejs_compat"],
 	"vars": {
 		"ORIGIN": "https://lp.haqplus.com",
-		"BETTER_AUTH_SECRET": "aura_acoustics_production_jwt_sec_99881122"
+		"BETTER_AUTH_SECRET": "aura_acoustics_production_jwt_sec_99881122",
+		"R2_PUBLIC_URL": "https://pub-fe7043cdba5e4550a7e594df8db06129.r2.dev"
 	},
 	"assets": {
 		"binding": "ASSETS",
 		"directory": ".svelte-kit/cloudflare"
 	},
+	"r2_buckets": [
+		{
+			"binding": "R2",
+			"bucket_name": "haqplus"
+		}
+	],
 	"d1_databases": [
 		{
 			"binding": "DB",

@@ -10,10 +10,19 @@
 		ChevronRight,
 		CheckCircle2,
 		X,
-		AppWindow
+		AppWindow,
+		Clock,
+		Sparkles,
+		ExternalLink,
+		MousePointerClick
 	} from 'lucide-svelte';
 	import { confirmModal } from '#lib/stores/confirm.svelte';
 	import { toast } from 'svelte-sonner';
+	import { Button } from '#lib/components/ui/button';
+	import { Input } from '#lib/components/ui/input';
+	import { Badge } from '#lib/components/ui/badge';
+	import { Card } from '#lib/components/ui/card';
+	import { invalidateAll } from '$app/navigation';
 
 	interface PopupItem {
 		id: string;
@@ -21,30 +30,24 @@
 		name: string;
 		url: string;
 		urlType: 'Internal' | 'External';
+		triggerType: 'on_load' | 'exit_intent' | 'delay_seconds';
+		delaySeconds: number;
 		priority: string;
 		status: 'PUBLISH' | 'DRAFT';
 	}
 
+	let { data }: { data: any } = $props();
+
 	let popups = $state<PopupItem[]>([]);
+
+	$effect(() => {
+		popups = data?.popups || [];
+	});
 
 	let searchQuery = $state('');
 	let activeTab = $state<'all' | 'publish' | 'draft' | 'trash'>('all');
 	let selectedIds = $state<string[]>([]);
 	let activeActionId = $state<string | null>(null);
-
-	// Modal State
-	let isModalOpen = $state(false);
-	let editingItem = $state<PopupItem | null>(null);
-	let modalName = $state('');
-	let modalUrl = $state('/products');
-	let modalUrlType = $state<'Internal' | 'External'>('Internal');
-	let modalPriority = $state('1');
-	let modalStatus = $state<'PUBLISH' | 'DRAFT'>('PUBLISH');
-	let modalImage = $state('/images/banners/banner-combo.svg');
-
-	function showToast(msg: string) {
-		toast.success(msg);
-	}
 
 	function handleActionClick(id: string, e: MouseEvent) {
 		e.stopPropagation();
@@ -67,7 +70,12 @@
 
 		if (searchQuery.trim()) {
 			const q = searchQuery.toLowerCase().trim();
-			list = list.filter((p) => p.name.toLowerCase().includes(q) || p.url.toLowerCase().includes(q));
+			list = list.filter(
+				(p) =>
+					p.name.toLowerCase().includes(q) ||
+					p.url.toLowerCase().includes(q) ||
+					p.triggerType.toLowerCase().includes(q)
+			);
 		}
 		return list;
 	});
@@ -92,122 +100,161 @@
 		}
 	}
 
-	function openAddModal() {
-		editingItem = null;
-		modalName = '';
-		modalUrl = '/products';
-		modalUrlType = 'Internal';
-		modalPriority = '1';
-		modalStatus = 'PUBLISH';
-		modalImage = '/images/banners/banner-combo.svg';
-		isModalOpen = true;
-	}
+	async function toggleStatus(item: PopupItem) {
+		try {
+			const formData = new FormData();
+			formData.append('id', item.id);
+			formData.append('status', item.status);
 
-	function openEditModal(item: PopupItem) {
-		editingItem = item;
-		modalName = item.name;
-		modalUrl = item.url;
-		modalUrlType = item.urlType;
-		modalPriority = item.priority;
-		modalStatus = item.status;
-		modalImage = item.image;
-		isModalOpen = true;
-	}
+			const res = await fetch('?/toggleStatus', {
+				method: 'POST',
+				body: formData
+			});
+			const result = await res.json();
 
-	function handleSave(e: SubmitEvent) {
-		e.preventDefault();
-		if (!modalName.trim()) return;
-
-		if (editingItem) {
-			popups = popups.map((p) =>
-				p.id === editingItem!.id
-					? {
-							...p,
-							name: modalName,
-							url: modalUrl,
-							urlType: modalUrlType,
-							priority: modalPriority,
-							status: modalStatus,
-							image: modalImage
-					  }
-					: p
-			);
-			showToast(`"${modalName}" পপআপ আপডেট হয়েছে`);
-		} else {
-			const newItem: PopupItem = {
-				id: `pop-${Date.now()}`,
-				name: modalName,
-				url: modalUrl,
-				urlType: modalUrlType,
-				priority: modalPriority,
-				status: modalStatus,
-				image: modalImage
-			};
-			popups = [...popups, newItem];
-			showToast(`নতুন পপআপ সফলভাবে যুক্ত হয়েছে`);
+			if (result.type === 'success' || result.status === 200) {
+				item.status = item.status === 'PUBLISH' ? 'DRAFT' : 'PUBLISH';
+				toast.success('পপআপ স্ট্যাটাস পরিবর্তিত হয়েছে');
+			} else {
+				toast.error('স্ট্যাটাস পরিবর্তনে সমস্যা হয়েছে');
+			}
+		} catch (err) {
+			toast.error('সার্ভারে সমস্যা হয়েছে');
 		}
-		isModalOpen = false;
 	}
 
 	async function handleDelete(item: PopupItem) {
 		const confirmed = await confirmModal({
 			title: 'পপআপ মুছে ফেলা',
-			message: `আপনি কি "${item.name}" পপআপটি মুছতে চান?`,
+			message: `আপনি কি "${item.name}" পপআপটি স্থায়ীভাবে মুছতে চান?`,
 			confirmText: 'হ্যাঁ, মুছে ফেলুন',
 			variant: 'destructive',
 			icon: 'trash'
 		});
 		if (!confirmed) return;
 
-		popups = popups.filter((p) => p.id !== item.id);
-		selectedIds = selectedIds.filter((id) => id !== item.id);
-		showToast(`পপআপটি মুছে ফেলা হয়েছে`);
+		try {
+			const formData = new FormData();
+			formData.append('id', item.id);
+
+			const res = await fetch('?/deletePopup', {
+				method: 'POST',
+				body: formData
+			});
+			const result = await res.json();
+
+			if (result.type === 'success' || result.status === 200) {
+				popups = popups.filter((p) => p.id !== item.id);
+				selectedIds = selectedIds.filter((id) => id !== item.id);
+				toast.success('পপআপ মুছে ফেলা হয়েছে');
+				await invalidateAll();
+			} else {
+				toast.error('মুছে ফেলতে ব্যর্থ হয়েছে');
+			}
+		} catch (err) {
+			toast.error('সার্ভারে সমস্যা হয়েছে');
+		}
+	}
+
+	async function handleBulkDelete() {
+		if (selectedIds.length === 0) return;
+
+		const confirmed = await confirmModal({
+			title: 'একসাথে পপআপ মুছে ফেলা',
+			message: `আপনি নির্বাচিত ${selectedIds.length}টি পপআপ মুছতে চান?`,
+			confirmText: 'সব মুছুন',
+			variant: 'destructive',
+			icon: 'trash'
+		});
+		if (!confirmed) return;
+
+		try {
+			const formData = new FormData();
+			formData.append('ids', JSON.stringify(selectedIds));
+
+			const res = await fetch('?/bulkDelete', {
+				method: 'POST',
+				body: formData
+			});
+			const result = await res.json();
+
+			if (result.type === 'success' || result.status === 200) {
+				popups = popups.filter((p) => !selectedIds.includes(p.id));
+				selectedIds = [];
+				toast.success('নির্বাচিত পপআপগুলো মুছে ফেলা হয়েছে');
+				await invalidateAll();
+			} else {
+				toast.error('মুছতে ব্যর্থ হয়েছে');
+			}
+		} catch (err) {
+			toast.error('সার্ভারে সমস্যা হয়েছে');
+		}
 	}
 </script>
 
 <svelte:window onclick={handleWindowClick} />
 
 <svelte:head>
-	<title>Popup - Customization - AURA Admin</title>
+	<title>Popup & Offers - Customization - AURA Admin</title>
 </svelte:head>
 
-<div class="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
-	<!-- Top Controls Row (Search Left, + Add Popup Right) -->
-	<div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-		<div class="relative w-full sm:w-80">
-			<input
-				type="text"
-				placeholder="Search popups..."
-				bind:value={searchQuery}
-				class="w-full bg-white border border-slate-200/90 rounded-2xl pl-4 pr-10 py-2.5 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#5845eb] focus:ring-2 focus:ring-[#5845eb]/15 transition-all shadow-2xs"
-			/>
-			<div class="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-				<Search class="w-4 h-4" />
+<div class="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto font-['Anek_Bangla',sans-serif]">
+	<!-- Page Header -->
+	<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+		<div class="flex items-center gap-2.5">
+			<div class="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-xs">
+				<AppWindow class="w-5 h-5" />
+			</div>
+			<div>
+				<h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">পপআপ ও ডিসকাউন্ট অফার</h1>
+				<p class="text-xs text-slate-500 mt-0.5">গ্রাহকদের জন্য আকর্ষণীয় অফার ও ডিসকাউন্ট পপআপ উইন্ডো পরিচালনা করুন</p>
 			</div>
 		</div>
 
-		<button
-			type="button"
-			onclick={openAddModal}
-			class="rounded-xl bg-[#5845eb] hover:bg-[#4936d6] text-white px-4 py-2.5 text-xs font-bold flex items-center gap-1.5 shadow-md shadow-indigo-500/25 transition-all cursor-pointer active:scale-95 shrink-0"
-		>
-			<Plus class="w-4 h-4 stroke-[2.5]" />
-			<span>Add Popup</span>
-		</button>
+		<!-- Direct Link to Dedicated Separate New Page -->
+		<div class="flex items-center gap-2">
+			<a
+				href="/admin/customization/popup/edit-popup/new"
+				class="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+			>
+				<Plus class="w-4 h-4" />
+				<span>নতুন পপআপ তৈরি</span>
+			</a>
+		</div>
 	</div>
 
-	<!-- Filter Tabs Capsule (All [0], Publish [0], Draft [0], Trash [0]) -->
-	<div class="flex items-center">
-		<div class="inline-flex items-center p-1 bg-slate-100/90 rounded-2xl border border-slate-200/70 shadow-2xs gap-1">
+	<!-- Top Filter & Search Controls -->
+	<div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+		<div class="relative w-full sm:w-80">
+			<Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+			<Input
+				type="text"
+				placeholder="পপআপ সার্চ করুন..."
+				bind:value={searchQuery}
+				class="pl-10 h-10 bg-white border-slate-200/90 rounded-2xl text-xs font-medium focus-visible:ring-indigo-500 shadow-2xs"
+			/>
+			{#if searchQuery}
+				<button
+					type="button"
+					onclick={() => (searchQuery = '')}
+					class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+				>
+					<X class="w-3.5 h-3.5" />
+				</button>
+			{/if}
+		</div>
+
+		<!-- Status Tabs -->
+		<div class="inline-flex items-center p-1 bg-slate-100/90 rounded-2xl border border-slate-200/70 shadow-2xs gap-1 self-start sm:self-auto">
 			<button
 				type="button"
 				onclick={() => (activeTab = 'all')}
-				class="px-4 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer {activeTab === 'all'
+				class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer {activeTab === 'all'
 					? 'bg-white text-slate-900 shadow-xs'
 					: 'text-slate-600 hover:text-slate-900'}"
 			>
-				<span>All</span>
-				<span class="px-1.5 py-0.2 rounded-full text-[10px] font-black {activeTab === 'all' ? 'bg-[#5845eb] text-white' : 'bg-slate-200/80 text-slate-700'}">
+				<span>সব</span>
+				<span class="px-1.5 py-0.2 rounded-full text-[10px] font-black {activeTab === 'all' ? 'bg-indigo-600 text-white' : 'bg-slate-200/80 text-slate-700'}">
 					{popups.length}
 				</span>
 			</button>
@@ -215,12 +262,12 @@
 			<button
 				type="button"
 				onclick={() => (activeTab = 'publish')}
-				class="px-4 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer {activeTab === 'publish'
+				class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer {activeTab === 'publish'
 					? 'bg-white text-slate-900 shadow-xs'
 					: 'text-slate-600 hover:text-slate-900'}"
 			>
-				<span>Publish</span>
-				<span class="px-1.5 py-0.2 rounded-full text-[10px] font-black {activeTab === 'publish' ? 'bg-[#5845eb] text-white' : 'bg-slate-200/80 text-slate-700'}">
+				<span>সক্রিয় (Active)</span>
+				<span class="px-1.5 py-0.2 rounded-full text-[10px] font-black {activeTab === 'publish' ? 'bg-emerald-600 text-white' : 'bg-slate-200/80 text-slate-700'}">
 					{popups.filter(p => p.status === 'PUBLISH').length}
 				</span>
 			</button>
@@ -228,78 +275,77 @@
 			<button
 				type="button"
 				onclick={() => (activeTab = 'draft')}
-				class="px-4 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer {activeTab === 'draft'
+				class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer {activeTab === 'draft'
 					? 'bg-white text-slate-900 shadow-xs'
 					: 'text-slate-600 hover:text-slate-900'}"
 			>
-				<span>Draft</span>
-				<span class="px-1.5 py-0.2 rounded-full text-[10px] font-black {activeTab === 'draft' ? 'bg-[#5845eb] text-white' : 'bg-slate-200/80 text-slate-700'}">
+				<span>ড্রাফট (Draft)</span>
+				<span class="px-1.5 py-0.2 rounded-full text-[10px] font-black {activeTab === 'draft' ? 'bg-slate-700 text-white' : 'bg-slate-200/80 text-slate-700'}">
 					{popups.filter(p => p.status === 'DRAFT').length}
-				</span>
-			</button>
-
-			<button
-				type="button"
-				onclick={() => (activeTab = 'trash')}
-				class="px-4 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer {activeTab === 'trash'
-					? 'bg-white text-slate-900 shadow-xs'
-					: 'text-slate-600 hover:text-slate-900'}"
-			>
-				<span>Trash</span>
-				<span class="px-1.5 py-0.2 rounded-full text-[10px] font-black {activeTab === 'trash' ? 'bg-[#5845eb] text-white' : 'bg-slate-200/80 text-slate-700'}">
-					0
 				</span>
 			</button>
 		</div>
 	</div>
 
-	<!-- Popup Table Card (Exact Match to Screenshot 3 with Empty State) -->
-	<div class="bg-white border border-slate-200/90 rounded-3xl shadow-xs overflow-hidden min-h-[260px]">
+	<!-- Bulk Actions Bar -->
+	{#if selectedIds.length > 0}
+		<div class="flex items-center justify-between p-3 px-4 bg-indigo-50 border border-indigo-200 rounded-2xl animate-in fade-in slide-in-from-top-1">
+			<div class="flex items-center gap-2 text-xs font-bold text-indigo-900">
+				<CheckCircle2 class="w-4 h-4 text-indigo-600" />
+				<span>{selectedIds.length}টি পপআপ নির্বাচিত</span>
+			</div>
+			<Button
+				variant="destructive"
+				size="sm"
+				onclick={handleBulkDelete}
+				class="rounded-xl h-8 px-3 text-xs gap-1.5 font-bold"
+			>
+				<Trash2 class="w-3.5 h-3.5" />
+				<span>নির্বাচিতগুলো মুছুন</span>
+			</Button>
+		</div>
+	{/if}
+
+	<!-- Popup Table Card (With min-h and unclipped dropdown positioning) -->
+	<Card class="rounded-3xl border-slate-200/90 shadow-xs min-h-[360px] pb-12">
 		<div class="overflow-x-auto no-scrollbar">
 			<table class="w-full text-left border-collapse">
 				<thead>
-					<tr class="border-b border-slate-200/80 bg-slate-50/50 text-[11px] font-bold tracking-wider text-slate-500 uppercase select-none">
+					<tr class="border-b border-slate-200/80 bg-slate-50/70 text-[11px] font-bold tracking-wider text-slate-500 uppercase select-none">
 						<th class="py-4 pl-5 pr-2 w-10">
 							<input
 								type="checkbox"
 								checked={isAllSelected}
 								onchange={toggleSelectAll}
 								disabled={filteredPopups.length === 0}
-								class="w-4 h-4 rounded-md border-slate-300 text-[#5845eb] focus:ring-[#5845eb] cursor-pointer disabled:opacity-40"
+								class="w-4 h-4 rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer disabled:opacity-40"
 								aria-label="Select all"
 							/>
 						</th>
-						<th class="py-4 px-4 min-w-[120px]">IMAGE</th>
-						<th class="py-4 px-4 min-w-[140px]">NAME</th>
-						<th class="py-4 px-4 min-w-[200px]">URL</th>
-						<th class="py-4 px-4 min-w-[120px]">URL TYPE</th>
-						<th class="py-4 px-4 min-w-[160px]">CUSTOMIZATION.PRIORITY</th>
-						<th class="py-4 px-4 min-w-[120px]">STATUS</th>
-						<th class="py-4 pr-6 pl-3 w-16 text-right">ACTIONS</th>
+						<th class="py-4 px-4 min-w-[100px]">ইমেজ</th>
+						<th class="py-4 px-4 min-w-[180px]">পপআপের নাম ও টাইমিং</th>
+						<th class="py-4 px-4 min-w-[180px]">টার্গেট লিংক</th>
+						<th class="py-4 px-4 min-w-[120px]">ট্রিগার মেকানিজম</th>
+						<th class="py-4 px-4 min-w-[110px]">স্ট্যাটাস</th>
+						<th class="py-4 pr-6 pl-3 w-16 text-right">অ্যাকশন</th>
 					</tr>
 				</thead>
 
 				<tbody class="divide-y divide-slate-100 text-slate-700 text-xs font-medium">
 					{#if filteredPopups.length === 0}
-						<!-- Exact Empty State Matching Screenshot 3 -->
 						<tr>
-							<td colspan="8" class="py-20 text-center">
+							<td colspan="7" class="py-20 text-center">
 								<div class="flex flex-col items-center justify-center gap-3">
 									<div class="relative">
-										<div class="w-16 h-16 rounded-full bg-[#f1effd] flex items-center justify-center text-[#5845eb]">
-											<!-- Popup window glyph -->
-											<svg class="w-7 h-7 text-[#5845eb]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-												<rect x="2" y="4" width="20" height="16" rx="2" />
-												<line x1="2" y1="9" x2="22" y2="9" />
-											</svg>
+										<div class="w-16 h-16 rounded-3xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-xs">
+											<AppWindow class="w-8 h-8" />
 										</div>
-										<!-- Small orange dot at top right of icon matching screenshot 3 -->
-										<span class="absolute top-1 right-0 w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+										<span class="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-4 ring-white"></span>
 									</div>
 
-									<div class="space-y-0.5">
-										<h4 class="text-sm sm:text-base font-bold text-slate-800">No popups found</h4>
-										<p class="text-xs text-slate-400">Popup items will appear here once available.</p>
+									<div class="space-y-1">
+										<h4 class="text-sm sm:text-base font-bold text-slate-900">কোনো পপআপ পাওয়া যায়নি</h4>
+										<p class="text-xs text-slate-400">নতুন অফার পপআপ তৈরি করতে উপরের "নতুন পপআপ তৈরি" বাটনে ক্লিক করুন।</p>
 									</div>
 								</div>
 							</td>
@@ -307,60 +353,122 @@
 					{:else}
 						{#each filteredPopups as item, index (item.id)}
 							{@const isSelected = selectedIds.includes(item.id)}
-							<tr class="hover:bg-slate-50/70 transition-colors {isSelected ? 'bg-indigo-50/30' : ''}">
+							{@const isNearBottom = index >= filteredPopups.length - 1 || filteredPopups.length <= 2}
+							<tr class="hover:bg-slate-50/80 transition-colors {isSelected ? 'bg-indigo-50/40' : ''}">
 								<td class="py-4 pl-5 pr-2">
 									<input
 										type="checkbox"
 										checked={isSelected}
 										onchange={() => toggleSelectRow(item.id)}
-										class="w-4 h-4 rounded-md border-slate-300 text-[#5845eb] focus:ring-[#5845eb] cursor-pointer"
+										class="w-4 h-4 rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
 										aria-label="Select {item.name}"
 									/>
 								</td>
 								<td class="py-4 px-4">
-									<div class="w-16 h-10 rounded-xl border border-slate-200/80 bg-slate-50 overflow-hidden shadow-2xs flex items-center justify-center p-0.5">
+									<div class="w-16 h-11 rounded-xl border border-slate-200/90 bg-slate-50 overflow-hidden shadow-2xs flex items-center justify-center p-0.5">
 										<img src={item.image} alt={item.name} class="w-full h-full object-cover rounded-lg" />
 									</div>
 								</td>
-								<td class="py-4 px-4 font-bold text-slate-900">{item.name}</td>
-								<td class="py-4 px-4 text-slate-700 font-mono text-xs">{item.url}</td>
-								<td class="py-4 px-4">{item.urlType}</td>
-								<td class="py-4 px-4 font-mono font-semibold">{item.priority}</td>
-								<td class="py-4 px-4 font-bold uppercase">{item.status}</td>
+								<td class="py-4 px-4">
+									<a
+										href="/admin/customization/popup/edit-popup/{item.id}"
+										class="font-bold text-slate-900 text-sm hover:text-indigo-600 transition-colors line-clamp-1"
+									>
+										{item.name}
+									</a>
+									<div class="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+										<Clock class="w-3 h-3 text-slate-400" />
+										<span>
+											{item.triggerType === 'delay_seconds'
+												? `${item.delaySeconds || 4} সেকেন্ড পর ডিসপ্লে`
+												: item.triggerType === 'exit_intent'
+												? 'Exit Intent (মাউস উপরে নিলে)'
+												: 'পেজ লোডের সাথে সাথে'}
+										</span>
+									</div>
+								</td>
+								<td class="py-4 px-4">
+									<a
+										href={item.url}
+										target="_blank"
+										class="inline-flex items-center gap-1 font-mono text-xs text-indigo-600 hover:text-indigo-800 hover:underline max-w-[200px] truncate"
+									>
+										<span>{item.url}</span>
+										<ExternalLink class="w-3 h-3 flex-shrink-0" />
+									</a>
+								</td>
+								<td class="py-4 px-4">
+									<Badge
+										variant="outline"
+										class="text-[11px] font-semibold {item.triggerType === 'exit_intent'
+											? 'border-amber-200 bg-amber-50 text-amber-700'
+											: item.triggerType === 'delay_seconds'
+											? 'border-indigo-200 bg-indigo-50 text-indigo-700'
+											: 'border-slate-200 bg-slate-50 text-slate-700'}"
+									>
+										{item.triggerType === 'delay_seconds'
+											? '⏱️ Delay'
+											: item.triggerType === 'exit_intent'
+											? '🚪 Exit Intent'
+											: '⚡ On Load'}
+									</Badge>
+								</td>
+								<td class="py-4 px-4">
+									<button
+										type="button"
+										onclick={() => toggleStatus(item)}
+										class="inline-flex items-center gap-1.5 cursor-pointer"
+										title="ক্লিক করে স্ট্যাটাস পরিবর্তন করুন"
+									>
+										<span
+											class="w-2.5 h-2.5 rounded-full {item.status === 'PUBLISH'
+												? 'bg-emerald-500 animate-pulse'
+												: 'bg-slate-300'}"
+										></span>
+										<Badge
+											variant={item.status === 'PUBLISH' ? 'default' : 'secondary'}
+											class="text-[11px] font-bold uppercase {item.status === 'PUBLISH'
+												? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+												: 'bg-slate-100 text-slate-600'}"
+										>
+											{item.status}
+										</Badge>
+									</button>
+								</td>
 								<td class="py-4 pr-6 pl-3 text-right relative">
 									<button
 										type="button"
 										onclick={(e) => handleActionClick(item.id, e)}
-										class="w-8 h-8 rounded-xl border border-slate-200/80 hover:bg-slate-100 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-colors ml-auto shadow-2xs cursor-pointer"
+										class="w-8 h-8 rounded-xl border border-slate-200/90 hover:bg-slate-100 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-colors ml-auto shadow-2xs cursor-pointer"
 										aria-label="Action menu"
 									>
 										<MoreVertical class="w-4 h-4" />
 									</button>
 
 									{#if activeActionId === item.id}
-										<div class="absolute right-6 {index >= filteredPopups.length - 2 && filteredPopups.length > 2 ? 'bottom-12 top-auto origin-bottom-right' : 'top-12'} w-36 bg-white border border-slate-200/90 rounded-2xl shadow-xl py-1.5 z-50 text-xs font-medium text-left animate-in fade-in zoom-in-95 duration-100">
-											<button
-												type="button"
-												onclick={() => {
-													openEditModal(item);
-													activeActionId = null;
-												}}
-												class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer"
+										<div
+											class="absolute right-6 {isNearBottom
+												? 'bottom-11 top-auto origin-bottom-right'
+												: 'top-11 origin-top-right'} w-44 bg-white border border-slate-200/90 rounded-2xl shadow-xl py-1.5 z-50 text-xs font-medium text-left animate-in fade-in zoom-in-95 duration-100"
+										>
+											<!-- Edit Links to Dedicated Separate Page -->
+											<a
+												href="/admin/customization/popup/edit-popup/{item.id}"
+												class="w-full text-left px-3.5 py-2.5 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"
 											>
 												<Edit3 class="w-3.5 h-3.5 text-slate-400" />
-												<span>Edit</span>
-											</button>
+												<span>এডিট করুন</span>
+											</a>
 											<button
 												type="button"
 												onclick={() => {
-													item.status = item.status === 'PUBLISH' ? 'DRAFT' : 'PUBLISH';
+													toggleStatus(item);
 													activeActionId = null;
-													showToast(`স্ট্যাটাস পরিবর্তন হয়েছে`);
 												}}
-												class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer"
+												class="w-full text-left px-3.5 py-2.5 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"
 											>
 												<Eye class="w-3.5 h-3.5 text-slate-400" />
-												<span>Toggle Status</span>
+												<span>স্ট্যাটাস পরিবর্তন</span>
 											</button>
 											<div class="h-px bg-slate-100 my-1"></div>
 											<button
@@ -369,10 +477,10 @@
 													handleDelete(item);
 													activeActionId = null;
 												}}
-												class="w-full text-left px-3.5 py-2 hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer"
+												class="w-full text-left px-3.5 py-2.5 hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer transition-colors"
 											>
 												<Trash2 class="w-3.5 h-3.5 text-rose-500" />
-												<span>Delete</span>
+												<span>মুছে ফেলুন</span>
 											</button>
 										</div>
 									{/if}
@@ -383,123 +491,15 @@
 				</tbody>
 			</table>
 		</div>
-	</div>
+	</Card>
 
-	<!-- Pagination (< 1 of 1 >) -->
-	<div class="flex items-center justify-end gap-2 text-xs font-semibold text-slate-600 pt-2">
-		<button
-			type="button"
-			disabled
-			class="w-8 h-8 rounded-xl border border-slate-200 bg-white flex items-center justify-center opacity-40 cursor-not-allowed"
-		>
-			<ChevronLeft class="w-4 h-4" />
-		</button>
-		<span class="px-3 py-1 bg-white border border-slate-200 rounded-xl shadow-2xs font-mono">
-			1
-		</span>
-		<span class="text-slate-400">of 1</span>
-		<button
-			type="button"
-			disabled
-			class="w-8 h-8 rounded-xl border border-slate-200 bg-white flex items-center justify-center opacity-40 cursor-not-allowed"
-		>
-			<ChevronRight class="w-4 h-4" />
-		</button>
-	</div>
-</div>
-
-<!-- Modal -->
-{#if isModalOpen}
-	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
-		<div class="bg-white rounded-3xl border border-slate-200/90 shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-150">
-			<div class="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-				<h3 class="text-base font-bold text-slate-900">
-					{editingItem ? 'পপআপ এডিট করুন' : 'নতুন পপআপ যুক্ত করুন'}
-				</h3>
-				<button type="button" onclick={() => (isModalOpen = false)} class="p-2 text-slate-400 hover:text-slate-700">
-					<X class="w-5 h-5" />
-				</button>
-			</div>
-
-			<form onsubmit={handleSave} class="p-6 space-y-4">
-				<div>
-					<label class="block text-xs font-bold text-slate-700 mb-1.5">পপআপের নাম *</label>
-					<input
-						type="text"
-						bind:value={modalName}
-						required
-						placeholder="যেমন: Flash Sale 50% Off Popup"
-						class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#5845eb] focus:bg-white"
-					/>
-				</div>
-
-				<div class="grid grid-cols-2 gap-3">
-					<div>
-						<label class="block text-xs font-bold text-slate-700 mb-1.5">টার্গেট URL</label>
-						<input
-							type="text"
-							bind:value={modalUrl}
-							class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-mono"
-						/>
-					</div>
-					<div>
-						<label class="block text-xs font-bold text-slate-700 mb-1.5">URL Type</label>
-						<select
-							bind:value={modalUrlType}
-							class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#5845eb]"
-						>
-							<option value="Internal">Internal</option>
-							<option value="External">External</option>
-						</select>
-					</div>
-				</div>
-
-				<div class="grid grid-cols-2 gap-3">
-					<div>
-						<label class="block text-xs font-bold text-slate-700 mb-1.5">প্রায়োরিটি</label>
-						<input
-							type="text"
-							bind:value={modalPriority}
-							class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-mono"
-						/>
-					</div>
-					<div>
-						<label class="block text-xs font-bold text-slate-700 mb-1.5">স্ট্যাটাস</label>
-						<select
-							bind:value={modalStatus}
-							class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-bold"
-						>
-							<option value="PUBLISH">PUBLISH</option>
-							<option value="DRAFT">DRAFT</option>
-						</select>
-					</div>
-				</div>
-
-				<div>
-					<label class="block text-xs font-bold text-slate-700 mb-1.5">ব্যানার/পপআপ ইমেজ পাথ</label>
-					<input
-						type="text"
-						bind:value={modalImage}
-						class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-mono"
-					/>
-				</div>
-
-				<div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
-					<button
-						type="button"
-						onclick={() => (isModalOpen = false)}
-						class="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700"
-					>
-						বাতিল
-					</button>
-					<button
-						type="submit"
-						class="px-5 py-2.5 rounded-xl bg-[#5845eb] hover:bg-[#4936d6] text-white text-xs font-bold"
-					>
-						সংরক্ষণ
-					</button>
-				</div>
-			</form>
+	<!-- Footer Notes / Summary -->
+	<div class="flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2 px-1">
+		<div>
+			মোট <strong class="text-slate-900">{popups.length}</strong>টি পপআপ কনফিগার করা রয়েছে।
+		</div>
+		<div class="flex items-center gap-2">
+			<span>💡 সেরা ফলাফলের জন্য পপআপে পরিষ্কার ইমেজ ও আকর্ষণীয় ডিসকাউন্ট কোড ব্যবহার করুন।</span>
 		</div>
 	</div>
-{/if}
+</div>

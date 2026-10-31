@@ -14,17 +14,17 @@
 		Link2
 	} from 'lucide-svelte';
 
-	let { data, form } = $props();
+	let { data, form } = $props<{ data?: any; form?: any }>();
 
 	// Reactive Profile State
 	let profile = $derived(data?.profile || {});
 	let adminId = $derived(profile.id || '1');
-	let name = $state(profile.name || 'Thecolorlighthouse');
-	let username = $state(profile.username || 'thecolorlighthouse');
-	let phoneNumber = $state(profile.phone || '01780081623');
-	let emailAddress = $state(profile.email || 'contact@thecolorlighthouse.com');
+	let name = $state('Thecolorlighthouse');
+	let username = $state('thecolorlighthouse');
+	let phoneNumber = $state('01780081623');
+	let emailAddress = $state('contact@thecolorlighthouse.com');
 	let role = $derived(profile.role || 'OWNER');
-	let avatarImage = $state<string | null>(profile.avatarUrl || null);
+	let avatarImage = $state<string | null>(null);
 
 	// Synchronize when server updates data
 	$effect(() => {
@@ -121,18 +121,40 @@
 		const target = e.target as HTMLInputElement;
 		const file = target.files?.[0];
 		if (file) {
-			if (file.size > 10 * 1024 * 1024) {
-				toast.error('ফাইলের সাইজ ১০ মেগাবাইটের কম হতে হবে!');
+			if (file.size > 5 * 1024 * 1024) {
+				toast.error('ফাইলের সাইজ ৫ মেগাবাইটের কম হতে হবে!');
 				return;
 			}
+			isSubmittingAvatar = true;
 			try {
+				const formData = new FormData();
+				formData.append('file', file);
+				formData.append('folder', 'avatars');
+
+				const res = await fetch('/api/admin/media/upload', {
+					method: 'POST',
+					body: formData
+				});
+				const uploadData: any = await res.json();
+
+				if (uploadData.success && uploadData.url) {
+					avatarInputUrl = uploadData.url;
+					avatarImage = uploadData.url;
+					submitAvatarForm();
+				} else {
+					const compressedUrl = await resizeImageToAvatar(file);
+					avatarInputUrl = compressedUrl;
+					avatarImage = compressedUrl;
+					submitAvatarForm();
+				}
+			} catch (err) {
+				console.error('Avatar upload error, using fallback:', err);
 				const compressedUrl = await resizeImageToAvatar(file);
 				avatarInputUrl = compressedUrl;
 				avatarImage = compressedUrl;
 				submitAvatarForm();
-			} catch (err) {
-				console.error('Image processing failed:', err);
-				toast.error('ছবি প্রসেস করতে সমস্যা হয়েছে!');
+			} finally {
+				isSubmittingAvatar = false;
 			}
 		}
 	}
@@ -246,9 +268,9 @@
 						return async ({ result, update }) => {
 							isSubmittingProfile = false;
 							if (result.type === 'success') {
-								toast.success(result.data?.message || 'প্রোফাইল তথ্য সফলভাবে আপডেট হয়েছে!');
+								toast.success((result.data as any)?.message || 'প্রোফাইল তথ্য সফলভাবে আপডেট হয়েছে!');
 							} else if (result.type === 'failure') {
-								toast.error(result.data?.message || 'আপডেট ব্যর্থ হয়েছে!');
+								toast.error((result.data as any)?.message || 'আপডেট ব্যর্থ হয়েছে!');
 							}
 							await update({ reset: false });
 						};
@@ -412,9 +434,9 @@
 			isSubmittingAvatar = false;
 			isPickImageOpen = false;
 			if (result.type === 'success') {
-				toast.success(result.data?.message || 'প্রোফাইল ছবি সফলভাবে আপডেট হয়েছে!');
+				toast.success((result.data as any)?.message || 'প্রোফাইল ছবি সফলভাবে আপডেট হয়েছে!');
 			} else if (result.type === 'failure') {
-				toast.error(result.data?.message || 'ছবি আপডেট ব্যর্থ হয়েছে!');
+				toast.error((result.data as any)?.message || 'ছবি আপডেট ব্যর্থ হয়েছে!');
 			}
 			await update({ reset: false });
 		};
@@ -513,13 +535,13 @@
 					return async ({ result, update }) => {
 						isSubmittingPassword = false;
 						if (result.type === 'success') {
-							toast.success(result.data?.message || 'পাসওয়ার্ড সফলভাবে পরিবর্তন করা হয়েছে!');
+							toast.success((result.data as any)?.message || 'পাসওয়ার্ড সফলভাবে পরিবর্তন করা হয়েছে!');
 							isChangePasswordOpen = false;
 							currentPassword = '';
 							newPassword = '';
 							confirmPassword = '';
 						} else if (result.type === 'failure') {
-							toast.error(result.data?.message || 'পাসওয়ার্ড পরিবর্তন ব্যর্থ হয়েছে!');
+							toast.error((result.data as any)?.message || 'পাসওয়ার্ড পরিবর্তন ব্যর্থ হয়েছে!');
 						}
 						await update({ reset: false });
 					};
@@ -548,7 +570,7 @@
 						name="newPassword"
 						bind:value={newPassword}
 						required
-						minlength="6"
+						minlength={6}
 						placeholder="Minimum 6 characters"
 						class="text-xs font-mono"
 					/>
@@ -562,7 +584,7 @@
 						name="confirmPassword"
 						bind:value={confirmPassword}
 						required
-						minlength="6"
+						minlength={6}
 						placeholder="Re-type new password"
 						class="text-xs font-mono"
 					/>

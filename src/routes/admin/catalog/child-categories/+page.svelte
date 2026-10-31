@@ -45,17 +45,6 @@
 		toast.success(msg);
 	}
 
-	// Modal state
-	let isModalOpen = $state(false);
-	let isEditing = $state(false);
-	let editingId = $state<string | null>(null);
-	let formName = $state('');
-	let formCategoryId = $state('');
-	let formSubCategoryId = $state('');
-	let formImage = $state('');
-	let formPriority = $state<number>(0);
-	let formStatus = $state<'publish' | 'draft'>('publish');
-
 	let openActionMenuId = $state<string | null>(null);
 
 	// Filtered sub-categories based on selected parent category in modal
@@ -119,73 +108,7 @@
 		}
 	}
 
-	function openAddModal() {
-		isEditing = false;
-		editingId = null;
-		formName = '';
-		formCategoryId = data?.parentCategories?.[0]?.id || '';
-		formSubCategoryId = availableSubCategories[0]?.id || data?.subCategories?.[0]?.id || '';
-		formImage = '';
-		formPriority = 0;
-		formStatus = 'publish';
-		isModalOpen = true;
-	}
 
-	function openEditModal(child: any) {
-		isEditing = true;
-		editingId = child.id;
-		formName = child.name;
-		formCategoryId = child.categoryId || '';
-		formSubCategoryId = child.subCategoryId || '';
-		formImage = child.image || '';
-		formPriority = typeof child.priority === 'number' ? child.priority : 0;
-		formStatus = child.status || 'publish';
-		openActionMenuId = null;
-		isModalOpen = true;
-	}
-
-	async function handleSave() {
-		if (!formName.trim()) {
-			showToast('চাইল্ড ক্যাটাগরির নাম দেওয়া বাধ্যতামূলক!');
-			return;
-		}
-		if (!formSubCategoryId) {
-			showToast('প্যারেন্ট সাব-ক্যাটাগরি নির্বাচন করুন!');
-			return;
-		}
-
-		isSaving = true;
-		const formData = new FormData();
-		formData.append('name', formName.trim());
-		formData.append('subCategoryId', formSubCategoryId);
-		formData.append('image', formImage.trim());
-		formData.append('priority', String(formPriority));
-		formData.append('status', formStatus);
-
-		try {
-			if (isEditing && editingId) {
-				formData.append('id', editingId);
-				await fetch('?/updateChildCategory', {
-					method: 'POST',
-					body: formData
-				});
-				showToast('চাইল্ড ক্যাটাগরি সফলভাবে আপডেট করা হয়েছে!');
-			} else {
-				await fetch('?/createChildCategory', {
-					method: 'POST',
-					body: formData
-				});
-				showToast('নতুন চাইল্ড ক্যাটাগরি তৈরি করা হয়েছে!');
-			}
-			isModalOpen = false;
-			await invalidateAll();
-		} catch (error) {
-			console.error('Error saving child-category:', error);
-			showToast('চাইল্ড ক্যাটাগরি সংরক্ষণে ত্রুটি হয়েছে');
-		} finally {
-			isSaving = false;
-		}
-	}
 
 	async function toggleStatus(child: any) {
 		const newStatus = child.status === 'publish' ? 'draft' : 'publish';
@@ -295,14 +218,13 @@
 		</div>
 
 		<!-- + Add Child Category Button -->
-		<button
-			type="button"
-			onclick={openAddModal}
+		<a
+			href="/admin/catalog/child-categories/new"
 			class="bg-[#5845eb] hover:bg-[#4a39cf] text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
 		>
 			<Plus class="w-4 h-4" />
 			<span>Add Child Category</span>
-		</button>
+		</a>
 	</div>
 
 	<!-- Filter Capsules: All Data (0), Publish (0), Draft (0), Low Stock (0), Trash (0) -->
@@ -458,14 +380,13 @@
 
 									{#if openActionMenuId === child.id}
 										<div class="absolute right-4 {index >= paginatedItems.length - 2 && paginatedItems.length > 2 ? 'bottom-10 top-auto origin-bottom-right' : 'top-10'} w-36 bg-white border border-slate-200 rounded-xl shadow-lg z-30 py-1 text-left text-xs">
-											<button
-												type="button"
-												onclick={() => openEditModal(child)}
-												class="w-full px-3 py-1.5 flex items-center gap-2 text-slate-700 hover:bg-slate-50 transition-colors"
+											<a
+												href="/admin/catalog/child-categories/edit/{child.id}"
+												class="w-full px-3 py-1.5 flex items-center gap-2 text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
 											>
 												<Edit3 class="w-3.5 h-3.5 text-slate-500" />
 												<span>Edit</span>
-											</button>
+											</a>
 
 											<button
 												type="button"
@@ -534,122 +455,3 @@
 	</div>
 </div>
 
-<!-- Add / Edit Child Category Modal -->
-{#if isModalOpen}
-	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
-		<div class="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-slate-100 overflow-hidden">
-			<div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-				<h3 class="font-bold text-slate-900 text-sm">
-					{isEditing ? 'Edit Child Category' : 'Add New Child Category'}
-				</h3>
-				<button
-					type="button"
-					onclick={() => (isModalOpen = false)}
-					class="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
-				>
-					<X class="w-4 h-4" />
-				</button>
-			</div>
-
-			<div class="p-6 space-y-4 text-xs">
-				<div class="space-y-1.5">
-					<label for="child-name" class="font-bold text-slate-700 block">Child Category Name *</label>
-					<input
-						id="child-name"
-						type="text"
-						bind:value={formName}
-						placeholder="উদাঃ Water Filter Cartridge"
-						class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb]"
-					/>
-				</div>
-
-				<div class="space-y-1.5">
-					<label for="child-cat" class="font-bold text-slate-700 block">Parent Category</label>
-					<select
-						id="child-cat"
-						bind:value={formCategoryId}
-						class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb] bg-white"
-					>
-						<option value="">-- সকল ক্যাটাগরি --</option>
-						{#each (data?.parentCategories || []) as cat}
-							<option value={cat.id}>{cat.name}</option>
-						{/each}
-					</select>
-				</div>
-
-				<div class="space-y-1.5">
-					<label for="child-subcat" class="font-bold text-slate-700 block">Sub Category *</label>
-					<select
-						id="child-subcat"
-						bind:value={formSubCategoryId}
-						class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb] bg-white"
-					>
-						<option value="" disabled>-- সাব-ক্যাটাগরি বেছে নিন --</option>
-						{#each (availableSubCategories || []) as sub}
-							<option value={sub.id}>{sub.name} {sub.category ? `(${sub.category})` : ''}</option>
-						{/each}
-					</select>
-				</div>
-
-				<div class="space-y-1.5">
-					<label for="child-img" class="font-bold text-slate-700 block">Image URL (ঐচ্ছিক)</label>
-					<input
-						id="child-img"
-						type="text"
-						bind:value={formImage}
-						placeholder="https://example.com/image.png"
-						class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb]"
-					/>
-				</div>
-
-				<div class="grid grid-cols-2 gap-4">
-					<div class="space-y-1.5">
-						<label for="child-priority" class="font-bold text-slate-700 block">Priority</label>
-						<input
-							id="child-priority"
-							type="text"
-							bind:value={formPriority}
-							placeholder="-"
-							class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb]"
-						/>
-					</div>
-
-					<div class="space-y-1.5">
-						<label for="child-status" class="font-bold text-slate-700 block">Status</label>
-						<select
-							id="child-status"
-							bind:value={formStatus}
-							class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#5845eb] bg-white"
-						>
-							<option value="publish">Publish</option>
-							<option value="draft">Draft</option>
-						</select>
-					</div>
-				</div>
-			</div>
-
-			<div class="flex items-center justify-end gap-2 px-6 py-4 bg-slate-50 border-t border-slate-100">
-				<button
-					type="button"
-					onclick={() => (isModalOpen = false)}
-					class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-200/60 cursor-pointer"
-				>
-					Cancel
-				</button>
-				<button
-					type="button"
-					onclick={handleSave}
-					disabled={isSaving}
-					class="px-4 py-2 rounded-xl text-xs font-bold bg-[#5845eb] text-white hover:bg-[#4a39cf] shadow-sm shadow-indigo-600/20 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-				>
-					{#if isSaving}
-						<Loader2 class="w-3.5 h-3.5 animate-spin" />
-						<span>সংরক্ষণ হচ্ছে...</span>
-					{:else}
-						<span>{isEditing ? 'Save Changes' : 'Create Child Category'}</span>
-					{/if}
-				</button>
-			</div>
-		</div>
-	</div>
-{/if}

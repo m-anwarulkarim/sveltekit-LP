@@ -11,6 +11,7 @@
 		getPopularProducts,
 		type Product
 	} from '#lib';
+	import PromotionalBannerStrip from '#lib/components/storefront/PromotionalBannerStrip.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -59,6 +60,8 @@
 		seeAllLink="/catalog/all-product?filter=best-sale"
 	/>
 
+	<!-- Promotional Banners Strip (Dynamic from Database) -->
+	<PromotionalBannerStrip banners={data.dbBanners} />
 
 	<!-- 4. New Arrivals (✨ সদ্য যোগ হওয়া নতুন কালেকশন) -->
 	<ProductSection

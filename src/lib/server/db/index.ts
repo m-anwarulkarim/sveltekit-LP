@@ -95,6 +95,26 @@ let cachedHttpDb: AppDatabase | null = null;
  * Guarantees 100% real remote database access everywhere!
  */
 export const getDb = (d1OrPlatform?: any): AppDatabase => {
+	// If configured to use real remote Cloudflare D1 database in dev/Node:
+	const useRemote =
+		typeof process !== 'undefined' &&
+		(process.env?.USE_REMOTE_D1 === 'true' || process.env?.USE_REMOTE_D1 === '1');
+
+	if (useRemote) {
+		const accountId = (typeof process !== 'undefined' && process.env?.CLOUDFLARE_ACCOUNT_ID) || '';
+		const databaseId = (typeof process !== 'undefined' && process.env?.CLOUDFLARE_DATABASE_ID) || '';
+		const token = (typeof process !== 'undefined' && process.env?.CLOUDFLARE_D1_TOKEN) || '';
+
+		if (token && accountId && databaseId) {
+			if (cachedHttpDb) {
+				return cachedHttpDb;
+			}
+			const httpD1 = createD1HttpClient(accountId, databaseId, token);
+			cachedHttpDb = drizzle(httpD1, { schema });
+			return cachedHttpDb;
+		}
+	}
+
 	// 1. Priority order for D1 binding:
 	//    a) Explicitly passed d1 or platform object (dev proxy / direct pass)
 	//    b) cloudflare:workers env.DB (production — new adapter-cloudflare v8+)

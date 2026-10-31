@@ -2,6 +2,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from './schema';
 import { env as cfEnv } from 'cloudflare:workers';
+import { env as dynamicPrivateEnv } from '$env/dynamic/private';
 
 export type AppDatabase = DrizzleD1Database<typeof schema>;
 
@@ -96,14 +97,36 @@ let cachedHttpDb: AppDatabase | null = null;
  */
 export const getDb = (d1OrPlatform?: any): AppDatabase => {
 	// If configured to use real remote Cloudflare D1 database in dev/Node:
-	const useRemote =
-		typeof process !== 'undefined' &&
-		(process.env?.USE_REMOTE_D1 === 'true' || process.env?.USE_REMOTE_D1 === '1');
+	const rawUseRemote =
+		dynamicPrivateEnv?.USE_REMOTE_D1 ||
+		(typeof process !== 'undefined' ? process.env?.USE_REMOTE_D1 : '');
+	const cleanUseRemote = (rawUseRemote || '').replace(/^["']|["']$/g, '').trim().toLowerCase();
+	const useRemote = cleanUseRemote === 'true' || cleanUseRemote === '1';
 
 	if (useRemote) {
-		const accountId = (typeof process !== 'undefined' && process.env?.CLOUDFLARE_ACCOUNT_ID) || '';
-		const databaseId = (typeof process !== 'undefined' && process.env?.CLOUDFLARE_DATABASE_ID) || '';
-		const token = (typeof process !== 'undefined' && process.env?.CLOUDFLARE_D1_TOKEN) || '';
+		const accountId = (
+			dynamicPrivateEnv?.CLOUDFLARE_ACCOUNT_ID ||
+			(typeof process !== 'undefined' ? process.env?.CLOUDFLARE_ACCOUNT_ID : '') ||
+			''
+		)
+			.replace(/^["']|["']$/g, '')
+			.trim();
+
+		const databaseId = (
+			dynamicPrivateEnv?.CLOUDFLARE_DATABASE_ID ||
+			(typeof process !== 'undefined' ? process.env?.CLOUDFLARE_DATABASE_ID : '') ||
+			''
+		)
+			.replace(/^["']|["']$/g, '')
+			.trim();
+
+		const token = (
+			dynamicPrivateEnv?.CLOUDFLARE_D1_TOKEN ||
+			(typeof process !== 'undefined' ? process.env?.CLOUDFLARE_D1_TOKEN : '') ||
+			''
+		)
+			.replace(/^["']|["']$/g, '')
+			.trim();
 
 		if (token && accountId && databaseId) {
 			if (cachedHttpDb) {

@@ -15,6 +15,9 @@ if (dev) {
 			if (proxy?.env?.DB) {
 				(globalThis as any).__DEV_D1__ = proxy.env.DB;
 			}
+			if (proxy?.env?.R2) {
+				(globalThis as any).__DEV_R2__ = proxy.env.R2;
+			}
 			return proxy;
 		} catch (e) {
 			console.error('Failed to initialize local wrangler platform proxy:', e);
@@ -34,6 +37,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 		if (localPlatform) {
 			if (localPlatform.env?.DB) {
 				(globalThis as any).__DEV_D1__ = localPlatform.env.DB;
+			}
+			if (localPlatform.env?.R2) {
+				(globalThis as any).__DEV_R2__ = localPlatform.env.R2;
 			}
 			(event as any).platform = {
 				...event.platform,

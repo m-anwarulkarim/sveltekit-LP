@@ -1,4 +1,5 @@
 import { env as cfEnv } from 'cloudflare:workers';
+import { DEV as dev } from 'esm-env';
 
 export interface UploadOptions {
 	platform?: any;
@@ -58,9 +59,10 @@ export class R2Service {
 					cacheControl: 'public, max-age=31536000, immutable'
 				}
 			});
+			const finalUrl = dev ? `/api/r2-local/${key}` : `${baseUrl}/${key}`;
 			return {
 				key,
-				url: `${baseUrl}/${key}`,
+				url: finalUrl,
 				sizeBytes
 			};
 		}

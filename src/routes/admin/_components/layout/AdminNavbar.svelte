@@ -52,11 +52,11 @@
 	let isWebsiteInfoActive = $derived(currentPath === '/admin/customization/website-information');
 	let isThemeViewActive = $derived(currentPath === '/admin/customization/theme-view');
 	let isSettingsActive = $derived(currentPath.startsWith('/admin/settings'));
-	let isCatalogCategories = $derived(currentPath.startsWith('/admin/catalog/categories') || currentPath.startsWith('/admin/catalog/all-category'));
-	let isCatalogSubCategories = $derived(currentPath.startsWith('/admin/catalog/sub-categories') || currentPath.startsWith('/admin/catalog/all-sub-category'));
-	let isCatalogChildCategories = $derived(currentPath.startsWith('/admin/catalog/child-categories') || currentPath.startsWith('/admin/catalog/all-child-category') || currentPath.startsWith('/admin/catalog/all_child_category'));
-	let isCatalogBrands = $derived(currentPath.startsWith('/admin/catalog/brands') || currentPath.startsWith('/admin/catalog/all-brand'));
-	let isCatalogTags = $derived(currentPath.startsWith('/admin/catalog/tags') || currentPath.startsWith('/admin/catalog/all-tag') || currentPath.startsWith('/admin/catalog/tag'));
+	let isCatalogCategories = $derived(currentPath.startsWith('/admin/catalog/categories') || currentPath === '/admin/catalog');
+	let isCatalogSubCategories = $derived(currentPath.startsWith('/admin/catalog/sub-categories'));
+	let isCatalogChildCategories = $derived(currentPath.startsWith('/admin/catalog/child-categories'));
+	let isCatalogBrands = $derived(currentPath.startsWith('/admin/catalog/brands'));
+	let isCatalogTags = $derived(currentPath.startsWith('/admin/catalog/tags'));
 	let isCatalogActive = $derived(currentPath.startsWith('/admin/catalog'));
 	let isCustomerActive = $derived(currentPath.startsWith('/admin/customers'));
 	let isDatabaseActive = $derived(currentPath.startsWith('/admin/database'));

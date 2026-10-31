@@ -673,11 +673,11 @@
 							<a
 								href="/admin/catalog/categories"
 								onclick={() => (mobileOpen = false)}
-								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath.startsWith('/admin/catalog/categories') || currentPath.startsWith('/admin/catalog/all-category')
+								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath.startsWith('/admin/catalog/categories') || currentPath === '/admin/catalog'
 									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
 									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
 							>
-								<span class="w-1.5 h-1.5 rounded-full {currentPath.startsWith('/admin/catalog/categories') || currentPath.startsWith('/admin/catalog/all-category') ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span class="w-1.5 h-1.5 rounded-full {currentPath.startsWith('/admin/catalog/categories') || currentPath === '/admin/catalog' ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
 								<span>Categories</span>
 							</a>
 
@@ -685,11 +685,11 @@
 							<a
 								href="/admin/catalog/sub-categories"
 								onclick={() => (mobileOpen = false)}
-								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath.startsWith('/admin/catalog/sub-categories') || currentPath.startsWith('/admin/catalog/all-sub-category')
+								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath.startsWith('/admin/catalog/sub-categories')
 									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
 									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
 							>
-								<span class="w-1.5 h-1.5 rounded-full {currentPath.startsWith('/admin/catalog/sub-categories') || currentPath.startsWith('/admin/catalog/all-sub-category') ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span class="w-1.5 h-1.5 rounded-full {currentPath.startsWith('/admin/catalog/sub-categories') ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
 								<span>Sub Categories</span>
 							</a>
 
@@ -697,11 +697,11 @@
 							<a
 								href="/admin/catalog/child-categories"
 								onclick={() => (mobileOpen = false)}
-								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath.startsWith('/admin/catalog/child-categories') || currentPath.startsWith('/admin/catalog/all-child-category') || currentPath.startsWith('/admin/catalog/all_child_category')
+								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath.startsWith('/admin/catalog/child-categories')
 									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
 									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
 							>
-								<span class="w-1.5 h-1.5 rounded-full {currentPath.startsWith('/admin/catalog/child-categories') || currentPath.startsWith('/admin/catalog/all-child-category') || currentPath.startsWith('/admin/catalog/all_child_category') ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span class="w-1.5 h-1.5 rounded-full {currentPath.startsWith('/admin/catalog/child-categories') ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
 								<span>Child Categories</span>
 							</a>
 
@@ -709,11 +709,11 @@
 							<a
 								href="/admin/catalog/brands"
 								onclick={() => (mobileOpen = false)}
-								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath.startsWith('/admin/catalog/brands') || currentPath.startsWith('/admin/catalog/all-brand')
+								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath.startsWith('/admin/catalog/brands')
 									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
 									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
 							>
-								<span class="w-1.5 h-1.5 rounded-full {currentPath.startsWith('/admin/catalog/brands') || currentPath.startsWith('/admin/catalog/all-brand') ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span class="w-1.5 h-1.5 rounded-full {currentPath.startsWith('/admin/catalog/brands') ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
 								<span>Brand</span>
 							</a>
 
@@ -721,11 +721,11 @@
 							<a
 								href="/admin/catalog/tags"
 								onclick={() => (mobileOpen = false)}
-								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath.startsWith('/admin/catalog/tags') || currentPath.startsWith('/admin/catalog/all-tag') || currentPath.startsWith('/admin/catalog/tag')
+								class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium transition-all {currentPath.startsWith('/admin/catalog/tags')
 									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
 									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
 							>
-								<span class="w-1.5 h-1.5 rounded-full {currentPath.startsWith('/admin/catalog/tags') || currentPath.startsWith('/admin/catalog/all-tag') || currentPath.startsWith('/admin/catalog/tag') ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+								<span class="w-1.5 h-1.5 rounded-full {currentPath.startsWith('/admin/catalog/tags') ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
 								<span>Tags</span>
 							</a>
 						</div>

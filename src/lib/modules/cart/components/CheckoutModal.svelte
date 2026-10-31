@@ -166,7 +166,7 @@
 								customerPhone: phone.trim()
 							})
 						});
-						const bkashData = await bkashRes.json();
+						const bkashData: any = await bkashRes.json();
 						if (bkashData.success && bkashData.bkashURL) {
 							cart.setLastOrder(orderSnapshot);
 							cart.clear();

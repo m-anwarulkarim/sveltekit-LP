@@ -16,6 +16,7 @@
 		Loader2,
 		Tag as TagIcon
 	} from 'lucide-svelte';
+	import { invalidateAll } from '$app/navigation';
 	import { CatalogFilterTabs } from '../../_components/catalog';
 	import type { CatalogTag } from '../../_data.ts';
 	import { confirmModal } from '#lib/stores/confirm.svelte';
@@ -181,6 +182,7 @@
 				showToast('নতুন ট্যাগ সফলভাবে তৈরি করা হয়েছে!');
 			}
 			isModalOpen = false;
+			await invalidateAll();
 		} catch (error) {
 			console.error('Error saving tag:', error);
 			showToast('ট্যাগ সংরক্ষণে ত্রুটি হয়েছে');
@@ -220,6 +222,7 @@
 				method: 'POST',
 				body: fd
 			});
+			await invalidateAll();
 		} catch (e) {
 			console.error('Error deleting tag:', e);
 		}
@@ -257,6 +260,7 @@
 				method: 'POST',
 				body: fd
 			});
+			await invalidateAll();
 		} catch (e) {
 			console.error('Error bulk deleting tags:', e);
 		}

@@ -377,8 +377,10 @@
 								</td>
 
 								<!-- Category -->
-								<td class="py-3.5 px-4 text-slate-700 font-medium">
-									{sub.category}
+								<td class="py-3.5 px-4">
+									<span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-[#5845eb] border border-indigo-100">
+										{sub.category}
+									</span>
 								</td>
 
 								<!-- Status -->

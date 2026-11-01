@@ -61,14 +61,23 @@
 		const button = e.currentTarget as HTMLElement;
 		const rect = button.getBoundingClientRect();
 
-		const menuWidth = 176; // w-44
+		const menuWidth = 176;
 		const menuHeight = 140; // 3 items (Edit, Toggle Status, Delete)
 
-		const spaceBelow = window.innerHeight - rect.bottom;
-		const openUpwards = spaceBelow < menuHeight + 20 && rect.top > menuHeight;
+		const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
+		const windowHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
 
-		const top = openUpwards ? rect.top - menuHeight - 4 : rect.bottom + 6;
-		const left = Math.max(10, rect.right - menuWidth);
+		let left = rect.right - menuWidth;
+		if (left < 10) left = 10;
+		if (left + menuWidth > windowWidth - 10) {
+			left = windowWidth - menuWidth - 10;
+		}
+
+		const spaceBelow = windowHeight - rect.bottom;
+		const spaceAbove = rect.top;
+		const openUpwards = spaceBelow < menuHeight + 10 && spaceAbove > spaceBelow;
+
+		const top = openUpwards ? Math.max(10, rect.top - menuHeight - 6) : rect.bottom + 6;
 
 		menuPosition = { top, left };
 		activeActionItem = item;
@@ -93,9 +102,9 @@
 			const q = searchQuery.toLowerCase().trim();
 			list = list.filter(
 				(p) =>
-					p.name.toLowerCase().includes(q) ||
-					p.url.toLowerCase().includes(q) ||
-					p.triggerType.toLowerCase().includes(q)
+					(p.name || '').toLowerCase().includes(q) ||
+					(p.url && p.url.toLowerCase().includes(q)) ||
+					(p.triggerType && p.triggerType.toLowerCase().includes(q))
 			);
 		}
 		return list;
@@ -213,7 +222,12 @@
 	}
 </script>
 
-<svelte:window onclick={closeActionMenu} onscroll={closeActionMenu} onresize={closeActionMenu} />
+<svelte:window
+	onkeydown={(e) => {
+		if (e.key === 'Escape') closeActionMenu();
+	}}
+	onresize={closeActionMenu}
+/>
 
 <svelte:head>
 	<title>Popup & Offers - Customization - AURA Admin</title>
@@ -487,17 +501,20 @@
 
 <!-- FLOATING FIXED-COORDINATE ACTION MENU (Never clipped by card or table overflow!) -->
 {#if activeActionItem && menuPosition}
+	<!-- Fixed click-outside backdrop covering entire screen -->
 	<button
 		type="button"
-		class="fixed inset-0 z-40 bg-transparent cursor-default"
+		class="fixed inset-0 z-50 bg-transparent cursor-default border-none outline-none"
 		tabindex="-1"
 		aria-hidden="true"
 		onclick={closeActionMenu}
 	></button>
 
+	<!-- Dropdown Menu Box (Fixed Positioning at calculated coordinates) -->
 	<div
 		style="position: fixed; top: {menuPosition.top}px; left: {menuPosition.left}px;"
-		class="w-44 bg-white border border-slate-200/90 rounded-2xl shadow-2xl py-1.5 z-50 text-xs font-medium text-left animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5"
+		class="w-44 bg-white border border-slate-200/90 rounded-2xl shadow-2xl py-1.5 z-60 text-xs font-medium text-left animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5"
+		onclick={(e) => e.stopPropagation()}
 	>
 		<a
 			href="/admin/customization/popup/edit-popup/{activeActionItem.id}"

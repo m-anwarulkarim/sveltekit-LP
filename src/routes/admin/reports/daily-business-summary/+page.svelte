@@ -51,6 +51,8 @@
 	let ordersList = $derived(summary.orders || []);
 
 	async function handleGenerate() {
+		if (isGenerating) return;
+
 		if (!startDate || !endDate) {
 			toast.error('শুরুর এবং শেষের তারিখ নির্বাচন করুন');
 			return;
@@ -62,12 +64,17 @@
 
 		isGenerating = true;
 		try {
-			await goto(`?startDate=${startDate}&endDate=${endDate}`, {
+			await goto(`/admin/reports/daily-business-summary?startDate=${startDate}&endDate=${endDate}`, {
 				keepFocus: true,
-				noScroll: true
+				noScroll: true,
+				invalidateAll: true
 			});
 			toast.success('রিপোর্ট ডাটা সফলভাবে তৈরি হয়েছে');
-		} catch (e) {
+		} catch (e: any) {
+			if (e?.message?.includes('cancelled') || e?.name === 'AbortError') {
+				return;
+			}
+			console.error('Report generate error:', e);
 			toast.error('রিপোর্ট লোড করতে সমস্যা হয়েছে');
 		} finally {
 			isGenerating = false;

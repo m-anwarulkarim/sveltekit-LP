@@ -11,7 +11,6 @@
 		AdminSearchModal
 	} from './_components/layout';
 	import {
-		TutorialModal,
 		PackageProModal
 	} from './_components/modals';
 	import { Toaster, GlobalConfirmDialog } from '#lib/components/ui';
@@ -20,7 +19,6 @@
 
 	let isSidebarCollapsed = $state(false);
 	let isMobileSidebarOpen = $state(false);
-	let isTutorialModalOpen = $state(false);
 	let isPackageModalOpen = $state(false);
 
 	let unreadCount = $state<number>(data?.unreadNotificationsCount ?? 0);
@@ -123,7 +121,6 @@
 		<!-- Top Command Bar -->
 		<AdminNavbar
 			{unreadCount}
-			onOpenTutorial={() => (isTutorialModalOpen = true)}
 			onOpenPackage={() => (isPackageModalOpen = true)}
 		/>
 
@@ -140,7 +137,6 @@
 	/>
 
 	<!-- 4. Top Navbar Interactive Modals -->
-	<TutorialModal bind:open={isTutorialModalOpen} />
 	<PackageProModal bind:open={isPackageModalOpen} />
 	<AdminSearchModal />
 

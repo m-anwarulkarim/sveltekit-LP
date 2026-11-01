@@ -165,16 +165,15 @@
 
 			<!-- Tutorial & Support Action Buttons (Desktop) -->
 			<div class="hidden sm:flex items-center gap-2.5">
-				<!-- Tutorial Button -->
-				<button
-					type="button"
-					onclick={() => onOpenTutorial?.()}
-					class="rounded-xl border border-red-300 bg-white hover:bg-red-50/50 px-3.5 py-1.5 flex items-center gap-1.5 text-xs font-bold text-red-600 shadow-[0_0_10px_rgba(239,68,68,0.12)] transition-all cursor-pointer hover:border-red-400"
-					title="ভিডিও টিউটোরিয়াল দেখুন"
+				<!-- Tutorial Button (Direct Link to Standalone Tutorials Page - No Popup) -->
+				<a
+					href="/admin/tutorials"
+					class="rounded-xl border border-red-300 bg-white hover:bg-red-50/50 px-3.5 py-1.5 flex items-center gap-1.5 text-xs font-bold text-red-600 shadow-[0_0_10px_rgba(239,68,68,0.12)] transition-all cursor-pointer hover:border-red-400 no-underline"
+					title="ভিডিও টিউটোরিয়াল পেজে যান"
 				>
 					<Play class="w-3.5 h-3.5 fill-red-600 text-red-600" />
 					<span>Tutorial</span>
-				</button>
+				</a>
 
 				<!-- Support Button -->
 				<a

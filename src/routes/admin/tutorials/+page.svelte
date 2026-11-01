@@ -1,5 +1,7 @@
-﻿<script lang="ts">
-	import { Button, Input, Card, Badge, Dialog } from '#lib/components/ui';
+<script lang="ts">
+	import { Button, Input, Card, Badge } from '#lib/components/ui';
+	import { enhance } from '$app/forms';
+	import { toast } from 'svelte-sonner';
 	import {
 		Play,
 		Search,
@@ -10,310 +12,611 @@
 		Clock,
 		Tag,
 		Share2,
-		CheckCircle2
+		Plus,
+		Trash2,
+		Headphones,
+		CheckCircle2,
+		Loader2,
+		ChevronLeft,
+		ChevronRight,
+		Film
 	} from 'lucide-svelte';
+	import type { TutorialItem } from '#lib/server/services/tutorial.service';
 
+	let { data }: { data: any } = $props();
+
+	// Reactive list of tutorials from server
+	let tutorials = $state<TutorialItem[]>(data?.tutorials || []);
+
+	$effect(() => {
+		if (data?.tutorials) {
+			tutorials = data.tutorials;
+		}
+	});
+
+	// Active Video for the Inline Cinema Player (Default to the first video)
+	let activeVideo = $state<TutorialItem>(
+		(data?.tutorials && data.tutorials[0]) || {
+			id: 'tut-haqplus-landing-page',
+			title: 'এক ক্লিকেই তৈরি করুন আনলিমিটেড ল্যান্ডিং পেজ ! Haq Plus IT',
+			youtubeId: 'KJNk1obp8PE',
+			thumbnail: 'https://img.youtube.com/vi/KJNk1obp8PE/hqdefault.jpg',
+			duration: '০৫:৪০ মিনিট',
+			category: 'Landing Page',
+			tags: ['Haq Plus IT', 'Landing Page', 'Unlimited Pages', 'Tutorial'],
+			description: 'প্রতিটি নতুন প্রোডাক্টের জন্য আলাদা করে ডেভেলপার খোঁজার দিন শেষ! এবার Haq Plus IT-এর স্মার্ট ড্যাশবোর্ড থেকেই মাত্র ১ ক্লিকে তৈরি করুন যত খুশি ল্যান্ডিং পেজ।'
+		}
+	);
+
+	// Filtering state
 	let searchQuery = $state('');
+	let selectedCategory = $state<string>('All');
 	let activeTag = $state<string | null>(null);
 
-	// Video Player Modal State
-	let activeVideo = $state<any | null>(null);
-	let isPlayerModalOpen = $state(false);
+	// Inline "Add Video" panel toggle (No pop-up!)
+	let isAddFormOpen = $state(false);
+	let isSubmitting = $state(false);
+	let newYoutubeUrl = $state('');
+	let newTitle = $state('');
+	let newCategory = $state('Landing Page');
+	let newDuration = $state('০৫:০০ মিনিট');
+	let newTags = $state('');
 
-	// Toast Feedback
-	let toastMessage = $state<string | null>(null);
-	function showToast(msg: string) {
-		toastMessage = msg;
-		setTimeout(() => (toastMessage = null), 2500);
-	}
-
-	// 8 Tutorial Videos (Exact Match with Reference Screenshot)
-	const tutorials = [
-		{
-			id: 'tut-1',
-			title: 'Saleecom Admin Panel শুরু করার সহজ গাইড (Mobile)',
-			youtubeId: '7wtfhZwyrcc',
-			thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=640&h=360&fit=crop',
-			duration: '০৫:৪০ মিনিট',
-			tags: ['Saleecom Admin Panel', 'Overview', 'Guide']
-		},
-		{
-			id: 'tut-2',
-			title: 'Saleecom Admin Panel শুরু করার সহজ গাইড',
-			youtubeId: 'kJQP7kiw5Fk',
-			thumbnail: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=640&h=360&fit=crop',
-			duration: '০৮:১৫ মিনিট',
-			tags: ['Saleecom Admin Panel', 'overview', 'guide']
-		},
-		{
-			id: 'tut-3',
-			title: 'How To Setup New Facebook Pixel And Connect With Website For Facebook Campaign',
-			youtubeId: 'ysz5S6PUM-U',
-			thumbnail: 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=640&h=360&fit=crop',
-			duration: '১২:৩০ মিনিট',
-			tags: ['new facebook pixel', 'facebook pixel full setup', 'connect pixel with add account']
-		},
-		{
-			id: 'tut-4',
-			title: "Introducing Saleecom's Official Support System | Dedicated To Serving Our Valued Customers",
-			youtubeId: '3JZ_D3ELwOQ',
-			thumbnail: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=640&h=360&fit=crop',
-			duration: '০৪:২০ মিনিট',
-			tags: ['support system', 'official support', 'issue ticket', 'feedback', 'complain']
-		},
-		{
-			id: 'tut-5',
-			title: 'Delivery Option Manage As Your Business Need | Saleecom',
-			youtubeId: 'fJ9rUzIMcZQ',
-			thumbnail: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=640&h=360&fit=crop',
-			duration: '০৬:১০ মিনিট',
-			tags: ['delivery manage', 'Inside city']
-		},
-		{
-			id: 'tut-6',
-			title: 'Advance Payment System | Saleecom',
-			youtubeId: '9bZkp7q19f0',
-			thumbnail: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=640&h=360&fit=crop',
-			duration: '০৭:৪৫ মিনিট',
-			tags: ['advance payment', 'order advance', 'custom order advance']
-		},
-		{
-			id: 'tut-7',
-			title: 'Fraud Checker | Courier History | Saleecom',
-			youtubeId: '2Vv-BfVoq4g',
-			thumbnail: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=640&h=360&fit=crop',
-			duration: '০৯:১৫ মিনিট',
-			tags: ['fraud order', 'courier info', 'order history']
-		},
-		{
-			id: 'tut-8',
-			title: 'Order Language Manage | Saleecom',
-			youtubeId: 'L_LUpnjgPso',
-			thumbnail: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=640&h=360&fit=crop',
-			duration: '০৩:৫০ মিনিট',
-			tags: ['order language', 'english', 'bangla', 'language change']
-		}
+	const CATEGORIES = [
+		{ id: 'All', label: 'সবগুলো (All)' },
+		{ id: 'Landing Page', label: 'ল্যান্ডিং পেজ (Landing Page)' },
+		{ id: 'Getting Started', label: 'শুরু করার গাইড (Getting Started)' },
+		{ id: 'Marketing & Pixel', label: 'মার্কেটিং ও পিক্সেল (Marketing & Pixel)' },
+		{ id: 'Orders & Courier', label: 'অর্ডার ও কুরিয়ার (Orders & Courier)' },
+		{ id: 'Design & Customization', label: 'ডিজাইন ও সেটিংস (Design)' }
 	];
 
-	// Filtered Videos
+	// Filtered Videos computation
 	let filteredTutorials = $derived(
 		tutorials.filter((tut) => {
 			const query = searchQuery.toLowerCase().trim();
 			const matchesSearch =
 				query === '' ||
 				tut.title.toLowerCase().includes(query) ||
-				tut.tags.some((t) => t.toLowerCase().includes(query));
+				(tut.category && tut.category.toLowerCase().includes(query)) ||
+				(tut.tags && tut.tags.some((t) => t.toLowerCase().includes(query)));
 
-			const matchesTag = activeTag === null || tut.tags.includes(activeTag);
+			const matchesCategory =
+				selectedCategory === 'All' || tut.category === selectedCategory;
 
-			return matchesSearch && matchesTag;
+			const matchesTag = activeTag === null || (tut.tags && tut.tags.includes(activeTag));
+
+			return matchesSearch && matchesCategory && matchesTag;
 		})
 	);
 
-	function openVideo(tut: any) {
+	// Play video in top Cinema Player (Scroll to top smoothly)
+	function selectVideo(tut: TutorialItem) {
 		activeVideo = tut;
-		isPlayerModalOpen = true;
+		const playerEl = document.getElementById('cinema-player');
+		if (playerEl) {
+			const yOffset = -90;
+			const y = playerEl.getBoundingClientRect().top + window.pageYOffset + yOffset;
+			window.scrollTo({ top: y, behavior: 'smooth' });
+		}
 	}
 
-	function shareVideo(tut: any) {
+	// Copy Video URL to Clipboard with Toast Feedback
+	function shareVideo(tut: TutorialItem) {
 		const url = `https://www.youtube.com/watch?v=${tut.youtubeId}`;
 		navigator.clipboard.writeText(url);
-		showToast('ইউটিউব ভিডিও লিঙ্ক কপি করা হয়েছে!');
+		toast.success('ইউটিউব ভিডিও লিংক কপি করা হয়েছে!');
+	}
+
+	// Navigate to Next/Previous Video in the List
+	function playNextVideo() {
+		const currentIndex = tutorials.findIndex((t) => t.id === activeVideo.id);
+		if (currentIndex !== -1 && currentIndex < tutorials.length - 1) {
+			selectVideo(tutorials[currentIndex + 1]);
+		} else if (tutorials.length > 0) {
+			selectVideo(tutorials[0]);
+		}
+	}
+
+	function playPrevVideo() {
+		const currentIndex = tutorials.findIndex((t) => t.id === activeVideo.id);
+		if (currentIndex > 0) {
+			selectVideo(tutorials[currentIndex - 1]);
+		} else if (tutorials.length > 0) {
+			selectVideo(tutorials[tutorials.length - 1]);
+		}
 	}
 </script>
 
 <svelte:head>
-	<title>ভিডিও টিউটোরিয়াল | Tutorials</title>
+	<title>ভিডিও টিউটোরিয়াল ও গাইড | AURA Tutorials</title>
 </svelte:head>
 
-<!-- Toast Alert -->
-{#if toastMessage}
-	<div class="fixed bottom-24 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-3 duration-200 text-xs font-bold">
-		<CheckCircle2 class="w-4 h-4 text-emerald-400" />
-		<span>{toastMessage}</span>
-	</div>
-{/if}
-
-<div class="space-y-6 max-w-7xl mx-auto font-['Anek_Bangla',sans-serif]">
+<div class="space-y-7 max-w-7xl mx-auto font-['Anek_Bangla',sans-serif]">
 	
-	<!-- Top Sub-Header Row: Title on Left, Search Bar on Right (Exact Match) -->
-	<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-		
-		<!-- Left: Heading -->
+	<!-- Top Sub-Header Bar (Matching Admin Standard) -->
+	<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-1 border-b border-slate-100">
 		<div>
-			<h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Tutorial</h2>
-			<p class="text-xs text-slate-500 mt-0.5">সহজ ভিডিও নির্দেশনার মাধ্যমে আপনার অনলাইন শপ পরিচালনা শিখুন</p>
+			<h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
+				<div class="w-9 h-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+					<Film class="w-5 h-5" />
+				</div>
+				<span>ভিডিও টিউটোরিয়াল ও ট্রেনিং হাব</span>
+			</h1>
+			<p class="text-xs text-slate-500 mt-0.5">
+				সহজ ভিডিও নির্দেশনার মাধ্যমে প্ল্যাটফর্মের প্রতিটি ফিচার পরিচালনা শিখুন
+			</p>
 		</div>
 
-		<!-- Right: Search Box with Purple Button (Exact Match) -->
-		<div class="w-full sm:w-80 flex items-center gap-2">
-			<div class="relative flex-1">
+		<!-- Action Buttons: + Add Video & Support Button -->
+		<div class="flex items-center gap-2.5 flex-wrap">
+			<Button
+				type="button"
+				onclick={() => (isAddFormOpen = !isAddFormOpen)}
+				class="bg-[#5845eb] hover:bg-[#4936d6] text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs gap-1.5 cursor-pointer"
+			>
+				{#if isAddFormOpen}
+					<X class="w-4 h-4" />
+					<span>ফর্ম বন্ধ করুন</span>
+				{:else}
+					<Plus class="w-4 h-4" />
+					<span>নতুন ভিডিও যুক্ত করুন</span>
+				{/if}
+			</Button>
+
+			<a
+				href="https://wa.me/8801860229546"
+				target="_blank"
+				rel="noopener noreferrer"
+				class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-2xs transition-colors"
+			>
+				<Headphones class="w-3.5 h-3.5 text-[#5845eb]" />
+				<span>সাপোর্ট হেল্পলাইন</span>
+			</a>
+		</div>
+	</div>
+
+	<!-- Collapsible Inline "Add Video" Form (No Pop-ups!) -->
+	{#if isAddFormOpen}
+		<div class="bg-indigo-50/50 border border-indigo-200/80 rounded-3xl p-5 sm:p-7 shadow-2xs space-y-5 animate-in fade-in slide-in-from-top-3 duration-200">
+			<div class="flex items-center justify-between pb-2 border-b border-indigo-100">
+				<div class="flex items-center gap-2">
+					<div class="w-7 h-7 rounded-lg bg-[#5845eb] text-white flex items-center justify-center font-bold text-xs">
+						+
+					</div>
+					<div>
+						<h3 class="text-sm font-bold text-slate-900">নতুন ভিডিও টিউটোরিয়াল যোগ করুন</h3>
+						<p class="text-[11px] text-slate-500">ইউটিউব ভিডিও লিংক ও শিরোনাম দিয়ে তালিকায় যুক্ত করুন</p>
+					</div>
+				</div>
+
+				<button
+					type="button"
+					onclick={() => (isAddFormOpen = false)}
+					class="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-white flex items-center justify-center"
+				>
+					<X class="w-4 h-4" />
+				</button>
+			</div>
+
+			<form
+				method="POST"
+				action="?/create"
+				use:enhance={() => {
+					isSubmitting = true;
+					return async ({ result, update }) => {
+						isSubmitting = false;
+						if (result.type === 'success') {
+							toast.success('নতুন ভিডিও টিউটোরিয়াল সফলভাবে যুক্ত হয়েছে!');
+							isAddFormOpen = false;
+							newTitle = '';
+							newYoutubeUrl = '';
+							newTags = '';
+						} else {
+							toast.error('ভিডিও যোগ করতে সমস্যা হয়েছে।');
+						}
+						await update();
+					};
+				}}
+				class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+			>
+				<!-- YouTube URL / Video ID -->
+				<div class="space-y-1.5 sm:col-span-2 lg:col-span-1">
+					<label for="vid-url" class="text-xs font-bold text-slate-800 block">
+						YouTube ভিডিও লিংক বা ID <span class="text-rose-500">*</span>
+					</label>
+					<Input
+						id="vid-url"
+						name="youtubeUrlOrId"
+						type="text"
+						required
+						bind:value={newYoutubeUrl}
+						placeholder="https://www.youtube.com/watch?v=..."
+						class="text-xs font-mono bg-white"
+					/>
+				</div>
+
+				<!-- Video Title -->
+				<div class="space-y-1.5 sm:col-span-2">
+					<label for="vid-title" class="text-xs font-bold text-slate-800 block">
+						ভিডিওর শিরোনাম (Title) <span class="text-rose-500">*</span>
+					</label>
+					<Input
+						id="vid-title"
+						name="title"
+						type="text"
+						required
+						bind:value={newTitle}
+						placeholder="যেমন: Facebook Pixel সেটআপ গাইড"
+						class="text-xs bg-white font-medium"
+					/>
+				</div>
+
+				<!-- Category -->
+				<div class="space-y-1.5">
+					<label for="vid-cat" class="text-xs font-bold text-slate-800 block">
+						ক্যাটাগরি
+					</label>
+					<select
+						id="vid-cat"
+						name="category"
+						bind:value={newCategory}
+						class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200/90 rounded-xl focus:outline-none focus:border-[#5845eb]"
+					>
+						<option value="Getting Started">Getting Started</option>
+						<option value="Marketing & Pixel">Marketing & Pixel</option>
+						<option value="Orders & Courier">Orders & Courier</option>
+						<option value="Design & Customization">Design & Customization</option>
+					</select>
+				</div>
+
+				<!-- Duration -->
+				<div class="space-y-1.5">
+					<label for="vid-dur" class="text-xs font-bold text-slate-800 block">
+						ভিডিওর সময়কাল (Duration)
+					</label>
+					<Input
+						id="vid-dur"
+						name="duration"
+						type="text"
+						bind:value={newDuration}
+						placeholder="০৫:৩০ মিনিট"
+						class="text-xs bg-white"
+					/>
+				</div>
+
+				<!-- Tags -->
+				<div class="space-y-1.5 sm:col-span-2 lg:col-span-1">
+					<label for="vid-tags" class="text-xs font-bold text-slate-800 block">
+						ট্যাগসমূহ (কমা দিয়ে আলাদা করুন)
+					</label>
+					<Input
+						id="vid-tags"
+						name="tags"
+						type="text"
+						bind:value={newTags}
+						placeholder="Pixel, CAPI, Meta, Marketing"
+						class="text-xs bg-white"
+					/>
+				</div>
+
+				<!-- Submit Button -->
+				<div class="sm:col-span-2 lg:col-span-3 pt-2 flex items-center justify-end gap-2">
+					<Button
+						type="button"
+						variant="outline"
+						onclick={() => (isAddFormOpen = false)}
+						class="text-xs font-bold"
+					>
+						বাতিল
+					</Button>
+
+					<Button
+						type="submit"
+						disabled={isSubmitting}
+						class="bg-[#5845eb] hover:bg-[#4936d6] text-white text-xs font-bold px-6 shadow-xs"
+					>
+						{#if isSubmitting}
+							<Loader2 class="w-4 h-4 animate-spin mr-1.5" />
+							<span>সংরক্ষণ হচ্ছে...</span>
+						{:else}
+							<span>সংরক্ষণ করুন</span>
+						{/if}
+					</Button>
+				</div>
+			</form>
+		</div>
+	{/if}
+
+	<!-- 1. FEATURED INLINE CINEMA PLAYER (পপ-আপ মুক্ত প্লেয়ার - Zero Modals) -->
+	<section id="cinema-player" class="scroll-mt-24">
+		<Card class="bg-white rounded-3xl border-slate-200/90 shadow-xs overflow-hidden">
+			<div class="grid grid-cols-1 lg:grid-cols-12 items-stretch">
+				
+				<!-- Left 7-8 cols: 16:9 Cinema Embed Frame -->
+				<div class="lg:col-span-8 bg-black relative aspect-video flex items-center justify-center">
+					<iframe
+						class="w-full h-full"
+						src={`https://www.youtube.com/embed/${activeVideo.youtubeId}?autoplay=0&rel=0`}
+						title={activeVideo.title}
+						frameborder="0"
+						allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+						allowfullscreen
+					></iframe>
+				</div>
+
+				<!-- Right 4-5 cols: Video Metadata & Quick Play Controls -->
+				<div class="lg:col-span-4 p-5 sm:p-6 flex flex-col justify-between space-y-4 bg-slate-50/50 border-t lg:border-t-0 lg:border-l border-slate-100">
+					
+					<div class="space-y-3.5">
+						<!-- Category & Status Badge Row -->
+						<div class="flex items-center justify-between gap-2 flex-wrap">
+							<span class="px-3 py-1 rounded-full text-[11px] font-bold bg-[#5845eb]/10 text-[#5845eb] border border-[#5845eb]/20">
+								{activeVideo.category || 'General Guide'}
+							</span>
+
+							<div class="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 font-mono">
+								<Clock class="w-3.5 h-3.5 text-slate-400" />
+								<span>{activeVideo.duration}</span>
+							</div>
+						</div>
+
+						<!-- Video Title -->
+						<h2 class="text-base sm:text-lg font-black text-slate-900 leading-snug tracking-tight">
+							{activeVideo.title}
+						</h2>
+
+						<!-- Description / Guidance Note -->
+						<p class="text-xs text-slate-600 leading-relaxed">
+							{activeVideo.description || 'এই ভিডিও নির্দেশনায় সম্পূর্ণ প্রক্রিয়াটি বিস্তারিতভাবে ধাপে ধাপে দেখানো হয়েছে। যেকোনো সমস্যায় আমাদের টেকনিক্যাল সাপোর্ট সেন্টারে যোগাযোগ করুন।'}
+						</p>
+
+						<!-- Tags Cloud -->
+						{#if activeVideo.tags && activeVideo.tags.length > 0}
+							<div class="flex items-center gap-1.5 flex-wrap pt-1">
+								{#each activeVideo.tags as tag}
+									<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-white text-slate-600 border border-slate-200 shadow-2xs">
+										#{tag}
+									</span>
+								{/each}
+							</div>
+						{/if}
+					</div>
+
+					<!-- Bottom Action Buttons: Prev/Next, Share, External Link, Delete -->
+					<div class="space-y-3 pt-3 border-t border-slate-200/80">
+						<!-- Quick Play Next / Prev -->
+						<div class="flex items-center justify-between gap-2">
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								onclick={playPrevVideo}
+								class="gap-1 text-xs font-bold text-slate-700 h-9 flex-1"
+							>
+								<ChevronLeft class="w-3.5 h-3.5" />
+								<span>পূর্ববর্তী</span>
+							</Button>
+
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								onclick={playNextVideo}
+								class="gap-1 text-xs font-bold text-slate-700 h-9 flex-1"
+							>
+								<span>পরবর্তী</span>
+								<ChevronRight class="w-3.5 h-3.5" />
+							</Button>
+						</div>
+
+						<!-- External & Share Actions -->
+						<div class="flex items-center gap-2">
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								onclick={() => shareVideo(activeVideo)}
+								class="gap-1.5 text-xs font-bold text-slate-700 h-9 flex-1"
+							>
+								<Share2 class="w-3.5 h-3.5 text-[#5845eb]" />
+								<span>লিংক কপি</span>
+							</Button>
+
+							<a
+								href={`https://www.youtube.com/watch?v=${activeVideo.youtubeId}`}
+								target="_blank"
+								rel="noopener noreferrer"
+								class="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 h-9 px-4 rounded-xl flex-1 shadow-2xs transition-colors"
+							>
+								<Play class="w-3.5 h-3.5 fill-white" />
+								<span>YouTube</span>
+							</a>
+
+							<!-- Delete Video if custom added -->
+							{#if activeVideo.id.startsWith('tut-') && activeVideo.id !== 'tut-1' && activeVideo.id !== 'tut-2' && activeVideo.id !== 'tut-3' && activeVideo.id !== 'tut-4' && activeVideo.id !== 'tut-5' && activeVideo.id !== 'tut-6' && activeVideo.id !== 'tut-7' && activeVideo.id !== 'tut-8'}
+								<form
+									method="POST"
+									action="?/delete"
+									use:enhance={() => {
+										return async ({ result, update }) => {
+											if (result.type === 'success') {
+												toast.success('ভিডিওটি মুছে ফেলা হয়েছে।');
+												if (tutorials.length > 0) activeVideo = tutorials[0];
+											}
+											await update();
+										};
+									}}
+								>
+									<input type="hidden" name="id" value={activeVideo.id} />
+									<Button
+										type="submit"
+										variant="outline"
+										size="icon"
+										class="h-9 w-9 text-rose-500 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
+										title="টিউটোরিয়াল মুছুন"
+									>
+										<Trash2 class="w-3.5 h-3.5" />
+									</Button>
+								</form>
+							{/if}
+						</div>
+					</div>
+
+				</div>
+
+			</div>
+		</Card>
+	</section>
+
+	<!-- 2. SEARCH & CATEGORY FILTERS ROW -->
+	<div class="space-y-3.5">
+		<div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+			
+			<!-- Category Chips Stack -->
+			<div class="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+				{#each CATEGORIES as cat}
+					<button
+						type="button"
+						onclick={() => { selectedCategory = cat.id; activeTag = null; }}
+						class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-2xs {selectedCategory === cat.id
+							? 'bg-[#5845eb] text-white shadow-sm'
+							: 'bg-white border border-slate-200 hover:border-slate-300 text-slate-700 hover:bg-slate-50'}"
+					>
+						{cat.label}
+					</button>
+				{/each}
+			</div>
+
+			<!-- Search Bar -->
+			<div class="w-full sm:w-72 relative">
 				<input
 					type="text"
-					placeholder="Search"
+					placeholder="টিউটোরিয়াল খুঁজুন..."
 					bind:value={searchQuery}
-					class="w-full bg-slate-50 border border-slate-200/90 rounded-2xl px-4 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#5845eb] focus:bg-white shadow-2xs transition-all"
+					class="w-full bg-white border border-slate-200 rounded-2xl pl-9 pr-8 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#5845eb] shadow-2xs transition-all"
 				/>
+				<Search class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
 				{#if searchQuery}
 					<button
 						type="button"
 						onclick={() => (searchQuery = '')}
-						class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+						class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
 					>
 						<X class="w-3.5 h-3.5" />
 					</button>
 				{/if}
 			</div>
 
-			<button
-				type="button"
-				class="w-10 h-10 rounded-2xl bg-[#e0e7ff] text-[#5845eb] hover:bg-[#c7d2fe] flex items-center justify-center shrink-0 transition-colors cursor-pointer shadow-2xs"
-				title="সার্চ করুন"
-			>
-				<Search class="w-4 h-4 stroke-[2.5]" />
-			</button>
 		</div>
 
+		<!-- Active Filter Tag Notice -->
+		{#if activeTag}
+			<div class="flex items-center gap-2 text-xs">
+				<span class="text-slate-500 font-bold">ফিল্টার ট্যাগ:</span>
+				<span class="px-3 py-1 bg-indigo-50 text-indigo-700 font-bold rounded-full flex items-center gap-1.5 border border-indigo-200">
+					<span>#{activeTag}</span>
+					<button type="button" onclick={() => (activeTag = null)} class="hover:text-indigo-900 cursor-pointer">
+						<X class="w-3.5 h-3.5" />
+					</button>
+				</span>
+			</div>
+		{/if}
 	</div>
 
-	<!-- Active Filter Tag Notice -->
-	{#if activeTag}
-		<div class="flex items-center gap-2 text-xs">
-			<span class="text-slate-500">ফিল্টার:</span>
-			<span class="px-3 py-1 bg-indigo-50 text-indigo-700 font-bold rounded-full flex items-center gap-1.5 border border-indigo-200">
-				<span>{activeTag}</span>
-				<button type="button" onclick={() => (activeTag = null)} class="hover:text-indigo-900">
-					<X class="w-3.5 h-3.5" />
-				</button>
-			</span>
+	<!-- 3. ALL VIDEO CARDS GRID (Responsive 4 Cols) -->
+	<div class="space-y-3">
+		<div class="flex items-center justify-between text-xs text-slate-500 font-bold px-1">
+			<span>সর্বমোট {filteredTutorials.length} টি ভিডিও টিউটোরিয়াল</span>
+			<span class="text-[11px] font-normal text-slate-400">ভিডিওতে ক্লিক করলে উপরে প্লে হবে</span>
 		</div>
-	{/if}
 
-	<!-- Video Cards Grid (4 Columns on Desktop, 2 on Tablet, 1 on Mobile) -->
-	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
-		{#each filteredTutorials as tut (tut.id)}
-			<div class="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-2xs hover:shadow-lg transition-all flex flex-col justify-between group">
-				
-				<!-- Top Part: Thumbnail & Content -->
-				<div class="space-y-3.5">
-					
-					<!-- 16:9 Video Thumbnail with Play Overlay -->
-					<div
-						onclick={() => openVideo(tut)}
-						class="aspect-video relative overflow-hidden bg-slate-950 cursor-pointer"
-					>
-						<img
-							src={tut.thumbnail}
-							alt={tut.title}
-							class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 opacity-90 group-hover:opacity-100"
-						/>
+		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
+			{#each filteredTutorials as tut (tut.id)}
+				{@const isCurrent = activeVideo.id === tut.id}
+				<div
+					onclick={() => selectVideo(tut)}
+					class="bg-white rounded-3xl border transition-all flex flex-col justify-between group cursor-pointer overflow-hidden shadow-2xs hover:shadow-md {isCurrent
+						? 'border-[#5845eb] ring-2 ring-[#5845eb]/20'
+						: 'border-slate-200/80 hover:border-slate-300'}"
+				>
+					<!-- Top Part: Thumbnail & Content -->
+					<div class="space-y-3">
 						
-						<!-- Dark Vignette Overlay -->
-						<div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+						<!-- 16:9 Video Thumbnail with Play Overlay -->
+						<div class="aspect-video relative overflow-hidden bg-slate-950">
+							<img
+								src={tut.thumbnail}
+								alt={tut.title}
+								loading="lazy"
+								class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 opacity-90 group-hover:opacity-100"
+							/>
+							
+							<!-- Dark Vignette Overlay -->
+							<div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
 
-						<!-- Centered Play Button -->
-						<div class="absolute inset-0 flex items-center justify-center">
-							<div class="w-12 h-12 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-115 group-hover:bg-red-600 transition-all">
-								<Play class="w-5 h-5 fill-white ml-0.5" />
+							<!-- Category Tag in Top Left -->
+							<div class="absolute top-2.5 left-2.5">
+								<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-black/60 backdrop-blur-xs text-white border border-white/10">
+									{tut.category}
+								</span>
+							</div>
+
+							<!-- Centered Play Button or Now Playing Badge -->
+							<div class="absolute inset-0 flex items-center justify-center">
+								{#if isCurrent}
+									<div class="px-3 py-1.5 rounded-full bg-[#5845eb] text-white flex items-center gap-1.5 text-[11px] font-bold shadow-lg animate-pulse">
+										<Play class="w-3.5 h-3.5 fill-white" />
+										<span>Now Playing</span>
+									</div>
+								{:else}
+									<div class="w-11 h-11 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:bg-red-600 transition-all">
+										<Play class="w-4 h-4 fill-white ml-0.5" />
+									</div>
+								{/if}
+							</div>
+
+							<!-- Video Duration Badge -->
+							<div class="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md bg-black/80 text-white font-mono text-[10px] font-bold">
+								{tut.duration}
 							</div>
 						</div>
 
-						<!-- Video Duration Badge -->
-						<div class="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md bg-black/80 text-white font-mono text-[10px] font-bold">
-							{tut.duration}
+						<!-- Video Title -->
+						<div class="px-4">
+							<h3
+								class="font-black text-slate-900 text-xs sm:text-sm leading-snug line-clamp-2 group-hover:text-[#5845eb] transition-colors"
+								title={tut.title}
+							>
+								{tut.title}
+							</h3>
+						</div>
+
+					</div>
+
+					<!-- Bottom Part: Tag Pills Stack -->
+					<div class="p-4 pt-2">
+						<div class="flex items-center gap-1.5 flex-wrap">
+							{#each tut.tags as tag}
+								<button
+									type="button"
+									onclick={(e) => {
+										e.stopPropagation();
+										activeTag = activeTag === tag ? null : tag;
+									}}
+									class="px-2 py-0.5 rounded-md text-[10px] font-semibold transition-colors cursor-pointer {activeTag === tag
+										? 'bg-[#5845eb] text-white'
+										: 'bg-slate-100 hover:bg-slate-200 text-slate-600'}"
+								>
+									#{tag}
+								</button>
+							{/each}
 						</div>
 					</div>
 
-					<!-- Video Title -->
-					<div class="px-4">
-						<h3
-							onclick={() => openVideo(tut)}
-							class="font-black text-slate-900 text-sm leading-snug line-clamp-2 hover:text-[#5845eb] transition-colors cursor-pointer"
-							title={tut.title}
-						>
-							{tut.title}
-						</h3>
-					</div>
-
 				</div>
-
-				<!-- Bottom Part: Tag Pills Stack -->
-				<div class="p-4 pt-2">
-					<div class="flex items-center gap-1.5 flex-wrap">
-						{#each tut.tags as tag}
-							<button
-								type="button"
-								onclick={() => (activeTag = activeTag === tag ? null : tag)}
-								class="px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors cursor-pointer {activeTag === tag
-									? 'bg-[#5845eb] text-white'
-									: 'bg-slate-100/90 hover:bg-slate-200 text-slate-600'}"
-							>
-								{tag}
-							</button>
-						{/each}
-					</div>
-				</div>
-
-			</div>
-		{/each}
+			{/each}
+		</div>
 	</div>
 
 </div>
-
-<!-- Interactive YouTube Video Player Modal -->
-<Dialog bind:open={isPlayerModalOpen} title={activeVideo ? activeVideo.title : 'টিউটোরিয়াল ভিডিও'}>
-	{#if activeVideo}
-		<div class="space-y-4 py-1">
-			
-			<!-- Responsive 16:9 YouTube Embed Player -->
-			<div class="aspect-video w-full rounded-2xl overflow-hidden bg-black shadow-lg border border-slate-800">
-				<iframe
-					class="w-full h-full"
-					src={`https://www.youtube.com/embed/${activeVideo.youtubeId}?autoplay=1&rel=0`}
-					title={activeVideo.title}
-					frameborder="0"
-					allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-					allowfullscreen
-				></iframe>
-			</div>
-
-			<!-- Video Info & Tags -->
-			<div class="space-y-2">
-				<div class="flex items-center justify-between gap-3 flex-wrap">
-					<h3 class="font-bold text-slate-900 text-sm">{activeVideo.title}</h3>
-					<span class="text-xs font-mono text-slate-500 font-semibold">{activeVideo.duration}</span>
-				</div>
-
-				<div class="flex items-center gap-1.5 flex-wrap pt-1">
-					{#each activeVideo.tags as tag}
-						<span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
-							#{tag}
-						</span>
-					{/each}
-				</div>
-			</div>
-
-			<!-- Footer Action Buttons -->
-			<div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-				<Button
-					type="button"
-					variant="outline"
-					onclick={() => shareVideo(activeVideo)}
-					class="flex items-center gap-1.5 text-xs font-bold"
-				>
-					<Share2 class="w-3.5 h-3.5" />
-					<span>লিঙ্ক শেয়ার করুন</span>
-				</Button>
-
-				<Button
-					type="button"
-					variant="outline"
-					onclick={() => (isPlayerModalOpen = false)}
-				>
-					বন্ধ করুন
-				</Button>
-			</div>
-
-		</div>
-	{/if}
-</Dialog>

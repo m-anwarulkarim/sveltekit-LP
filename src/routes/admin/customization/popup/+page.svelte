@@ -91,9 +91,9 @@
 	let filteredPopups = $derived.by(() => {
 		let list = [...popups];
 		if (activeTab === 'publish') {
-			list = list.filter((p) => p.status === 'PUBLISH');
+			list = list.filter((p) => (p.status || '').toUpperCase().startsWith('PUB'));
 		} else if (activeTab === 'draft') {
-			list = list.filter((p) => p.status === 'DRAFT');
+			list = list.filter((p) => (p.status || '').toUpperCase().startsWith('DRAFT'));
 		} else if (activeTab === 'trash') {
 			list = [];
 		}

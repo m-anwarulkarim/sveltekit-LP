@@ -85,9 +85,9 @@
 	let editingItem = $state<CarouselItem | null>(null);
 	let modalName = $state('');
 	let modalUrl = $state('/Home');
-	let modalUrlType = $state<'Internal' | 'External'>('Internal');
+	let modalUrlType = $state<'Internal' | 'External' | string>('Internal');
 	let modalSerial = $state('1');
-	let modalStatus = $state<'PUBLISH' | 'DRAFT'>('PUBLISH');
+	let modalStatus = $state<'PUBLISH' | 'DRAFT' | 'Publish' | 'Draft' | string>('PUBLISH');
 	let modalImage = $state('/images/banners/banner-home.svg');
 
 	function showToast(msg: string) {
@@ -133,16 +133,16 @@
 	let filteredCarousels = $derived.by(() => {
 		let list = [...carousels];
 		if (activeTab === 'publish') {
-			list = list.filter((c) => c.status === 'PUBLISH');
+			list = list.filter((c) => (c.status || '').toUpperCase().startsWith('PUB'));
 		} else if (activeTab === 'draft') {
-			list = list.filter((c) => c.status === 'DRAFT');
+			list = list.filter((c) => (c.status || '').toUpperCase().startsWith('DRAFT'));
 		} else if (activeTab === 'trash') {
 			list = [];
 		}
 
 		if (searchQuery.trim()) {
 			const q = searchQuery.toLowerCase().trim();
-			list = list.filter((c) => c.name.toLowerCase().includes(q) || c.url.toLowerCase().includes(q));
+			list = list.filter((c) => (c.name || '').toLowerCase().includes(q) || (c.url && c.url.toLowerCase().includes(q)));
 		}
 		return list;
 	});
@@ -182,9 +182,9 @@
 		editingItem = item;
 		modalName = item.name;
 		modalUrl = item.url;
-		modalUrlType = item.urlType;
+		modalUrlType = item.urlType === 'External' ? 'External' : 'Internal';
 		modalSerial = item.serial;
-		modalStatus = item.status;
+		modalStatus = (item.status || '').toUpperCase().startsWith('DRAFT') ? 'DRAFT' : 'PUBLISH';
 		modalImage = item.image;
 		isModalOpen = true;
 	}
@@ -224,8 +224,8 @@
 		isModalOpen = false;
 	}
 
-	let publishCount = $derived(carousels.filter((c) => c.status === 'PUBLISH' || c.status === 'Publish').length);
-	let draftCount = $derived(carousels.filter((c) => c.status === 'DRAFT' || c.status === 'Draft').length);
+	let publishCount = $derived(carousels.filter((c) => (c.status || '').toUpperCase().startsWith('PUB')).length);
+	let draftCount = $derived(carousels.filter((c) => (c.status || '').toUpperCase().startsWith('DRAFT')).length);
 	let allCount = $derived(carousels.length);
 
 	async function handleToggleStatus(item: CarouselItem) {

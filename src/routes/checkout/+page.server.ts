@@ -49,9 +49,8 @@ export const load: PageServerLoad = async (event) => {
 	};
 };
 
-import fs from 'node:fs';
-
-async function handlePlaceOrderAction({ request, platform, getClientAddress, locals, url }: any) {
+async function handlePlaceOrderAction(event: any) {
+	const { request, cookies, platform, getClientAddress, locals, url } = event;
 	try {
 		const db = getDb(platform);
 
@@ -189,32 +188,48 @@ async function handlePlaceOrderAction({ request, platform, getClientAddress, loc
 			orderNumber = result.orderNumber;
 
 			// Capture Meta Browser ID (_fbp) and Click ID (_fbc) cookies for 9.0+ EMQ
-			const fbp = cookies.get('_fbp') || undefined;
-			const fbc = cookies.get('_fbc') || undefined;
+			let fbp: string | undefined = undefined;
+			let fbc: string | undefined = undefined;
+			try {
+				if (cookies && typeof cookies.get === 'function') {
+					fbp = cookies.get('_fbp') || undefined;
+					fbc = cookies.get('_fbc') || undefined;
+				} else {
+					const cookieHeader = request.headers.get('cookie') || '';
+					const matchFbp = cookieHeader.match(/_fbp=([^;]+)/);
+					if (matchFbp) fbp = matchFbp[1];
+					const matchFbc = cookieHeader.match(/_fbc=([^;]+)/);
+					if (matchFbc) fbc = matchFbc[1];
+				}
+			} catch (_) {}
 
 			// Dispatch asynchronous server-side Meta Conversions API (CAPI) Purchase event
-			const capiPromise = PixelService.sendCAPIPurchase(db, {
-				orderId,
-				orderNumber,
-				customerName,
-				customerPhone,
-				customerEmail: payload.customerEmail || customerPhone,
-				shippingAddress: finalShippingAddress,
-				total,
-				items,
-				currency: 'BDT',
-				ipAddress,
-				userAgent,
-				fbp,
-				fbc,
-				eventSourceUrl: `${url?.origin || 'https://lp.haqplus.com'}/checkout`
-			}).catch((err) => console.error('Background CAPI Purchase Error:', err));
+			try {
+				const capiPromise = PixelService.sendCAPIPurchase(db, {
+					orderId,
+					orderNumber,
+					customerName,
+					customerPhone,
+					customerEmail: payload.customerEmail || customerPhone,
+					shippingAddress: finalShippingAddress,
+					total,
+					items,
+					currency: 'BDT',
+					ipAddress,
+					userAgent,
+					fbp,
+					fbc,
+					eventSourceUrl: `${url?.origin || 'https://lp.haqplus.com'}/checkout`
+				}).catch((err) => console.error('Background CAPI Purchase Error:', err));
 
-			// Ensure Cloudflare Worker execution context does not terminate before CAPI completes
-			if (platform?.ctx?.waitUntil) {
-				platform.ctx.waitUntil(capiPromise);
-			} else if ((platform as any)?.context?.waitUntil) {
-				(platform as any).context.waitUntil(capiPromise);
+				// Ensure Cloudflare Worker execution context does not terminate before CAPI completes
+				if (platform?.ctx?.waitUntil) {
+					platform.ctx.waitUntil(capiPromise);
+				} else if ((platform as any)?.context?.waitUntil) {
+					(platform as any).context.waitUntil(capiPromise);
+				}
+			} catch (capiErr) {
+				console.error('CAPI dispatch init error:', capiErr);
 			}
 		} catch (err: any) {
 			console.error('Order creation error in D1:', err);
@@ -251,7 +266,6 @@ async function handlePlaceOrderAction({ request, platform, getClientAddress, loc
 			total
 		};
 	} catch (err: any) {
-		fs.writeFileSync('checkout_error.log', (err && (err.stack || err.message)) || String(err));
 		console.error('CRITICAL CHECKOUT ERROR:', err);
 		return fail(500, {
 			message: err?.message || 'অর্ডারে ত্রুটি হয়েছে।'

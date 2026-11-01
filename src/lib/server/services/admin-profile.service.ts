@@ -1,6 +1,7 @@
 import { eq, and, ne, sql } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from '../db/schema';
+import { hashPassword, verifyPassword } from '../utils/password';
 
 export interface UpdateProfileInput {
 	name: string;
@@ -23,28 +24,6 @@ export class AdminProfileService {
 	 */
 	static async ensureColumns(_db: DrizzleD1Database<typeof schema>) {
 		// No-op: Columns are defined in schema and applied via migrations
-	}
-
-	/**
-	 * Cryptographic password hasher using standard Web Crypto API (SHA-256 with Salt).
-	 * Fully native in Cloudflare Workers and Node.js without binary dependencies.
-	 */
-	static async hashPassword(password: string, salt?: string): Promise<string> {
-		const s = salt || crypto.randomUUID().replace(/-/g, '').slice(0, 16);
-		const enc = new TextEncoder();
-		const data = enc.encode(`${password}:${s}`);
-		const hashBuf = await crypto.subtle.digest('SHA-256', data);
-		const hashHex = Array.from(new Uint8Array(hashBuf))
-			.map((b) => b.toString(16).padStart(2, '0'))
-			.join('');
-		return `${s}:${hashHex}`;
-	}
-
-	static async verifyPassword(password: string, storedHash: string): Promise<boolean> {
-		if (!storedHash || !storedHash.includes(':')) return false;
-		const [salt] = storedHash.split(':');
-		const computed = await this.hashPassword(password, salt);
-		return computed === storedHash;
 	}
 
 	/**
@@ -98,6 +77,32 @@ export class AdminProfileService {
 			hasPassword: true,
 			createdAt: new Date('2025-09-03'),
 			updatedAt: new Date()
+		};
+	}
+
+	/**
+	 * Fetches the profile of a specific signed-in admin.
+	 */
+	static async getProfileById(db: DrizzleD1Database<typeof schema>, adminId: string) {
+		const adm = await db
+			.select()
+			.from(schema.adminUsers)
+			.where(eq(schema.adminUsers.id, adminId))
+			.get();
+		if (!adm) return null;
+		return {
+			id: adm.id,
+			name: adm.name,
+			username: adm.username,
+			email: adm.email,
+			phone: adm.phone || '',
+			role: adm.role,
+			avatarUrl: adm.avatarUrl || null,
+			avatarBg: adm.avatarBg || 'bg-black text-pink-500 border-pink-500/40',
+			avatarText: adm.avatarText || adm.name.slice(0, 2).toUpperCase(),
+			hasPassword: Boolean(adm.passwordHash),
+			createdAt: adm.createdAt ? new Date(adm.createdAt) : new Date(),
+			updatedAt: adm.updatedAt ? new Date(adm.updatedAt) : new Date()
 		};
 	}
 
@@ -234,14 +239,14 @@ export class AdminProfileService {
 			if (!currentPassword) {
 				throw new Error('বর্তমান পাসওয়ার্ড প্রদান করা বাধ্যতামূলক!');
 			}
-			const isValid = await this.verifyPassword(currentPassword, admin.passwordHash);
+			const isValid = await verifyPassword(currentPassword, admin.passwordHash);
 			if (!isValid) {
 				throw new Error('বর্তমান পাসওয়ার্ডটি সঠিক নয়!');
 			}
 		}
 
 		// Generate new salt and hash
-		const newHash = await this.hashPassword(newPassword);
+		const newHash = await hashPassword(newPassword);
 
 		await db
 			.update(schema.adminUsers)

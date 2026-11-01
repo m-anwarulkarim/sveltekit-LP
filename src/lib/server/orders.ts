@@ -5,18 +5,19 @@ import { fail } from '@sveltejs/kit';
 import { OrderService } from './services/order.service';
 import { CustomerService } from './services/customer.service';
 import { NotificationService } from './services/notification.service';
-import {
-	updateLiveOrderStatus,
-	trashLiveOrder,
-	restoreLiveOrder,
-	deleteLiveOrderPermanently,
-	addLiveOrder
-} from './orders-store';
+import { StockService } from './services/stock.service';
 
 /**
  * Enterprise Admin Order Actions Controller
- * Connects directly to Cloudflare D1 real database and syncs with live in-memory store
+ * Connects directly to Cloudflare D1. A database failure is always reported as a
+ * failure, so the admin never sees a change that was not saved.
  */
+
+const SAVE_FAILED = 'ডাটাবেসে সেভ করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।';
+
+async function findOrder(db: ReturnType<typeof getDb>, orderId: string) {
+	return await db.select().from(schema.orders).where(eq(schema.orders.id, orderId)).get();
+}
 
 export async function handleUpdateStatus(request: Request, platform: any) {
 	const data = await request.formData();
@@ -30,6 +31,9 @@ export async function handleUpdateStatus(request: Request, platform: any) {
 
 	try {
 		const db = getDb(platform);
+		const order = await findOrder(db, orderId);
+		if (!order) return fail(404, { message: 'অর্ডার পাওয়া যায়নি' });
+
 		const updatePayload: Record<string, any> = {
 			status: newStatus,
 			updatedAt: new Date()
@@ -43,6 +47,7 @@ export async function handleUpdateStatus(request: Request, platform: any) {
 			updatePayload.deliveredAt = new Date();
 		}
 
+		await StockService.syncForStatusChange(db, order, newStatus);
 		await db.update(schema.orders).set(updatePayload).where(eq(schema.orders.id, orderId));
 
 		if (note.trim().length > 0) {
@@ -55,13 +60,10 @@ export async function handleUpdateStatus(request: Request, platform: any) {
 			});
 		}
 
-		updateLiveOrderStatus(orderId, newStatus, note);
 		return { success: true, updatedOrder: orderId, newStatus };
 	} catch (err: any) {
 		console.error('Failed to update order status:', err);
-		// Still sync in-memory
-		updateLiveOrderStatus(orderId, newStatus, note);
-		return { success: true, updatedOrder: orderId, newStatus };
+		return fail(500, { message: SAVE_FAILED });
 	}
 }
 
@@ -72,6 +74,10 @@ export async function handleQuickConfirm(request: Request, platform: any) {
 
 	try {
 		const db = getDb(platform);
+		const order = await findOrder(db, orderId);
+		if (!order) return fail(404, { message: 'অর্ডার পাওয়া যায়নি' });
+
+		await StockService.syncForStatusChange(db, order, 'confirmed');
 		await db
 			.update(schema.orders)
 			.set({
@@ -85,16 +91,14 @@ export async function handleQuickConfirm(request: Request, platform: any) {
 			id: crypto.randomUUID(),
 			orderId,
 			adminName: 'Admin Staff',
-			note: 'কুইক কনফার্ম: অর্ডারটি সরাসরি কনফার্ম করা হয়েছে।',
+			note: 'কুইক কনফার্ম: অর্ডারটি সরাসরি কনফার্ম করা হয়েছে।',
 			callStatus: 'confirmed'
 		});
 
-		updateLiveOrderStatus(orderId, 'confirmed', 'কুইক কনফার্ম: অর্ডারটি সরাসরি কনফার্ম করা হয়েছে');
 		return { success: true, confirmedOrder: orderId, newStatus: 'confirmed' };
 	} catch (err: any) {
 		console.error('Failed to confirm order in D1:', err);
-		updateLiveOrderStatus(orderId, 'confirmed', 'কুইক কনফার্ম: অর্ডারটি সরাসরি কনফার্ম করা হয়েছে');
-		return { success: true, confirmedOrder: orderId, newStatus: 'confirmed' };
+		return fail(500, { message: SAVE_FAILED });
 	}
 }
 
@@ -107,6 +111,10 @@ export async function handleQuickCancel(request: Request, platform: any) {
 
 	try {
 		const db = getDb(platform);
+		const order = await findOrder(db, orderId);
+		if (!order) return fail(404, { message: 'অর্ডার পাওয়া যায়নি' });
+
+		await StockService.syncForStatusChange(db, order, 'cancelled');
 		await db
 			.update(schema.orders)
 			.set({
@@ -123,12 +131,10 @@ export async function handleQuickCancel(request: Request, platform: any) {
 			callStatus: 'not_answering'
 		});
 
-		updateLiveOrderStatus(orderId, 'cancelled', reason);
 		return { success: true, cancelledOrder: orderId };
 	} catch (err: any) {
 		console.error('Failed to cancel order in D1:', err);
-		updateLiveOrderStatus(orderId, 'cancelled', reason);
-		return { success: true, cancelledOrder: orderId };
+		return fail(500, { message: SAVE_FAILED });
 	}
 }
 
@@ -209,39 +215,22 @@ export async function handleCreateManualOrder(request: Request, platform: any) {
 			id: crypto.randomUUID(),
 			orderId: newId,
 			adminName: 'Admin Staff',
-			note: `ম্যানুয়াল অর্ডার তৈরি করা হয়েছে। পণ্য: ${productName}`,
+			note: `ম্যানুয়াল অর্ডার তৈরি করা হয়েছে। পণ্য: ${productName}`,
 			callStatus: 'call_received'
 		});
 
 		// Trigger real admin notification
 		await NotificationService.createNotification(db, {
-			title: `নতুন ম্যানুয়াল অর্ডার #${orderNumber} তৈরি হয়েছে`,
-			description: `কাস্টমার ${customerName} (${customerPhone})-এর জন্য নতুন অর্ডার #${orderNumber} তৈরি হয়েছে। মোট বিল: ৳${total}।`,
+			title: `নতুন ম্যানুয়াল অর্ডার #${orderNumber} তৈরি হয়েছে`,
+			description: `কাস্টমার ${customerName} (${customerPhone})-এর জন্য নতুন অর্ডার #${orderNumber} তৈরি হয়েছে। মোট বিল: ৳${total}।`,
 			category: 'order',
 			link: `/admin/orders/${newId}`
 		}).catch((e) => console.error('Failed to trigger manual order notification:', e));
 
-		addLiveOrder({
-			id: newId,
-			orderNumber,
-			customerName,
-			customerEmail: customerPhone,
-			customerPhone,
-			shippingAddress,
-			items,
-			total,
-			subtotal: total,
-			deliveryCharge: 0,
-			status,
-			orderType: 'manual',
-			source: 'Manual Entry',
-			createdAt: new Date().toISOString()
-		});
-
 		return { success: true, createdOrderId: newId, orderNumber };
 	} catch (err: any) {
 		console.error('Failed to create manual order in D1:', err);
-		return fail(500, { message: err?.message || 'অর্ডার তৈরিতে সমস্যা হয়েছে' });
+		return fail(500, { message: 'অর্ডার তৈরিতে সমস্যা হয়েছে' });
 	}
 }
 
@@ -261,12 +250,10 @@ export async function handleDeleteOrder(request: Request, platform: any) {
 			})
 			.where(eq(schema.orders.id, orderId));
 
-		trashLiveOrder(orderId);
 		return { success: true, trashedOrder: orderId };
 	} catch (err: any) {
 		console.error('Failed to trash order in D1:', err);
-		trashLiveOrder(orderId);
-		return { success: true, trashedOrder: orderId };
+		return fail(500, { message: SAVE_FAILED });
 	}
 }
 
@@ -277,6 +264,10 @@ export async function handleRestoreOrder(request: Request, platform: any) {
 
 	try {
 		const db = getDb(platform);
+		const order = await findOrder(db, orderId);
+		if (!order) return fail(404, { message: 'অর্ডার পাওয়া যায়নি' });
+
+		await StockService.syncForStatusChange(db, order, 'pending');
 		await db
 			.update(schema.orders)
 			.set({
@@ -286,12 +277,10 @@ export async function handleRestoreOrder(request: Request, platform: any) {
 			})
 			.where(eq(schema.orders.id, orderId));
 
-		restoreLiveOrder(orderId);
 		return { success: true, restoredOrder: orderId };
 	} catch (err: any) {
 		console.error('Failed to restore order in D1:', err);
-		restoreLiveOrder(orderId);
-		return { success: true, restoredOrder: orderId };
+		return fail(500, { message: SAVE_FAILED });
 	}
 }
 
@@ -303,12 +292,10 @@ export async function handlePermanentDelete(request: Request, platform: any) {
 	try {
 		const db = getDb(platform);
 		await db.delete(schema.orders).where(eq(schema.orders.id, orderId));
-		deleteLiveOrderPermanently(orderId);
 		return { success: true, deletedOrder: orderId };
 	} catch (err: any) {
 		console.error('Failed to permanently delete order in D1:', err);
-		deleteLiveOrderPermanently(orderId);
-		return { success: true, deletedOrder: orderId };
+		return fail(500, { message: SAVE_FAILED });
 	}
 }
 
@@ -319,7 +306,7 @@ export async function handleEmptyTrash(platform: any) {
 		return { success: true, emptied: true };
 	} catch (err: any) {
 		console.error('Failed to empty trash in D1:', err);
-		return fail(500, { message: err?.message || 'Failed to empty trash' });
+		return fail(500, { message: SAVE_FAILED });
 	}
 }
 
@@ -333,6 +320,9 @@ export async function handleConvertIncompleteToOrder(request: Request, platform:
 
 	try {
 		const db = getDb(platform);
+		const order = await findOrder(db, orderId);
+		if (!order) return fail(404, { message: 'অর্ডার পাওয়া যায়নি' });
+
 		const updatePayload: Record<string, any> = {
 			status: 'confirmed',
 			isTrashed: false,
@@ -343,21 +333,21 @@ export async function handleConvertIncompleteToOrder(request: Request, platform:
 		if (shippingAddress) updatePayload.shippingAddress = shippingAddress;
 		if (customerName) updatePayload.customerName = customerName;
 
+		await StockService.syncForStatusChange(db, order, 'confirmed');
 		await db.update(schema.orders).set(updatePayload).where(eq(schema.orders.id, orderId));
 
 		await db.insert(schema.orderNotes).values({
 			id: crypto.randomUUID(),
 			orderId,
 			adminName: 'Admin Staff',
-			note: 'ড্রপ-অফ লিড সফলভাবে কনভার্ট করে কনফার্মড অর্ডারে রূপান্তর করা হয়েছে।',
+			note: 'ড্রপ-অফ লিড সফলভাবে কনভার্ট করে কনফার্মড অর্ডারে রূপান্তর করা হয়েছে।',
 			callStatus: 'call_received'
 		});
 
-		updateLiveOrderStatus(orderId, 'confirmed');
 		return { success: true, convertedOrder: orderId, newStatus: 'confirmed' };
 	} catch (err: any) {
 		console.error('Failed to convert order in D1:', err);
-		return fail(500, { message: err?.message || 'Failed to convert order' });
+		return fail(500, { message: SAVE_FAILED });
 	}
 }
 
@@ -376,11 +366,7 @@ export async function handleUpdateIncompleteOrder(request: Request, platform: an
 
 	try {
 		const db = getDb(platform);
-		const existing = await db
-			.select()
-			.from(schema.orders)
-			.where(eq(schema.orders.id, orderId))
-			.get();
+		const existing = await findOrder(db, orderId);
 
 		let currentItems: any[] = [];
 		try {
@@ -424,6 +410,6 @@ export async function handleUpdateIncompleteOrder(request: Request, platform: an
 		return { success: true, updatedOrder: orderId };
 	} catch (err: any) {
 		console.error('Failed to update incomplete order in D1:', err);
-		return fail(500, { message: err?.message || 'Failed to update incomplete order' });
+		return fail(500, { message: SAVE_FAILED });
 	}
 }

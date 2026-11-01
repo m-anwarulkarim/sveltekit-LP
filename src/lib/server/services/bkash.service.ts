@@ -36,6 +36,10 @@ export interface BkashExecutePaymentResult {
 	raw?: any;
 }
 
+// bKash id_tokens last 60 minutes. Reusing one avoids a token grant on every payment step.
+const TOKEN_REUSE_MS = 50 * 60 * 1000;
+const tokenCache = new Map<string, { idToken: string; expires: number }>();
+
 export class BkashService {
 	private static getBaseUrl(mode: 'sandbox' | 'live'): string {
 		return mode === 'live'
@@ -71,12 +75,21 @@ export class BkashService {
 	/**
 	 * 1. Grant Token: Generates Bearer id_token using App Key, Secret, Username and Password
 	 */
-	static async grantToken(creds: BkashCredentials): Promise<BkashTokenResult> {
+	static async grantToken(
+		creds: BkashCredentials,
+		options: { fresh?: boolean } = {}
+	): Promise<BkashTokenResult> {
 		if (!creds.appKey || !creds.appSecret || !creds.username || !creds.password) {
 			return {
 				success: false,
 				message: 'App Key, App Secret, Username এবং Password সব ফিল্ড পূরণ করা আবশ্যক'
 			};
+		}
+
+		const cacheKey = `${creds.mode}:${creds.appKey}:${creds.username}`;
+		const cached = tokenCache.get(cacheKey);
+		if (!options.fresh && cached && cached.expires > Date.now()) {
+			return { success: true, idToken: cached.idToken, statusCode: '0000', message: 'cached' };
 		}
 
 		const url = `${this.getBaseUrl(creds.mode)}/checkout/token/grant`;
@@ -99,6 +112,7 @@ export class BkashService {
 			const data: any = await res.json();
 
 			if (data && data.id_token) {
+				tokenCache.set(cacheKey, { idToken: data.id_token, expires: Date.now() + TOKEN_REUSE_MS });
 				return {
 					success: true,
 					idToken: data.id_token,
@@ -130,7 +144,7 @@ export class BkashService {
 		mode: string;
 		statusCode?: string;
 	}> {
-		const tokenRes = await this.grantToken(creds);
+		const tokenRes = await this.grantToken(creds, { fresh: true });
 		if (tokenRes.success && tokenRes.idToken) {
 			return {
 				success: true,

@@ -224,7 +224,7 @@
 					</div>
 
 					{#if cart.couponMessage}
-						<div class="text-[11px] font-semibold {cart.discountPercent > 0 ? 'text-emerald-600' : 'text-rose-600'} px-1">
+						<div class="text-[11px] font-semibold {cart.couponCode ? 'text-emerald-600' : 'text-rose-600'} px-1">
 							{cart.couponMessage}
 						</div>
 					{/if}

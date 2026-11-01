@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { submitAction } from '#lib/client/submit-action';
 	import { Button, Input, Card, CardHeader, CardContent } from '#lib/components/ui';
 	import {
 		User,
@@ -19,9 +20,10 @@
 	interface Props {
 		product: any;
 		config: any;
+		landingPage?: any;
 	}
 
-	let { product, config }: Props = $props();
+	let { product, config, landingPage }: Props = $props();
 
 	// Effective pricing
 	let price = $derived(config?.customPrice || product?.price || 1200);
@@ -83,34 +85,20 @@
 			fd.append('quantity', String(quantity));
 			fd.append('productId', product?.id || '');
 			fd.append('productName', product?.name || config?.headline || 'Landing Page Product');
-			fd.append('price', String(price));
 
 			const notes: string[] = [];
 			if (orderNote.trim()) notes.push(orderNote.trim());
 			if (altPhone.trim()) notes.push(`বিকল্প নম্বর: ${altPhone.trim()}`);
 			fd.append('orderNote', notes.join(' | '));
 
-			const response = await fetch('?/placeOrder', {
-				method: 'POST',
-				body: fd
-			});
+			const result = await submitAction('?/placeOrder', fd);
 
-			const res: any = await response.json();
-
-			if (response.ok && res?.data?.success) {
-				const orderId = res.data.orderId || res.data.orderNumber;
-				toast.success('অর্ডার সফলভাবে সম্পন্ন হয়েছে!');
-				window.location.href = `/thank-you?order_id=${orderId}`;
+			if (result.ok) {
+				toast.success('আপনার অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে!');
+				window.location.href = `/thank-you?order_id=${result.data.orderId}`;
 			} else {
-				// Fallback thank you navigation
-				toast.success('আপনার অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে!');
-				const fallbackId = `LP-${Math.floor(100000 + Math.random() * 900000)}`;
-				window.location.href = `/thank-you?order_id=${fallbackId}`;
+				toast.error(result.message);
 			}
-		} catch (err) {
-			console.error('Order submission error:', err);
-			const fallbackId = `LP-${Math.floor(100000 + Math.random() * 900000)}`;
-			window.location.href = `/thank-you?order_id=${fallbackId}`;
 		} finally {
 			isSubmitting = false;
 		}

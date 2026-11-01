@@ -10,6 +10,7 @@
 	import { goto } from '$app/navigation';
 	import { trackMetaEvent } from '#lib/client/meta-pixel';
 	import { trackGtmViewItem } from '#lib/client/gtm';
+	import { jsonLdScript, plainText } from '#lib/utils/html-safe';
 
 	let { data }: { data: PageData } = $props();
 
@@ -19,8 +20,8 @@
 	// Fire Standard Meta Pixel ViewContent & GA4 E-Commerce view_item events
 	$effect(() => {
 		if (product && typeof window !== 'undefined') {
-			const matchId = String(product.sku || product.id);
-			const price = Number(product.salePrice || product.price || 0);
+			const matchId = String(product.id);
+			const price = Number(product.price || 0);
 
 			trackMetaEvent('ViewContent', {
 				content_name: product.name,
@@ -49,17 +50,16 @@
 	<title>{product.name} | AURA Store</title>
 	<meta
 		name="description"
-		content={product.description || `${product.name} - কিনুন সেরা মূল্যে AURA স্টোর থেকে।`}
+		content={plainText(product.description, 160) || `${product.name} - কিনুন সেরা মূল্যে AURA স্টোর থেকে।`}
 	/>
 	<meta property="og:title" content="{product.name} | AURA Store" />
 	<meta property="og:description" content={product.tagline || product.name} />
 	<meta property="og:image" content={product.image} />
-	<link rel="canonical" href="https://lp.haqplus.com/products/{product.slug}" />
 	{#if data?.productJsonLd}
-		{@html `<script type="application/ld+json">${JSON.stringify(data.productJsonLd)}</script>`}
+		{@html jsonLdScript(data.productJsonLd)}
 	{/if}
 	{#if data?.breadcrumbsJsonLd}
-		{@html `<script type="application/ld+json">${JSON.stringify(data.breadcrumbsJsonLd)}</script>`}
+		{@html jsonLdScript(data.breadcrumbsJsonLd)}
 	{/if}
 </svelte:head>
 

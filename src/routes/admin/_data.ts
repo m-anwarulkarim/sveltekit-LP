@@ -90,13 +90,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = productsData.map((p, idx) => ({
 // Real E-commerce orders store (All demo orders purged - 100% real database driven)
 export let INITIAL_ORDERS: any[] = [];
 
-export function normalizeOrderStatus(status: string): string {
-	if (status === 'paid') return 'confirmed';
-	if (status === 'dispatched') return 'shipped';
-	if (status === 'refunded') return 'cancelled';
-	if (status === 'no_response_3') return 'good_no_response';
-	return status;
-}
+export { normalizeOrderStatus } from '#lib/constants/order-status';
 
 // -------------------------------------------------------------
 // CATALOG DATA TYPES & INITIAL DATA (Exact match to SaleEcom)

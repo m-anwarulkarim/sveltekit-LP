@@ -16,7 +16,7 @@
 		Loader2
 	} from 'lucide-svelte';
 
-	let { data } = $props<{ data: { settings: OrderSettingsConfig } }>();
+	let { data }: { data: { settings: OrderSettingsConfig } } = $props();
 
 	let isSaving = $state(false);
 	let formElement: HTMLFormElement | null = $state(null);

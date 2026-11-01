@@ -6,7 +6,6 @@
 	"compatibility_flags": ["nodejs_compat"],
 	"vars": {
 		"ORIGIN": "https://lp.haqplus.com",
-		"BETTER_AUTH_SECRET": "aura_acoustics_production_jwt_sec_99881122",
 		"R2_PUBLIC_URL": "https://pub-fe7043cdba5e4550a7e594df8db06129.r2.dev"
 	},
 	"assets": {
@@ -17,6 +16,18 @@
 		{
 			"binding": "R2",
 			"bucket_name": "haqplus"
+		}
+	],
+	"ratelimits": [
+		{
+			"name": "RATE_LIMIT_STRICT",
+			"namespace_id": "1001",
+			"simple": { "limit": 10, "period": 60 }
+		},
+		{
+			"name": "RATE_LIMIT_DEFAULT",
+			"namespace_id": "1002",
+			"simple": { "limit": 60, "period": 60 }
 		}
 	],
 	"d1_databases": [

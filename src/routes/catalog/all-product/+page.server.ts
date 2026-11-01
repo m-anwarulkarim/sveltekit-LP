@@ -1,3 +1,4 @@
+import { publicProductColumns } from '#lib/server/services/product.service';
 import type { PageServerLoad } from './$types';
 import type { Product } from '#lib/modules/products/types';
 import { getDb } from '#lib/server/db/index';
@@ -12,14 +13,14 @@ export const load: PageServerLoad = async (event) => {
 	try {
 		const db = getDb(event.platform);
 		const rawProducts = await db
-			.select()
+			.select(publicProductColumns)
 			.from(schema.products)
 			.where(eq(schema.products.status, 'published'))
 			.orderBy(desc(schema.products.createdAt))
 			.all();
 
 		allProducts = rawProducts.map((p) => {
-			const ratingNum = p.rating ? (p.rating > 5 ? p.rating / 10 : p.rating) : 5;
+			const ratingNum = p.rating ? (p.rating > 5 ? p.rating / 10 : p.rating) : 0;
 			const discountPercent =
 				p.originalPrice > p.price
 					? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100)
@@ -36,7 +37,7 @@ export const load: PageServerLoad = async (event) => {
 				price: p.price,
 				originalPrice: p.originalPrice || p.price,
 				rating: ratingNum,
-				reviewsCount: p.reviewsCount || 100,
+				reviewsCount: p.reviewsCount || 0,
 				discountPercent,
 				deliveryTime: '12-24 HOURS',
 				image: p.image || '/images/placeholder.svg',

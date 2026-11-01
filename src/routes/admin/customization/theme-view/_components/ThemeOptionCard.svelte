@@ -30,9 +30,16 @@
 	}: Props = $props();
 </script>
 
-<button
-	type="button"
+<!-- A div, because the Preview button below cannot sit inside a button. -->
+<div
+	tabindex="0"
 	onclick={onSelect}
+	onkeydown={(e) => {
+		if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+			e.preventDefault();
+			onSelect();
+		}
+	}}
 	class="relative w-full p-3.5 sm:p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center gap-3.5 sm:gap-4 select-none {selected
 		? 'border-[#2563eb] ring-2 ring-[#2563eb]/25 bg-blue-50/25 shadow-xs'
 		: 'border-slate-200/90 bg-white hover:bg-slate-50/80 hover:border-slate-300 shadow-2xs'}"
@@ -176,6 +183,6 @@
 			<span class="hidden sm:inline">Preview</span>
 		</button>
 	{/if}
-</button>
+</div>
 
 

@@ -97,7 +97,7 @@
 				method: 'POST',
 				body: formData
 			});
-			const result = await res.json();
+			const result: any = await res.json();
 			if (result.type === 'success' || result.status === 200) {
 				offers = offers.filter((o) => o.id !== offer.id);
 				toast.success('অফার মুছে ফেলা হয়েছে');
@@ -118,7 +118,7 @@
 				method: 'POST',
 				body: formData
 			});
-			const result = await res.json();
+			const result: any = await res.json();
 			if (result.type === 'success' || result.status === 200) {
 				offer.status = offer.status === 'active' ? 'inactive' : 'active';
 				toast.success('অফার স্ট্যাটাস পরিবর্তন হয়েছে');

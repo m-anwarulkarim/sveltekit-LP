@@ -176,7 +176,7 @@
 			});
 
 			if (!res.ok) {
-				const errorData = await res.json().catch(() => ({}));
+				const errorData: any = await res.json().catch(() => ({}));
 				throw new Error(errorData?.message || 'প্রোডাক্ট সেভ করতে সমস্যা হয়েছে');
 			}
 

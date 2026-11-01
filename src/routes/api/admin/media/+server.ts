@@ -14,13 +14,13 @@ export const GET: RequestHandler = async ({ platform, url }) => {
 		return json({ success: true, items });
 	} catch (error: any) {
 		console.error('API /api/admin/media GET error:', error);
-		return json({ success: false, items: [], error: error?.message }, { status: 500 });
+		return json({ success: false, items: [], error: 'Server error' }, { status: 500 });
 	}
 };
 
 export const POST: RequestHandler = async ({ request, platform }) => {
 	try {
-		const body = await request.json();
+		const body = (await request.json()) as any;
 		let { name, url, folder = 'products', size = '100 KB', dimensions = '800 x 800', mimeType } = body;
 
 		if (!url) {
@@ -29,6 +29,10 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 
 		// If base64 data URI, upload directly to R2 to prevent D1 database bloat
 		if (url.startsWith('data:')) {
+			// SVG can carry scripts, so only plain raster images may be stored.
+			if (!/^data:image\/(png|jpeg|webp|gif|avif)[;,]/i.test(url)) {
+				return json({ success: false, message: 'শুধুমাত্র PNG, JPG, WEBP, GIF বা AVIF ছবি আপলোড করা যাবে।' }, { status: 400 });
+			}
 			try {
 				const r2Res = await R2Service.uploadBase64(url, {
 					platform,
@@ -55,7 +59,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 		return json({ success: true, item: created });
 	} catch (error: any) {
 		console.error('API /api/admin/media POST error:', error);
-		return json({ success: false, message: error?.message || 'Failed to save media' }, { status: 500 });
+		return json({ success: false, message: 'Failed to save media' }, { status: 500 });
 	}
 };
 
@@ -75,7 +79,7 @@ export const DELETE: RequestHandler = async ({ request, platform, url }) => {
 
 		if (request.headers.get('content-type')?.includes('application/json')) {
 			try {
-				const body = await request.json();
+				const body = (await request.json()) as any;
 				if (body.id) ids.push(body.id);
 				if (Array.isArray(body.ids)) ids.push(...body.ids);
 				if (body.url) imageUrl = body.url;
@@ -97,7 +101,7 @@ export const DELETE: RequestHandler = async ({ request, platform, url }) => {
 		return json({ success: true });
 	} catch (error: any) {
 		console.error('API /api/admin/media DELETE error:', error);
-		return json({ success: false, message: error?.message || 'Failed to delete media' }, { status: 500 });
+		return json({ success: false, message: 'Failed to delete media' }, { status: 500 });
 	}
 };
 

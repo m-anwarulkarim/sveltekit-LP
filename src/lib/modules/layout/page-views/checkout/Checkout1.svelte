@@ -86,8 +86,8 @@
 
 					<div class="space-y-3 text-xs">
 						<div>
-							<label class="block font-bold text-slate-700 mb-1">ডেলিভারি ঠিকানা</label>
-							<textarea class="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 text-slate-800 resize-none" rows="2" readonly>বাড়ি #১২, রোড #৪, ধানমন্ডি, ঢাকা</textarea>
+							<label for="c1-address" class="block font-bold text-slate-700 mb-1">ডেলিভারি ঠিকানা</label>
+							<textarea id="c1-address" class="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 text-slate-800 resize-none" rows="2" readonly>বাড়ি #১২, রোড #৪, ধানমন্ডি, ঢাকা</textarea>
 						</div>
 					</div>
 				</div>

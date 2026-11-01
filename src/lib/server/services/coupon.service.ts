@@ -26,43 +26,6 @@ export interface CouponFilterOptions {
 }
 
 export class CouponService {
-	private static isTableInitialized = false;
-
-	/**
-	 * Ensures the coupons table exists in Cloudflare D1
-	 */
-	static async ensureTable(db: DrizzleD1Database<typeof schema>) {
-		if (this.isTableInitialized) return;
-		try {
-			await db.run(
-				sql.raw(`
-				CREATE TABLE IF NOT EXISTS coupons (
-					id TEXT PRIMARY KEY,
-					name TEXT NOT NULL DEFAULT 'Special Discount',
-					code TEXT NOT NULL UNIQUE,
-					banner_image TEXT,
-					discount_type TEXT NOT NULL DEFAULT 'percentage',
-					discount_value INTEGER NOT NULL,
-					min_order_amount INTEGER DEFAULT 0,
-					max_discount_amount INTEGER,
-					description TEXT,
-					start_date TEXT,
-					end_date TEXT,
-					status TEXT NOT NULL DEFAULT 'publish',
-					usage_limit INTEGER,
-					usage_count INTEGER NOT NULL DEFAULT 0,
-					is_active INTEGER NOT NULL DEFAULT 1,
-					created_at INTEGER NOT NULL,
-					updated_at INTEGER NOT NULL
-				);
-			`)
-			);
-			this.isTableInitialized = true;
-		} catch (e) {
-			console.error('Failed to ensure coupons table:', e);
-		}
-	}
-
 	/**
 	 * Lists all coupons with tab counts and filters
 	 */
@@ -70,7 +33,6 @@ export class CouponService {
 		db: DrizzleD1Database<typeof schema>,
 		options: CouponFilterOptions = {}
 	) {
-		await this.ensureTable(db);
 		try {
 			// Auto seed if empty
 			const countRes = await db
@@ -131,10 +93,50 @@ export class CouponService {
 	}
 
 	/**
+	 * Checks a code against every rule the admin set. Used by the cart preview and again
+	 * when the order is placed, so an expired or used-up coupon cannot be charged.
+	 */
+	static async validateCoupon(
+		db: DrizzleD1Database<typeof schema>,
+		code: string,
+		subtotal: number
+	): Promise<
+		| { valid: true; coupon: typeof schema.coupons.$inferSelect; message: string }
+		| { valid: false; message: string }
+	> {
+		const clean = code.trim().toUpperCase();
+		const coupon = clean
+			? await db.select().from(schema.coupons).where(eq(schema.coupons.code, clean)).get()
+			: null;
+
+		if (!coupon || !coupon.isActive || coupon.status !== 'publish') {
+			return { valid: false, message: 'কুপন কোডটি সঠিক নয়।' };
+		}
+
+		const today = new Date().toISOString().slice(0, 10);
+		if (coupon.startDate && today < coupon.startDate.slice(0, 10)) {
+			return { valid: false, message: 'এই কুপনটি এখনো চালু হয়নি।' };
+		}
+		if (coupon.endDate && today > coupon.endDate.slice(0, 10)) {
+			return { valid: false, message: 'এই কুপনের মেয়াদ শেষ হয়ে গেছে।' };
+		}
+		if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
+			return { valid: false, message: 'এই কুপনের ব্যবহারের সীমা শেষ হয়ে গেছে।' };
+		}
+		if (subtotal < (coupon.minOrderAmount || 0)) {
+			return {
+				valid: false,
+				message: `এই কুপন ব্যবহার করতে কমপক্ষে ৳${coupon.minOrderAmount} টাকার অর্ডার করতে হবে।`
+			};
+		}
+
+		return { valid: true, coupon, message: `"${coupon.name}" কুপনটি যুক্ত হয়েছে!` };
+	}
+
+	/**
 	 * Get coupon by ID
 	 */
 	static async getCouponById(db: DrizzleD1Database<typeof schema>, id: string) {
-		await this.ensureTable(db);
 		try {
 			return await db
 				.select()
@@ -154,7 +156,6 @@ export class CouponService {
 		db: DrizzleD1Database<typeof schema>,
 		payload: CreateCouponPayload
 	) {
-		await this.ensureTable(db);
 		const cleanCode = payload.code.trim().toUpperCase();
 
 		// Check for existing code
@@ -199,7 +200,6 @@ export class CouponService {
 		id: string,
 		payload: UpdateCouponPayload
 	) {
-		await this.ensureTable(db);
 		const updateData: Partial<typeof schema.coupons.$inferInsert> = {
 			updatedAt: new Date()
 		};
@@ -244,7 +244,6 @@ export class CouponService {
 	 * Toggle status between publish and draft
 	 */
 	static async toggleStatus(db: DrizzleD1Database<typeof schema>, id: string) {
-		await this.ensureTable(db);
 		const current = await this.getCouponById(db, id);
 		if (!current) throw new Error('কুপন পাওয়া যায়নি!');
 
@@ -265,7 +264,6 @@ export class CouponService {
 	 * Move coupon to trash
 	 */
 	static async moveToTrash(db: DrizzleD1Database<typeof schema>, id: string) {
-		await this.ensureTable(db);
 		await db
 			.update(schema.coupons)
 			.set({
@@ -281,7 +279,6 @@ export class CouponService {
 	 * Restore coupon from trash
 	 */
 	static async restore(db: DrizzleD1Database<typeof schema>, id: string) {
-		await this.ensureTable(db);
 		await db
 			.update(schema.coupons)
 			.set({
@@ -297,7 +294,6 @@ export class CouponService {
 	 * Permanent delete
 	 */
 	static async permanentDelete(db: DrizzleD1Database<typeof schema>, id: string) {
-		await this.ensureTable(db);
 		await db.delete(schema.coupons).where(eq(schema.coupons.id, id));
 		return { id, success: true };
 	}

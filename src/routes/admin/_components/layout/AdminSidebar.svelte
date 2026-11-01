@@ -91,26 +91,7 @@
 	let isReportsOpen = $derived(openSubmenu === 'reports');
 
 	// Derived counts from layout data
-	let webOrders = $derived(
-		(data?.orders || []).filter((o: any) =>
-			!o.isTrashed &&
-			['pending', 'no_response', 'no_response_3', 'good_no_response', 'busy', 'hold', 'recall'].includes(o.status)
-		)
-	);
-
-	let incompleteOrders = $derived(
-		(data?.orders || []).filter((o: any) => !o.isTrashed && o.status === 'incomplete')
-	);
-
-	let orderListOrders = $derived(
-		(data?.orders || []).filter((o: any) =>
-			!o.isTrashed &&
-			['processing', 'confirmed', 'printed', 'entry_done', 'shipped', 'delivered', 'partial_delivered', 'pending_return', 'returned', 'missing'].includes(o.status)
-		)
-	);
-
-	let trashedOrders = $derived((data?.orders || []).filter((o: any) => o.isTrashed || o.status === 'cancelled'));
-	let preOrders = $derived((data?.orders || []).filter((o: any) => !o.isTrashed && (o.total || 0) > 3000));
+	let counts = $derived(data?.sidebarCounts);
 
 	// Active route helpers
 	let currentPath = $derived(page.url.pathname);
@@ -353,7 +334,7 @@
 						{#if !collapsed}
 							<div class="flex items-center gap-1 pr-2">
 								<span class="text-xs font-bold px-2 py-0.5 rounded-full {isOrdersActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
-									{webOrders.length + orderListOrders.length + incompleteOrders.length}
+									{(counts?.web ?? 0) + (counts?.orderList ?? 0) + (counts?.incomplete ?? 0)}
 								</span>
 								<button
 									type="button"
@@ -398,7 +379,7 @@
 							>
 								<span>Web Orders</span>
 								<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-									{webOrders.length}
+									{counts?.web ?? 0}
 								</span>
 							</a>
 
@@ -413,9 +394,9 @@
 								<div class="flex items-center gap-1.5">
 									<span>Incomplete Orders</span>
 								</div>
-								{#if incompleteOrders.length > 0}
+								{#if (counts?.incomplete ?? 0) > 0}
 									<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200/90">
-										{incompleteOrders.length}
+										{counts?.incomplete ?? 0}
 									</span>
 								{/if}
 							</a>
@@ -430,7 +411,7 @@
 							>
 								<span>Order List</span>
 								<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-									{orderListOrders.length}
+									{counts?.orderList ?? 0}
 								</span>
 							</a>
 
@@ -443,9 +424,9 @@
 									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
 							>
 								<span>Pre-Orders</span>
-								{#if preOrders.length > 0}
+								{#if (counts?.preOrders ?? 0) > 0}
 									<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-										{preOrders.length}
+										{counts?.preOrders ?? 0}
 									</span>
 								{/if}
 							</a>
@@ -459,9 +440,9 @@
 									: 'text-slate-600 hover:text-rose-600 hover:bg-rose-50/60'}"
 							>
 								<span>Trash</span>
-								{#if trashedOrders.length > 0}
+								{#if (counts?.trashed ?? 0) > 0}
 									<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">
-										{trashedOrders.length}
+										{counts?.trashed ?? 0}
 									</span>
 								{/if}
 							</a>
@@ -491,7 +472,7 @@
 					</div>
 					{#if !collapsed}
 						<span class="text-xs font-bold px-2 py-0.5 rounded-full {isProductsActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
-							{(data?.products || []).length || 83}
+							{counts?.products ?? 0}
 						</span>
 					{/if}
 				</a>
@@ -789,7 +770,7 @@
 					</div>
 					{#if !collapsed}
 						<span class="text-xs font-bold px-2 py-0.5 rounded-full {isGalleryActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'}">
-							{data?.galleryCount ?? 16}
+							{data?.galleryCount ?? 0}
 						</span>
 					{/if}
 				</a>

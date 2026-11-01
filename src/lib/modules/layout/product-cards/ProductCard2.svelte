@@ -34,7 +34,14 @@
 
 <!-- Product Card 2: Minimalist Boutique Card with Soft Framing -->
 <div
+	role="link"
+	tabindex="0"
 	onclick={() => goto(`/products/${product.slug || product.id}`)}
+	onkeydown={(e) => {
+		if (e.key === 'Enter' && e.target === e.currentTarget) {
+			goto(`/products/${product.slug || product.id}`);
+		}
+	}}
 	class="group relative bg-white/80 hover:bg-white rounded-2xl p-3 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-slate-100 flex flex-col justify-between cursor-pointer"
 >
 	<!-- Thumbnail & Overlay Badges -->
@@ -91,11 +98,13 @@
 			{product.name}
 		</h3>
 
-		<div class="flex items-center gap-1 text-amber-400 text-[11px]">
-			<Star class="w-3 h-3 fill-amber-400 text-amber-400" />
-			<span class="font-bold text-slate-700">{product.rating || 4.8}</span>
-			<span class="text-slate-400 text-[10px]">({product.reviewsCount || 12})</span>
-		</div>
+		{#if product.rating && product.reviewsCount}
+			<div class="flex items-center gap-1 text-amber-400 text-[11px]">
+				<Star class="w-3 h-3 fill-amber-400 text-amber-400" />
+				<span class="font-bold text-slate-700">{product.rating}</span>
+				<span class="text-slate-400 text-[10px]">({product.reviewsCount})</span>
+			</div>
+		{/if}
 
 		<div class="flex items-baseline gap-2 pt-1">
 			<span class="text-sm sm:text-base font-extrabold text-slate-900 font-mono">

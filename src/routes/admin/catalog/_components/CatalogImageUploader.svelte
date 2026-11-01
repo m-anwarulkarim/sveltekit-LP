@@ -103,7 +103,7 @@
 				method: 'POST',
 				body: formData
 			});
-			const data = await res.json();
+			const data: any = await res.json();
 
 			if (data.success && data.url) {
 				image = data.url;
@@ -123,7 +123,7 @@
 		isLoadingGallery = true;
 		try {
 			const res = await fetch('/api/admin/media?limit=60');
-			const data = await res.json();
+			const data: any = await res.json();
 			if (data.success && Array.isArray(data.items)) {
 				galleryItems = data.items;
 			}

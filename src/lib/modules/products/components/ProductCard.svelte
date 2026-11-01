@@ -99,16 +99,22 @@
 		</a>
 
 		<!-- Star Rating & Review Count -->
-		<div class="flex items-center gap-1 mb-1.5 sm:mb-2">
-			<div class="flex text-amber-400 gap-0.5">
-				{#each Array(5) as _}
-					<Star class="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-amber-400 text-amber-400" />
-				{/each}
+		{#if product.rating && product.reviewsCount}
+			<div class="flex items-center gap-1 mb-1.5 sm:mb-2">
+				<div class="flex text-amber-400 gap-0.5" role="img" aria-label="{product.rating} / 5">
+					{#each Array(5) as _, i}
+						<Star
+							class="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-400 {i < Math.round(product.rating)
+								? 'fill-amber-400'
+								: ''}"
+						/>
+					{/each}
+				</div>
+				<span class="text-[10px] sm:text-[11px] text-slate-400 font-medium">
+					({product.reviewsCount})
+				</span>
 			</div>
-			<span class="text-[10px] sm:text-[11px] text-slate-400 font-medium">
-				({product.reviewsCount})
-			</span>
-		</div>
+		{/if}
 	</div>
 
 	<!-- Bottom Price & Action Buttons -->

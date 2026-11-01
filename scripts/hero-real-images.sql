@@ -1,0 +1,6 @@
+-- Homepage hero slides and one product photo. Images are CC0: see scripts/image-sources.md
+UPDATE carousels SET name='ইলেকট্রনিক্স ও অডিও', description='হেডফোন, ইয়ারবাড ও স্পিকার', image='/images/hero/electronics.webp', mobile_image='', target_url='/categories/electronics', updated_at=1793561816439 WHERE id='car-1';
+UPDATE carousels SET name='স্মার্ট গ্যাজেট', description='স্মার্টওয়াচ ও প্রতিদিনের গ্যাজেট', image='/images/hero/gadgets.webp', mobile_image='', target_url='/categories/smart-gadgets', updated_at=1793561816439 WHERE id='car-2';
+UPDATE carousels SET name='বই ও সাহিত্য', description='আপনার পরের প্রিয় বইটি খুঁজে নিন', image='/images/hero/books.webp', mobile_image='', target_url='/categories/books', updated_at=1793561816439 WHERE id='car-3';
+INSERT OR REPLACE INTO carousels (id, name, description, image, mobile_image, target_url, url_type, sort_order, status, created_at, updated_at) VALUES ('car-4', 'মধু ও গ্রোসারি', 'প্রতিদিনের প্রয়োজনীয় খাবার', '/images/hero/groceries.webp', '', '/categories/groceries', 'Internal', 4, 'Publish', 1793561816439, 1793561816439);
+UPDATE products SET image='/images/products/sundarban-honey.webp', updated_at=1793561816439 WHERE slug='sundarbans-pure-khalisa-honey';

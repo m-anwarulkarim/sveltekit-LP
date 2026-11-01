@@ -46,40 +46,10 @@ export interface TargetViewItem {
  * Enterprise Daily Target & Revenue Milestone Service
  */
 export class DailyTargetService {
-	private static isTableInitialized = false;
-
-	/**
-	 * Ensures daily_targets table exists in Cloudflare D1
-	 */
-	static async ensureTable(db: DrizzleD1Database<typeof schema>) {
-		if (this.isTableInitialized) return;
-		try {
-			await db.run(
-				sql.raw(`
-				CREATE TABLE IF NOT EXISTS daily_targets (
-					id TEXT PRIMARY KEY,
-					title TEXT NOT NULL DEFAULT 'Daily Target',
-					start_date TEXT NOT NULL,
-					end_date TEXT NOT NULL,
-					target_amount INTEGER NOT NULL,
-					consumed_amount INTEGER NOT NULL DEFAULT 0,
-					status TEXT NOT NULL DEFAULT 'active',
-					created_at INTEGER NOT NULL,
-					updated_at INTEGER NOT NULL
-				);
-			`)
-			);
-			this.isTableInitialized = true;
-		} catch (e) {
-			console.error('Failed to ensure daily_targets table:', e);
-		}
-	}
-
 	/**
 	 * Lists all daily targets with live consumed stats from real orders
 	 */
 	static async listTargets(db: DrizzleD1Database<typeof schema>): Promise<TargetViewItem[]> {
-		await this.ensureTable(db);
 		try {
 			const rows = await db
 				.select()
@@ -181,7 +151,6 @@ export class DailyTargetService {
 	 * Creates a new daily target
 	 */
 	static async createTarget(db: DrizzleD1Database<typeof schema>, payload: CreateTargetPayload) {
-		await this.ensureTable(db);
 		const today = new Date().toISOString().split('T')[0];
 		let status: 'active' | 'upcoming' | 'completed' = 'active';
 
@@ -215,7 +184,6 @@ export class DailyTargetService {
 		id: string,
 		payload: UpdateTargetPayload
 	) {
-		await this.ensureTable(db);
 		const updateData: Partial<typeof schema.dailyTargets.$inferInsert> = {
 			updatedAt: new Date()
 		};
@@ -238,7 +206,6 @@ export class DailyTargetService {
 	 * Deletes a target by id
 	 */
 	static async deleteTarget(db: DrizzleD1Database<typeof schema>, id: string) {
-		await this.ensureTable(db);
 		await db.delete(schema.dailyTargets).where(eq(schema.dailyTargets.id, id));
 		return { id, success: true };
 	}
@@ -251,7 +218,6 @@ export class DailyTargetService {
 		startDateStr: string,
 		endDateStr: string
 	): Promise<DailyBreakdownItem[]> {
-		await this.ensureTable(db);
 		const result: DailyBreakdownItem[] = [];
 		const start = new Date(startDateStr);
 		const end = new Date(endDateStr);

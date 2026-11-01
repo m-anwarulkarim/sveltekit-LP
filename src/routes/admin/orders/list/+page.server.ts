@@ -1,3 +1,4 @@
+import { OrderService } from '#lib/server/services/order.service';
 import type { Actions, PageServerLoad } from './$types';
 import {
 	handleUpdateStatus,
@@ -8,13 +9,12 @@ import { CourierService } from '#lib/server/services/courier.service';
 import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
 import { inArray, eq } from 'drizzle-orm';
-import { updateLiveOrderStatus } from '#lib/server/orders-store';
+import { StockService } from '#lib/server/services/stock.service';
 import { fail } from '@sveltejs/kit';
 
-export const load: PageServerLoad = async ({ parent }) => {
-	const parentData = await parent();
+export const load: PageServerLoad = async ({ platform }) => {
 	return {
-		...parentData
+		orders: await OrderService.listAdminOrders(getDb(platform), 'active')
 	};
 };
 
@@ -37,7 +37,6 @@ export const actions: Actions = {
 			const db = getDb(platform);
 			const res = await CourierService.bookConsignment(db, orderId, provider.toLowerCase() as any);
 			if (res.success) {
-				updateLiveOrderStatus(orderId, 'shipped', `${provider} বুকিং: ${res.trackingCode}`);
 				return {
 					success: true,
 					message: `অর্ডারটি সফলভাবে ${provider} কুরিয়ারে বুকিং সম্পন্ন হয়েছে! ট্র্যাকিং কোড: ${res.trackingCode}`
@@ -76,7 +75,6 @@ export const actions: Actions = {
 				const res = await CourierService.bookConsignment(db, orderId, provider.toLowerCase() as any);
 				if (res.success) {
 					successCount++;
-					updateLiveOrderStatus(orderId, 'shipped', `${provider} বাল্ক বুকিং: ${res.trackingCode}`);
 				}
 			}
 
@@ -121,11 +119,12 @@ export const actions: Actions = {
 			if (targetStatus === 'shipped') updatePayload.shippedAt = new Date();
 			if (targetStatus === 'delivered') updatePayload.deliveredAt = new Date();
 
-			await db.update(schema.orders).set(updatePayload).where(inArray(schema.orders.id, ids));
-
-			for (const id of ids) {
-				updateLiveOrderStatus(id, targetStatus, `বাল্ক স্ট্যাটাস পরিবর্তন -> ${targetStatus}`);
+			const orders = await db.select().from(schema.orders).where(inArray(schema.orders.id, ids)).all();
+			for (const order of orders) {
+				await StockService.syncForStatusChange(db, order, targetStatus);
 			}
+
+			await db.update(schema.orders).set(updatePayload).where(inArray(schema.orders.id, ids));
 
 			return {
 				success: true,
@@ -162,10 +161,6 @@ export const actions: Actions = {
 					updatedAt: new Date()
 				})
 				.where(inArray(schema.orders.id, ids));
-
-			for (const id of ids) {
-				updateLiveOrderStatus(id, 'trashed', 'বাল্ক ট্র্যাশে পাঠানো হয়েছে');
-			}
 
 			return {
 				success: true,

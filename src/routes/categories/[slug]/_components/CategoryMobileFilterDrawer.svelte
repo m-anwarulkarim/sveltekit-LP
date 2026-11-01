@@ -49,8 +49,8 @@
 		onResetAll
 	}: MobileDrawerProps = $props();
 
-	let localMin = $state(minPrice ? String(minPrice) : '');
-	let localMax = $state(maxPrice ? String(maxPrice) : '');
+	let localMin = $derived(minPrice ? String(minPrice) : '');
+	let localMax = $derived(maxPrice ? String(maxPrice) : '');
 
 	$effect(() => {
 		localMin = minPrice ? String(minPrice) : '';

@@ -164,12 +164,16 @@ export class LandingPageService {
 		}
 
 		let productImages: string[] = [];
-		if (product?.images) {
+		if (product?.galleryImages) {
 			try {
-				productImages = typeof product.images === 'string' ? JSON.parse(product.images) : product.images;
+				const gallery = JSON.parse(product.galleryImages);
+				if (Array.isArray(gallery)) productImages = gallery;
 			} catch {
-				productImages = ['/images/placeholder.svg'];
+				// Malformed gallery JSON: fall through to the primary image below.
 			}
+		}
+		if (productImages.length === 0 && product?.image) {
+			productImages = [product.image];
 		}
 
 		return {
@@ -273,12 +277,16 @@ export class LandingPageService {
 		}
 
 		let productImages: string[] = [];
-		if (product?.images) {
+		if (product?.galleryImages) {
 			try {
-				productImages = typeof product.images === 'string' ? JSON.parse(product.images) : product.images;
+				const gallery = JSON.parse(product.galleryImages);
+				if (Array.isArray(gallery)) productImages = gallery;
 			} catch {
-				productImages = ['/images/placeholder.svg'];
+				// Malformed gallery JSON: fall through to the primary image below.
 			}
+		}
+		if (productImages.length === 0 && product?.image) {
+			productImages = [product.image];
 		}
 
 		return {

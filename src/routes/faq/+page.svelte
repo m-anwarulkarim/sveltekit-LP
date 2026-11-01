@@ -1,5 +1,5 @@
 ﻿<script lang="ts">
-	import { StoreLayout } from '#lib';
+	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
 	import { Card, CardContent, Badge, Accordion, AccordionItem } from '#lib/components/ui';
 	import type { PageData } from './$types';
 

@@ -156,7 +156,7 @@
 		}[] = [];
 
 		if (selectedSub && selectedSub !== 'all') {
-			const subObj = data.category.subCategories.find((s) => s.slug === selectedSub);
+			const subObj = data.category.subCategories.find((s: any) => s.slug === selectedSub);
 			items.push({
 				type: 'subCategory',
 				label: subObj ? subObj.name : selectedSub,

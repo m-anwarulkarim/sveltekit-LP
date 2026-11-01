@@ -47,13 +47,6 @@
 
 	let openActionMenuId = $state<string | null>(null);
 
-	// Filtered sub-categories based on selected parent category in modal
-	let availableSubCategories = $derived.by(() => {
-		if (!data?.subCategories) return [];
-		if (!formCategoryId) return data.subCategories;
-		return data.subCategories.filter((s: any) => s.categoryId === formCategoryId);
-	});
-
 	// Derived counts
 	let allCount = $derived(childCategories.filter((c) => !c.isTrash).length);
 	let publishCount = $derived(childCategories.filter((c) => c.status === 'publish' && !c.isTrash).length);
@@ -305,13 +298,12 @@
 										নতুন চাইল্ড-ক্যাটাগরি তৈরি করতে নিচের বাটনে ক্লিক করুন।
 									</p>
 
-									<button
-										type="button"
-										onclick={openAddModal}
-										class="mt-2 text-xs font-bold text-[#5845eb] hover:underline cursor-pointer"
+									<a
+										href="/admin/catalog/child-categories/new"
+										class="mt-2 text-xs font-bold text-[#5845eb] hover:underline"
 									>
 										+ Add Child Category
-									</button>
+									</a>
 								</div>
 							</td>
 						</tr>

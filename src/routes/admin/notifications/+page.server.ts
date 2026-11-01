@@ -1,20 +1,24 @@
+import { getVisibleNotificationCategories } from '#lib/constants/admin-permissions';
 import type { PageServerLoad, Actions } from './$types';
 import { getDb } from '#lib/server/db/index';
 import { NotificationService } from '#lib/server/services/notification.service';
 import { fail } from '@sveltejs/kit';
 
-export const load: PageServerLoad = async ({ parent, platform }) => {
+export const load: PageServerLoad = async ({ parent, platform, locals }) => {
 	const parentData = await parent();
 	let notificationsList: any[] = [];
 	let unreadCount = 0;
 
 	try {
 		const db = getDb(platform);
+		const categories = getVisibleNotificationCategories(locals.admin!.permissions);
 		const [liveNotifications, liveUnread] = await Promise.all([
 			NotificationService.listNotifications(db, { limit: 100 }),
-			NotificationService.getUnreadCount(db)
+			NotificationService.getUnreadCount(db, categories)
 		]);
-		notificationsList = liveNotifications || [];
+		notificationsList = (liveNotifications || []).filter(
+			(n: any) => !categories || categories.includes(n.category)
+		);
 		unreadCount = liveUnread;
 	} catch (error) {
 		console.error('Failed to load notifications from D1:', error);

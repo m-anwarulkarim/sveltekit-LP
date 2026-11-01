@@ -138,8 +138,14 @@
 </div>
 
 <!-- Lightbox Fullscreen Modal -->
+<svelte:window
+	onkeydown={(e) => {
+		if (e.key === 'Escape') isLightboxOpen = false;
+	}}
+/>
+
 {#if isLightboxOpen}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 	<div
 		class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
 		onclick={() => (isLightboxOpen = false)}

@@ -7,9 +7,9 @@ import { ProductService } from '#lib/server/services/product.service';
 import { OrderService } from '#lib/server/services/order.service';
 import { FraudService } from '#lib/server/services/fraud.service';
 import { CourierService } from '#lib/server/services/courier.service';
+import { StockService } from '#lib/server/services/stock.service';
 
-export const load: PageServerLoad = async ({ params, parent, platform }) => {
-	const parentData = await parent();
+export const load: PageServerLoad = async ({ params, platform }) => {
 	const orderId = params.id;
 
 	let foundOrder: any = null;
@@ -18,26 +18,13 @@ export const load: PageServerLoad = async ({ params, parent, platform }) => {
 	// 1. Query full order using OrderService from real D1
 	try {
 		const db = getDb(platform);
-		const detailedOrder = await OrderService.getOrderById(db, orderId);
+		const detailedOrder = await OrderService.getOrderById(db, orderId, { includeTrashed: true });
 		if (detailedOrder) {
 			foundOrder = detailedOrder;
 			orderNotesFromDb = detailedOrder.notesList || [];
 		}
 	} catch (e) {
 		console.error('Error fetching order from D1:', e);
-	}
-
-	// 2. Try finding in parent data
-	if (!foundOrder && parentData?.orders) {
-		const clean = (orderId || '').trim();
-		const withoutHash = clean.replace(/^#/, '');
-		foundOrder = parentData.orders.find(
-			(o: any) =>
-				o.id === clean ||
-				o.orderNumber === clean ||
-				o.orderNumber === withoutHash ||
-				o.orderNumber === `#${withoutHash}`
-		);
 	}
 
 	// 3. Throw 404 if order does not exist in real database (no demo data)
@@ -65,10 +52,12 @@ export const load: PageServerLoad = async ({ params, parent, platform }) => {
 	}));
 
 	// Find past orders for this customer (by phone / customerEmail)
-	const allOrders = parentData?.orders || [];
-	const pastOrders = allOrders
-		.filter((o: any) => o.customerEmail === foundOrder.customerEmail && o.id !== foundOrder.id)
-		.map((o: any) => ({
+	const pastOrderRows = await OrderService.listCustomerOrderHistory(
+		getDb(platform),
+		foundOrder.customerEmail,
+		foundOrder.id
+	).catch(() => []);
+	const pastOrders = pastOrderRows.map((o) => ({
 			id: o.id,
 			status: o.status,
 			total: o.total,
@@ -186,6 +175,10 @@ export const actions: Actions = {
 
 		try {
 			const db = getDb(platform);
+			const existing = await db.select().from(schema.orders).where(eq(schema.orders.id, orderId)).get();
+			if (existing) {
+				await StockService.syncForStatusChange(db, existing, status);
+			}
 			await db
 				.update(schema.orders)
 				.set({

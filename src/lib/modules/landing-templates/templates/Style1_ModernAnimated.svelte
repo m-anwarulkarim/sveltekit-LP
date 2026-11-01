@@ -375,7 +375,7 @@
 				</p>
 			</div>
 
-			<LandingOrderForm {product} {config} />
+			<LandingOrderForm {product} {config} {landingPage} />
 		</section>
 
 		<!-- 6. Real Customer Testimonials -->

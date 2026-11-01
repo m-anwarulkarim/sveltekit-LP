@@ -1,3 +1,5 @@
+import { OrderService } from '#lib/server/services/order.service';
+import { getDb } from '#lib/server/db/index';
 import type { Actions, PageServerLoad } from './$types';
 import {
 	handleUpdateStatus,
@@ -6,10 +8,9 @@ import {
 	handleDeleteOrder
 } from '#lib/server/orders';
 
-export const load: PageServerLoad = async ({ parent }) => {
-	const parentData = await parent();
+export const load: PageServerLoad = async ({ platform }) => {
 	return {
-		...parentData
+		orders: await OrderService.listAdminOrders(getDb(platform), 'pre')
 	};
 };
 

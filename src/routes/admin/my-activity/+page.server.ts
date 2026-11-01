@@ -1,11 +1,14 @@
 import type { PageServerLoad, Actions } from './$types';
 import { getDb } from '#lib/server/db/index';
+import { OrderService } from '#lib/server/services/order.service';
 import * as schema from '#lib/server/db/schema';
 import { desc, eq, and, sql } from 'drizzle-orm';
 
 export const load: PageServerLoad = async ({ parent, platform }) => {
 	const parentData = await parent();
-	const allOrders: any[] = parentData?.orders || [];
+	const allOrders: any[] = platform?.env?.DB
+		? await OrderService.getAllOrders(getDb(platform.env.DB))
+		: [];
 
 	let myOrders: any[] = [];
 	let recentNotes: any[] = [];

@@ -1,3 +1,4 @@
+import { publicProductColumns } from '#lib/server/services/product.service';
 import type { PageServerLoad } from './$types';
 import { getCategoryBySlug } from '#lib/modules/products/categories.data';
 import type { Product } from '#lib/modules/products/types';
@@ -58,14 +59,14 @@ export const load: PageServerLoad = async (event) => {
 		}
 
 		const rawProducts = await db
-			.select()
+			.select(publicProductColumns)
 			.from(schema.products)
 			.where(eq(schema.products.status, 'published'))
 			.orderBy(desc(schema.products.createdAt))
 			.all();
 
 		allProducts = rawProducts.map((p) => {
-			const ratingNum = p.rating ? (p.rating > 5 ? p.rating / 10 : p.rating) : 5;
+			const ratingNum = p.rating ? (p.rating > 5 ? p.rating / 10 : p.rating) : 0;
 			const discountPercent =
 				p.originalPrice > p.price
 					? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100)
@@ -82,7 +83,7 @@ export const load: PageServerLoad = async (event) => {
 				price: p.price,
 				originalPrice: p.originalPrice || p.price,
 				rating: ratingNum,
-				reviewsCount: p.reviewsCount || 100,
+				reviewsCount: p.reviewsCount || 0,
 				discountPercent,
 				deliveryTime: '12-24 HOURS',
 				image: p.image || '/images/placeholder.svg',
@@ -96,7 +97,7 @@ export const load: PageServerLoad = async (event) => {
 
 		// If no brands in DB yet, extract unique brands from products
 		if (dbBrands.length === 0) {
-			const extracted = Array.from(new Set(allProducts.map((p) => p.brand).filter(Boolean)));
+			const extracted = Array.from(new Set(allProducts.map((p) => p.brand).filter((b): b is string => Boolean(b))));
 			if (extracted.length > 0) {
 				dbBrands = extracted;
 				if (category) category.brands = dbBrands;

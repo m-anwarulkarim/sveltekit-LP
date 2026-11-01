@@ -1,9 +1,22 @@
-import type { Handle } from '@sveltejs/kit/hooks';
+import type { Handle, HandleServerError } from '@sveltejs/kit/hooks';
+import type { RequestEvent } from '@sveltejs/kit';
+import { json, redirect } from '@sveltejs/kit';
 import { DEV as dev } from 'esm-env';
 import { env as cfEnv } from 'cloudflare:workers';
 import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { createAuth } from '#lib/server/auth';
+import { getAuthSecret } from '#lib/server/secrets';
+import { cached, clearCache } from '#lib/server/cache';
+import { getRateLimitTier, isRateLimitAllowed } from '#lib/server/rate-limit';
+import { SecurityService } from '#lib/server/services/security.service';
+import { ADMIN_SESSION_COOKIE, AdminAuthService } from '#lib/server/services/admin-auth.service';
+import {
+	ADMIN_MENU_LIST,
+	canAccessAdminApi,
+	getMenuIdFromPath,
+	hasMenuAccess
+} from '#lib/constants/admin-permissions';
 
 let platformProxyPromise: Promise<any> | null = null;
 
@@ -31,7 +44,123 @@ const SEARCH_BOTS = /googlebot|bingbot|yandex|duckduckbot|baiduspider|slurp|sogo
 const AI_CRAWLERS = /gptbot|chatgpt-user|claudebot|anthropic-ai|perplexitybot|bytespider|ccbot|applebot-extended|meta-externalagent|cohere-ai/i;
 const HEADLESS_OR_SCRAPERS = /headlesschrome|puppeteer|playwright|python-requests|aiohttp|curl\/|wget\/|scrapy|postman|httpie|go-http-client/i;
 
-export const handle: Handle = async ({ event, resolve }) => {
+const IP_BLOCK_CACHE_TTL_MS = 60_000;
+const CUSTOMER_SESSION_COOKIES = ['better-auth.session_token', '__Secure-better-auth.session_token'];
+
+function isAssetPath(pathname: string): boolean {
+	return pathname.startsWith('/_app/') || pathname.startsWith('/favicon');
+}
+
+function decodedPathname(event: RequestEvent): string {
+	try {
+		return decodeURIComponent(event.url.pathname);
+	} catch {
+		// Malformed encoding: fall back to the raw pathname.
+		return event.url.pathname;
+	}
+}
+
+/**
+ * Route IDs are used first because SvelteKit decodes the URL before matching a route,
+ * so a pathname check alone could be bypassed with an encoded path like /%61dmin.
+ */
+function getProtectedArea(event: RequestEvent): 'page' | 'api' | null {
+	const routeId = event.route.id ?? '';
+	const pathname = decodedPathname(event);
+
+	const matches = (root: string) =>
+		routeId === root ||
+		routeId.startsWith(`${root}/`) ||
+		pathname === root ||
+		pathname.startsWith(`${root}/`);
+
+	if (matches('/api/admin')) return 'api';
+	if (matches('/admin')) return 'page';
+	return null;
+}
+
+function canAccessAdminPath(permissions: string[], role: string, pathname: string): boolean {
+	const menuId = getMenuIdFromPath(pathname);
+	if (!menuId) return true;
+	const menu = ADMIN_MENU_LIST.find((m) => m.id === menuId);
+	if (menu?.isOwnerOnly && role !== 'Owner') return false;
+	return hasMenuAccess(permissions, menuId);
+}
+
+async function guardAdminArea(event: RequestEvent, area: 'page' | 'api'): Promise<Response | null> {
+	let admin = null;
+	try {
+		admin = await AdminAuthService.resolveSession(
+			getDb(event.platform),
+			event.cookies.get(ADMIN_SESSION_COOKIE),
+			getAuthSecret()
+		);
+	} catch (err) {
+		// Fail closed: a database problem must never open the admin panel.
+		console.error('Admin session check failed:', err);
+		return area === 'api'
+			? json({ success: false, message: 'Service unavailable' }, { status: 503 })
+			: new Response('Service unavailable', { status: 503 });
+	}
+
+	if (!admin) {
+		if (area === 'api') {
+			return json({ success: false, message: 'Unauthorized' }, { status: 401 });
+		}
+		const target = `${event.url.pathname}${event.url.search}`;
+		throw redirect(303, `/auth/admin-login?redirectTo=${encodeURIComponent(target)}`);
+	}
+
+	event.locals.admin = admin;
+
+	// Route IDs are already decoded, so an encoded path cannot slip past these checks.
+	const accessPath = event.route.id || decodedPathname(event);
+
+	if (area === 'api') {
+		return canAccessAdminApi(admin.permissions, admin.role, accessPath)
+			? null
+			: json({ success: false, message: 'Forbidden' }, { status: 403 });
+	}
+
+	if (!canAccessAdminPath(admin.permissions, admin.role, accessPath)) {
+		// Form actions skip the layout load, and a data request can skip it too,
+		// so a layout-only check would not be enough.
+		if (event.request.method !== 'GET') {
+			return new Response('Forbidden', { status: 403 });
+		}
+		const allowed = ADMIN_MENU_LIST.find((m) => canAccessAdminPath(admin.permissions, admin.role, m.path));
+		throw redirect(303, allowed?.path || '/admin/profile');
+	}
+
+	return null;
+}
+
+async function attachCustomerSession(event: RequestEvent) {
+	const hasSessionCookie = CUSTOMER_SESSION_COOKIES.some((name) => event.cookies.get(name));
+	const needsAuth = hasSessionCookie || event.url.pathname.startsWith('/auth/');
+	if (!needsAuth) return;
+
+	const secret = getAuthSecret();
+	const d1 = (event.platform as any)?.env?.DB || (cfEnv as any)?.DB;
+	if (!secret || !d1) return;
+
+	try {
+		const baseURL = event.url.origin;
+		const auth = createAuth(d1, secret, baseURL);
+		event.locals.auth = auth;
+		if (auth && hasSessionCookie) {
+			const session = await auth.api.getSession({ headers: event.request.headers });
+			if (session) {
+				event.locals.user = session.user;
+				event.locals.session = session.session;
+			}
+		}
+	} catch (err) {
+		console.error('Customer session check failed:', err);
+	}
+}
+
+const handleRequest: Handle = async ({ event, resolve }) => {
 	if (dev && platformProxyPromise) {
 		const localPlatform = await platformProxyPromise;
 		if (localPlatform) {
@@ -53,28 +182,26 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	const platform: any = event.platform;
+	const { pathname } = event.url;
 	const userAgent = event.request.headers.get('user-agent') || '';
 	const clientIp =
 		event.request.headers.get('cf-connecting-ip') ||
 		event.request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
 		'127.0.0.1';
 
-	// 1. Sentinel IP Block Check (Ignore static asset requests to keep speed fast)
-	if (!event.url.pathname.startsWith('/_app/') && !event.url.pathname.startsWith('/favicon')) {
+	// 1. Sentinel IP Block Check, cached so a page view does not always cost a D1 read
+	if (!isAssetPath(pathname)) {
 		try {
-			const db = getDb(cfEnv.DB);
-			const blocked = await db
-				.select({ ip: schema.ipBlocks.ipAddress, reason: schema.ipBlocks.reason })
-				.from(schema.ipBlocks)
-				.where(eq(schema.ipBlocks.ipAddress, clientIp))
-				.get();
+			const block = await cached(`ip-block:${clientIp}`, IP_BLOCK_CACHE_TTL_MS, () =>
+				SecurityService.isBlocked(getDb(platform), clientIp)
+			);
 
-			if (blocked) {
+			if (block.blocked) {
 				return new Response(
 					JSON.stringify({
 						error: 'Access Denied',
 						message: 'Your IP address has been blocked by AURA Security Sentinel.',
-						reason: blocked.reason || 'Restricted Activity'
+						reason: block.reason || 'Restricted Activity'
 					}),
 					{
 						status: 403,
@@ -87,7 +214,25 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	// 2. Real-Time Bot & Crawler Telemetry Classification
+	// 2. Rate limit sensitive public endpoints
+	const rateLimitTier = getRateLimitTier(event.request.method, pathname);
+	if (rateLimitTier && !(await isRateLimitAllowed(rateLimitTier, clientIp, pathname))) {
+		return json(
+			{ success: false, message: 'অনেকবার চেষ্টা করা হয়েছে। এক মিনিট পরে আবার চেষ্টা করুন।' },
+			{ status: 429, headers: { 'retry-after': '60' } }
+		);
+	}
+
+	// 3. Authentication
+	await attachCustomerSession(event);
+
+	const protectedArea = getProtectedArea(event);
+	if (protectedArea) {
+		const denied = await guardAdminArea(event, protectedArea);
+		if (denied) return denied;
+	}
+
+	// 4. Real-Time Bot & Crawler Telemetry Classification
 	let botCategory: 'search' | 'ai' | 'headless' | null = null;
 	let threatLevel: 'low' | 'moderate' | 'critical' = 'low';
 
@@ -102,7 +247,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		threatLevel = 'critical';
 	}
 
-	// 3. Asynchronously Record Real Bot Telemetry to D1 (Exclude localhost to prevent dev test noise)
+	// 5. Asynchronously Record Real Bot Telemetry to D1 (Exclude localhost to prevent dev test noise)
 	const isLocalDev =
 		dev ||
 		clientIp === '127.0.0.1' ||
@@ -112,8 +257,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	if (botCategory && !isLocalDev) {
 		try {
-			const db = getDb(cfEnv.DB);
-			const logPromise = db
+			const logPromise = getDb(platform)
 				.insert(schema.botLogs)
 				.values({
 					id: crypto.randomUUID(),
@@ -121,28 +265,57 @@ export const handle: Handle = async ({ event, resolve }) => {
 					userAgent: userAgent.slice(0, 300),
 					botCategory,
 					threatLevel,
-					pathVisited: event.url.pathname,
+					pathVisited: pathname,
 					actionTaken: 'allowed'
 				})
 				.catch((err) => console.error('Failed to log bot telemetry:', err));
 
 			if (platform?.ctx?.waitUntil) {
 				platform.ctx.waitUntil(logPromise);
-			} else if ((cfEnv as any)?.ctx?.waitUntil) {
-				(cfEnv as any).ctx.waitUntil(logPromise);
 			}
 		} catch (err) {
 			console.error('Failed to init db for bot telemetry:', err);
 		}
 	}
 
-	return resolve(event);
+	const response = await resolve(event);
+
+	// Show admin changes on the storefront immediately, at least on this isolate.
+	if (protectedArea && event.request.method !== 'GET') {
+		clearCache();
+	}
+
+	return response;
 };
 
-export const handleError = ({ error, event }: any) => {
-	console.error('SERVER ERROR AT', event.url.pathname, ':', error);
+export const handle: Handle = async (input) => {
+	const response = await handleRequest(input);
+	try {
+		response.headers.set('X-Content-Type-Options', 'nosniff');
+		response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+		// SAMEORIGIN, not DENY: the admin landing page preview may use an iframe.
+		response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+		response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+		if (input.event.url.protocol === 'https:') {
+			response.headers.set('Strict-Transport-Security', 'max-age=31536000');
+		}
+	} catch {
+		// Responses such as Response.redirect() have immutable headers.
+	}
+	return response;
+};
+
+export const handleError: HandleServerError = (input) => {
+	// Errors raised on purpose, such as a 404 or error(404, '...'), already have a safe message.
+	if (input.kind !== 'unknown') {
+		return { message: input.error.message };
+	}
+
+	// Anything else is unexpected: log the details and show the visitor only a reference.
+	const errorId = crypto.randomUUID();
+	console.error(`SERVER ERROR ${errorId} AT`, input.event.url.pathname, ':', input.error);
 	return {
-		message: error?.message || 'Server error',
-		stack: error?.stack || null
+		message: 'সার্ভারে একটি সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।',
+		errorId
 	};
 };

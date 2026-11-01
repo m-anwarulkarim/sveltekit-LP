@@ -166,7 +166,7 @@
 
 		try {
 			const res = await fetch(`/api/admin/customers/orders?phone=${encodeURIComponent(cust.phone)}`);
-			const json = await res.json();
+			const json: any = await res.json();
 			if (json.success) {
 				customerOrders = json.orders || [];
 			} else {

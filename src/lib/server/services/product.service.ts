@@ -1,4 +1,4 @@
-import { eq, or, desc, asc, and, sql } from 'drizzle-orm';
+import { eq, or, desc, asc, and, sql, getTableColumns } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from '../db/schema';
 
@@ -9,6 +9,12 @@ export interface ProductFilterOptions {
 	limit?: number;
 	offset?: number;
 }
+
+/** Product and variant columns safe to send to storefront visitors: no cost prices. */
+const { costPrice: _productCost, ...productColumns } = getTableColumns(schema.products);
+const { costPrice: _variantCost, ...variantColumns } = getTableColumns(schema.productVariants);
+export const publicProductColumns = productColumns;
+export const publicVariantColumns = variantColumns;
 
 /**
  * Enterprise Product Catalog & Inventory Service

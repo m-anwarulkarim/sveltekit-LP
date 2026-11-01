@@ -19,7 +19,7 @@
 	import { toast } from 'svelte-sonner';
 	import type { SocialLoginConfig } from '#lib/server/services/settings.service';
 
-	let { data, form } = $props<{ data: { settings: SocialLoginConfig }; form?: any }>();
+	let { data, form }: { data: { settings: SocialLoginConfig }; form?: any } = $props();
 
 	let isSaving = $state(false);
 	let showSecret = $state(false);

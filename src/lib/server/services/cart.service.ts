@@ -9,36 +9,10 @@ export interface CartPayload {
 }
 
 export class CartService {
-	private static isTableInitialized = false;
-
-	/**
-	 * Ensures the user_carts table exists in Cloudflare D1
-	 */
-	static async ensureTable(db: DrizzleD1Database<typeof schema>) {
-		if (this.isTableInitialized) return;
-		try {
-			await db.run(
-				sql.raw(`
-				CREATE TABLE IF NOT EXISTS user_carts (
-					user_id TEXT PRIMARY KEY,
-					items TEXT NOT NULL DEFAULT '[]',
-					coupon_code TEXT,
-					discount_percent INTEGER DEFAULT 0,
-					updated_at INTEGER NOT NULL
-				);
-			`)
-			);
-			this.isTableInitialized = true;
-		} catch (e) {
-			console.error('Failed to ensure user_carts table:', e);
-		}
-	}
-
 	/**
 	 * Retrieve a user's stored cart from database
 	 */
 	static async getUserCart(db: DrizzleD1Database<typeof schema>, userId: string) {
-		await this.ensureTable(db);
 		try {
 			const record = await db
 				.select()
@@ -76,7 +50,6 @@ export class CartService {
 		userId: string,
 		payload: CartPayload
 	) {
-		await this.ensureTable(db);
 		try {
 			const itemsJson = JSON.stringify(payload.items || []);
 			const couponCode = payload.couponCode || '';
@@ -113,7 +86,6 @@ export class CartService {
 	 * Clear a user's cart in database (e.g. after successful order placement)
 	 */
 	static async clearUserCart(db: DrizzleD1Database<typeof schema>, userId: string) {
-		await this.ensureTable(db);
 		try {
 			await db.delete(schema.userCarts).where(eq(schema.userCarts.userId, userId));
 			return { success: true };

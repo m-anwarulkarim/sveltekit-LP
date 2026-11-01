@@ -70,12 +70,20 @@ export class NotificationService {
 	/**
 	 * Gets total count of unread notifications for live Navbar badge
 	 */
-	static async getUnreadCount(db: DrizzleD1Database<typeof schema>): Promise<number> {
+	static async getUnreadCount(
+		db: DrizzleD1Database<typeof schema>,
+		categories?: string[] | null
+	): Promise<number> {
 		try {
 			const res = await db
 				.select({ count: sql<number>`count(*)` })
 				.from(schema.notifications)
-				.where(eq(schema.notifications.isRead, false))
+				.where(
+					and(
+						eq(schema.notifications.isRead, false),
+						categories ? inArray(schema.notifications.category, categories) : undefined
+					)
+				)
 				.all();
 			return res[0]?.count ?? 0;
 		} catch (error) {

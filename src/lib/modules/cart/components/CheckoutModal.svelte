@@ -1,8 +1,8 @@
 <script lang="ts">
+	import { submitAction } from '#lib/client/submit-action';
 	import { cart } from '../cart.svelte';
 	import { goto } from '$app/navigation';
-	import { deserialize } from '$app/forms';
-	import { trackMetaEvent } from '#lib/client/meta-pixel';
+		import { trackMetaEvent } from '#lib/client/meta-pixel';
 	import { trackGtmBeginCheckout } from '#lib/client/gtm';
 	import { getAttributionSource } from '#lib/client/attribution';
 	import { toast } from 'svelte-sonner';
@@ -89,6 +89,9 @@
 		}, 1200);
 	}
 
+	// Set when the server reports a different total, so the next click confirms that price.
+	let confirmedServerTotal = $state<number | null>(null);
+
 	async function handleCheckoutSubmit(e: Event) {
 		e.preventDefault();
 		if (!name.trim() || !phone.trim() || !address.trim()) return;
@@ -105,100 +108,78 @@
 			formData.append('orderNote', '');
 			formData.append('website_url', '');
 			formData.append('source', getAttributionSource());
+			if (cart.couponCode) formData.append('couponCode', cart.couponCode);
+			formData.append('expectedTotal', String(confirmedServerTotal ?? cart.total));
 			formData.append(
 				'items',
 				JSON.stringify(
 					cart.items.map((item) => ({
 						id: item.id,
-						name: item.name,
-						price: item.price,
 						quantity: item.quantity,
-						variantId: item.variantId || null,
-						variantName: item.variantName || null,
-						image: item.image || null
+						variantId: item.variantId || null
 					}))
 				)
 			);
 
-			const response = await fetch('/checkout?/placeOrder', {
-				method: 'POST',
-				headers: {
-					'x-sveltekit-action': 'true'
-				},
-				body: formData
-			});
+			const result = await submitAction('/checkout?/placeOrder', formData);
 
-			const result = deserialize(await response.text());
-			let confirmedId = `AURA-${Math.floor(100000 + Math.random() * 900000)}`;
-			let orderTotal = cart.total;
-
-			if (result.type === 'success' && result.data) {
-				const d = result.data as any;
-				confirmedId = d.orderNumber || d.orderId || confirmedId;
-				orderTotal = d.total || orderTotal;
-
-				// Snapshot order details before clearing cart
-				const orderSnapshot = {
-					orderId: confirmedId,
-					customerName: name.trim(),
-					customerPhone: phone.trim(),
-					customerAddress: address.trim(),
-					customerCity: city,
-					paymentMethod: paymentMethod === 'cod' ? 'ক্যাশ অন ডেলিভারি (COD)' : 'বিকাশ অনলাইন পেমেন্ট (bKash)',
-					items: [...cart.items],
-					subtotal: cart.subtotal,
-					deliveryCharge: cart.deliveryCharge,
-					discountAmount: cart.discountAmount,
-					total: orderTotal,
-					createdAt: new Date().toISOString()
-				};
-
-				// If customer chose bKash, initialize bKash PGW URL
-				if (paymentMethod === 'bkash' && d.orderId) {
-					try {
-						const bkashRes = await fetch('/api/payment/bkash/create', {
-							method: 'POST',
-							headers: { 'Content-Type': 'application/json' },
-							body: JSON.stringify({
-								orderId: d.orderId,
-								orderNumber: d.orderNumber || confirmedId,
-								amount: orderTotal,
-								customerPhone: phone.trim()
-							})
-						});
-						const bkashData: any = await bkashRes.json();
-						if (bkashData.success && bkashData.bkashURL) {
-							cart.setLastOrder(orderSnapshot);
-							cart.clear();
-							isSubmitting = false;
-							onClose();
-							window.location.href = bkashData.bkashURL;
-							return;
-						} else {
-							toast.error(bkashData.message || 'বিকাশ গেটওয়ে সংযোগে সমস্যা হয়েছে');
-						}
-					} catch (bkErr) {
-						console.error('Failed to trigger bKash redirect:', bkErr);
-					}
-				}
-
-				// Save snapshot for thank-you page
-				cart.setLastOrder(orderSnapshot);
-				cart.clear();
-				isSubmitting = false;
-				onClose();
-
-				// Navigate to dedicated Thank You Page
-				goto(`/thank-you?order_id=${confirmedId}`);
+			if (!result.ok) {
+				toast.error(result.message);
+				confirmedServerTotal = result.data?.code === 'PRICE_CHANGED' ? Number(result.data.total) : null;
 				return;
 			}
-		} catch (error) {
-			console.error('Checkout submit error:', error);
-			const fallbackId = `AURA-${Math.floor(100000 + Math.random() * 900000)}`;
+
+			confirmedServerTotal = null;
+			const d = result.data;
+
+			// Snapshot order details before clearing cart
+			const orderSnapshot = {
+				orderId: d.orderNumber,
+				customerName: name.trim(),
+				customerPhone: phone.trim(),
+				customerAddress: address.trim(),
+				customerCity: city,
+				paymentMethod: paymentMethod === 'cod' ? 'ক্যাশ অন ডেলিভারি (COD)' : 'বিকাশ অনলাইন পেমেন্ট (bKash)',
+				items: [...cart.items],
+				subtotal: cart.subtotal,
+				deliveryCharge: cart.deliveryCharge,
+				discountAmount: cart.discountAmount,
+				total: d.total,
+				createdAt: new Date().toISOString()
+			};
+
+			// If customer chose bKash, initialize bKash PGW URL
+			if (paymentMethod === 'bkash') {
+				try {
+					const bkashRes = await fetch('/api/payment/bkash/create', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ orderId: d.orderId })
+					});
+					const bkashData: any = await bkashRes.json();
+					if (bkashData.success && bkashData.bkashURL) {
+						cart.setLastOrder(orderSnapshot);
+						cart.clear();
+						onClose();
+						window.location.href = bkashData.bkashURL;
+						return;
+					}
+					toast.error(bkashData.message || 'বিকাশ গেটওয়ে সংযোগে সমস্যা হয়েছে');
+				} catch (bkErr) {
+					console.error('Failed to trigger bKash redirect:', bkErr);
+					toast.error('বিকাশ গেটওয়ে সংযোগে সমস্যা হয়েছে');
+				}
+			}
+
+			// Save snapshot for thank-you page
+			cart.setLastOrder(orderSnapshot);
 			cart.clear();
-			isSubmitting = false;
 			onClose();
-			goto(`/thank-you?order_id=${fallbackId}`);
+
+			// Navigate to dedicated Thank You Page
+			goto(`/thank-you?order_id=${d.orderId}`);
+		} finally {
+			isSubmitting = false;
 		}
 	}
 

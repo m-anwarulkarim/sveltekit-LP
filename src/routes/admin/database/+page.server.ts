@@ -1,18 +1,16 @@
-import type { Actions, PageServerLoad } from './$types';
+import type { Actions } from './$types';
 import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
 import { INITIAL_PRODUCTS } from '../_data';
 import { fail } from '@sveltejs/kit';
 
-export const load: PageServerLoad = async ({ parent }) => {
-	const parentData = await parent();
-	return {
-		...parentData
-	};
-};
-
 export const actions: Actions = {
-	seedDatabase: async ({ platform }) => {
+	seedDatabase: async ({ platform, locals }) => {
+		// This action wipes the products table, so only the Owner may run it.
+		if (locals.admin?.role !== 'Owner') {
+			return fail(403, { message: 'শুধুমাত্র Owner এই কাজটি করতে পারবেন।' });
+		}
+
 		if (!platform?.env?.DB) {
 			return fail(500, { message: 'Cloudflare D1 binding unavailable' });
 		}

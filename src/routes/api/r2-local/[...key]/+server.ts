@@ -21,6 +21,7 @@ export const GET: RequestHandler = async ({ params, platform }) => {
 					headers.set('etag', obj.httpEtag);
 				}
 				headers.set('cache-control', 'public, max-age=31536000');
+				headers.set('x-content-type-options', 'nosniff');
 				return new Response(obj.body, { headers });
 			}
 		} catch (e) {
@@ -35,6 +36,7 @@ export const GET: RequestHandler = async ({ params, platform }) => {
 			const headers = new Headers();
 			headers.set('content-type', upstream.headers.get('content-type') || 'image/png');
 			headers.set('cache-control', 'public, max-age=31536000');
+				headers.set('x-content-type-options', 'nosniff');
 			return new Response(upstream.body, { status: 200, headers });
 		}
 	} catch (err) {

@@ -1,100 +1,60 @@
-import type { PageServerLoad, Actions } from './$types';
+import type { Actions, PageServerLoad } from './$types';
 import { getDb } from '#lib/server/db/index';
-import * as schema from '#lib/server/db/schema';
-import { eq, or, and, desc } from 'drizzle-orm';
+import { OrderService } from '#lib/server/services/order.service';
 import { fail } from '@sveltejs/kit';
 
-export const load: PageServerLoad = async ({ url, platform, locals }) => {
-	const query = url.searchParams.get('order') || url.searchParams.get('q') || '';
-	let trackedOrder: any = null;
-	let notFound = false;
+const STATUS_LABELS: Record<string, string> = {
+	pending: 'অপেক্ষমাণ (Pending)',
+	processing: 'প্রসেসিং হচ্ছে (Processing)',
+	confirmed: 'কনফার্ম করা হয়েছে (Confirmed)',
+	shipped: 'কুরিয়ারে হস্তান্তর করা হয়েছে (Shipped)',
+	delivered: 'সফলভাবে ডেলিভারি সম্পন্ন (Delivered)',
+	cancelled: 'বাতিল করা হয়েছে (Cancelled)',
+	returned: 'ফেরত এসেছে (Returned)'
+};
 
-	if (query.trim()) {
-		try {
-			const db = getDb(platform);
-			const clean = query.trim();
-			const withoutHash = clean.replace(/^#/, '');
-
-			// Search by ID, Order Number, or Customer Phone
-			const orderRow = await db
-				.select()
-				.from(schema.orders)
-				.where(
-					and(
-						or(
-							eq(schema.orders.id, clean),
-							eq(schema.orders.orderNumber, clean),
-							eq(schema.orders.orderNumber, withoutHash),
-							eq(schema.orders.customerPhone, clean)
-						),
-						eq(schema.orders.isTrashed, false)
-					)
-				)
-				.orderBy(desc(schema.orders.createdAt))
-				.limit(1)
-				.get();
-
-			if (orderRow) {
-				const items = await db
-					.select()
-					.from(schema.orderItems)
-					.where(eq(schema.orderItems.orderId, orderRow.id))
-					.all();
-
-				const statusBanglaMap: Record<string, string> = {
-					pending: 'অপেক্ষমাণ (Pending)',
-					processing: 'প্রসেসিং হচ্ছে (Processing)',
-					confirmed: 'কনফার্ম করা হয়েছে (Confirmed)',
-					shipped: 'কুরিয়ারে হস্তান্তর করা হয়েছে (Shipped)',
-					delivered: 'সফলভাবে ডেলিভারি সম্পন্ন (Delivered)',
-					cancelled: 'বাতিল করা হয়েছে (Cancelled)'
-				};
-
-				trackedOrder = {
-					id: orderRow.orderNumber ? (orderRow.orderNumber.startsWith('#') ? orderRow.orderNumber : `#${orderRow.orderNumber}`) : `#${orderRow.id.slice(0, 8)}`,
-					date: orderRow.createdAt ? new Date(orderRow.createdAt).toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' }) : 'আজ',
-					status: orderRow.status,
-					statusBangla: statusBanglaMap[orderRow.status] || orderRow.status,
-					customer: orderRow.customerName,
-					phone: orderRow.customerPhone ? `${orderRow.customerPhone.slice(0, 5)}***${orderRow.customerPhone.slice(-3)}` : '',
-					address: orderRow.shippingAddress,
-					courier: orderRow.courierName || 'Steadfast Courier',
-					trackingCode: orderRow.courierTrackingCode || 'অর্ডার প্রসেসিংয়ে রয়েছে',
-					total: orderRow.totalAmount,
-					subtotal: orderRow.subtotal,
-					deliveryCharge: orderRow.deliveryCharge,
-					paymentMethod: orderRow.paymentMethod,
-					items: items.map((it) => ({
-						name: it.productName,
-						quantity: it.quantity,
-						price: it.price,
-						image: it.productImage
-					}))
-				};
-			} else {
-				notFound = true;
-			}
-		} catch (err) {
-			console.error('Track order query error:', err);
-		}
-	}
-
+export const load: PageServerLoad = async ({ url, locals }) => {
 	return {
 		user: locals.user ?? null,
-		searchQuery: query,
-		trackedOrder,
-		notFound
+		orderNumber: url.searchParams.get('order') || url.searchParams.get('orderId') || ''
 	};
 };
 
 export const actions: Actions = {
-	track: async ({ request }) => {
+	track: async ({ request, platform }) => {
 		const data = await request.formData();
-		const query = data.get('query')?.toString()?.trim();
-		if (!query) {
-			return fail(400, { message: 'অনুগ্রহ করে অর্ডার নম্বর বা মোবাইল নম্বর লিখুন।' });
+		const orderNumber = data.get('orderNumber')?.toString()?.trim() || '';
+		const phone = data.get('phone')?.toString()?.trim() || '';
+
+		if (!orderNumber || !phone) {
+			return fail(400, { message: 'অর্ডার নম্বর এবং মোবাইল নম্বর দুটিই দিন।' });
 		}
-		return { success: true, redirectQuery: query };
+
+		try {
+			const order = await OrderService.trackPublicOrder(getDb(platform), orderNumber, phone);
+			if (!order) {
+				return { notFound: true };
+			}
+
+			return {
+				trackedOrder: {
+					id: `#${(order.orderNumber || '').replace(/^#/, '')}`,
+					date: new Date(order.createdAt).toLocaleDateString('bn-BD', {
+						day: 'numeric',
+						month: 'long',
+						year: 'numeric'
+					}),
+					status: order.status,
+					statusBangla: STATUS_LABELS[order.status] || order.status,
+					courier: order.courierProvider,
+					trackingCode: order.trackingCode,
+					total: order.total,
+					items: order.items
+				}
+			};
+		} catch (err) {
+			console.error('Track order query error:', err);
+			return fail(500, { message: 'অর্ডার খুঁজতে সমস্যা হয়েছে। আবার চেষ্টা করুন।' });
+		}
 	}
 };
-

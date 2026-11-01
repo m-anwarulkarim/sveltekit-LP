@@ -17,7 +17,7 @@
 	} from 'lucide-svelte';
 	import type { AssetValuationReportData, AssetValuationProduct } from '#lib/server/services/report.service';
 
-	let { data } = $props<{ data: { report: AssetValuationReportData } }>();
+	let { data }: { data: { report: AssetValuationReportData } } = $props();
 
 	let allProducts = $derived<AssetValuationProduct[]>(data?.report?.products || []);
 	let totalAssetCost = $derived(data?.report?.totalAssetCost || 0);

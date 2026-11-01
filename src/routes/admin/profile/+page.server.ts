@@ -1,46 +1,25 @@
 import type { PageServerLoad, Actions } from './$types';
-import { fail } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import { getDb } from '#lib/server/db/index';
 import { AdminProfileService } from '#lib/server/services/admin-profile.service';
 import { R2Service } from '#lib/server/services/r2.service';
 
-export const load: PageServerLoad = async ({ platform }) => {
-	try {
-		const db = getDb(platform);
-		const profile = await AdminProfileService.getOwnerProfile(db);
-		return { profile };
-	} catch (error: any) {
-		console.error('Failed to load admin profile:', error);
-		// Fallback safe default
-		return {
-			profile: {
-				id: '1',
-				name: 'Thecolorlighthouse',
-				username: 'thecolorlighthouse',
-				email: 'contact@thecolorlighthouse.com',
-				phone: '01780081623',
-				role: 'OWNER',
-				avatarUrl: null,
-				avatarBg: 'bg-black text-pink-500 border-pink-500/40',
-				avatarText: 'COLOR LIGHT',
-				hasPassword: true,
-				createdAt: new Date('2025-09-03'),
-				updatedAt: new Date()
-			}
-		};
-	}
+export const load: PageServerLoad = async ({ platform, locals }) => {
+	const profile = await AdminProfileService.getProfileById(getDb(platform), locals.admin!.id);
+	if (!profile) throw error(404, 'অ্যাডমিন প্রোফাইল পাওয়া যায়নি');
+	return { profile };
 };
 
 export const actions: Actions = {
-	updateProfile: async ({ request, platform }) => {
+	updateProfile: async ({ request, platform, locals }) => {
 		const data = await request.formData();
-		const adminId = data.get('adminId')?.toString()?.trim();
+		const adminId = locals.admin!.id;
 		const name = data.get('name')?.toString()?.trim() || '';
 		const username = data.get('username')?.toString()?.trim() || '';
 		const email = data.get('email')?.toString()?.trim() || '';
 		const phone = data.get('phone')?.toString()?.trim() || '';
 
-		if (!adminId || !name || !username || !email) {
+		if (!name || !username || !email) {
 			return fail(400, {
 				action: 'updateProfile',
 				success: false,
@@ -81,12 +60,12 @@ export const actions: Actions = {
 		}
 	},
 
-	updateAvatar: async ({ request, platform }) => {
+	updateAvatar: async ({ request, platform, locals }) => {
 		const data = await request.formData();
-		const adminId = data.get('adminId')?.toString()?.trim();
+		const adminId = locals.admin!.id;
 		let avatarUrl = data.get('avatarUrl')?.toString()?.trim();
 
-		if (!adminId || !avatarUrl) {
+		if (!avatarUrl) {
 			return fail(400, {
 				action: 'updateAvatar',
 				success: false,
@@ -139,20 +118,12 @@ export const actions: Actions = {
 		}
 	},
 
-	changePassword: async ({ request, platform }) => {
+	changePassword: async ({ request, platform, locals }) => {
 		const data = await request.formData();
-		const adminId = data.get('adminId')?.toString()?.trim();
+		const adminId = locals.admin!.id;
 		const currentPassword = data.get('currentPassword')?.toString() || '';
 		const newPassword = data.get('newPassword')?.toString() || '';
 		const confirmPassword = data.get('confirmPassword')?.toString() || '';
-
-		if (!adminId) {
-			return fail(400, {
-				action: 'changePassword',
-				success: false,
-				message: 'অ্যাডমিন আইডি পাওয়া যায়নি!'
-			});
-		}
 
 		if (!newPassword || newPassword.length < 6) {
 			return fail(400, {

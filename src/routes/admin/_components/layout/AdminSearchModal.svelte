@@ -108,7 +108,7 @@
 		try {
 			const res = await fetch(`/api/admin/search?q=${encodeURIComponent(term.trim())}`);
 			if (res.ok) {
-				const data = await res.json();
+				const data: any = await res.json();
 				searchResults = {
 					orders: data.orders || [],
 					products: data.products || [],

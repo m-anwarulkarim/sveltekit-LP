@@ -3,4 +3,4 @@
 	let { data } = $props();
 </script>
 
-<PopupPage />
+<PopupPage {data} />

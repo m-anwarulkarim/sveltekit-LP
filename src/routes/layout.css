@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 @theme {
-	--font-sans: 'Anek Bangla', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+	--font-sans: 'Anek Bangla', system-ui, -apple-system, sans-serif;
 	--font-bangla: 'Anek Bangla', system-ui, -apple-system, sans-serif;
 	--font-display: 'Outfit', 'Anek Bangla', system-ui, -apple-system, sans-serif;
 	--color-accent-purple: #8b5cf6;
@@ -13,7 +13,7 @@
 }
 
 :root {
-	font-family: 'Anek Bangla', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+	font-family: 'Anek Bangla', system-ui, -apple-system, sans-serif;
 	color-scheme: light;
 }
 
@@ -21,7 +21,7 @@ html, body {
 	background-color: #f8fafc;
 	color: #0f172a;
 	min-height: 100%;
-	font-family: 'Anek Bangla', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+	font-family: 'Anek Bangla', system-ui, -apple-system, sans-serif;
 }
 
 h1, h2, h3, h4, .font-heading {

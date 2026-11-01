@@ -3,4 +3,4 @@
 	let { data } = $props();
 </script>
 
-<ProductsPage {data} />
+<ProductsPage data={data as any} />

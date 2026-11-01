@@ -2,8 +2,10 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, inArray } from 'drizzle-orm';
 import { OrderService } from '#lib/server/services/order.service';
+import { incompleteOrderSchema } from '#lib/server/validations/order.validation';
+import { parseCartItemId } from '#lib/utils/order-pricing';
 
 function parseDeviceFromUserAgent(ua: string = '') {
 	const lower = ua.toLowerCase();
@@ -31,21 +33,21 @@ function parseDeviceFromUserAgent(ua: string = '') {
 
 export const POST: RequestHandler = async ({ request, platform, getClientAddress }) => {
 	try {
-		const body = await request.json();
-		const customerPhone = body.customerPhone?.toString()?.trim();
-		const customerName = body.customerName?.toString()?.trim() || 'অপরিচিত কাস্টমার';
-		const shippingAddress = body.shippingAddress?.toString()?.trim() || 'ঠিকানা দেওয়া হয়নি';
-		const deliveryArea = body.deliveryArea || 'inside_dhaka';
-		const items = Array.isArray(body.items) ? body.items : [];
-		const subtotal = Number(body.subtotal) || 0;
-		const deliveryCharge = Number(body.deliveryCharge) || 60;
-		const total = Number(body.total) || (subtotal + deliveryCharge);
-		const source = body.source || 'Direct';
-
-		// Validate phone: must have at least 10 digits
-		if (!customerPhone || customerPhone.replace(/\D/g, '').length < 10) {
-			return json({ success: false, message: 'Invalid phone' }, { status: 400 });
+		const parsed = incompleteOrderSchema.safeParse(await request.json());
+		if (!parsed.success) {
+			return json({ success: false, message: 'Invalid data' }, { status: 400 });
 		}
+
+		const body = parsed.data;
+		const customerPhone = body.customerPhone;
+		const customerName = body.customerName || 'অপরিচিত কাস্টমার';
+		const shippingAddress = body.shippingAddress || 'ঠিকানা দেওয়া হয়নি';
+		const deliveryArea = body.deliveryArea || 'inside_dhaka';
+		const items = body.items ?? [];
+		const subtotal = Math.round(body.subtotal ?? 0);
+		const deliveryCharge = Math.round(body.deliveryCharge ?? 60);
+		const total = Math.round(body.total ?? subtotal + deliveryCharge);
+		const source = body.source || 'Direct';
 
 		const db = getDb(platform);
 
@@ -57,9 +59,9 @@ export const POST: RequestHandler = async ({ request, platform, getClientAddress
 		const locationTag = city ? `${city}, ${country}` : country;
 		const deviceFingerprint = `${parseDeviceFromUserAgent(userAgent)} • ${locationTag}`;
 
-		// Check if an incomplete order for this phone already exists in the last 24 hours
+		// Reuse this phone's open abandoned checkout, if it has one
 		const existingIncomplete = await db
-			.select()
+			.select({ id: schema.orders.id })
 			.from(schema.orders)
 			.where(
 				and(
@@ -73,7 +75,6 @@ export const POST: RequestHandler = async ({ request, platform, getClientAddress
 			.get();
 
 		if (existingIncomplete) {
-			// Update the existing incomplete record with latest cart items & address
 			await db
 				.update(schema.orders)
 				.set({
@@ -95,74 +96,74 @@ export const POST: RequestHandler = async ({ request, platform, getClientAddress
 			return json({ success: true, incompleteOrderId: existingIncomplete.id });
 		}
 
-		// Insert new incomplete order
 		const nextOrderNumber = await OrderService.generateNextOrderNumber(db);
 		const newOrderId = crypto.randomUUID();
 
-		await db.insert(schema.orders).values({
-			id: newOrderId,
-			orderNumber: nextOrderNumber,
-			customerName,
-			customerPhone,
-			shippingAddress,
-			deliveryArea,
-			subtotal,
-			deliveryCharge,
-			discountAmount: 0,
-			advancePayment: 0,
-			dueAmount: total,
-			total,
-			paymentMethod: 'cod',
-			paymentStatus: 'pending',
-			status: 'incomplete',
-			orderType: 'web',
-			dropOffStage: 'checkout',
-			recoveryStatus: 'uncontacted',
-			source,
-			ipAddress,
-			userAgent,
-			deviceFingerprint,
-			items: JSON.stringify(items),
-			isTrashed: false,
-			createdAt: new Date(),
-			updatedAt: new Date()
+		// Only link line items to products that really exist
+		const requestedIds = items.flatMap((it) => {
+			const raw = it.id || it.productId;
+			return raw ? [parseCartItemId(raw).productId] : [];
 		});
+		const knownProducts =
+			requestedIds.length > 0
+				? await db
+						.select({ id: schema.products.id })
+						.from(schema.products)
+						.where(inArray(schema.products.id, requestedIds))
+						.all()
+				: [];
+		const knownProductIds = new Set(knownProducts.map((p) => p.id));
 
-		// Insert order items for relationship with defensive FK check
-		for (const it of items) {
-			const uPrice = Number(it.price) || 0;
-			const qty = Number(it.quantity) || 1;
-			const rawProdId = it.id || it.productId;
-
-			let validProdId: string | null = null;
-			if (rawProdId) {
-				const prodExists = await db
-					.select({ id: schema.products.id })
-					.from(schema.products)
-					.where(eq(schema.products.id, rawProdId))
-					.get()
-					.catch(() => null);
-				if (prodExists) validProdId = prodExists.id;
-			}
-
-			await db.insert(schema.orderItems).values({
-				id: crypto.randomUUID(),
-				orderId: newOrderId,
-				productId: validProdId,
-				productName: it.name || 'পণ্য',
-				productImage: it.image || null,
-				quantity: qty,
-				unitPrice: uPrice,
-				subtotal: uPrice * qty
-			}).catch((err) => {
-				console.error('Failed to insert incomplete order item:', err);
-			});
-		}
+		const statements: any[] = [
+			db.insert(schema.orders).values({
+				id: newOrderId,
+				orderNumber: nextOrderNumber,
+				customerName,
+				customerEmail: customerPhone,
+				customerPhone,
+				shippingAddress,
+				deliveryArea,
+				subtotal,
+				deliveryCharge,
+				discountAmount: 0,
+				advancePayment: 0,
+				dueAmount: total,
+				total,
+				paymentMethod: 'cod',
+				paymentStatus: 'pending',
+				status: 'incomplete',
+				orderType: 'web',
+				dropOffStage: 'checkout',
+				recoveryStatus: 'uncontacted',
+				source,
+				ipAddress,
+				userAgent,
+				deviceFingerprint,
+				items: JSON.stringify(items),
+				isTrashed: false
+			}),
+			...items.map((it) => {
+				const unitPrice = Math.round(it.price ?? 0);
+				const quantity = it.quantity ?? 1;
+				const raw = it.id || it.productId;
+				const productId = raw ? parseCartItemId(raw).productId : null;
+				return db.insert(schema.orderItems).values({
+					id: crypto.randomUUID(),
+					orderId: newOrderId,
+					productId: productId && knownProductIds.has(productId) ? productId : null,
+					productName: it.name || 'পণ্য',
+					productImage: it.image || null,
+					quantity,
+					unitPrice,
+					subtotal: unitPrice * quantity
+				});
+			})
+		];
+		await db.batch(statements as [any, ...any[]]);
 
 		return json({ success: true, incompleteOrderId: newOrderId });
 	} catch (e: any) {
 		console.error('Failed to capture incomplete checkout order:', e);
-		return json({ success: false, message: e?.message || 'Server error' }, { status: 500 });
+		return json({ success: false, message: 'Server error' }, { status: 500 });
 	}
 };
-

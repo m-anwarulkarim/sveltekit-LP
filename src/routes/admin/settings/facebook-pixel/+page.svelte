@@ -158,7 +158,7 @@
 		const fd = new FormData();
 		fd.append('pixelId', settings.pixelId.trim());
 		fd.append('capiToken', settings.capiToken.trim());
-		fd.append('testEventCode', settings.testEventCode.trim());
+		fd.append('testEventCode', (settings.testEventCode ?? '').trim());
 
 		try {
 			const res = await fetch('?/testCapi', {

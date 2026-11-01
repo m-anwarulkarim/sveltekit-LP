@@ -241,19 +241,19 @@
 
 							<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 								<div>
-									<label class="block text-xs font-semibold text-slate-700 mb-1">আপনার নাম *</label>
-									<Input name="author" placeholder="যেমন: রাশেদ করিম" required class="bg-white rounded-xl text-xs" />
+									<label for="review-author" class="block text-xs font-semibold text-slate-700 mb-1">আপনার নাম *</label>
+									<Input id="review-author" name="author" placeholder="যেমন: রাশেদ করিম" required class="bg-white rounded-xl text-xs" />
 								</div>
 								<div>
-									<label class="block text-xs font-semibold text-slate-700 mb-1">শিরোনাম (ঐচ্ছিক)</label>
-									<Input name="title" placeholder="যেমন: দারুণ পণ্য ও ফাস্ট ডেলিভারি" class="bg-white rounded-xl text-xs" />
+									<label for="review-title" class="block text-xs font-semibold text-slate-700 mb-1">শিরোনাম (ঐচ্ছিক)</label>
+									<Input id="review-title" name="title" placeholder="যেমন: দারুণ পণ্য ও ফাস্ট ডেলিভারি" class="bg-white rounded-xl text-xs" />
 								</div>
 							</div>
 
 							<div>
-								<label class="block text-xs font-semibold text-slate-700 mb-1">আপনার মতামত ও অভিজ্ঞতা *</label>
+								<label for="review-content" class="block text-xs font-semibold text-slate-700 mb-1">আপনার মতামত ও অভিজ্ঞতা *</label>
 								<Textarea
-									name="content"
+									id="review-content" name="content"
 									rows={3}
 									placeholder="পণ্যের গুণগত মান ও আপনার অভিজ্ঞতা সম্পর্কে বিস্তারিত লিখুন..."
 									required

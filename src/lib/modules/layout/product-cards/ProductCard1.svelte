@@ -34,7 +34,14 @@
 
 <!-- Product Card 1: Classic Clean E-Commerce Card -->
 <div
+	role="link"
+	tabindex="0"
 	onclick={() => goto(`/products/${product.slug || product.id}`)}
+	onkeydown={(e) => {
+		if (e.key === 'Enter' && e.target === e.currentTarget) {
+			goto(`/products/${product.slug || product.id}`);
+		}
+	}}
 	class="bg-white rounded-xl border border-slate-200/90 hover:border-slate-300 shadow-2xs hover:shadow-md transition-all p-3 flex flex-col justify-between group cursor-pointer"
 >
 	<!-- Image Container -->

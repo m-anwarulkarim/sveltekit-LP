@@ -98,6 +98,13 @@
 	];
 
 	// Derived slides: database-driven when carousels exist, fallback to default promo slides
+	const PHOTO_SLIDE_BACKGROUNDS = ['bg-slate-900', 'bg-teal-900', 'bg-stone-800', 'bg-amber-900'];
+
+	// A designed banner already contains its own text. A photo needs a text panel beside it.
+	function isPhotoImage(image?: string): boolean {
+		return Boolean(image) && !/\.svg($|\?)/i.test(image as string);
+	}
+
 	const activeSlides = $derived.by<Slide[]>(() => {
 		if (carousels && carousels.length > 0) {
 			return carousels.map((c) => ({
@@ -185,8 +192,35 @@
 					<div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,rgba(255,255,255,0.22),transparent_65%)] pointer-events-none"></div>
 					<div class="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
 
+					<!-- SLIDE TYPE 0A: DATABASE PHOTO SLIDE, TEXT PANEL BESIDE THE FULL PHOTO -->
+					{#if slide.type === 'db-banner' && isPhotoImage(slide.image)}
+						<a
+							href={slide.linkUrl}
+							class="relative z-10 grid h-full w-full grid-cols-[1fr_1.1fr] select-none group {PHOTO_SLIDE_BACKGROUNDS[index % PHOTO_SLIDE_BACKGROUNDS.length]}"
+						>
+							<div class="flex min-w-0 flex-col items-start justify-center gap-1 px-4 sm:gap-2 sm:px-8 md:px-12">
+								<h2 class="text-base leading-tight font-bold text-white sm:text-3xl md:text-4xl">{slide.title}</h2>
+								{#if slide.subtitle}
+									<p class="line-clamp-2 text-[11px] leading-snug text-white/80 sm:text-base">{slide.subtitle}</p>
+								{/if}
+								<span class="mt-1 inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-900 sm:mt-2 sm:px-5 sm:py-2 sm:text-sm">
+									এখনই দেখুন
+									<ArrowRight class="h-3 w-3 transition-transform group-hover:translate-x-0.5 sm:h-4 sm:w-4" />
+								</span>
+							</div>
+							<img
+								src={slide.image}
+								alt={slide.title}
+								width="1000"
+								height="667"
+								class="h-full w-full min-w-0 object-cover"
+								loading={index === 0 ? 'eager' : 'lazy'}
+								fetchpriority={index === 0 ? 'high' : 'auto'}
+							/>
+						</a>
+
 					<!-- SLIDE TYPE 0: LIVE DATABASE-DRIVEN HERO BANNER -->
-					{#if slide.type === 'db-banner'}
+					{:else if slide.type === 'db-banner'}
 						<a
 							href={slide.linkUrl}
 							class="w-full h-full block relative overflow-hidden group select-none"
@@ -198,7 +232,7 @@
 										src={slide.image}
 										alt={slide.title}
 										class="w-full h-full object-cover sm:object-fill transition-transform duration-700 group-hover:scale-[1.01]"
-										loading={index === 0 ? 'eager' : 'lazy'}
+										loading={index === 0 ? 'eager' : 'lazy'} fetchpriority={index === 0 ? 'high' : 'auto'}
 									/>
 								</picture>
 							{:else}
@@ -206,7 +240,7 @@
 									src={slide.image}
 									alt={slide.title}
 									class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.01]"
-									loading={index === 0 ? 'eager' : 'lazy'}
+									loading={index === 0 ? 'eager' : 'lazy'} fetchpriority={index === 0 ? 'high' : 'auto'}
 								/>
 							{/if}
 

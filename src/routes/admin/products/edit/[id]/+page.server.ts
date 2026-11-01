@@ -44,14 +44,6 @@ export const load: PageServerLoad = async ({ params, parent, platform }) => {
 		console.error('Failed to query product/taxonomy from D1:', e);
 	}
 
-	if (!foundProduct && Array.isArray(layoutData?.products)) {
-		foundProduct =
-			layoutData.products.find((p: any) => p.id === params.id || p.slug === params.id) || null;
-		if (foundProduct && !foundProduct.images) {
-			foundProduct.images = [foundProduct.image];
-		}
-	}
-
 	return {
 		product: foundProduct,
 		productId: params.id,

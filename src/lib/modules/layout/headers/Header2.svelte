@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { cart } from '#lib/modules/cart/cart.svelte';
 	import { page } from '$app/state';
 	import {
@@ -45,8 +46,8 @@
 	function handleSearchSubmit(e: SubmitEvent) {
 		e.preventDefault();
 		if (!searchQuery.trim()) return;
-		window.location.href = `/catalog/all-product?search=${encodeURIComponent(searchQuery.trim())}`;
 		isSearchOpen = false;
+		goto(`/catalog/all-product?search=${encodeURIComponent(searchQuery.trim())}`);
 	}
 </script>
 
@@ -170,6 +171,7 @@
 			<form onsubmit={handleSearchSubmit} class="max-w-3xl mx-auto flex items-center gap-2">
 				<div class="relative flex-1">
 					<Search class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+					<!-- svelte-ignore a11y_autofocus (the user just opened search) -->
 					<input
 						type="search"
 						bind:value={searchQuery}
@@ -180,7 +182,7 @@
 				</div>
 				<button
 					type="submit"
-					class="px-5 py-2.5 rounded-xl bg-[#5845eb] hover:bg-[#4936d6] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+aria-label="অনুসন্ধান করুন" 					class="px-5 py-2.5 rounded-xl bg-[#5845eb] hover:bg-[#4936d6] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
 				>
 					সার্চ
 				</button>

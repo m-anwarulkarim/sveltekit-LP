@@ -37,6 +37,19 @@ export interface UpdateAdminUserInput {
  */
 export class AdminControlService {
 	/**
+	 * Creates the initial admin accounts the first time the table is empty
+	 */
+	static async ensureSeeded(db: DrizzleD1Database<typeof schema>) {
+		const countRes = await db
+			.select({ count: sql<number>`count(*)` })
+			.from(schema.adminUsers)
+			.all();
+		if ((countRes[0]?.count ?? 0) === 0) {
+			await this.seedInitialAdmins(db);
+		}
+	}
+
+	/**
 	 * Lists admin users with auto-seeding
 	 */
 	static async listAdminUsers(
@@ -44,16 +57,7 @@ export class AdminControlService {
 		options: AdminUserFilterOptions = {}
 	) {
 		try {
-			// Auto-seed initial admin users if table is empty
-			const countRes = await db
-				.select({ count: sql<number>`count(*)` })
-				.from(schema.adminUsers)
-				.all();
-			const totalInDb = countRes[0]?.count ?? 0;
-
-			if (totalInDb === 0) {
-				await this.seedInitialAdmins(db);
-			}
+			await this.ensureSeeded(db);
 
 			const conditions: any[] = [];
 
@@ -107,7 +111,7 @@ export class AdminControlService {
 				avatarText: r.avatarText || 'AK',
 				avatarUrl: r.avatarUrl || null,
 				permissions: normalizePermissions(r.permissions),
-				plainPasswordHint: r.plainPasswordHint || ''
+				hasPassword: Boolean(r.passwordHash)
 			}));
 		} catch (error) {
 			console.error('Error in AdminControlService.listAdminUsers:', error);
@@ -133,7 +137,6 @@ export class AdminControlService {
 			.slice(0, 2) || 'AD';
 
 		const passwordHash = input.password ? await hashPassword(input.password) : null;
-		const plainPasswordHint = input.password || null;
 		const permissions = JSON.stringify(input.permissions || (input.role === 'Owner' ? ['*'] : []));
 
 		await db.insert(schema.adminUsers).values({
@@ -146,7 +149,6 @@ export class AdminControlService {
 			isTrashed: false,
 			lastLogin: 'Never',
 			passwordHash,
-			plainPasswordHint,
 			permissions,
 			avatarBg: input.avatarBg || 'bg-[#5845eb] text-white border-indigo-300',
 			avatarText: initials,
@@ -165,7 +167,7 @@ export class AdminControlService {
 			lastLogin: 'Never',
 			registeredAt: 'Just Now',
 			permissions: normalizePermissions(permissions),
-			plainPasswordHint: plainPasswordHint || '',
+			hasPassword: Boolean(passwordHash),
 			avatarBg: input.avatarBg || 'bg-[#5845eb] text-white border-indigo-300',
 			avatarText: initials
 		};
@@ -213,7 +215,6 @@ export class AdminControlService {
 		}
 		if (input.password && input.password.trim()) {
 			updates.passwordHash = await hashPassword(input.password.trim());
-			updates.plainPasswordHint = input.password.trim();
 		}
 
 		await db
@@ -241,7 +242,6 @@ export class AdminControlService {
 			.update(schema.adminUsers)
 			.set({
 				passwordHash,
-				plainPasswordHint: newPassword.trim(),
 				updatedAt: new Date()
 			})
 			.where(eq(schema.adminUsers.id, id));

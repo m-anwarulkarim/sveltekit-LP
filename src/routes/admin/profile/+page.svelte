@@ -14,7 +14,7 @@
 		Link2
 	} from 'lucide-svelte';
 
-	let { data, form } = $props<{ data?: any; form?: any }>();
+	let { data, form }: { data?: any; form?: any } = $props();
 
 	// Reactive Profile State
 	let profile = $derived(data?.profile || {});

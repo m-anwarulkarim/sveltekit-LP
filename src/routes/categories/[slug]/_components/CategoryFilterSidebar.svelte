@@ -52,8 +52,8 @@
 	let openAvailability = $state(true);
 
 	// Local price inputs
-	let localMin = $state(minPrice ? String(minPrice) : '');
-	let localMax = $state(maxPrice ? String(maxPrice) : '');
+	let localMin = $derived(minPrice ? String(minPrice) : '');
+	let localMax = $derived(maxPrice ? String(maxPrice) : '');
 	let brandSearch = $state('');
 
 	$effect(() => {

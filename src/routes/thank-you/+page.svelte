@@ -35,7 +35,7 @@
 	let isCopied = $state(false);
 	let bKashTrxID = $state('');
 
-	const displayOrderId = $derived(data.dbOrder?.orderNumber || order?.orderId || data.orderId || '1001');
+	const displayOrderId = $derived(data.dbOrder?.orderNumber || order?.orderId || '');
 
 	onMount(() => {
 		order = cart.loadLastOrder();
@@ -47,7 +47,8 @@
 
 		// Idempotent Browser Purchase Event Tracking (Single fire guard per Order ID)
 		const effectiveOrderId = displayOrderId;
-		if (effectiveOrderId && typeof window !== 'undefined') {
+		// Only a real order from the database may fire a Purchase event.
+		if (data.dbOrder && effectiveOrderId && typeof window !== 'undefined') {
 			const trackKey = `fb_tracked_purchase_${effectiveOrderId}`;
 			if (!sessionStorage.getItem(trackKey)) {
 				sessionStorage.setItem(trackKey, 'true');

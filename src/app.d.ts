@@ -1,5 +1,6 @@
 import type { User, Session } from 'better-auth';
 import { createAuth } from '#lib/server/auth.ts';
+import type { AuthenticatedAdmin } from '#lib/server/services/admin-auth.service';
 
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
@@ -15,10 +16,14 @@ declare global {
 		interface Locals {
 			user?: User;
 			session?: Session;
-			auth: ReturnType<typeof createAuth>;
+			auth?: ReturnType<typeof createAuth>;
+			admin?: AuthenticatedAdmin;
 		}
 
-		// interface Error {}
+		interface Error {
+			message: string;
+			errorId?: string;
+		}
 		// interface PageData {}
 		// interface PageState {}
 	}

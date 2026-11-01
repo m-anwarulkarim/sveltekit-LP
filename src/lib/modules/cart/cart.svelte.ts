@@ -1,5 +1,6 @@
 import { trackMetaEvent } from '#lib/client/meta-pixel';
 import { trackGtmAddToCart, trackGtmRemoveFromCart, trackGtmViewCart } from '#lib/client/gtm';
+import { computeCouponDiscount, type CouponTerms } from '#lib/utils/order-pricing';
 
 export interface CartItem {
 	id: string;
@@ -37,6 +38,7 @@ class CartStore {
 	isOpen = $state(false);
 	couponCode = $state('');
 	discountPercent = $state(0);
+	couponTerms = $state<CouponTerms | null>(null);
 	couponMessage = $state('');
 	lastOrder = $state<OrderDetails | null>(null);
 
@@ -158,6 +160,7 @@ class CartStore {
 				if (parsed && typeof parsed === 'object') {
 					this.couponCode = typeof parsed.code === 'string' ? parsed.code : '';
 					this.discountPercent = Number(parsed.discountPercent) || 0;
+					this.couponTerms = parsed.terms ?? null;
 					this.couponMessage = typeof parsed.message === 'string' ? parsed.message : '';
 				}
 			}
@@ -175,6 +178,7 @@ class CartStore {
 				JSON.stringify({
 					code: this.couponCode,
 					discountPercent: this.discountPercent,
+					terms: this.couponTerms,
 					message: this.couponMessage
 				})
 			);
@@ -196,6 +200,7 @@ class CartStore {
 	}
 
 	get discountAmount() {
+		if (this.couponTerms) return computeCouponDiscount(this.couponTerms, this.subtotal);
 		return Math.round((this.subtotal * this.discountPercent) / 100);
 	}
 
@@ -360,35 +365,40 @@ class CartStore {
 		this.pushToServer();
 	}
 
-	applyCoupon(code: string) {
+	async applyCoupon(code: string) {
 		const clean = code.trim().toUpperCase();
-		if (clean === 'AURA20') {
-			this.discountPercent = 20;
-			this.couponCode = clean;
-			this.couponMessage = '২০% স্পেশাল লঞ্চ ডিসকাউন্ট যুক্ত হয়েছে!';
-			this.saveToStorage();
-			this.pushToServer();
-			return true;
-		} else if (clean === 'VIP30') {
-			this.discountPercent = 30;
-			this.couponCode = clean;
-			this.couponMessage = '৩০% ভিআইপি মেম্বার ডিসকাউন্ট যুক্ত হয়েছে!';
-			this.saveToStorage();
-			this.pushToServer();
-			return true;
-		} else {
-			this.discountPercent = 0;
-			this.couponMessage = 'ভুল প্রোমোকোড। ট্রাই করুন: AURA20';
-			this.saveToStorage();
-			this.pushToServer();
-			return false;
+		let result: { valid?: boolean; message?: string; coupon?: CouponTerms & { code: string } } = {};
+		try {
+			const res = await fetch('/api/coupon/validate', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ code: clean, subtotal: this.subtotal })
+			});
+			result = await res.json();
+		} catch {
+			result = { valid: false, message: 'কুপন যাচাই করা যায়নি। আবার চেষ্টা করুন।' };
 		}
+
+		if (result.valid && result.coupon) {
+			this.couponTerms = result.coupon;
+			this.couponCode = result.coupon.code;
+			this.discountPercent = result.coupon.discountType === 'percentage' ? result.coupon.discountValue : 0;
+		} else {
+			this.couponTerms = null;
+			this.couponCode = '';
+			this.discountPercent = 0;
+		}
+		this.couponMessage = result.message || '';
+		this.saveToStorage();
+		this.pushToServer();
+		return Boolean(result.valid);
 	}
 
 	clear() {
 		this.items = [];
 		this.couponCode = '';
 		this.discountPercent = 0;
+		this.couponTerms = null;
 		this.couponMessage = '';
 		this.saveToStorage();
 

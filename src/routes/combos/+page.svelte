@@ -1,5 +1,5 @@
 ﻿<script lang="ts">
-	import { StoreLayout } from '#lib';
+	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
 	import { Button, Card, CardContent, Badge } from '#lib/components/ui';
 	import { cart } from '#lib/modules/cart/cart.svelte';
 	import { Flame, ShoppingCart, Sparkles, Check } from 'lucide-svelte';

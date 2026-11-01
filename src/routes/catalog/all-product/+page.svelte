@@ -59,13 +59,13 @@
 	});
 
 	function handleTabClick(tabId: string) {
-		const newUrl = new URL(page.url);
+		const newUrl = new URL(page.url.href);
 		if (tabId === 'all') {
 			newUrl.searchParams.delete('filter');
 		} else {
 			newUrl.searchParams.set('filter', tabId);
 		}
-		goto(newUrl.toString(), { replaceState: true, keepFocus: true });
+		goto(newUrl.toString(), { replaceState: true, reset: false });
 	}
 </script>
 

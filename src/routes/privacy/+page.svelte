@@ -1,5 +1,5 @@
 ﻿<script lang="ts">
-	import { StoreLayout } from '#lib';
+	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
 	import { Card, CardContent, Badge } from '#lib/components/ui';
 	import { Shield, Lock } from 'lucide-svelte';
 	import type { PageData } from './$types';

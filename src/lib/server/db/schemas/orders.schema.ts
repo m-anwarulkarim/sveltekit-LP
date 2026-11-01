@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text, index } from 'drizzle-orm/sqlite-core';
+import { integer, sqliteTable, text, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { customers } from './customers.schema';
 import { products, productVariants } from './products.schema';
@@ -75,7 +75,7 @@ export const orders = sqliteTable(
 			.notNull()
 	},
 	(table) => [
-		index('orders_number_idx').on(table.orderNumber),
+		uniqueIndex('orders_number_uidx').on(table.orderNumber),
 		index('orders_customer_id_idx').on(table.customerId),
 		index('orders_customer_phone_idx').on(table.customerPhone),
 		index('orders_status_created_idx').on(table.status, table.createdAt),

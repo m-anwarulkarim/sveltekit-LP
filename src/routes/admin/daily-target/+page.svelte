@@ -95,7 +95,7 @@
 			const res = await fetch(
 				`/api/admin/daily-target/breakdown?startDate=${target.startDate}&endDate=${target.endDate}`
 			);
-			const resData = await res.json();
+			const resData: any = await res.json();
 			if (resData.success && Array.isArray(resData.days)) {
 				breakdownDays = resData.days;
 			}

@@ -39,21 +39,21 @@
 
 				<div class="space-y-3 text-xs">
 					<div>
-						<label class="block font-bold text-slate-700 mb-1">আপনার নাম *</label>
-						<input type="text" placeholder="উদাঃ আনোয়ারুল করিম" class="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white text-slate-800" readonly />
+						<label for="c2-name" class="block font-bold text-slate-700 mb-1">আপনার নাম *</label>
+						<input id="c2-name" type="text" placeholder="উদাঃ আনোয়ারুল করিম" class="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white text-slate-800" readonly />
 					</div>
 					<div>
-						<label class="block font-bold text-slate-700 mb-1">মোবাইল নম্বর *</label>
-						<input type="text" placeholder="০১৭xxxxxxxx" class="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white text-slate-800" readonly />
+						<label for="c2-phone" class="block font-bold text-slate-700 mb-1">মোবাইল নম্বর *</label>
+						<input id="c2-phone" type="text" placeholder="০১৭xxxxxxxx" class="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white text-slate-800" readonly />
 					</div>
 					<div>
-						<label class="block font-bold text-slate-700 mb-1">পূর্ণ ঠিকানা *</label>
-						<textarea placeholder="বাসা/হোল্ডিং, রোড, থানা, জেলা..." rows="2" class="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white text-slate-800 resize-none" readonly></textarea>
+						<label for="c2-address" class="block font-bold text-slate-700 mb-1">পূর্ণ ঠিকানা *</label>
+						<textarea id="c2-address" placeholder="বাসা/হোল্ডিং, রোড, থানা, জেলা..." rows="2" class="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white text-slate-800 resize-none" readonly></textarea>
 					</div>
 
 					<!-- Delivery Area Pills -->
 					<div>
-						<label class="block font-bold text-slate-700 mb-1.5">ডেলিভারি এলাকা</label>
+						<p class="block font-bold text-slate-700 mb-1.5">ডেলিভারি এলাকা</p>
 						<div class="grid grid-cols-2 gap-2">
 							<div class="p-2.5 rounded-xl border border-blue-500 bg-blue-50/40 text-blue-900 font-bold flex items-center justify-between text-xs cursor-pointer">
 								<span>ঢাকার ভিতরে (৳৬০)</span>

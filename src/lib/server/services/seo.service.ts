@@ -25,7 +25,7 @@ export interface BreadcrumbItem {
 export class SeoService {
 	static readonly SITE_NAME = 'AURA Acoustics & Gadgets';
 	static readonly SITE_URL = 'https://lp.haqplus.com';
-	static readonly DEFAULT_IMAGE = 'https://lp.haqplus.com/og-image.jpg';
+	static readonly DEFAULT_IMAGE = 'https://lp.haqplus.com/apple-touch-icon.png';
 
 	/**
 	 * Generates Google Rich Snippet Product Schema (JSON-LD)
@@ -57,13 +57,18 @@ export class SeoService {
 					name: this.SITE_NAME
 				}
 			},
-			aggregateRating: {
-				'@type': 'AggregateRating',
-				ratingValue: product.ratingValue || 4.9,
-				reviewCount: product.reviewCount || 148,
-				bestRating: '5',
-				worstRating: '1'
-			}
+			// Only real reviews may be declared: invented ratings break Google's structured data policy.
+			...(product.ratingValue && product.reviewCount
+				? {
+						aggregateRating: {
+							'@type': 'AggregateRating',
+							ratingValue: product.ratingValue,
+							reviewCount: product.reviewCount,
+							bestRating: '5',
+							worstRating: '1'
+						}
+					}
+				: {})
 		};
 	}
 

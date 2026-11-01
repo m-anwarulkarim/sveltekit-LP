@@ -1,6 +1,6 @@
 ﻿<script lang="ts">
 	import { page } from '$app/state';
-	import { StoreLayout } from '#lib';
+	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
 	import { Button, Badge, Card, CardContent } from '#lib/components/ui';
 	import {
 		Compass,

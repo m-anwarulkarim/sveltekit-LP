@@ -26,7 +26,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 	}
 
 	try {
-		const body = await request.json();
+		const body: any = await request.json();
 		const items = Array.isArray(body.items) ? body.items : [];
 		const couponCode = typeof body.couponCode === 'string' ? body.couponCode : '';
 		const discountPercent = Number(body.discountPercent) || 0;

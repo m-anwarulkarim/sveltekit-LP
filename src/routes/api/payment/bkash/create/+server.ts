@@ -1,23 +1,36 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getDb } from '#lib/server/db/index';
+import * as schema from '#lib/server/db/schema';
+import { eq } from 'drizzle-orm';
 import { BkashService } from '#lib/server/services/bkash.service';
+
+const NOT_PAYABLE_STATUSES = new Set(['incomplete', 'cancelled', 'returned']);
 
 export const POST: RequestHandler = async ({ request, url, platform }) => {
 	try {
-		const body = await request.json();
-		const { orderId, orderNumber, amount, customerPhone } = body;
+		const body = (await request.json()) as { orderId?: unknown };
+		const orderId = typeof body?.orderId === 'string' ? body.orderId : '';
 
-		if (!orderId || !orderNumber || !amount) {
-			return json(
-				{ success: false, message: 'অর্ডার আইডি ও টাকার পরিমাণ প্রদান করা আবশ্যক' },
-				{ status: 400 }
-			);
+		if (!orderId) {
+			return json({ success: false, message: 'অর্ডার আইডি প্রদান করা আবশ্যক' }, { status: 400 });
 		}
 
 		const db = getDb(platform);
-		const creds = await BkashService.getCredentials(db);
 
+		// The amount always comes from the saved order, never from the browser.
+		const order = await db.select().from(schema.orders).where(eq(schema.orders.id, orderId)).get();
+		if (!order || order.isTrashed || NOT_PAYABLE_STATUSES.has(order.status)) {
+			return json({ success: false, message: 'অর্ডারটি পাওয়া যায়নি' }, { status: 404 });
+		}
+		if (order.paymentMethod !== 'bkash') {
+			return json({ success: false, message: 'এই অর্ডারটি বিকাশ পেমেন্টের জন্য নয়' }, { status: 400 });
+		}
+		if (order.paymentStatus === 'paid') {
+			return json({ success: false, message: 'এই অর্ডারের পেমেন্ট আগেই সম্পন্ন হয়েছে' }, { status: 409 });
+		}
+
+		const creds = await BkashService.getCredentials(db);
 		if (!creds || !creds.appKey || !creds.appSecret || !creds.username || !creds.password) {
 			return json(
 				{ success: false, message: 'bKash গেটওয়ে এখনও অ্যাডমিন প্যানেল থেকে কনফিগার করা হয়নি' },
@@ -25,14 +38,11 @@ export const POST: RequestHandler = async ({ request, url, platform }) => {
 			);
 		}
 
-		const origin = url.origin;
-		const callbackUrl = `${origin}/api/payment/bkash/callback?orderId=${encodeURIComponent(orderId)}`;
-
 		const result = await BkashService.createPayment(creds, {
-			amount: Number(amount),
-			orderNumber: String(orderNumber),
-			customerPhone: customerPhone ? String(customerPhone) : undefined,
-			callbackUrl
+			amount: order.dueAmount || order.total,
+			orderNumber: order.orderNumber || order.id,
+			customerPhone: order.customerPhone || undefined,
+			callbackUrl: `${url.origin}/api/payment/bkash/callback?orderId=${encodeURIComponent(order.id)}`
 		});
 
 		if (result.success && result.bkashURL) {
@@ -52,10 +62,6 @@ export const POST: RequestHandler = async ({ request, url, platform }) => {
 		);
 	} catch (err: any) {
 		console.error('Error in /api/payment/bkash/create:', err);
-		return json(
-			{ success: false, message: err?.message || 'সার্ভার অভ্যন্তরীণ সমস্যা' },
-			{ status: 500 }
-		);
+		return json({ success: false, message: 'সার্ভার অভ্যন্তরীণ সমস্যা' }, { status: 500 });
 	}
 };
-

@@ -3,17 +3,20 @@ import type { RequestHandler } from './$types';
 import { getDb } from '#lib/server/db/index';
 import { NotificationService } from '#lib/server/services/notification.service';
 import * as schema from '#lib/server/db/schema';
-import { desc } from 'drizzle-orm';
+import { desc, inArray } from 'drizzle-orm';
+import { getVisibleNotificationCategories } from '#lib/constants/admin-permissions';
 
-export const GET: RequestHandler = async ({ platform }) => {
+export const GET: RequestHandler = async ({ platform, locals }) => {
 	try {
 		const db = getDb(platform);
-		const unreadCount = await NotificationService.getUnreadCount(db);
+		const categories = getVisibleNotificationCategories(locals.admin!.permissions);
+		const unreadCount = await NotificationService.getUnreadCount(db, categories);
 
 		// Get the most recent notification to check if there is a fresh alert
 		const latestRows = await db
 			.select()
 			.from(schema.notifications)
+			.where(categories ? inArray(schema.notifications.category, categories) : undefined)
 			.orderBy(desc(schema.notifications.createdAt))
 			.limit(1)
 			.all();

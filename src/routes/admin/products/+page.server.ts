@@ -2,9 +2,8 @@ import type { PageServerLoad, Actions } from './$types';
 import { getDb } from '#lib/server/db/index';
 import { ProductService } from '#lib/server/services/product.service';
 
-export const load: PageServerLoad = async ({ parent, platform }) => {
+export const load: PageServerLoad = async ({ platform }) => {
 	let debugError = null;
-	const parentData = await parent();
 	let productsList: any[] = [];
 
 	try {
@@ -13,13 +12,9 @@ export const load: PageServerLoad = async ({ parent, platform }) => {
 	} catch (e: any) {
 		console.error('Failed to load products from D1 in admin/products:', e);
 		debugError = e?.message || String(e);
-		if (Array.isArray(parentData?.products)) {
-			productsList = parentData.products;
-		}
 	}
 
 	return {
-		...parentData,
 		products: productsList,
 		debugError
 	};

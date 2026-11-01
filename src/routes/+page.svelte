@@ -1,18 +1,19 @@
 <script lang="ts">
+	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
+	import DynamicShowcase from '#lib/modules/layout/showcases/DynamicShowcase.svelte';
+	import DynamicCategoryView from '#lib/modules/layout/category-views/DynamicCategoryView.svelte';
+	import ProductSection from '#lib/modules/products/components/ProductSection.svelte';
 	import {
-		StoreLayout,
-		Hero,
-		ShopByCategory,
-		DynamicShowcase,
-		DynamicCategoryView,
-		ProductSection,
 		getBestSaleProducts,
 		getNewArrivals,
-		getPopularProducts,
-		type Product
-	} from '#lib';
+		getPopularProducts
+	} from '#lib/modules/products/products.data';
+	import type { Product } from '#lib/modules/products/types';
 	import PromotionalBannerStrip from '#lib/components/storefront/PromotionalBannerStrip.svelte';
+	import { page } from '$app/state';
 	import type { PageData } from './$types';
+
+	const SECTION_SIZE = 12;
 
 	let { data }: { data: PageData } = $props();
 
@@ -22,20 +23,29 @@
 	});
 
 	// Derived filtered lists for each section (auto updates when products change)
-	const bestSaleItems = $derived(getBestSaleProducts(allProducts));
-	const newArrivalItems = $derived(getNewArrivals(allProducts));
-	const popularItems = $derived(getPopularProducts(allProducts));
+	const bestSaleItems = $derived(getBestSaleProducts(allProducts).slice(0, SECTION_SIZE));
+	const newArrivalItems = $derived(getNewArrivals(allProducts).slice(0, SECTION_SIZE));
+	const popularItems = $derived(getPopularProducts(allProducts).slice(0, SECTION_SIZE));
+
+	const siteName = $derived(data.websiteInfo?.websiteName || 'AURA Store');
+	const pageTitle = $derived(`${siteName} | Premium Lifestyle & Essentials Store`);
+	const pageDescription = $derived(
+		`${siteName} - Next-generation lifestyle, skincare and creator essentials store in Bangladesh.`
+	);
 </script>
 
 <svelte:head>
-	<title>AURA | Premium Lifestyle & Essentials Store</title>
-	<meta
-		name="description"
-		content="AURA - Next-generation lifestyle, skincare and creator essentials store in Bangladesh."
-	/>
+	<title>{pageTitle}</title>
+	<meta name="description" content={pageDescription} />
+	<meta property="og:type" content="website" />
+	<meta property="og:title" content={pageTitle} />
+	<meta property="og:description" content={pageDescription} />
+	<meta property="og:image" content="{page.url.origin}/apple-touch-icon.png" />
 </svelte:head>
 
 <StoreLayout user={data.user}>
+	<h1 class="sr-only">{pageTitle}</h1>
+
 	<!-- 1. Hero Showcase Banner Section (Dynamic based on Admin Theme View) -->
 	<DynamicShowcase
 		activeShowcase={data.themeConfig?.views?.showcase}

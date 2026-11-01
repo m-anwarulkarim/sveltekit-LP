@@ -1,5 +1,5 @@
 ﻿<script lang="ts">
-	import { StoreLayout } from '#lib';
+	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
 	import { Button, Input, Textarea, Card, CardContent, Badge, Alert, AlertDescription } from '#lib/components/ui';
 	import { Phone, Mail, MapPin, Clock, Send, CheckCircle2, MessageSquare } from 'lucide-svelte';
 	import type { PageData } from './$types';

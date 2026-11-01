@@ -204,7 +204,7 @@ export const ROLE_PRESETS: RolePreset[] = [
  * Parses raw JSON string or string array into a clean string array of menu IDs
  */
 export function normalizePermissions(raw: any): string[] {
-	if (!raw) return ['*'];
+	if (!raw) return [];
 	if (Array.isArray(raw)) return raw;
 	if (typeof raw === 'string') {
 		try {
@@ -214,7 +214,7 @@ export function normalizePermissions(raw: any): string[] {
 			return raw.split(',').map((s) => s.trim()).filter(Boolean);
 		}
 	}
-	return ['*'];
+	return [];
 }
 
 /**
@@ -260,4 +260,40 @@ export function getMenuIdFromPath(pathname: string): string | null {
 	if (pathname.startsWith('/admin/database')) return 'database';
 	if (pathname.startsWith('/admin/admin-control')) return 'admin-control';
 	return null;
+}
+
+/** True when the admin may use at least one of the given menus. */
+export function hasAnyMenuAccess(permissions: string[], menuIds: string[]): boolean {
+	return menuIds.some((menuId) => hasMenuAccess(permissions, menuId));
+}
+
+/** Menus that work with product and page images. */
+export const MEDIA_MENU_IDS = ['gallery', 'products', 'catalog', 'customization', 'landing-pages', 'settings'];
+
+// Checked in order, so a more specific path must come before its parent.
+// 'route' means every admin may call it and the handler limits what each one receives.
+const ADMIN_API_RULES: { prefix: string; menus: string[] | 'route' }[] = [
+	{ prefix: '/api/admin/search', menus: 'route' },
+	{ prefix: '/api/admin/notifications', menus: 'route' },
+	{ prefix: '/api/admin/media/upload', menus: 'route' },
+	{ prefix: '/api/admin/media', menus: MEDIA_MENU_IDS },
+	{ prefix: '/api/admin/customers', menus: ['customers'] },
+	{ prefix: '/api/admin/courier', menus: ['orders'] },
+	{ prefix: '/api/admin/daily-target', menus: ['daily-target'] }
+];
+
+/** A new endpoint with no rule is Owner-only until someone adds one. */
+export function canAccessAdminApi(permissions: string[], role: string, path: string): boolean {
+	if (role === 'Owner') return true;
+	const rule = ADMIN_API_RULES.find((r) => path === r.prefix || path.startsWith(`${r.prefix}/`));
+	if (!rule) return false;
+	return rule.menus === 'route' || hasAnyMenuAccess(permissions, rule.menus);
+}
+
+/**
+ * Order and courier notifications include customer names and phone numbers.
+ * Returns null when the admin may see every category.
+ */
+export function getVisibleNotificationCategories(permissions: string[]): string[] | null {
+	return hasAnyMenuAccess(permissions, ['orders', 'customers']) ? null : ['system'];
 }

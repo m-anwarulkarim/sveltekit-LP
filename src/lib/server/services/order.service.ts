@@ -1,29 +1,87 @@
-import { eq, desc, and, or } from 'drizzle-orm';
+import { eq, desc, and, or, sql, ne, inArray, gte, getTableColumns } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from '../db/schema';
 import {
 	checkoutOrderSchema,
-	type CheckoutOrderInput,
+	type CheckoutOrderItemInput,
 	type UpdateOrderStatusInput
 } from '../validations/order.validation';
 import { CustomerService } from './customer.service';
 import { SecurityService } from './security.service';
 import { NotificationService } from './notification.service';
+import { SettingsService } from './settings.service';
+import { CouponService } from './coupon.service';
+import { StockService, type StockChange } from './stock.service';
+import { normalizeBdPhone } from '../utils/phone';
+import { normalizeOrderStatus } from '../../constants/order-status';
+import {
+	computeCouponDiscount,
+	computeDeliveryCharge,
+	computeOfferDiscount,
+	getBundlePrice,
+	parseCartItemId
+} from '../../utils/order-pricing';
+
+type Db = DrizzleD1Database<typeof schema>;
 
 export interface OrderCreationContext {
 	ipAddress?: string;
 	userAgent?: string;
 	source?: string;
 	deviceFingerprint?: string;
+	userId?: string | null;
+	/** Price set by a landing page offer. When present, cart pricing rules are skipped. */
+	landingOffer?: {
+		productId: string | null;
+		productName: string;
+		image?: string | null;
+		unitPrice: number;
+		quantity: number;
+		subtotal: number;
+		deliveryCharge: number;
+	};
+}
+
+export interface PricedOrderItem {
+	id: string;
+	name: string;
+	price: number;
+	quantity: number;
+	variantId: string | null;
+	variantName: string | null;
+	image: string | null;
 }
 
 export interface OrderCreationResult {
 	orderId: string;
 	orderNumber: string;
+	subtotal: number;
+	deliveryCharge: number;
+	discountAmount: number;
 	total: number;
 	customerName: string;
 	customerPhone: string;
+	items: PricedOrderItem[];
 }
+
+/** An order problem the customer can act on. Its message is safe to show them. */
+export class OrderValidationError extends Error {}
+
+/** The server's total differs from the one the customer confirmed. */
+export class OrderPriceChangedError extends OrderValidationError {
+	constructor(
+		message: string,
+		readonly total: number
+	) {
+		super(message);
+	}
+}
+
+export type AdminOrderScope = 'active' | 'incomplete' | 'pre' | 'trash';
+
+const ORDER_SEQUENCE_GROUP = 'system';
+const ORDER_SEQUENCE_KEY = 'order_sequence';
+const FIRST_ORDER_SEQUENCE = 1000;
 
 /**
  * Enterprise E-Commerce Order Service
@@ -31,87 +89,250 @@ export interface OrderCreationResult {
  */
 export class OrderService {
 	/**
-	 * Generates a clean, sequential order reference code starting from 1001.
-	 * e.g. 1001, 1002, 1003...
+	 * Returns the next order number from an atomic counter, so concurrent checkouts can
+	 * never receive the same one. The counter is seeded once from existing orders.
 	 */
-	static async generateNextOrderNumber(db: DrizzleD1Database<typeof schema>): Promise<string> {
-		try {
-			const existingOrders = await db
-				.select({ orderNumber: schema.orders.orderNumber })
-				.from(schema.orders);
+	static async generateNextOrderNumber(db: Db): Promise<string> {
+		const { storeSettings } = schema;
+		const whereCounter = and(
+			eq(storeSettings.group, ORDER_SEQUENCE_GROUP),
+			eq(storeSettings.key, ORDER_SEQUENCE_KEY)
+		);
 
-			let maxSeq = 1000;
-			for (const o of existingOrders) {
-				if (o.orderNumber) {
-					const cleaned = o.orderNumber.replace(/\D/g, '');
-					if (cleaned) {
-						const num = parseInt(cleaned, 10);
-						// Consider numbers in sequential range (>= 1000 and < 100000)
-						if (!isNaN(num) && num >= 1000 && num < 100000) {
-							if (num > maxSeq) {
-								maxSeq = num;
-							}
-						}
-					}
-				}
-			}
-			return String(maxSeq + 1);
-		} catch (err) {
-			console.error('Failed to compute next sequential order number:', err);
-			return '1001';
+		const updated = await db
+			.update(storeSettings)
+			.set({ value: sql`cast(cast(${storeSettings.value} as integer) + 1 as text)` })
+			.where(whereCounter)
+			.returning({ value: storeSettings.value })
+			.get();
+		if (updated) return updated.value;
+
+		const existing = await db.select({ orderNumber: schema.orders.orderNumber }).from(schema.orders);
+		let maxSeq = FIRST_ORDER_SEQUENCE;
+		for (const { orderNumber } of existing) {
+			const num = parseInt((orderNumber || '').replace(/\D/g, ''), 10);
+			if (num >= FIRST_ORDER_SEQUENCE && num < 100000 && num > maxSeq) maxSeq = num;
 		}
+
+		const seeded = await db
+			.insert(storeSettings)
+			.values({ group: ORDER_SEQUENCE_GROUP, key: ORDER_SEQUENCE_KEY, value: String(maxSeq + 1) })
+			.onConflictDoUpdate({
+				target: [storeSettings.group, storeSettings.key],
+				set: { value: sql`cast(cast(${storeSettings.value} as integer) + 1 as text)` }
+			})
+			.returning({ value: storeSettings.value })
+			.get();
+		return seeded.value;
 	}
 
-	static generateOrderNumber(): string {
-		const randomSuffix = Math.floor(1001 + Math.random() * 8999);
-		return String(randomSuffix);
+	/**
+	 * Rebuilds cart lines from the database so a tampered price, name or product can
+	 * never reach an order.
+	 */
+	private static async priceCartItems(db: Db, rawItems: CheckoutOrderItemInput[]) {
+		const parsed = rawItems.map((item) => ({ ...item, ...parseCartItemId(item.id) }));
+		const productIds = [...new Set(parsed.map((item) => item.productId))];
+		const variantIds = [...new Set(parsed.flatMap((item) => (item.variantId ? [item.variantId] : [])))];
+
+		const [productRows, variantRows] = await Promise.all([
+			db.select().from(schema.products).where(inArray(schema.products.id, productIds)).all(),
+			variantIds.length > 0
+				? db
+						.select()
+						.from(schema.productVariants)
+						.where(inArray(schema.productVariants.id, variantIds))
+						.all()
+				: Promise.resolve([] as (typeof schema.productVariants.$inferSelect)[])
+		]);
+		const productsById = new Map(productRows.map((p) => [p.id, p]));
+		const variantsById = new Map(variantRows.map((v) => [v.id, v]));
+
+		const requestedStock = new Map<string, number>();
+		const stockChanges: StockChange[] = [];
+		const items: PricedOrderItem[] = [];
+
+		for (const line of parsed) {
+			const product = productsById.get(line.productId);
+			if (!product || product.status === 'draft' || product.status === 'archived') {
+				throw new OrderValidationError(
+					'আপনার কার্টের একটি পণ্য আর পাওয়া যাচ্ছে না। কার্ট থেকে সরিয়ে আবার চেষ্টা করুন।'
+				);
+			}
+			if (!product.inStock && !product.isPreOrder) {
+				throw new OrderValidationError(`"${product.name}" পণ্যটি এখন স্টকে নেই।`);
+			}
+
+			const variant = line.variantId ? variantsById.get(line.variantId) : undefined;
+			if (line.variantId && variant?.productId !== product.id) {
+				throw new OrderValidationError(`"${product.name}" পণ্যের নির্বাচিত ভ্যারিয়েন্টটি পাওয়া যায়নি।`);
+			}
+
+			const units = line.quantity * line.bundle.multiplier;
+			const totalRequested = (requestedStock.get(product.id) || 0) + units;
+			requestedStock.set(product.id, totalRequested);
+			if (product.totalStock > 0 && totalRequested > product.totalStock && !product.isPreOrder) {
+				throw new OrderValidationError(`"${product.name}" পণ্যের মাত্র ${product.totalStock}টি স্টকে আছে।`);
+			}
+
+			const isBundle = line.bundle.id !== 'standard';
+			items.push({
+				id: line.id,
+				name: isBundle ? `${product.name} [${line.bundle.name}]` : product.name,
+				price: getBundlePrice(variant?.price ?? product.price, line.bundle),
+				quantity: line.quantity,
+				variantId: variant?.id ?? null,
+				variantName: variant?.name ?? null,
+				image: variant?.image || product.image || null
+			});
+			stockChanges.push({ productId: product.id, variantId: variant?.id ?? null, quantity: units });
+		}
+
+		return { items, stockChanges };
+	}
+
+	private static async isFirstOrder(db: Db, phone: string): Promise<boolean> {
+		const previous = await db
+			.select({ id: schema.orders.id })
+			.from(schema.orders)
+			.where(
+				and(
+					eq(schema.orders.customerPhone, phone),
+					ne(schema.orders.status, 'incomplete'),
+					eq(schema.orders.isTrashed, false)
+				)
+			)
+			.limit(1)
+			.get();
+		return !previous;
+	}
+
+	private static async assertPaymentMethodEnabled(db: Db, method: string) {
+		const config = await SettingsService.getPaymentConfig(db);
+		const enabled: Record<string, boolean> = {
+			cod: config.enableCOD,
+			bkash: config.enableBkash,
+			nagad: config.enableNagad,
+			card: config.enableSSLCommerz
+		};
+		if (!enabled[method]) {
+			throw new OrderValidationError('নির্বাচিত পেমেন্ট পদ্ধতিটি এখন চালু নেই।');
+		}
 	}
 
 	/**
 	 * Creates a new storefront order with atomic database persistence
 	 */
 	static async createWebOrder(
-		db: DrizzleD1Database<typeof schema>,
+		db: Db,
 		rawData: unknown,
 		context?: OrderCreationContext
 	): Promise<OrderCreationResult> {
 		// 1. Validate payload using strict Zod schema
 		const validationResult = checkoutOrderSchema.safeParse(rawData);
 		if (!validationResult.success) {
-			const firstError = validationResult.error.issues[0]?.message || 'ভুল ইনপুট প্রদান করা হয়েছে';
-			throw new Error(firstError);
+			throw new OrderValidationError(
+				validationResult.error.issues[0]?.message || 'ভুল ইনপুট প্রদান করা হয়েছে'
+			);
 		}
-
 		const data = validationResult.data;
 
 		// 2. Honeypot Bot Deterrence Check
 		if (data.website_url && data.website_url.trim().length > 0) {
-			throw new Error('স্বয়ংক্রিয় রোবট দ্বারা স্প্যাম শনাক্ত হয়েছে');
+			throw new OrderValidationError('স্বয়ংক্রিয় রোবট দ্বারা স্প্যাম শনাক্ত হয়েছে');
 		}
 
 		// 3. Sentinel IP & Phone Blacklist Check
-		if (context?.ipAddress || data.customerPhone) {
-			const checkResult = await SecurityService.isBlocked(
-				db,
-				context?.ipAddress || '127.0.0.1',
-				data.customerPhone
+		const block = await SecurityService.isBlocked(
+			db,
+			context?.ipAddress || '127.0.0.1',
+			data.customerPhone
+		);
+		if (block.blocked) {
+			throw new OrderValidationError(
+				`আপনার ফোন নম্বর বা আইপি অ্যাড্রেস সিস্টেম দ্বারা সীমাবদ্ধ (Blocked)। কারণ: ${block.reason || 'Restricted Activity'}`
 			);
-			if (checkResult.blocked) {
-				throw new Error(
-					`আপনার ফোন নম্বর বা আইপি অ্যাড্রেস সিস্টেম দ্বারা সীমাবদ্ধ (Blocked)। কারণ: ${checkResult.reason || 'Restricted Activity'}`
-				);
-			}
 		}
 
-		// 4. Compute Financial Breakdown
-		const subtotal = data.items.reduce((acc, item) => acc + item.price * item.quantity, 0);
-		const deliveryCharge = data.deliveryArea === 'inside_dhaka' ? 60 : 120;
-		const total = subtotal + deliveryCharge;
+		// 4. Compute the financial breakdown on the server
+		let items: PricedOrderItem[];
+		let stockChanges: StockChange[] = [];
+		let subtotal: number;
+		let deliveryCharge: number;
+		let discountAmount = 0;
+		let appliedCoupon: { id: string; code: string } | null = null;
+
+		const offer = context?.landingOffer;
+		if (offer) {
+			items = [
+				{
+					id: offer.productId || 'lp-prod',
+					name: offer.productName,
+					price: offer.unitPrice,
+					quantity: offer.quantity,
+					variantId: null,
+					variantName: null,
+					image: offer.image || null
+				}
+			];
+			if (offer.productId) {
+				stockChanges = [{ productId: offer.productId, quantity: offer.quantity }];
+			}
+			subtotal = offer.subtotal;
+			deliveryCharge = offer.deliveryCharge;
+		} else {
+			await this.assertPaymentMethodEnabled(db, data.paymentMethod);
+
+			const priced = await this.priceCartItems(db, data.items);
+			items = priced.items;
+			stockChanges = priced.stockChanges;
+			subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+
+			if (data.couponCode) {
+				const coupon = await CouponService.validateCoupon(db, data.couponCode, subtotal);
+				if (!coupon.valid) throw new OrderValidationError(coupon.message);
+				discountAmount += computeCouponDiscount(coupon.coupon, subtotal);
+				appliedCoupon = { id: coupon.coupon.id, code: coupon.coupon.code };
+			}
+
+			const [storeConfig, productSettings, offers] = await Promise.all([
+				SettingsService.getStoreDeliveryConfig(db),
+				SettingsService.getProductSettings(db),
+				SettingsService.getManageOffers(db)
+			]);
+
+			const activeOffer = (type: string) =>
+				offers.find((o) => o.offerType === type && o.status === 'active');
+			if (data.paymentMethod !== 'cod') {
+				discountAmount += computeOfferDiscount(activeOffer('Online Payment')?.discount, subtotal);
+			}
+			const hasFreeDeliveryOffer =
+				Boolean(activeOffer('Free Delivery (1st Order)')) &&
+				(await this.isFirstOrder(db, data.customerPhone));
+
+			deliveryCharge = computeDeliveryCharge({
+				subtotal,
+				area: data.deliveryArea,
+				store: storeConfig,
+				productSettings,
+				hasFreeDeliveryOffer
+			});
+		}
+
+		discountAmount = Math.min(discountAmount, subtotal);
+		const total = Math.max(0, subtotal - discountAmount + deliveryCharge);
+
+		if (typeof data.expectedTotal === 'number' && data.expectedTotal !== total) {
+			throw new OrderPriceChangedError(
+				`অর্ডারের মোট মূল্য পরিবর্তিত হয়ে ৳${total.toLocaleString('en-US')} হয়েছে। এই মূল্যে অর্ডার করতে আবার অর্ডার বাটনে ক্লিক করুন।`,
+				total
+			);
+		}
 
 		const orderId = crypto.randomUUID();
 		const orderNumber = await this.generateNextOrderNumber(db);
 
-		// 4. Upsert Customer in Customer 360 database
+		// 5. Upsert Customer in Customer 360 database
 		let customerId: string | undefined;
 		try {
 			const customer = await CustomerService.getOrCreateCustomer(db, {
@@ -124,37 +345,52 @@ export class OrderService {
 			console.error('Customer upsert failed:', err);
 		}
 
-		// 5. Prepare Order Record
-		const newOrder: typeof schema.orders.$inferInsert = {
-			id: orderId,
-			orderNumber,
-			customerId: customerId || null,
-			customerName: data.customerName,
-			customerEmail: data.customerPhone, // Store phone as identifier
-			customerPhone: data.customerPhone,
-			alternatePhone: data.alternatePhone || null,
-			shippingAddress: data.shippingAddress,
-			deliveryArea: data.deliveryArea,
-			subtotal,
-			deliveryCharge,
-			discountAmount: 0,
-			advancePayment: 0,
-			dueAmount: total,
-			total,
-			paymentMethod: data.paymentMethod,
-			paymentStatus: 'pending',
-			status: 'pending',
-			orderType: 'web',
-			items: JSON.stringify(data.items),
-			source: context?.source || 'Web Checkout',
-			ipAddress: context?.ipAddress || null,
-			userAgent: context?.userAgent || null,
-			deviceFingerprint: context?.deviceFingerprint || null
-		};
-
-		// Clean up previous incomplete drop-off record if customer now completed checkout
-		try {
-			await db
+		// 6. Atomic Database Execution
+		const statements: any[] = [
+			db.insert(schema.orders).values({
+				id: orderId,
+				orderNumber,
+				customerId: customerId || null,
+				userId: context?.userId || null,
+				customerName: data.customerName,
+				customerEmail: data.customerPhone, // Store phone as identifier
+				customerPhone: data.customerPhone,
+				alternatePhone: data.alternatePhone || null,
+				shippingAddress: data.shippingAddress,
+				deliveryArea: data.deliveryArea,
+				subtotal,
+				deliveryCharge,
+				discountAmount,
+				advancePayment: 0,
+				dueAmount: total,
+				total,
+				paymentMethod: data.paymentMethod,
+				paymentStatus: 'pending',
+				status: 'pending',
+				orderType: 'web',
+				items: JSON.stringify(items),
+				source: context?.source || 'Web Checkout',
+				ipAddress: context?.ipAddress || null,
+				userAgent: context?.userAgent || null,
+				deviceFingerprint: context?.deviceFingerprint || null
+			}),
+			...items.map((item, index) =>
+				db.insert(schema.orderItems).values({
+					id: crypto.randomUUID(),
+					orderId,
+					productId: stockChanges[index]?.productId ?? null,
+					variantId: item.variantId,
+					productName: item.name,
+					variantName: item.variantName,
+					unitPrice: item.price,
+					quantity: item.quantity,
+					// A landing package price can differ from unit x quantity after rounding.
+					subtotal: offer ? offer.subtotal : item.price * item.quantity,
+					productImage: item.image
+				})
+			),
+			// The customer finished checkout, so close their abandoned-checkout record.
+			db
 				.update(schema.orders)
 				.set({ isTrashed: true, recoveryStatus: 'converted' })
 				.where(
@@ -162,107 +398,73 @@ export class OrderService {
 						eq(schema.orders.customerPhone, data.customerPhone),
 						eq(schema.orders.status, 'incomplete')
 					)
-				);
-		} catch (e) {
-			// silent fallback
+				),
+			...StockService.decrementStatements(db, stockChanges)
+		];
+
+		const notes = [
+			data.orderNote?.trim(),
+			appliedCoupon ? `কুপন: ${appliedCoupon.code}` : ''
+		].filter(Boolean);
+		if (notes.length > 0) {
+			statements.push(
+				db.insert(schema.orderNotes).values({
+					id: crypto.randomUUID(),
+					orderId,
+					adminName: 'Customer (Order Note)',
+					note: notes.join(' | '),
+					callStatus: 'customer_note'
+				})
+			);
 		}
 
-		// 6. Prepare Normalized Order Items (safely check foreign key)
-		let validProductIds = new Set<string>();
-		try {
-			const existing = await db.select({ id: schema.products.id }).from(schema.products).all();
-			validProductIds = new Set(existing.map((p) => p.id));
-		} catch {
-			// ignore lookup failure
+		if (appliedCoupon) {
+			statements.push(
+				db
+					.update(schema.coupons)
+					.set({ usageCount: sql`${schema.coupons.usageCount} + 1` })
+					.where(eq(schema.coupons.id, appliedCoupon.id))
+			);
 		}
 
-		const orderItemsToInsert: (typeof schema.orderItems.$inferInsert)[] = data.items.map((item) => ({
-			id: crypto.randomUUID(),
-			orderId,
-			productId: validProductIds.has(item.id) ? item.id : null,
-			variantId: null,
-			productName: item.name,
-			variantName: item.variantName || null,
-			unitPrice: item.price,
-			quantity: item.quantity,
-			subtotal: item.price * item.quantity,
-			productImage: item.image || null
-		}));
-
-		// 7. Atomic Database Execution
 		try {
-			// If db supports batching (D1)
-			if (typeof (db as any).batch === 'function') {
-				const batchQueries: any[] = [
-					db.insert(schema.orders).values(newOrder),
-					...orderItemsToInsert.map((item) => db.insert(schema.orderItems).values(item))
-				];
-
-				if (data.orderNote && data.orderNote.trim().length > 0) {
-					batchQueries.push(
-						db.insert(schema.orderNotes).values({
-							id: crypto.randomUUID(),
-							orderId,
-							adminName: 'Customer (Order Note)',
-							note: data.orderNote.trim(),
-							callStatus: 'customer_note'
-						})
-					);
-				}
-
-				await (db as any).batch(batchQueries);
-			} else {
-				// Standard fallback (PostgreSQL / MySQL / SQLite transaction)
-				await db.insert(schema.orders).values(newOrder);
-				for (const item of orderItemsToInsert) {
-					await db.insert(schema.orderItems).values(item);
-				}
-				if (data.orderNote && data.orderNote.trim().length > 0) {
-					await db.insert(schema.orderNotes).values({
-						id: crypto.randomUUID(),
-						orderId,
-						adminName: 'Customer (Order Note)',
-						note: data.orderNote.trim(),
-						callStatus: 'customer_note'
-					});
-				}
-			}
-
-			// Update customer lifetime stats
-			if (customerId) {
-				await CustomerService.incrementCustomerOrderStats(db, customerId, total).catch((e) =>
-					console.error('Customer stats increment failed:', e)
-				);
-			}
-
-			// Trigger real admin notification
-			await NotificationService.createNotification(db, {
-				title: `নতুন অর্ডার #${orderNumber} প্রাপ্ত হয়েছে`,
-				description: `কাস্টমার ${data.customerName} (${data.customerPhone}) ${data.items.length}টি আইটেম অর্ডার করেছেন। মোট বিল: ৳${total.toLocaleString('en-US')}।`,
-				category: 'order',
-				link: `/admin/orders/${orderId}`
-			}).catch((e) => console.error('Failed to trigger order notification:', e));
-		} catch (dbErr: any) {
+			await db.batch(statements as [any, ...any[]]);
+		} catch (dbErr) {
 			console.error('Failed to persist order to database:', dbErr);
-			throw new Error(`অর্ডার সংরক্ষণ করা সম্ভব হয়নি: ${dbErr?.message || 'Database error'}`);
+			throw new Error('Order persistence failed');
 		}
+
+		// 7. Non-critical follow-ups must never fail an order that is already saved
+		if (customerId) {
+			await CustomerService.incrementCustomerOrderStats(db, customerId, total).catch((e) =>
+				console.error('Customer stats increment failed:', e)
+			);
+		}
+
+		await NotificationService.createNotification(db, {
+			title: `নতুন অর্ডার #${orderNumber} প্রাপ্ত হয়েছে`,
+			description: `কাস্টমার ${data.customerName} (${data.customerPhone}) ${items.length}টি আইটেম অর্ডার করেছেন। মোট বিল: ৳${total.toLocaleString('en-US')}।`,
+			category: 'order',
+			link: `/admin/orders/${orderId}`
+		}).catch((e) => console.error('Failed to trigger order notification:', e));
 
 		return {
 			orderId,
 			orderNumber,
+			subtotal,
+			deliveryCharge,
+			discountAmount,
 			total,
 			customerName: data.customerName,
-			customerPhone: data.customerPhone
+			customerPhone: data.customerPhone,
+			items
 		};
 	}
 
 	/**
 	 * Retrieves all orders from the database with optional status/trashed filtering
 	 */
-	static async getAllOrders(
-		db: DrizzleD1Database<typeof schema>,
-		options?: { isTrashed?: boolean; status?: string }
-	) {
+	static async getAllOrders(db: Db, options?: { isTrashed?: boolean; status?: string }) {
 		const conditions: any[] = [];
 		if (options?.isTrashed !== undefined) {
 			conditions.push(eq(schema.orders.isTrashed, options.isTrashed));
@@ -279,72 +481,183 @@ export class OrderService {
 		return await query.orderBy(desc(schema.orders.createdAt)).all();
 	}
 
+	/** Orders for one admin list page, limited on the server to what that page shows. */
+	static async listAdminOrders(db: Db, scope: AdminOrderScope) {
+		const { orders } = schema;
+		const conditions = {
+			active: eq(orders.isTrashed, false),
+			incomplete: and(eq(orders.isTrashed, false), eq(orders.status, 'incomplete')),
+			pre: or(gte(orders.total, 2500), eq(orders.status, 'pre_order'), eq(orders.source, 'Pre-Order')),
+			trash: or(eq(orders.isTrashed, true), inArray(orders.status, ['cancelled', 'refunded']))
+		};
+
+		const rows = await db
+			.select()
+			.from(orders)
+			.where(conditions[scope])
+			.orderBy(desc(orders.createdAt))
+			.all();
+
+		return rows.map((o) => ({
+			...o,
+			isTrashed: Boolean(o.isTrashed),
+			status: normalizeOrderStatus(o.status)
+		}));
+	}
+
+	/** Only the columns the dashboard reads, across all orders. */
+	static async listDashboardOrders(db: Db) {
+		const { items, userAgent, deviceFingerprint, ipAddress, ...columns } = getTableColumns(schema.orders);
+		const rows = await db
+			.select(columns)
+			.from(schema.orders)
+			.orderBy(desc(schema.orders.createdAt))
+			.all();
+		return rows.map((o) => ({ ...o, status: normalizeOrderStatus(o.status) }));
+	}
+
+	/** Lightweight index for matching a phone number's past orders while creating an order. */
+	static async listOrderHistoryIndex(db: Db) {
+		return await db
+			.select({
+				id: schema.orders.id,
+				status: schema.orders.status,
+				total: schema.orders.total,
+				createdAt: schema.orders.createdAt,
+				customerEmail: schema.orders.customerEmail
+			})
+			.from(schema.orders)
+			.where(eq(schema.orders.isTrashed, false))
+			.orderBy(desc(schema.orders.createdAt))
+			.all();
+	}
+
+	static async listCustomerOrderHistory(db: Db, customerEmail: string, excludeOrderId: string) {
+		return await db
+			.select({
+				id: schema.orders.id,
+				status: schema.orders.status,
+				total: schema.orders.total,
+				createdAt: schema.orders.createdAt
+			})
+			.from(schema.orders)
+			.where(and(eq(schema.orders.customerEmail, customerEmail), ne(schema.orders.id, excludeOrderId)))
+			.orderBy(desc(schema.orders.createdAt))
+			.limit(50)
+			.all();
+	}
+
 	/**
-	 * Retrieves an order by its ID or human-readable order number
+	 * Retrieves an order by its ID or human-readable order number. Admin use only:
+	 * the result contains customer details.
 	 */
-	static async getOrderById(db: DrizzleD1Database<typeof schema>, idOrNumber: string) {
+	static async getOrderById(db: Db, idOrNumber: string, options?: { includeTrashed?: boolean }) {
 		const clean = (idOrNumber || '').trim();
 		const withoutHash = clean.replace(/^#/, '');
 
-		// 1. Direct UUID or Exact Match
 		const order = await db
-			.select()
-			.from(schema.orders)
-			.where(and(eq(schema.orders.id, clean), eq(schema.orders.isTrashed, false)))
-			.get();
-
-		if (order) {
-			const items = await db
-				.select()
-				.from(schema.orderItems)
-				.where(eq(schema.orderItems.orderId, order.id));
-			const notes = await db
-				.select()
-				.from(schema.orderNotes)
-				.where(eq(schema.orderNotes.orderId, order.id))
-				.orderBy(desc(schema.orderNotes.createdAt));
-
-			return { ...order, itemsList: items, notesList: notes };
-		}
-
-		// 2. Fallback lookup by order number (with or without hash)
-		const orderByNumber = await db
 			.select()
 			.from(schema.orders)
 			.where(
 				and(
 					or(
+						eq(schema.orders.id, clean),
 						eq(schema.orders.orderNumber, clean),
 						eq(schema.orders.orderNumber, withoutHash)
 					),
-					eq(schema.orders.isTrashed, false)
+					options?.includeTrashed ? undefined : eq(schema.orders.isTrashed, false)
 				)
 			)
 			.get();
 
-		if (!orderByNumber) return null;
+		if (!order) return null;
+
+		const [items, notes] = await Promise.all([
+			db.select().from(schema.orderItems).where(eq(schema.orderItems.orderId, order.id)),
+			db
+				.select()
+				.from(schema.orderNotes)
+				.where(eq(schema.orderNotes.orderId, order.id))
+				.orderBy(desc(schema.orderNotes.createdAt))
+		]);
+
+		return { ...order, itemsList: items, notesList: notes };
+	}
+
+	/**
+	 * Confirmation page data. The lookup is by the unguessable order UUID only, and the
+	 * result leaves out every customer detail.
+	 */
+	static async getPublicOrderSummary(db: Db, orderId: string) {
+		return (
+			(await db
+				.select({
+					orderNumber: schema.orders.orderNumber,
+					items: schema.orders.items,
+					subtotal: schema.orders.subtotal,
+					deliveryCharge: schema.orders.deliveryCharge,
+					discountAmount: schema.orders.discountAmount,
+					total: schema.orders.total,
+					status: schema.orders.status,
+					paymentStatus: schema.orders.paymentStatus
+				})
+				.from(schema.orders)
+				.where(and(eq(schema.orders.id, orderId), eq(schema.orders.isTrashed, false)))
+				.get()) ?? null
+		);
+	}
+
+	/**
+	 * Public order tracking. Needs both the order number and the matching phone number,
+	 * because order numbers are sequential and easy to guess.
+	 */
+	static async trackPublicOrder(db: Db, orderNumber: string, phone: string) {
+		const number = orderNumber.trim().replace(/^#/, '');
+		const normalizedPhone = normalizeBdPhone(phone);
+		if (!number || !normalizedPhone) return null;
+
+		const order = await db
+			.select({
+				id: schema.orders.id,
+				orderNumber: schema.orders.orderNumber,
+				status: schema.orders.status,
+				createdAt: schema.orders.createdAt,
+				total: schema.orders.total,
+				courierProvider: schema.orders.courierProvider,
+				trackingCode: schema.orders.trackingCode
+			})
+			.from(schema.orders)
+			.where(
+				and(
+					or(eq(schema.orders.orderNumber, number), eq(schema.orders.orderNumber, `#${number}`)),
+					eq(schema.orders.customerPhone, normalizedPhone),
+					eq(schema.orders.isTrashed, false)
+				)
+			)
+			.orderBy(desc(schema.orders.createdAt))
+			.limit(1)
+			.get();
+
+		if (!order) return null;
 
 		const items = await db
-			.select()
+			.select({
+				name: schema.orderItems.productName,
+				quantity: schema.orderItems.quantity,
+				price: schema.orderItems.unitPrice
+			})
 			.from(schema.orderItems)
-			.where(eq(schema.orderItems.orderId, orderByNumber.id));
-		const notes = await db
-			.select()
-			.from(schema.orderNotes)
-			.where(eq(schema.orderNotes.orderId, orderByNumber.id))
-			.orderBy(desc(schema.orderNotes.createdAt));
+			.where(eq(schema.orderItems.orderId, order.id))
+			.all();
 
-		return { ...orderByNumber, itemsList: items, notesList: notes };
+		const { id: _id, ...publicOrder } = order;
+		return { ...publicOrder, items };
 	}
 
 	/**
 	 * Updates order lifecycle status and registers an admin audit note
 	 */
-	static async updateOrderStatus(
-		db: DrizzleD1Database<typeof schema>,
-		input: UpdateOrderStatusInput,
-		actorName = 'Admin Staff'
-	) {
+	static async updateOrderStatus(db: Db, input: UpdateOrderStatusInput, actorName = 'Admin Staff') {
 		const order = await db
 			.select()
 			.from(schema.orders)
@@ -352,7 +665,7 @@ export class OrderService {
 			.get();
 
 		if (!order) {
-			throw new Error('অর্ডার পাওয়া যায়নি');
+			throw new Error('অর্ডার পাওয়া যায়নি');
 		}
 
 		const updatePayload: Record<string, any> = {
@@ -368,6 +681,7 @@ export class OrderService {
 			updatePayload.deliveredAt = new Date();
 		}
 
+		await StockService.syncForStatusChange(db, order, input.status);
 		await db.update(schema.orders).set(updatePayload).where(eq(schema.orders.id, input.orderId));
 
 		if (input.note && input.note.trim().length > 0) {
@@ -383,4 +697,3 @@ export class OrderService {
 		return { success: true, updatedStatus: input.status };
 	}
 }
-

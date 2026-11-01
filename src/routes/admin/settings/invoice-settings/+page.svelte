@@ -58,7 +58,7 @@
 				}
 			});
 
-			const responseData = await res.json();
+			const responseData: any = await res.json();
 			isSaving = false;
 
 			if (responseData.type === 'success' || res.ok) {

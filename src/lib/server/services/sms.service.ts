@@ -34,7 +34,7 @@ export class SmsService {
 		}
 
 		if (!config || !config.apiKey) {
-			console.log(`[SMS Simulation to ${phone}]: ${message}`);
+			console.log('[SMS Simulation]: no gateway configured, message not sent');
 			return { success: true, messageId: 'simulated-local-id' };
 		}
 
@@ -59,7 +59,7 @@ export class SmsService {
 			}
 
 			// Generic HTTP Gateway
-			console.log(`[Generic SMS to ${phone}]: ${message}`);
+			console.log('[Generic SMS]: dispatched');
 			return { success: true, messageId: 'generic-dispatched' };
 		} catch (err: any) {
 			console.error('Failed to send SMS:', err);

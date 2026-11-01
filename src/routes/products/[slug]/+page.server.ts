@@ -1,3 +1,6 @@
+import { publicProductColumns } from '#lib/server/services/product.service';
+import { plainText } from '#lib/utils/html-safe';
+import { sanitizeRichText } from '#lib/utils/sanitize-html';
 import type { PageServerLoad, Actions } from './$types';
 import { error, fail } from '@sveltejs/kit';
 import type { Product } from '#lib/modules/products/types';
@@ -24,7 +27,7 @@ export const load: PageServerLoad = async (event) => {
 
 		// Find targeted product by slug or id
 		const rawProduct = await db
-			.select()
+			.select(publicProductColumns)
 			.from(schema.products)
 			.where(eq(schema.products.slug, slug))
 			.get();
@@ -41,7 +44,7 @@ export const load: PageServerLoad = async (event) => {
 			// Fetch real reviews from D1 database
 			productReviews = await ReviewService.listProductReviews(db, rawProduct.id);
 
-			const ratingNum = rawProduct.rating ? (rawProduct.rating > 5 ? rawProduct.rating / 10 : rawProduct.rating) : 5;
+			const ratingNum = rawProduct.rating ? (rawProduct.rating > 5 ? rawProduct.rating / 10 : rawProduct.rating) : 0;
 			const discountPercent =
 				rawProduct.originalPrice > rawProduct.price
 					? Math.round(((rawProduct.originalPrice - rawProduct.price) / rawProduct.originalPrice) * 100)
@@ -64,21 +67,21 @@ export const load: PageServerLoad = async (event) => {
 				image: rawProduct.image || '/images/placeholder.svg',
 				badge: rawProduct.badge || 'Published',
 				badgeColor: 'bg-blue-600 text-white',
-				features: specs.length > 0 ? specs.map((s) => s.value) : (rawProduct.description ? [rawProduct.description] : []),
-				description: rawProduct.description || rawProduct.name,
+				features: specs.length > 0 ? specs.map((s) => s.value) : (rawProduct.description ? [plainText(rawProduct.description)] : []),
+				description: sanitizeRichText(rawProduct.description) || rawProduct.name,
 				inStock: Boolean(rawProduct.inStock)
 			};
 
 			// Query related products from same category or published products
 			const rawRelated = await db
-				.select()
+				.select(publicProductColumns)
 				.from(schema.products)
 				.where(ne(schema.products.id, rawProduct.id))
 				.limit(6)
 				.all();
 
 			relatedProducts = rawRelated.map((p) => {
-				const rNum = p.rating ? (p.rating > 5 ? p.rating / 10 : p.rating) : 5;
+				const rNum = p.rating ? (p.rating > 5 ? p.rating / 10 : p.rating) : 0;
 				const dPercent = p.originalPrice > p.price ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100) : 0;
 				return {
 					id: p.id,
@@ -91,14 +94,14 @@ export const load: PageServerLoad = async (event) => {
 					price: p.price,
 					originalPrice: p.originalPrice || p.price,
 					rating: rNum,
-					reviewsCount: p.reviewsCount || 100,
+					reviewsCount: p.reviewsCount || 0,
 					discountPercent: dPercent,
 					deliveryTime: '12-24 HOURS',
 					image: p.image || '/images/placeholder.svg',
 					badge: p.badge || 'Published',
 					badgeColor: 'bg-blue-600 text-white',
 					features: [],
-					description: p.description || p.name,
+					description: plainText(p.description) || p.name,
 					inStock: Boolean(p.inStock)
 				};
 			});
@@ -111,10 +114,15 @@ export const load: PageServerLoad = async (event) => {
 		throw error(404, 'প্রোডাক্টটি খুঁজে পাওয়া যায়নি');
 	}
 
+	const realRating =
+		productReviews.length > 0
+			? productReviews.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) / productReviews.length
+			: 0;
+
 	const productJsonLd = SeoService.getProductJsonLd({
 		name: product.name,
 		description:
-			product.description ||
+			plainText(product.description, 300) ||
 			product.tagline ||
 			`${product.name} - কিনুন আসল কোয়ালিটির পণ্য সবচেয়ে কম মূল্যে AURA স্টোরে।`,
 		slug: product.slug,
@@ -122,8 +130,9 @@ export const load: PageServerLoad = async (event) => {
 		regularPrice: product.originalPrice,
 		image: product.image,
 		sku: product.id,
-		ratingValue: product.rating,
-		reviewCount: product.reviewsCount,
+		// Google only accepts ratings from real customer reviews.
+		ratingValue: realRating,
+		reviewCount: productReviews.length,
 		inStock: product.inStock
 	});
 

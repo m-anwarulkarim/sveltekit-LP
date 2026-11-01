@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { PRODUCT_BUNDLES, getBundlePrice } from '#lib/utils/order-pricing';
 	import type { Product } from '#lib/modules/products/types.ts';
 	import { cart } from '#lib/modules/cart/cart.svelte';
 	import { Button, Badge, Separator } from '#lib/components/ui';
@@ -29,30 +30,7 @@
 	let quantity = $state(1);
 	let isAdded = $state(false);
 
-	// Dynamic variant definitions with actual price multipliers and discounts
-	const variantOptions = [
-		{
-			id: 'standard',
-			name: 'Standard Edition',
-			subtitle: '১টি একক প্যাক',
-			multiplier: 1,
-			discount: 0
-		},
-		{
-			id: 'combo',
-			name: 'Combo Value Pack (Save 10%)',
-			subtitle: '২টি প্যাক • ১০% অতিরিক্ত ছাড়',
-			multiplier: 2,
-			discount: 0.10
-		},
-		{
-			id: 'pro-duo',
-			name: 'Pro Duo Bundle (Save 15%)',
-			subtitle: 'সেরা ভ্যালু কম্বো • ১৫% ছাড়',
-			multiplier: 2,
-			discount: 0.15
-		}
-	];
+	const variantOptions = PRODUCT_BUNDLES;
 
 	let selectedVariantId = $state('standard');
 	const selectedVariant = $derived(
@@ -60,13 +38,7 @@
 	);
 
 	// Dynamic Price Calculation
-	const activePrice = $derived.by(() => {
-		const base = product.price * selectedVariant.multiplier;
-		if (selectedVariant.discount > 0) {
-			return Math.round(base * (1 - selectedVariant.discount));
-		}
-		return base;
-	});
+	const activePrice = $derived(getBundlePrice(product.price, selectedVariant));
 
 	const activeOriginalPrice = $derived.by(() => {
 		return (product.originalPrice || product.price) * selectedVariant.multiplier;

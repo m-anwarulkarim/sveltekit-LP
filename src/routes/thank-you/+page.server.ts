@@ -4,14 +4,14 @@ import { OrderService } from '#lib/server/services/order.service';
 import { SettingsService } from '#lib/server/services/settings.service';
 
 export const load: PageServerLoad = async (event) => {
-	const orderId = event.url.searchParams.get('order_id') || `AUR-${Math.floor(100000 + Math.random() * 900000)}`;
+	const orderId = event.url.searchParams.get('order_id') || '';
 	let dbOrder = null;
 	let orderSettings = null;
 
 	try {
 		const db = getDb(event.platform);
 		if (orderId) {
-			dbOrder = await OrderService.getOrderById(db, orderId);
+			dbOrder = await OrderService.getPublicOrderSummary(db, orderId);
 		}
 		orderSettings = await SettingsService.getOrderSettings(db);
 	} catch (e) {
@@ -20,7 +20,6 @@ export const load: PageServerLoad = async (event) => {
 
 	return {
 		user: event.locals.user ?? null,
-		orderId,
 		dbOrder,
 		orderSettings
 	};

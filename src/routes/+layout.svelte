@@ -11,6 +11,7 @@
 	import { initGtm, trackGtmPageView } from '#lib/client/gtm';
 	import { captureAttribution } from '#lib/client/attribution';
 	import { cart } from '#lib/modules/cart/cart.svelte';
+	import { jsonLdScript, safeCssColor } from '#lib/utils/html-safe';
 
 	let { data, children }: LayoutProps = $props();
 
@@ -40,7 +41,12 @@
 
 <svelte:head>
 	{#if data?.themeConfig?.appearance?.colors}
-		{@html `<style>:root { --brand-primary: ${data.themeConfig.appearance.colors.primary || '#e8007c'}; --brand-secondary: ${data.themeConfig.appearance.colors.secondary || '#00c153'}; --brand-tertiary: ${data.themeConfig.appearance.colors.tertiary || '#ff00ae'}; }</style>`}
+		{@html `<style>:root { --brand-primary: ${safeCssColor(data.themeConfig.appearance.colors.primary, '#e8007c')}; --brand-secondary: ${safeCssColor(data.themeConfig.appearance.colors.secondary, '#00c153')}; --brand-tertiary: ${safeCssColor(data.themeConfig.appearance.colors.tertiary, '#ff00ae')}; }</style>`}
+	{/if}
+	{#if !page.url.pathname.startsWith('/admin')}
+		<link rel="canonical" href="{page.url.origin}{page.url.pathname}" />
+		<meta property="og:url" content="{page.url.origin}{page.url.pathname}" />
+		<meta property="og:site_name" content={data?.websiteInfo?.websiteName || 'AURA Store'} />
 	{/if}
 	{#if data?.websiteInfo?.faviconUrl}
 		<link rel="icon" href={data.websiteInfo.faviconUrl} />
@@ -51,11 +57,11 @@
 	{/if}
 	{#if data?.websiteJsonLd}
 		<!-- Google Structured Data: WebSite Schema -->
-		{@html `<script type="application/ld+json">${JSON.stringify(data.websiteJsonLd)}</script>`}
+		{@html jsonLdScript(data.websiteJsonLd)}
 	{/if}
 	{#if data?.organizationJsonLd}
 		<!-- Google Structured Data: Organization Schema -->
-		{@html `<script type="application/ld+json">${JSON.stringify(data.organizationJsonLd)}</script>`}
+		{@html jsonLdScript(data.organizationJsonLd)}
 	{/if}
 	{#if data?.googleConsole?.verificationToken}
 		<!-- Google Search Console Verification -->

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { submitAction } from '#lib/client/submit-action';
 	import { Button, Badge, Card, CardHeader, CardTitle, CardContent, Input, Textarea, Separator } from '#lib/components/ui';
 	import {
 		ShieldCheck,
@@ -212,7 +213,7 @@
 			fd.append('productId', product?.id || '');
 			const packageLabel = currentPackage ? currentPackage.title : 'একক অফার';
 			fd.append('productName', `${product?.name || config?.headline || 'Landing Product'} (${packageLabel})`);
-			fd.append('price', String(Math.round(unitPrice / (currentPackage?.qty || 1))));
+			if (currentPackage) fd.append('packageIndex', String(selectedPackageIndex));
 
 			const notes: string[] = [];
 			notes.push(`প্যাকেজ: ${packageLabel} (মূল্য: ${formatTaka(unitPrice)})`);
@@ -220,27 +221,14 @@
 			if (altPhone.trim()) notes.push(`বিকল্প নম্বর: ${altPhone.trim()}`);
 			fd.append('orderNote', notes.join(' | '));
 
-			const response = await fetch('?/placeOrder', {
-				method: 'POST',
-				body: fd
-			});
+			const result = await submitAction('?/placeOrder', fd);
 
-			const res: any = await response.json();
-
-			if (response.ok && res?.data?.success) {
-				const orderId = res.data.orderId || res.data.orderNumber;
-				toast.success('আপনার অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে!');
-				window.location.href = `/thank-you?order_id=${orderId}`;
+			if (result.ok) {
+				toast.success('আপনার অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে!');
+				window.location.href = `/thank-you?order_id=${result.data.orderId}`;
 			} else {
-				// Fallback navigation
-				toast.success('আপনার অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে!');
-				const fallbackId = `LP-${Math.floor(100000 + Math.random() * 900000)}`;
-				window.location.href = `/thank-you?order_id=${fallbackId}`;
+				toast.error(result.message);
 			}
-		} catch (err) {
-			console.error('Order submission error:', err);
-			const fallbackId = `LP-${Math.floor(100000 + Math.random() * 900000)}`;
-			window.location.href = `/thank-you?order_id=${fallbackId}`;
 		} finally {
 			isSubmitting = false;
 		}

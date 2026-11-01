@@ -41,7 +41,7 @@
 				method: 'POST',
 				body: fd
 			});
-			const result = await res.json();
+			const result: any = await res.json();
 			if (result?.type === 'success' || res.ok) {
 				toast.success('ডিফল্ট সেটিংস সফলভাবে রিসেট হয়েছে!');
 				window.location.reload();

@@ -1,6 +1,7 @@
 import type { LayoutServerLoad } from './$types';
 import { SeoService } from '#lib/server/services/seo.service';
 import { getDb } from '#lib/server/db/index';
+import { cached } from '#lib/server/cache';
 import {
 	ThemeCustomizationService,
 	DEFAULT_THEME_CONFIG
@@ -53,7 +54,7 @@ export const load: LayoutServerLoad = async (event) => {
 
 	try {
 		const db = getDb(event.platform);
-		const [tc, pc, gtm, cats, sCfg, pCfg, wInfo, popup, gConsole] = await Promise.all([
+		const [tc, pc, gtm, cats, sCfg, pCfg, wInfo, popup, gConsole] = await cached('root-layout', 30_000, () => Promise.all([
 			ThemeCustomizationService.getThemeConfig(db).catch(() => DEFAULT_THEME_CONFIG),
 			PixelService.getPublicConfig(db).catch(() => pixelConfig),
 			GtmService.getPublicConfig(db).catch(() => gtmConfig),
@@ -63,7 +64,7 @@ export const load: LayoutServerLoad = async (event) => {
 			SettingsService.getWebsiteInfo(db).catch(() => DEFAULT_WEBSITE_INFO),
 			CustomizationService.getActivePopupForStorefront(db).catch(() => null),
 			SettingsService.getGoogleConsoleConfig(db).catch(() => DEFAULT_GOOGLE_CONSOLE_CONFIG)
-		]);
+		]));
 		if (tc) themeConfig = tc;
 		if (pc) pixelConfig = pc;
 		if (gtm) gtmConfig = gtm;

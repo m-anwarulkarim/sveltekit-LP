@@ -1,10 +1,9 @@
 import type { LayoutServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
+import { count, sql } from 'drizzle-orm';
 import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
-import { desc, eq } from 'drizzle-orm';
 import { normalizeOrderStatus } from './_data';
-import { getLiveOrders, syncLiveOrders } from '#lib/server/orders-store';
 import { NotificationService } from '#lib/server/services/notification.service';
 import { AdminProfileService } from '#lib/server/services/admin-profile.service';
 import { SecurityService } from '#lib/server/services/security.service';
@@ -12,214 +11,247 @@ import { CustomerService } from '#lib/server/services/customer.service';
 import {
 	ADMIN_MENU_LIST,
 	hasMenuAccess,
-	normalizePermissions,
-	getMenuIdFromPath
+	getMenuIdFromPath,
+	getVisibleNotificationCategories
 } from '#lib/constants/admin-permissions';
 
-export const load: LayoutServerLoad = async ({ platform, cookies, url }) => {
-	let productsList: any[] = [];
-	let ordersList: any[] = [];
-	let reviewsList: any[] = [];
-	let newsletterList: any[] = [];
-	let unreadNotificationsCount = 0;
-	let blockedIpsCount = 0;
-	let customersCount = 0;
-	let landingPagesCount = 0;
-	let galleryCount = 0;
-	let isD1Connected = false;
-	let ownerProfile: any = null;
-	let currentAdmin: any = null;
-	let allAdminUsers: any[] = [];
+const PRE_CONFIRMATION_STATUSES = new Set([
+	'pending',
+	'incomplete',
+	'no_response',
+	'good_no_response',
+	'busy',
+	'hold',
+	'recall'
+]);
 
-	try {
-		const db = getDb(platform);
-		isD1Connected = true;
+const POST_CONFIRMATION_STATUSES = new Set([
+	'processing',
+	'confirmed',
+	'printed',
+	'entry_done',
+	'shipped',
+	'delivered',
+	'partial_delivered',
+	'pending_return',
+	'returned',
+	'missing'
+]);
 
-		// 1. Fetch real products from D1
-		productsList = await db.select().from(schema.products).orderBy(desc(schema.products.createdAt)).all();
+const DHAKA_UTC_OFFSET_MS = 6 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
-		// 2. Fetch real orders from D1
-		const rawOrders = await db.select().from(schema.orders).orderBy(desc(schema.orders.createdAt)).all();
-		ordersList = rawOrders.map((o) => ({
-			...o,
-			isTrashed: Boolean(o.isTrashed),
-			status: normalizeOrderStatus(o.status)
-		}));
+function startOfTodayInDhaka(now = Date.now()): number {
+	return Math.floor((now + DHAKA_UTC_OFFSET_MS) / DAY_MS) * DAY_MS - DHAKA_UTC_OFFSET_MS;
+}
 
-		// Synchronize singleton in-memory live orders
-		syncLiveOrders(ordersList);
+function percent(part: number, whole: number): string {
+	return whole > 0 ? ((part / whole) * 100).toFixed(1) : '0.0';
+}
 
-		// 3. Fetch real reviews & newsletter
-		reviewsList = await db.select().from(schema.reviews).orderBy(desc(schema.reviews.createdAt)).all();
-		newsletterList = await db.select().from(schema.newsletter).orderBy(desc(schema.newsletter.createdAt)).all();
+/** One aggregate query replaces loading every order row on every admin page. */
+async function loadOrderSummary(db: ReturnType<typeof getDb>) {
+	const { orders } = schema;
+	const rows = await db
+		.select({
+			status: orders.status,
+			isTrashed: orders.isTrashed,
+			orderCount: count(),
+			revenue: sql<number>`coalesce(sum(${orders.total}), 0)`,
+			todayCount: sql<number>`sum(case when ${orders.createdAt} >= ${startOfTodayInDhaka()} then 1 else 0 end)`,
+			highValueCount: sql<number>`sum(case when ${orders.total} > 3000 then 1 else 0 end)`
+		})
+		.from(orders)
+		.groupBy(orders.status, orders.isTrashed)
+		.all();
 
-		// 4. Fetch live unread notifications count, blocked IPs count & landing pages count
-		unreadNotificationsCount = await NotificationService.getUnreadCount(db);
-		blockedIpsCount = await SecurityService.countBlocked(db).catch(() => 0);
-		customersCount = await CustomerService.countCustomers(db).catch(() => 0);
-		try {
-			const lps = await db.select({ id: schema.landingPages.id }).from(schema.landingPages).all();
-			landingPagesCount = lps.length;
-		} catch (e) {
-			console.error('Failed to count landing pages in layout:', e);
-		}
-		try {
-			const media = await db.select({ id: schema.mediaAssets.id }).from(schema.mediaAssets).all();
-			galleryCount = media.length || 16;
-		} catch {
-			galleryCount = 16;
-		}
+	const summary = {
+		totalOrders: 0,
+		totalRevenue: 0,
+		activeOrders: 0,
+		confirmedCount: 0,
+		confirmedRevenue: 0,
+		deliveredCount: 0,
+		deliveredRevenue: 0,
+		cancelledOrReturned: 0,
+		todayOrdersCount: 0,
+		trashedCount: 0,
+		sidebar: { web: 0, incomplete: 0, orderList: 0, trashed: 0, preOrders: 0 },
+		pendingWebOrders: 0
+	};
 
-		// 5. Fetch Owner profile (Avatar, Name, etc.)
-		ownerProfile = await AdminProfileService.getOwnerProfile(db);
+	for (const row of rows) {
+		const status = normalizeOrderStatus(row.status);
+		const orderCount = Number(row.orderCount) || 0;
+		const revenue = Number(row.revenue) || 0;
 
-		// 6. Fetch Admin Users & Current Active Admin Session
-		const rawAdmins = await db
-			.select()
-			.from(schema.adminUsers)
-			.where(eq(schema.adminUsers.isTrashed, false))
-			.all();
-
-		allAdminUsers = rawAdmins.map((a) => ({
-			id: a.id,
-			name: a.name,
-			username: a.username,
-			email: a.email,
-			role: a.role,
-			access: a.access,
-			permissions: normalizePermissions(a.permissions),
-			avatarBg: a.avatarBg,
-			avatarText: a.avatarText
-		}));
-
-		const activeAdminId = cookies.get('admin_active_id');
-		if (activeAdminId) {
-			const found = allAdminUsers.find((a) => a.id === activeAdminId);
-			if (found && found.access !== 'Suspended') {
-				currentAdmin = found;
-			}
+		if (row.isTrashed) {
+			summary.trashedCount += orderCount;
+			summary.sidebar.trashed += orderCount;
+			continue;
 		}
 
-		if (!currentAdmin) {
-			currentAdmin = {
-				id: 'owner',
-				name: ownerProfile?.name || 'thecolorlighthouse',
-				username: ownerProfile?.username || 'thecolorlighthouse',
-				email: ownerProfile?.email || 'contact@thecolorlighthouse.com',
-				role: 'Owner',
-				access: 'Allowed',
-				permissions: ['*'],
-				avatarBg: 'bg-black text-pink-500 border-pink-500/40',
-				avatarText: 'COLOR LIGHT'
-			};
+		summary.totalOrders += orderCount;
+		summary.todayOrdersCount += Number(row.todayCount) || 0;
+		summary.sidebar.preOrders += Number(row.highValueCount) || 0;
+
+		if (status !== 'cancelled') {
+			summary.activeOrders += orderCount;
+			summary.totalRevenue += revenue;
+		} else {
+			summary.sidebar.trashed += orderCount;
 		}
-	} catch (error) {
-		console.error('Failed to query D1 database:', error);
-		ordersList = getLiveOrders().map((o: any) => ({
-			...o,
-			isTrashed: Boolean(o.isTrashed)
-		}));
-		currentAdmin = {
-			id: 'owner',
-			name: 'thecolorlighthouse',
-			username: 'thecolorlighthouse',
-			email: 'contact@thecolorlighthouse.com',
-			role: 'Owner',
-			access: 'Allowed',
-			permissions: ['*'],
-			avatarBg: 'bg-black text-pink-500 border-pink-500/40',
-			avatarText: 'COLOR LIGHT'
-		};
+		if (status === 'delivered') {
+			summary.deliveredCount += orderCount;
+			summary.deliveredRevenue += revenue;
+		}
+		if (status === 'cancelled' || status === 'returned') {
+			summary.cancelledOrReturned += orderCount;
+		}
+		if (POST_CONFIRMATION_STATUSES.has(status)) {
+			summary.confirmedCount += orderCount;
+			summary.confirmedRevenue += revenue;
+			summary.sidebar.orderList += orderCount;
+		}
+		if (PRE_CONFIRMATION_STATUSES.has(status)) {
+			summary.pendingWebOrders += orderCount;
+			if (status === 'incomplete') summary.sidebar.incomplete += orderCount;
+			else summary.sidebar.web += orderCount;
+		}
 	}
 
-	// 7. Route Guarding based on Menu Permissions
+	return summary;
+}
+
+async function countRows(db: ReturnType<typeof getDb>, table: any): Promise<number> {
+	const [row] = await db.select({ value: count() }).from(table).all();
+	return Number(row?.value) || 0;
+}
+
+export const load: LayoutServerLoad = async ({ platform, url, locals }) => {
+	// hooks.server.ts has already rejected anyone without a valid admin session.
+	const currentAdmin = locals.admin!;
+
+	// Route Guarding based on Menu Permissions
 	const targetMenuId = getMenuIdFromPath(url.pathname);
-	if (targetMenuId && !hasMenuAccess(currentAdmin.permissions, targetMenuId)) {
-		// Find first permitted menu
-		const allowedFirst = ADMIN_MENU_LIST.find((m) => hasMenuAccess(currentAdmin.permissions, m.id));
-		const redirectPath = allowedFirst?.path || '/admin';
+	const isOwnerOnlyTarget = ADMIN_MENU_LIST.find((m) => m.id === targetMenuId)?.isOwnerOnly;
+	const canAccess = (menuId: string, ownerOnly?: boolean) =>
+		hasMenuAccess(currentAdmin.permissions, menuId) && (!ownerOnly || currentAdmin.role === 'Owner');
+
+	if (targetMenuId && !canAccess(targetMenuId, isOwnerOnlyTarget)) {
+		const allowedFirst = ADMIN_MENU_LIST.find((m) => canAccess(m.id, m.isOwnerOnly));
+		const redirectPath = allowedFirst?.path || '/admin/profile';
 		if (url.pathname !== redirectPath) {
 			throw redirect(303, redirectPath);
 		}
 	}
 
-	// Calculate telemetry from active (non-trashed) orders
-	const activeNonTrashed = ordersList.filter((o) => !o.isTrashed);
-	const totalOrders = activeNonTrashed.length;
-	const activeOrders = activeNonTrashed.filter((o) => o.status !== 'cancelled');
-	const totalRevenue = activeOrders.reduce((acc, o) => acc + (o.total || 0), 0);
+	let isD1Connected = false;
+	let ownerProfile: Awaited<ReturnType<typeof AdminProfileService.getProfileById>> = null;
+	let unreadNotificationsCount = 0;
+	let blockedIpsCount = 0;
+	let customersCount = 0;
+	let landingPagesCount = 0;
+	let galleryCount = 0;
+	let productCount = 0;
+	let inStockProducts = 0;
+	let reviewCount = 0;
+	let subscriberCount = 0;
+	let summary: Awaited<ReturnType<typeof loadOrderSummary>> | null = null;
 
-	const deliveredOrders = activeNonTrashed.filter((o) => o.status === 'delivered');
-	const deliveredRevenue = deliveredOrders.reduce((acc, o) => acc + (o.total || 0), 0);
+	try {
+		const db = getDb(platform);
+		const [
+			orderSummary,
+			products,
+			stocked,
+			reviews,
+			subscribers,
+			landingPages,
+			media,
+			unread,
+			blocked,
+			customers,
+			profile
+		] = await Promise.all([
+			loadOrderSummary(db),
+			countRows(db, schema.products),
+			db
+				.select({ value: count() })
+				.from(schema.products)
+				.where(sql`${schema.products.inStock} = 1`)
+				.all(),
+			countRows(db, schema.reviews),
+			countRows(db, schema.newsletter),
+			countRows(db, schema.landingPages).catch(() => 0),
+			countRows(db, schema.mediaAssets).catch(() => 0),
+			NotificationService.getUnreadCount(db, getVisibleNotificationCategories(currentAdmin.permissions)),
+			SecurityService.countBlocked(db).catch(() => 0),
+			CustomerService.countCustomers(db).catch(() => 0),
+			AdminProfileService.getProfileById(db, currentAdmin.id)
+		]);
 
-	const postConfirmationStatuses = [
-		'processing',
-		'confirmed',
-		'printed',
-		'entry_done',
-		'shipped',
-		'delivered',
-		'partial_delivered',
-		'pending_return',
-		'returned',
-		'missing'
-	];
-	const confirmedOrders = activeNonTrashed.filter((o) => postConfirmationStatuses.includes(o.status));
-	const confirmedRevenue = confirmedOrders.reduce((acc, o) => acc + (o.total || 0), 0);
+		isD1Connected = true;
+		summary = orderSummary;
+		productCount = products;
+		inStockProducts = Number(stocked[0]?.value) || 0;
+		reviewCount = reviews;
+		subscriberCount = subscribers;
+		landingPagesCount = landingPages;
+		galleryCount = media;
+		unreadNotificationsCount = unread;
+		blockedIpsCount = blocked;
+		customersCount = customers;
+		ownerProfile = profile;
+	} catch (error) {
+		console.error('Failed to query D1 database:', error);
+	}
 
-	const cancelledOrReturnedOrders = activeNonTrashed.filter((o) => ['cancelled', 'returned'].includes(o.status));
-	const pendingWebOrders = activeNonTrashed.filter((o) =>
-		['pending', 'incomplete', 'no_response', 'no_response_3', 'good_no_response', 'busy', 'hold', 'recall'].includes(
-			o.status
-		)
-	);
-
-	const now = new Date();
-	const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-	const todayOrders = activeNonTrashed.filter((o) => {
-		const t = o.createdAt ? new Date(o.createdAt).getTime() : 0;
-		return t >= startOfToday;
-	});
-	const todayOrdersCount = todayOrders.length;
-	const trashedCount = ordersList.filter((o) => o.isTrashed).length;
-
-	const confirmedRate = totalOrders > 0 ? ((confirmedOrders.length / totalOrders) * 100).toFixed(1) : '0.0';
-	const deliveredRate = totalOrders > 0 ? ((deliveredOrders.length / totalOrders) * 100).toFixed(1) : '0.0';
-	const cancelledRate = totalOrders > 0 ? ((cancelledOrReturnedOrders.length / totalOrders) * 100).toFixed(1) : '0.0';
-	const aov = totalOrders > 0 ? Math.round(totalRevenue / (activeOrders.length || 1)) : 0;
+	const totalOrders = summary?.totalOrders ?? 0;
+	const activeOrders = summary?.activeOrders ?? 0;
+	const totalRevenue = summary?.totalRevenue ?? 0;
 
 	return {
 		isD1Connected,
 		ownerProfile,
 		currentAdmin,
-		allAdminUsers,
 		unreadNotificationsCount,
 		blockedIpsCount,
 		customersCount,
 		landingPagesCount,
 		galleryCount,
-		products: productsList,
-		orders: ordersList,
-		reviews: reviewsList,
-		newsletter: newsletterList,
+		sidebarCounts: {
+			web: summary?.sidebar.web ?? 0,
+			incomplete: summary?.sidebar.incomplete ?? 0,
+			orderList: summary?.sidebar.orderList ?? 0,
+			trashed: summary?.sidebar.trashed ?? 0,
+			preOrders: summary?.sidebar.preOrders ?? 0,
+			products: productCount
+		},
+		entityCounts: {
+			products: productCount,
+			orders: totalOrders + (summary?.trashedCount ?? 0),
+			reviews: reviewCount,
+			newsletter: subscriberCount
+		},
 		stats: {
 			totalRevenue,
-			confirmedRevenue,
+			confirmedRevenue: summary?.confirmedRevenue ?? 0,
 			totalOrders,
-			confirmedCount: confirmedOrders.length,
-			confirmedRate,
-			deliveredCount: deliveredOrders.length,
-			deliveredRevenue,
-			deliveredRate,
-			cancelledCount: cancelledOrReturnedOrders.length,
-			cancelledRate,
-			aov,
-			todayOrdersCount,
-			webOrdersCount: pendingWebOrders.length,
-			orderListCount: confirmedOrders.length,
-			inStockProducts: productsList.filter((p) => p.inStock).length,
-			totalSubscribers: newsletterList.length,
-			trashedCount
+			confirmedCount: summary?.confirmedCount ?? 0,
+			confirmedRate: percent(summary?.confirmedCount ?? 0, totalOrders),
+			deliveredCount: summary?.deliveredCount ?? 0,
+			deliveredRevenue: summary?.deliveredRevenue ?? 0,
+			deliveredRate: percent(summary?.deliveredCount ?? 0, totalOrders),
+			cancelledCount: summary?.cancelledOrReturned ?? 0,
+			cancelledRate: percent(summary?.cancelledOrReturned ?? 0, totalOrders),
+			aov: totalOrders > 0 ? Math.round(totalRevenue / (activeOrders || 1)) : 0,
+			todayOrdersCount: summary?.todayOrdersCount ?? 0,
+			webOrdersCount: summary?.pendingWebOrders ?? 0,
+			orderListCount: summary?.confirmedCount ?? 0,
+			inStockProducts,
+			totalSubscribers: subscriberCount,
+			trashedCount: summary?.trashedCount ?? 0
 		}
 	};
 };

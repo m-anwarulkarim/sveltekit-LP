@@ -16,7 +16,7 @@
 	import { Button, Input } from '#lib/components/ui';
 	import type { DailyBusinessSummaryData } from '#lib/server/services/report.service';
 
-	let { data } = $props<{ data: { summary: DailyBusinessSummaryData } }>();
+	let { data }: { data: { summary: DailyBusinessSummaryData } } = $props();
 
 	const todayStr = new Date().toISOString().split('T')[0];
 
@@ -65,8 +65,7 @@
 		isGenerating = true;
 		try {
 			await goto(`/admin/reports/daily-business-summary?startDate=${startDate}&endDate=${endDate}`, {
-				keepFocus: true,
-				noScroll: true,
+				reset: false,
 				invalidateAll: true
 			});
 			toast.success('রিপোর্ট ডাটা সফলভাবে তৈরি হয়েছে');

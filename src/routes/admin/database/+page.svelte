@@ -30,25 +30,25 @@
 	<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
 		<div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs">
 			<span class="text-xs text-slate-500 font-bold block">products টেবিল</span>
-			<span class="text-2xl font-black text-slate-900 font-['Outfit'] mt-1 block">{(data.products || []).length}</span>
+			<span class="text-2xl font-black text-slate-900 font-['Outfit'] mt-1 block">{data.entityCounts?.products ?? 0}</span>
 			<span class="text-[11px] text-slate-400 mt-0.5 block">সক্রিয় প্রোডাক্টস</span>
 		</div>
 
 		<div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs">
 			<span class="text-xs text-slate-500 font-bold block">orders টেবিল</span>
-			<span class="text-2xl font-black text-slate-900 font-['Outfit'] mt-1 block">{(data.orders || []).length}</span>
+			<span class="text-2xl font-black text-slate-900 font-['Outfit'] mt-1 block">{data.entityCounts?.orders ?? 0}</span>
 			<span class="text-[11px] text-slate-400 mt-0.5 block">মোট রেকর্ড</span>
 		</div>
 
 		<div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs">
 			<span class="text-xs text-slate-500 font-bold block">reviews টেবিল</span>
-			<span class="text-2xl font-black text-slate-900 font-['Outfit'] mt-1 block">{(data.reviews || []).length}</span>
+			<span class="text-2xl font-black text-slate-900 font-['Outfit'] mt-1 block">{data.entityCounts?.reviews ?? 0}</span>
 			<span class="text-[11px] text-slate-400 mt-0.5 block">কাস্টমার মতামত</span>
 		</div>
 
 		<div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs">
 			<span class="text-xs text-slate-500 font-bold block">newsletter টেবিল</span>
-			<span class="text-2xl font-black text-slate-900 font-['Outfit'] mt-1 block">{(data.newsletter || []).length}</span>
+			<span class="text-2xl font-black text-slate-900 font-['Outfit'] mt-1 block">{data.entityCounts?.newsletter ?? 0}</span>
 			<span class="text-[11px] text-slate-400 mt-0.5 block">ভিআইপি গ্রাহক</span>
 		</div>
 	</div>

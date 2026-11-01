@@ -440,7 +440,7 @@ export const productsData: Product[] = [
 ];
 
 // 100% Dynamic Helper functions for real storefront sections
-export function getBestSaleProducts(all: Product[] = productsData): Product[] {
+export function getBestSaleProducts(all: Product[] = []): Product[] {
 	if (!all || all.length === 0) return [];
 	const matched = all.filter(
 		(p) =>
@@ -452,7 +452,7 @@ export function getBestSaleProducts(all: Product[] = productsData): Product[] {
 	return matched.length >= 4 ? matched : all.slice(0, 8);
 }
 
-export function getNewArrivals(all: Product[] = productsData): Product[] {
+export function getNewArrivals(all: Product[] = []): Product[] {
 	if (!all || all.length === 0) return [];
 	const matched = all.filter(
 		(p) =>
@@ -463,7 +463,7 @@ export function getNewArrivals(all: Product[] = productsData): Product[] {
 	return matched.length >= 4 ? matched : all.slice(0, 8);
 }
 
-export function getPopularProducts(all: Product[] = productsData): Product[] {
+export function getPopularProducts(all: Product[] = []): Product[] {
 	if (!all || all.length === 0) return [];
 	const matched = all.filter(
 		(p) =>

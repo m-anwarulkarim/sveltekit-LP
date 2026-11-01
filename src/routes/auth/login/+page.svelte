@@ -2,7 +2,7 @@
 	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
 	import { Button } from '#lib/components/ui/button';
 	import { Input } from '#lib/components/ui/input';
-	import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '#lib/components/ui/card';
+	import { Card, CardHeader, CardDescription, CardContent, CardFooter } from '#lib/components/ui/card';
 	import { Mail, Lock, LogIn, UserPlus, Eye, EyeOff, ShieldCheck, AlertCircle, ArrowLeft } from 'lucide-svelte';
 	import type { ActionData } from './$types';
 
@@ -37,7 +37,7 @@
 					<div class="mx-auto w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#5845eb] mb-3 shadow-2xs">
 						<LogIn class="w-6 h-6" />
 					</div>
-					<CardTitle class="text-2xl font-black text-slate-900 tracking-tight">লগইন করুন</CardTitle>
+					<h1 class="text-2xl font-black text-slate-900 tracking-tight">লগইন করুন</h1>
 					<CardDescription class="text-xs text-slate-500 mt-1 font-medium">
 						আপনার অর্ডার ট্র্যাক করতে এবং দ্রুত কেনাকাটা করতে একাউন্টে প্রবেশ করুন
 					</CardDescription>

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { submitAction } from '#lib/client/submit-action';
+	import { computeDeliveryCharge, computeOfferDiscount } from '#lib/utils/order-pricing';
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
 	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
@@ -95,39 +97,20 @@
 		)
 	);
 
-	const offerDiscount = $derived.by(() => {
-		if (paymentMethod !== 'cod' && onlinePaymentOffer?.discount) {
-			const dStr = String(onlinePaymentOffer.discount).trim();
-			if (dStr.endsWith('%')) {
-				const pct = parseFloat(dStr) || 0;
-				return Math.round((cart.subtotal * pct) / 100);
-			} else {
-				return Math.min(cart.subtotal, parseFloat(dStr) || 0);
-			}
-		}
-		return 0;
-	});
+	const offerDiscount = $derived(
+		paymentMethod !== 'cod' ? computeOfferDiscount(onlinePaymentOffer?.discount, cart.subtotal) : 0
+	);
 
-	// Dynamic delivery charge based on productSettings, district, storeConfig and first-order offer
-	const deliveryFee = $derived.by(() => {
-		if (data?.productSettings?.enableDeliveryCharge === false) return 0;
-		if (data?.productSettings?.productType === 'digital') return 0;
-		if (cart.subtotal === 0) return 0;
-		if (firstOrderFreeDeliveryOffer) return 0; // First order free delivery
-		if (
-			data?.storeConfig?.enableFreeDelivery &&
-			cart.subtotal >= (data?.storeConfig?.freeShippingThreshold || 2000)
-		) {
-			return 0; // Free delivery over threshold
-		}
-		if (district === 'dhaka') {
-			return data?.storeConfig?.insideDhakaCharge ?? 60;
-		}
-		if (district === 'sub_area' || district === 'savar' || district === 'gazipur' || district === 'narayanganj') {
-			return data?.storeConfig?.subAreaCharge ?? 100;
-		}
-		return data?.storeConfig?.outsideDhakaCharge ?? 120;
-	});
+	// Same rules the server applies when the order is placed
+	const deliveryFee = $derived(
+		computeDeliveryCharge({
+			subtotal: cart.subtotal,
+			area: district === 'dhaka' ? 'inside_dhaka' : 'outside_dhaka',
+			store: data?.storeConfig,
+			productSettings: data?.productSettings as any,
+			hasFreeDeliveryOffer: Boolean(firstOrderFreeDeliveryOffer)
+		})
+	);
 
 	const grandTotal = $derived(
 		Math.max(0, cart.subtotal - cart.discountAmount - offerDiscount + deliveryFee)
@@ -206,27 +189,26 @@
 		}, 1200);
 	}
 
+	// Set when the server reports a different total, so the next click confirms that price.
+	let confirmedServerTotal = $state<number | null>(null);
+
 	async function handlePlaceOrder(e: Event) {
-		console.log('[DEBUG] handlePlaceOrder invoked!');
 		e.preventDefault();
 		errorMessage = '';
 
 		if (data.isLoginRequired && !data.user) {
-			console.log('[DEBUG] Login required for checkout');
 			errorMessage = 'এই স্টোরে অর্ডার সম্পন্ন করতে অ্যাকাউন্টে লগইন থাকা আবশ্যক।';
 			goto('/account?redirectTo=/checkout');
 			return;
 		}
 
 		if (!name.trim()) {
-			console.log('[DEBUG] Name missing');
 			errorMessage = 'অনুগ্রহ করে আপনার নাম লিখুন।';
 			return;
 		}
 
 		const cleanPhone = phone.trim().replace(/\D/g, '');
 		if (cleanPhone.length < 11) {
-			console.log('[DEBUG] Phone invalid:', cleanPhone);
 			errorMessage = 'অনুগ্রহ করে সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন (যেমন: 017xxxxxxxx)।';
 			return;
 		}
@@ -241,19 +223,16 @@
 		}
 
 		if (requireAddress && !address.trim()) {
-			console.log('[DEBUG] Address missing');
 			errorMessage = 'অনুগ্রহ করে পূর্ণ ডেলিভারি ঠিকানা লিখুন।';
 			return;
 		}
 
 		if (cart.items.length === 0) {
-			console.log('[DEBUG] Cart is empty');
 			errorMessage = 'আপনার শপিং ব্যাগ খালি! অনুগ্রহ করে পণ্য যোগ করুন।';
 			return;
 		}
 
 		isSubmitting = true;
-		console.log('[DEBUG] Posting to ?/placeOrder with items:', cart.items.length);
 
 		try {
 			const formData = new FormData();
@@ -269,100 +248,72 @@
 			formData.append('orderNote', fullNotes.join(' | '));
 			formData.append('website_url', honeypot);
 			formData.append('source', getAttributionSource());
+			if (cart.couponCode) formData.append('couponCode', cart.couponCode);
+			formData.append('expectedTotal', String(confirmedServerTotal ?? grandTotal));
 			formData.append(
 				'items',
 				JSON.stringify(
 					cart.items.map((item) => ({
 						id: item.id,
-						name: item.name,
-						price: item.price,
 						quantity: item.quantity,
-						variantId: item.variantId || null,
-						variantName: item.variantName || null,
-						image: item.image || null
+						variantId: item.variantId || null
 					}))
 				)
 			);
 
-			const response = await fetch('?/placeOrder', {
-				method: 'POST',
-				headers: {
-					'x-sveltekit-action': 'true'
-				},
-				body: formData
-			});
+			const result = await submitAction('?/placeOrder', formData);
 
-			const rawText = await response.text();
-			console.log('[DEBUG] rawText:', rawText);
-			const result = deserialize(rawText);
-			console.log('[DEBUG] result:', JSON.stringify(result));
-
-			if (result.type === 'success' && result.data) {
-				const orderData = result.data as any;
-				const confirmedId =
-					orderData.orderNumber ||
-					orderData.orderId ||
-					`AUR-${Math.floor(100000 + Math.random() * 900000)}`;
-
-				const orderSnapshot = {
-					orderId: confirmedId,
-					customerName: name.trim(),
-					customerPhone: phone.trim(),
-					customerAddress: address.trim(),
-					customerCity: district === 'dhaka' ? 'ঢাকা সিটি (Dhaka)' : 'ঢাকার বাইরে (Outside Dhaka)',
-					paymentMethod:
-						paymentMethod === 'cod'
-							? 'ক্যাশ অন ডেলিভারি (Cash on Delivery)'
-							: 'বিকাশ অনলাইন পেমেন্ট (bKash)',
-					items: [...cart.items],
-					subtotal: cart.subtotal,
-					deliveryCharge: deliveryFee,
-					discountAmount: cart.discountAmount,
-					total: orderData.total || grandTotal,
-					createdAt: new Date().toISOString()
-				};
-
-				// If customer chose bKash, initialize bKash PGW URL
-				if (paymentMethod === 'bkash' && orderData.orderId) {
-					try {
-						const bkashRes = await fetch('/api/payment/bkash/create', {
-							method: 'POST',
-							headers: { 'Content-Type': 'application/json' },
-							body: JSON.stringify({
-								orderId: orderData.orderId,
-								orderNumber: orderData.orderNumber || confirmedId,
-								amount: orderData.total || grandTotal,
-								customerPhone: phone.trim()
-							})
-						});
-						const bkashData = await bkashRes.json();
-						if (bkashData.success && bkashData.bkashURL) {
-							cart.setLastOrder(orderSnapshot);
-							cart.clear();
-							window.location.href = bkashData.bkashURL;
-							return;
-						} else {
-							toast.error(bkashData.message || 'বিকাশ গেটওয়ে সংযোগে সমস্যা হয়েছে');
-						}
-					} catch (bkErr) {
-						console.error('Failed to trigger bKash redirect:', bkErr);
-					}
-				}
-
-				cart.setLastOrder(orderSnapshot);
-				cart.clear();
-				goto(`/thank-you?order_id=${confirmedId}`);
-			} else if (result.type === 'failure' && result.data) {
-				errorMessage = (result.data as any).message || 'অর্ডারে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।';
-			} else {
-				// Fallback navigation
-				const fallbackId = `AUR-${Math.floor(100000 + Math.random() * 900000)}`;
-				cart.clear();
-				goto(`/thank-you?order_id=${fallbackId}`);
+			if (!result.ok) {
+				errorMessage = result.message;
+				confirmedServerTotal = result.data?.code === 'PRICE_CHANGED' ? Number(result.data.total) : null;
+				return;
 			}
-		} catch (err: any) {
-			console.error('Checkout error:', err);
-			errorMessage = err?.message || 'নেটওয়ার্কে সমস্যা হয়েছে। আবার চেষ্টা করুন।';
+
+			confirmedServerTotal = null;
+			const orderData = result.data;
+			const orderSnapshot = {
+				orderId: orderData.orderNumber,
+				customerName: name.trim(),
+				customerPhone: phone.trim(),
+				customerAddress: address.trim(),
+				customerCity: district === 'dhaka' ? 'ঢাকা সিটি (Dhaka)' : 'ঢাকার বাইরে (Outside Dhaka)',
+				paymentMethod:
+					paymentMethod === 'cod'
+						? 'ক্যাশ অন ডেলিভারি (Cash on Delivery)'
+						: 'বিকাশ অনলাইন পেমেন্ট (bKash)',
+				items: [...cart.items],
+				subtotal: cart.subtotal,
+				deliveryCharge: deliveryFee,
+				discountAmount: cart.discountAmount,
+				total: orderData.total,
+				createdAt: new Date().toISOString()
+			};
+
+			// If customer chose bKash, initialize bKash PGW URL
+			if (paymentMethod === 'bkash') {
+				try {
+					const bkashRes = await fetch('/api/payment/bkash/create', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ orderId: orderData.orderId })
+					});
+					const bkashData: any = await bkashRes.json();
+					if (bkashData.success && bkashData.bkashURL) {
+						cart.setLastOrder(orderSnapshot);
+						cart.clear();
+						window.location.href = bkashData.bkashURL;
+						return;
+					}
+					toast.error(bkashData.message || 'বিকাশ গেটওয়ে সংযোগে সমস্যা হয়েছে');
+				} catch (bkErr) {
+					console.error('Failed to trigger bKash redirect:', bkErr);
+					toast.error('বিকাশ গেটওয়ে সংযোগে সমস্যা হয়েছে');
+				}
+			}
+
+			cart.setLastOrder(orderSnapshot);
+			cart.clear();
+			goto(`/thank-you?order_id=${orderData.orderId}`);
 		} finally {
 			isSubmitting = false;
 		}
@@ -503,7 +454,7 @@
 						<div class="p-3.5 bg-emerald-50/80 border border-emerald-200/80 rounded-2xl flex items-center justify-between text-xs font-bold text-emerald-800 shadow-2xs">
 							<span class="flex items-center gap-2">
 								<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-								লগইনকৃত অ্যাকাউন্ট: {data.user.name || data.user.phone || data.user.email}
+								লগইনকৃত অ্যাকাউন্ট: {data.user.name || data.user.email}
 							</span>
 							<span class="text-[10px] uppercase tracking-wider bg-white px-2 py-0.5 rounded-full border border-emerald-200 shadow-2xs">
 								VERIFIED MEMBER
@@ -957,7 +908,7 @@
 								</div>
 
 								{#if cart.couponMessage}
-									<div class="text-[11px] font-semibold {cart.discountPercent > 0 ? 'text-emerald-600' : 'text-rose-600'} px-1">
+									<div class="text-[11px] font-semibold {cart.couponCode ? 'text-emerald-600' : 'text-rose-600'} px-1">
 										{cart.couponMessage}
 									</div>
 								{/if}

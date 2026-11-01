@@ -1,8 +1,13 @@
+import { publicProductColumns } from '#lib/server/services/product.service';
+import { plainText } from '#lib/utils/html-safe';
 import type { PageServerLoad } from './$types';
 import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { CustomizationService, CategoryService } from '#lib/server/services';
+
+// Enough for every home section; the full catalog lives on /catalog/all-product.
+const HOME_PRODUCT_LIMIT = 60;
 
 export const load: PageServerLoad = async (event) => {
 	let dbProducts: any[] = [];
@@ -13,14 +18,15 @@ export const load: PageServerLoad = async (event) => {
 	try {
 		const db = getDb(event.platform);
 		const rawProducts = await db
-			.select()
+			.select(publicProductColumns)
 			.from(schema.products)
 			.where(eq(schema.products.status, 'published'))
 			.orderBy(desc(schema.products.createdAt))
+			.limit(HOME_PRODUCT_LIMIT)
 			.all();
 
 		dbProducts = rawProducts.map((p) => {
-			const ratingNum = p.rating ? (p.rating > 5 ? p.rating / 10 : p.rating) : 5;
+			const ratingNum = p.rating ? (p.rating > 5 ? p.rating / 10 : p.rating) : 0;
 			const discountPercent =
 				p.originalPrice > p.price
 					? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100)
@@ -37,14 +43,14 @@ export const load: PageServerLoad = async (event) => {
 				price: p.price,
 				originalPrice: p.originalPrice || p.price,
 				rating: ratingNum,
-				reviewsCount: p.reviewsCount || 100,
+				reviewsCount: p.reviewsCount || 0,
 				discountPercent: discountPercent,
 				deliveryTime: '12-24 HOURS',
 				image: p.image || '/images/placeholder.svg',
 				badge: p.badge || 'Published',
 				badgeColor: 'bg-blue-600 text-white',
 				features: [],
-				description: p.description || p.name,
+				description: plainText(p.description) || p.name,
 				inStock: Boolean(p.inStock)
 			};
 		});

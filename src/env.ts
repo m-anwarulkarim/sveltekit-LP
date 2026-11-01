@@ -4,7 +4,7 @@ import { defineEnvVars } from '@sveltejs/kit/env';
  * SvelteKit Environment Variables Definition
  *
  * NOTE: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_DATABASE_ID, CLOUDFLARE_D1_TOKEN, USE_REMOTE_D1,
- * R2_PUBLIC_URL, R2_BUCKET_NAME are intentionally NOT listed in defineEnvVars here.
+ * R2_PUBLIC_URL, R2_BUCKET_NAME, BETTER_AUTH_SECRET, ADMIN_BOOTSTRAP_PASSWORD are intentionally NOT listed in defineEnvVars here.
  * They are accessed via platform.env / process.env.
  * Listing them in defineEnvVars causes SvelteKit runtime validator to treat them as
  * MISSING on the Cloudflare Edge Worker and throw an Error 1101 uncaught exception!
@@ -12,10 +12,6 @@ import { defineEnvVars } from '@sveltejs/kit/env';
 export const variables = defineEnvVars({
 	ORIGIN: {
 		description: 'The app origin (base URL), e.g. `http://localhost:5173` or `https://lp.haqplus.com`.'
-	},
-	BETTER_AUTH_SECRET: {
-		description:
-			'Secret used to sign tokens. For production use 32 characters generated with high entropy. See [Better Auth installation](https://www.better-auth.com/docs/installation).'
 	}
 });
 
@@ -45,7 +41,10 @@ export interface EnvVariables {
 	R2_BUCKET_NAME?: string;
 
 	/** Better-Auth encryption secret (32+ high entropy characters) */
-	BETTER_AUTH_SECRET: string;
+	BETTER_AUTH_SECRET?: string;
+
+	/** Break-glass Owner password. Remove it once the Owner has set a real password. */
+	ADMIN_BOOTSTRAP_PASSWORD?: string;
 }
 
 export type Env = EnvVariables;

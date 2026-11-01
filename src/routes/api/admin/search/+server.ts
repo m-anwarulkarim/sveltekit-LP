@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
 import { like, or, and, eq, ne } from 'drizzle-orm';
+import { ADMIN_MENU_LIST, getMenuIdFromPath, hasMenuAccess } from '#lib/constants/admin-permissions';
 
 const ADMIN_NAV_LINKS = [
 	{ title: 'Dashboard Overview', path: '/admin', group: 'Navigation', icon: 'dashboard', keywords: 'home overview analytics বিক্রয়' },
@@ -39,13 +40,22 @@ const ADMIN_NAV_LINKS = [
 	{ title: 'Admin Profile', path: '/admin/profile', group: 'System', icon: 'profile', keywords: 'my account password প্রোফাইল' }
 ];
 
-export const GET: RequestHandler = async ({ url, platform }) => {
+export const GET: RequestHandler = async ({ url, platform, locals }) => {
+	const admin = locals.admin!;
+	const canUse = (menuId: string) => admin.role === 'Owner' || hasMenuAccess(admin.permissions, menuId);
+	const navLinks = ADMIN_NAV_LINKS.filter((link) => {
+		const menuId = getMenuIdFromPath(link.path);
+		if (!menuId) return true;
+		const isOwnerOnly = ADMIN_MENU_LIST.find((m) => m.id === menuId)?.isOwnerOnly;
+		return canUse(menuId) && (!isOwnerOnly || admin.role === 'Owner');
+	});
+
 	const q = (url.searchParams.get('q') || '').trim();
 	const cleanQ = q.replace(/^#/, '').trim();
 
 	// If empty query, return top suggested navigation shortcuts
 	if (!cleanQ) {
-		const suggestions = ADMIN_NAV_LINKS.slice(0, 8);
+		const suggestions = navLinks.slice(0, 8);
 		return json({
 			query: '',
 			orders: [],
@@ -58,7 +68,7 @@ export const GET: RequestHandler = async ({ url, platform }) => {
 	const lowerQ = cleanQ.toLowerCase();
 
 	// 1. Search Navigation Shortcuts
-	const matchedNav = ADMIN_NAV_LINKS.filter(
+	const matchedNav = navLinks.filter(
 		(item) =>
 			item.title.toLowerCase().includes(lowerQ) ||
 			item.group.toLowerCase().includes(lowerQ) ||
@@ -72,6 +82,7 @@ export const GET: RequestHandler = async ({ url, platform }) => {
 		// 2. Search Orders in Cloudflare D1
 		let matchedOrders: any[] = [];
 		try {
+			if (canUse('orders'))
 			matchedOrders = await db
 				.select({
 					id: schema.orders.id,
@@ -104,6 +115,7 @@ export const GET: RequestHandler = async ({ url, platform }) => {
 		// 3. Search Products in Cloudflare D1
 		let matchedProducts: any[] = [];
 		try {
+			if (canUse('products'))
 			matchedProducts = await db
 				.select({
 					id: schema.products.id,
@@ -134,6 +146,7 @@ export const GET: RequestHandler = async ({ url, platform }) => {
 		// 4. Search Customers in Cloudflare D1
 		let matchedCustomers: any[] = [];
 		try {
+			if (canUse('customers'))
 			matchedCustomers = await db
 				.select({
 					id: schema.customers.id,

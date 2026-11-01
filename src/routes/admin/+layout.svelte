@@ -37,7 +37,7 @@
 			try {
 				const res = await fetch('/api/admin/notifications/poll');
 				if (res.ok) {
-					const result = await res.json();
+					const result: any = await res.json();
 					if (result.success) {
 						const freshUnread = result.unreadCount ?? 0;
 						const latest = result.latest;

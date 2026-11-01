@@ -63,7 +63,7 @@
 		avatarText: string;
 		avatarUrl?: string | null;
 		permissions?: string[];
-		plainPasswordHint?: string;
+		hasPassword?: boolean;
 	}
 
 	let { data }: { data?: any } = $props();
@@ -512,7 +512,6 @@
 				access: newAdminAccess,
 				isTrashed: false,
 				permissions: [...newAdminPermissions],
-				plainPasswordHint: newAdminPassword.trim(),
 				avatarBg: 'bg-[#5845eb] text-white border-indigo-300',
 				avatarText: initials
 			};
@@ -568,7 +567,6 @@
 						role: editRole,
 						access: editAccess,
 						permissions: [...editPermissions],
-						plainPasswordHint: editPassword.trim() ? editPassword.trim() : a.plainPasswordHint
 					};
 				}
 				return a;
@@ -606,7 +604,6 @@
 				if (a.id === passwordAdmin!.id) {
 					return {
 						...a,
-						plainPasswordHint: resetPasswordValue.trim()
 					};
 				}
 				return a;
@@ -872,21 +869,7 @@
 
 								<!-- Password Hint & Quick View -->
 								<td class="py-3.5 px-4">
-									{#if admin.plainPasswordHint}
-										<div class="flex items-center gap-1.5">
-											<code class="px-2 py-1 rounded bg-slate-100 border border-slate-200 font-mono text-[11px] text-slate-700">
-												{admin.plainPasswordHint}
-											</code>
-											<button
-												type="button"
-												onclick={() => copyToClipboard(admin.plainPasswordHint!, 'পাসওয়ার্ড')}
-												class="p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
-												title="পাসওয়ার্ড কপি করুন"
-											>
-												<Copy class="w-3 h-3" />
-											</button>
-										</div>
-									{:else}
+									
 										<button
 											type="button"
 											onclick={() => openPasswordModal(admin)}
@@ -895,7 +878,7 @@
 											<KeyRound class="w-3 h-3" />
 											<span>পাসওয়ার্ড সেট করুন</span>
 										</button>
-									{/if}
+									
 								</td>
 
 								<!-- Access Status Dropdown -->
@@ -1488,22 +1471,7 @@
 			<form onsubmit={handleResetPasswordSubmit} class="space-y-4 pt-4">
 				
 				<!-- Current Hint if available -->
-				{#if passwordAdmin.plainPasswordHint}
-					<div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-						<div>
-							<div class="text-[11px] text-slate-400 font-bold">বর্তমান পাসওয়ার্ড:</div>
-							<code class="font-mono text-xs font-bold text-slate-800">{passwordAdmin.plainPasswordHint}</code>
-						</div>
-						<button
-							type="button"
-							onclick={() => copyToClipboard(passwordAdmin!.plainPasswordHint!, 'বর্তমান পাসওয়ার্ড')}
-							class="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 cursor-pointer shadow-2xs"
-							title="কপি করুন"
-						>
-							<Copy class="w-3.5 h-3.5" />
-						</button>
-					</div>
-				{/if}
+				
 
 				<div>
 					<div class="flex items-center justify-between mb-1">

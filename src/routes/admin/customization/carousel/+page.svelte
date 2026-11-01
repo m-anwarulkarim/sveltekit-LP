@@ -20,11 +20,18 @@
 	interface CarouselItem {
 		id: string;
 		image: string;
+		mobileImage?: string;
 		name: string;
 		url: string;
-		urlType: 'Internal' | 'External';
+		urlType: 'Internal' | 'External' | string;
 		serial: string;
-		status: 'PUBLISH' | 'DRAFT';
+		status: 'PUBLISH' | 'DRAFT' | 'Publish' | 'Draft' | string;
+		description?: string;
+		startDate?: string | null;
+		endDate?: string | null;
+		viewCount?: number;
+		clickCount?: number;
+		ctr?: string;
 	}
 
 	let { data }: { data?: any } = $props();
@@ -223,8 +230,9 @@
 
 	async function handleToggleStatus(item: CarouselItem) {
 		const oldStatus = item.status;
-		const newStatus = oldStatus === 'PUBLISH' || oldStatus === 'Publish' ? 'DRAFT' : 'PUBLISH';
-		item.status = newStatus as any;
+		const isPub = (oldStatus || '').toUpperCase().startsWith('PUB');
+		const newStatus = isPub ? 'DRAFT' : 'PUBLISH';
+		item.status = newStatus;
 		closeActionMenu();
 		showToast(`স্ট্যাটাস পরিবর্তিত হয়েছে: ${newStatus}`);
 

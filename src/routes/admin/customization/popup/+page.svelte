@@ -29,11 +29,11 @@
 		image: string;
 		name: string;
 		url: string;
-		urlType: 'Internal' | 'External';
-		triggerType: 'on_load' | 'exit_intent' | 'delay_seconds';
+		urlType: 'Internal' | 'External' | string;
+		triggerType: 'on_load' | 'exit_intent' | 'delay_seconds' | string;
 		delaySeconds: number;
 		priority: string;
-		status: 'PUBLISH' | 'DRAFT';
+		status: 'PUBLISH' | 'DRAFT' | 'Publish' | 'Draft' | string;
 	}
 
 	let { data }: { data: any } = $props();
@@ -143,7 +143,8 @@
 			const result: any = await res.json();
 
 			if (result.type === 'success' || result.status === 200) {
-				item.status = item.status === 'PUBLISH' ? 'DRAFT' : 'PUBLISH';
+				const isPub = (item.status || '').toUpperCase().startsWith('PUB');
+				item.status = isPub ? 'DRAFT' : 'PUBLISH';
 				toast.success('পপআপ স্ট্যাটাস পরিবর্তিত হয়েছে');
 			} else {
 				toast.error('স্ট্যাটাস পরিবর্তনে সমস্যা হয়েছে');

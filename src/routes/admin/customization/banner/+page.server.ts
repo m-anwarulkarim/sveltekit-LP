@@ -38,7 +38,7 @@ export const actions: Actions = {
 
 		try {
 			const db = getDb(platform);
-			await CustomizationService.deleteBanner(db, id);
+			await CustomizationService.deleteBanner(db, id, platform);
 			return { success: true, message: 'ব্যানার মুছে ফেলা হয়েছে' };
 		} catch (e: any) {
 			console.error('Failed to delete banner:', e);

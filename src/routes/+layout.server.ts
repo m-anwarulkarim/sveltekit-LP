@@ -15,7 +15,9 @@ import {
 	DEFAULT_PRODUCT_SETTINGS,
 	type ProductSettingsConfig,
 	DEFAULT_WEBSITE_INFO,
-	type WebsiteInfoConfig
+	type WebsiteInfoConfig,
+	DEFAULT_GOOGLE_CONSOLE_CONFIG,
+	type GoogleConsoleConfig
 } from '#lib/server/services/settings.service';
 
 export const load: LayoutServerLoad = async (event) => {
@@ -47,10 +49,11 @@ export const load: LayoutServerLoad = async (event) => {
 	let productSettings: ProductSettingsConfig = DEFAULT_PRODUCT_SETTINGS;
 	let websiteInfo: WebsiteInfoConfig = DEFAULT_WEBSITE_INFO;
 	let activePopup: any = null;
+	let googleConsole: GoogleConsoleConfig = DEFAULT_GOOGLE_CONSOLE_CONFIG;
 
 	try {
 		const db = getDb(event.platform);
-		const [tc, pc, gtm, cats, sCfg, pCfg, wInfo, popup] = await Promise.all([
+		const [tc, pc, gtm, cats, sCfg, pCfg, wInfo, popup, gConsole] = await Promise.all([
 			ThemeCustomizationService.getThemeConfig(db).catch(() => DEFAULT_THEME_CONFIG),
 			PixelService.getPublicConfig(db).catch(() => pixelConfig),
 			GtmService.getPublicConfig(db).catch(() => gtmConfig),
@@ -58,7 +61,8 @@ export const load: LayoutServerLoad = async (event) => {
 			SettingsService.getStoreDeliveryConfig(db).catch(() => storeConfig),
 			SettingsService.getProductSettings(db).catch(() => DEFAULT_PRODUCT_SETTINGS),
 			SettingsService.getWebsiteInfo(db).catch(() => DEFAULT_WEBSITE_INFO),
-			CustomizationService.getActivePopupForStorefront(db).catch(() => null)
+			CustomizationService.getActivePopupForStorefront(db).catch(() => null),
+			SettingsService.getGoogleConsoleConfig(db).catch(() => DEFAULT_GOOGLE_CONSOLE_CONFIG)
 		]);
 		if (tc) themeConfig = tc;
 		if (pc) pixelConfig = pc;
@@ -68,6 +72,7 @@ export const load: LayoutServerLoad = async (event) => {
 		if (pCfg) productSettings = pCfg;
 		if (wInfo) websiteInfo = wInfo;
 		if (popup) activePopup = popup;
+		if (gConsole) googleConsole = gConsole;
 	} catch (err) {
 		console.error('Failed to load database in root layout:', err);
 	}
@@ -83,6 +88,7 @@ export const load: LayoutServerLoad = async (event) => {
 		productSettings,
 		websiteInfo,
 		activePopup,
+		googleConsole,
 		websiteJsonLd: SeoService.getWebSiteJsonLd(),
 		organizationJsonLd: SeoService.getOrganizationJsonLd()
 	};

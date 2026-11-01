@@ -1,6 +1,7 @@
 import { eq, desc, asc, sql } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from '../db/schema';
+import { MediaService } from './media.service';
 
 export interface CarouselInput {
 	name: string;
@@ -101,7 +102,18 @@ export class CustomizationService {
 		return await this.getCarouselById(db, id);
 	}
 
-	static async deleteCarousel(db: DrizzleD1Database<typeof schema>, id: string) {
+	static async deleteCarousel(db: DrizzleD1Database<typeof schema>, id: string, platform?: any) {
+		try {
+			const orig = await this.getCarouselById(db, id);
+			if (orig?.image && (orig.image.startsWith('/api/r2-local/') || orig.image.startsWith('/uploads/'))) {
+				await MediaService.deleteMediaByUrl(db, orig.image, platform);
+			}
+			if (orig?.mobileImage && (orig.mobileImage.startsWith('/api/r2-local/') || orig.mobileImage.startsWith('/uploads/'))) {
+				await MediaService.deleteMediaByUrl(db, orig.mobileImage, platform);
+			}
+		} catch (e) {
+			console.error(`Failed to clean up carousel media for ${id}:`, e);
+		}
 		await db.delete(schema.carousels).where(eq(schema.carousels.id, id));
 		return { success: true };
 	}
@@ -278,7 +290,15 @@ export class CustomizationService {
 		return await this.getBannerById(db, id);
 	}
 
-	static async deleteBanner(db: DrizzleD1Database<typeof schema>, id: string) {
+	static async deleteBanner(db: DrizzleD1Database<typeof schema>, id: string, platform?: any) {
+		try {
+			const orig = await this.getBannerById(db, id);
+			if (orig?.image && (orig.image.startsWith('/api/r2-local/') || orig.image.startsWith('/uploads/'))) {
+				await MediaService.deleteMediaByUrl(db, orig.image, platform);
+			}
+		} catch (e) {
+			console.error(`Failed to clean up banner media for ${id}:`, e);
+		}
 		await db.delete(schema.banners).where(eq(schema.banners.id, id));
 		return { success: true };
 	}
@@ -414,7 +434,15 @@ export class CustomizationService {
 		return await this.getPopupById(db, id);
 	}
 
-	static async deletePopup(db: DrizzleD1Database<typeof schema>, id: string) {
+	static async deletePopup(db: DrizzleD1Database<typeof schema>, id: string, platform?: any) {
+		try {
+			const orig = await this.getPopupById(db, id);
+			if (orig?.imageUrl && (orig.imageUrl.startsWith('/api/r2-local/') || orig.imageUrl.startsWith('/uploads/'))) {
+				await MediaService.deleteMediaByUrl(db, orig.imageUrl, platform);
+			}
+		} catch (e) {
+			console.error(`Failed to clean up popup media for ${id}:`, e);
+		}
 		await db.delete(schema.popups).where(eq(schema.popups.id, id));
 		return { success: true };
 	}

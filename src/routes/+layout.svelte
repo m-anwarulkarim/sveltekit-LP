@@ -57,6 +57,10 @@
 		<!-- Google Structured Data: Organization Schema -->
 		{@html `<script type="application/ld+json">${JSON.stringify(data.organizationJsonLd)}</script>`}
 	{/if}
+	{#if data?.googleConsole?.verificationToken}
+		<!-- Google Search Console Verification -->
+		<meta name="google-site-verification" content={data.googleConsole.verificationToken} />
+	{/if}
 	{#if data?.pixelConfig?.trackingMode === 'native_direct' && data?.pixelConfig?.pixelId}
 		<!-- Meta Pixel Noscript Fallback -->
 		<noscript>

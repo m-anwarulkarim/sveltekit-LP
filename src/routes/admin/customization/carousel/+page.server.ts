@@ -43,7 +43,7 @@ export const actions: Actions = {
 
 		try {
 			const db = getDb(platform);
-			await CustomizationService.deleteCarousel(db, id);
+			await CustomizationService.deleteCarousel(db, id, platform);
 			return { success: true, message: 'ক্যারোসেল মুছে ফেলা হয়েছে' };
 		} catch (e: any) {
 			console.error('Failed to delete carousel:', e);

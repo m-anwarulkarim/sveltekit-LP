@@ -1,6 +1,7 @@
 import type { Actions, PageServerLoad } from './$types';
 import { getDb } from '#lib/server/db/index';
 import { MediaService } from '#lib/server/services/media.service';
+import { R2Service } from '#lib/server/services/r2.service';
 import { getGalleryImages, addGalleryImage, deleteGalleryImage, type GalleryImage } from '../_data/gallery';
 
 export const load: PageServerLoad = async ({ parent, platform, url }) => {
@@ -33,13 +34,27 @@ export const actions: Actions = {
 	uploadImage: async ({ request, platform }) => {
 		const data = await request.formData();
 		const name = data.get('name')?.toString()?.trim() || 'Untitled Image';
-		const url = data.get('url')?.toString()?.trim() || '';
+		let url = data.get('url')?.toString()?.trim() || '';
 		const folder = (data.get('folder')?.toString() || 'products') as GalleryImage['folder'];
-		const size = data.get('size')?.toString() || '50 KB';
+		let size = data.get('size')?.toString() || '50 KB';
 		const dimensions = data.get('dimensions')?.toString() || '800 x 800';
 
 		if (!url) {
 			return { success: false, message: 'ইমেজ ফাইল বা ইউআরএল আবশ্যক।' };
+		}
+
+		if (url.startsWith('data:')) {
+			try {
+				const r2Res = await R2Service.uploadBase64(url, {
+					platform,
+					folder,
+					filename: name || 'image.png'
+				});
+				url = r2Res.url;
+				size = `${Math.round(r2Res.sizeBytes / 1024)} KB`;
+			} catch (e) {
+				console.error('Failed to upload base64 to R2 in gallery action:', e);
+			}
 		}
 
 		if (platform?.env?.DB) {
@@ -81,7 +96,7 @@ export const actions: Actions = {
 		if (platform?.env?.DB) {
 			try {
 				const db = getDb(platform.env.DB);
-				await MediaService.deleteMedia(db, id);
+				await MediaService.deleteMedia(db, id, platform);
 				return { success: true, deletedId: id, message: 'ছবি সফলভাবে মুছে ফেলা হয়েছে!' };
 			} catch (error: any) {
 				console.error('Failed to delete media in D1:', error);
@@ -111,7 +126,7 @@ export const actions: Actions = {
 		if (platform?.env?.DB) {
 			try {
 				const db = getDb(platform.env.DB);
-				await MediaService.bulkDeleteMedia(db, ids);
+				await MediaService.bulkDeleteMedia(db, ids, platform);
 				return { success: true, message: `${ids.length}টি ছবি সফলভাবে মুছে ফেলা হয়েছে!` };
 			} catch (error: any) {
 				console.error('Failed to bulk delete media in D1:', error);

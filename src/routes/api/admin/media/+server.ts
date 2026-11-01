@@ -59,3 +59,46 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 	}
 };
 
+export const DELETE: RequestHandler = async ({ request, platform, url }) => {
+	try {
+		const db = getDb(platform);
+		let ids: string[] = [];
+		let imageUrl: string | null = null;
+
+		const paramId = url.searchParams.get('id');
+		const paramIds = url.searchParams.get('ids');
+		const paramUrl = url.searchParams.get('url');
+
+		if (paramId) ids.push(paramId);
+		if (paramIds) ids.push(...paramIds.split(',').filter(Boolean));
+		if (paramUrl) imageUrl = paramUrl;
+
+		if (request.headers.get('content-type')?.includes('application/json')) {
+			try {
+				const body = await request.json();
+				if (body.id) ids.push(body.id);
+				if (Array.isArray(body.ids)) ids.push(...body.ids);
+				if (body.url) imageUrl = body.url;
+			} catch (_) {}
+		}
+
+		ids = Array.from(new Set(ids.filter(Boolean)));
+
+		if (imageUrl) {
+			await MediaService.deleteMediaByUrl(db, imageUrl, platform);
+		}
+
+		if (ids.length === 1) {
+			await MediaService.deleteMedia(db, ids[0], platform);
+		} else if (ids.length > 1) {
+			await MediaService.bulkDeleteMedia(db, ids, platform);
+		}
+
+		return json({ success: true });
+	} catch (error: any) {
+		console.error('API /api/admin/media DELETE error:', error);
+		return json({ success: false, message: error?.message || 'Failed to delete media' }, { status: 500 });
+	}
+};
+
+

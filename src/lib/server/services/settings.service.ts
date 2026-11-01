@@ -27,6 +27,14 @@ export interface RewardPointConfig {
 	calcMethod: 'manual' | 'percentage';
 }
 
+export interface GoogleConsoleConfig {
+	verificationToken: string;
+}
+
+export const DEFAULT_GOOGLE_CONSOLE_CONFIG: GoogleConsoleConfig = {
+	verificationToken: ''
+};
+
 export interface WebsiteInfoConfig {
 	websiteName: string;
 	shortDescription: string;
@@ -196,6 +204,10 @@ export interface PaymentConfig {
 
 export interface ProductSettingsConfig {
 	productType: 'physical' | 'digital';
+	enableEmail?: boolean;
+	isEmailOptional?: boolean;
+	enableAddress?: boolean;
+	enableDivision?: boolean;
 	enableSoldQtySort: boolean;
 	enablePrioritySort: boolean;
 	enableMultipleCategory: boolean;
@@ -231,6 +243,10 @@ export interface ProductSettingsConfig {
 
 export const DEFAULT_PRODUCT_SETTINGS: ProductSettingsConfig = {
 	productType: 'physical',
+	enableEmail: false,
+	isEmailOptional: false,
+	enableAddress: false,
+	enableDivision: false,
 	enableSoldQtySort: false,
 	enablePrioritySort: false,
 	enableMultipleCategory: true,
@@ -631,6 +647,10 @@ export class SettingsService {
 			const s = await this.getSettingsGroup(db, 'product');
 			return {
 				productType: s.product_type === 'digital' ? 'digital' : 'physical',
+				enableEmail: Boolean(s.enable_email),
+				isEmailOptional: Boolean(s.is_email_optional),
+				enableAddress: Boolean(s.enable_address),
+				enableDivision: Boolean(s.enable_division),
 				enableSoldQtySort: Boolean(s.enable_sold_qty_sort),
 				enablePrioritySort: Boolean(s.enable_priority_sort),
 				enableMultipleCategory: s.enable_multiple_category !== undefined ? Boolean(s.enable_multiple_category) : true,
@@ -678,6 +698,10 @@ export class SettingsService {
 	) {
 		const mapping: [string, any][] = [
 			['product_type', config.productType || 'physical'],
+			['enable_email', Boolean(config.enableEmail)],
+			['is_email_optional', Boolean(config.isEmailOptional)],
+			['enable_address', Boolean(config.enableAddress)],
+			['enable_division', Boolean(config.enableDivision)],
 			['enable_sold_qty_sort', Boolean(config.enableSoldQtySort)],
 			['enable_priority_sort', Boolean(config.enablePrioritySort)],
 			['enable_multiple_category', config.enableMultipleCategory !== undefined ? Boolean(config.enableMultipleCategory) : true],
@@ -1016,6 +1040,45 @@ export class SettingsService {
 		}
 
 		return await this.getInvoiceConfig(db);
+	}
+
+	/**
+	 * Retrieves Google Search Console verification token from D1 store_settings
+	 */
+	static async getGoogleConsoleConfig(
+		db: DrizzleD1Database<typeof schema>
+	): Promise<GoogleConsoleConfig> {
+		try {
+			const group = await this.getSettingsGroup(db, 'google_console');
+			return {
+				verificationToken: String(group.verification_token ?? group.token ?? '').trim()
+			};
+		} catch (e) {
+			console.error('Failed to get google console config from D1:', e);
+			return { ...DEFAULT_GOOGLE_CONSOLE_CONFIG };
+		}
+	}
+
+	/**
+	 * Persists Google Search Console configuration to D1 store_settings.
+	 * Cleans and sanitizes inputs if user pastes full meta tag code.
+	 */
+	static async saveGoogleConsoleConfig(
+		db: DrizzleD1Database<typeof schema>,
+		token: string
+	): Promise<GoogleConsoleConfig> {
+		let cleanToken = String(token ?? '').trim();
+		// Extract verification token if pasted as full meta HTML tag
+		const contentMatch = cleanToken.match(/content=["']([^"']+)["']/i);
+		if (contentMatch && contentMatch[1]) {
+			cleanToken = contentMatch[1].trim();
+		} else {
+			// Strip tag wrappers or stray quotes if present
+			cleanToken = cleanToken.replace(/^<meta[^>]*>/i, '').replace(/["']/g, '').trim();
+		}
+
+		await this.setSetting(db, 'google_console', 'verification_token', cleanToken);
+		return await this.getGoogleConsoleConfig(db);
 	}
 }
 

@@ -23,35 +23,37 @@ export const load: PageServerLoad = async ({ parent, platform }) => {
 	};
 };
 
-export const actions: Actions = {
-	save: async ({ request, platform }) => {
-		const data = await request.formData();
+async function handleSave({ request, platform }: any) {
+	const data = await request.formData();
 
-		const template = String(data.get('template') || 'classicDesign');
-		const disablePrice = data.get('disablePrice') === 'true' || data.get('disablePrice') === 'on';
-		const enableCourier = data.get('enableCourier') === 'true' || data.get('enableCourier') === 'on';
-		const enableReturnPolicy = data.get('enableReturnPolicy') === 'true' || data.get('enableReturnPolicy') === 'on';
+	const template = String(data.get('template') || data.get('selectedTemplate') || 'classicDesign').trim();
+	const disablePrice = data.get('disablePrice') === 'true' || data.get('disablePrice') === 'on';
+	const enableCourier = data.get('enableCourier') === 'true' || data.get('enableCourier') === 'on';
+	const enableReturnPolicy = data.get('enableReturnPolicy') === 'true' || data.get('enableReturnPolicy') === 'on';
 
-		try {
-			const db = getDb(platform);
-			await SettingsService.saveInvoiceConfig(db, {
-				template,
-				disablePrice,
-				enableCourier,
-				enableReturnPolicy
-			});
+	try {
+		const db = getDb(platform);
+		const updated = await SettingsService.saveInvoiceConfig(db, {
+			template,
+			disablePrice,
+			enableCourier,
+			enableReturnPolicy
+		});
 
-			return {
-				success: true,
-				message: 'ইনভয়েস ডিজাইন ও সেটিংস সফলভাবে সংরক্ষিত হয়েছে!'
-			};
-		} catch (e: any) {
-			console.error('Failed to save invoice settings to D1:', e);
-			return fail(500, {
-				success: false,
-				message: e.message || 'ইনভয়েস সেটিংস সংরক্ষণে সমস্যা হয়েছে।'
-			});
-		}
+		return {
+			success: true,
+			invoiceConfig: updated,
+			message: 'ইনভয়েস ডিজাইন ও সেটিংস সফলভাবে ডাটাবেসে সংরক্ষিত হয়েছে!'
+		};
+	} catch (e: any) {
+		console.error('Failed to save invoice settings to D1:', e);
+		return fail(500, {
+			success: false,
+			message: e.message || 'ইনভয়েস সেটিংস সংরক্ষণে সমস্যা হয়েছে।'
+		});
 	}
-};
+}
 
+export const actions: Actions = {
+	save: handleSave
+};

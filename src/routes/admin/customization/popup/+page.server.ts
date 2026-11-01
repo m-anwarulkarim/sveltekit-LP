@@ -82,7 +82,7 @@ export const actions: Actions = {
 
 		try {
 			const db = getDb(platform);
-			await CustomizationService.deletePopup(db, id);
+			await CustomizationService.deletePopup(db, id, platform);
 			return { success: true, message: 'পপআপ সফলভাবে মুছে ফেলা হয়েছে' };
 		} catch (e: any) {
 			console.error('Failed to delete popup:', e);

@@ -93,7 +93,20 @@ async function handlePlaceOrderAction({ request, platform, getClientAddress, loc
 			return fail(400, { message: 'আপনার কার্টে কোনো পণ্য নেই। অর্ডার করতে পণ্য যোগ করুন।' });
 		}
 
-		if (!customerName || !customerPhone || !shippingAddress) {
+		// Fallback for digital products if address collection is disabled
+		let finalShippingAddress = shippingAddress;
+		if (!finalShippingAddress) {
+			try {
+				const productSettings = await SettingsService.getProductSettings(db);
+				if (productSettings.productType === 'digital' && !productSettings.enableAddress) {
+					finalShippingAddress = 'ডিজিটাল ডেলিভারি (অনলাইন)';
+				}
+			} catch (e) {
+				console.error('Failed to resolve product settings in checkout:', e);
+			}
+		}
+
+		if (!customerName || !customerPhone || !finalShippingAddress) {
 			return fail(400, { message: 'নাম, মোবাইল নম্বর এবং ঠিকানা পূরণ করা আবশ্যক।' });
 		}
 
@@ -116,7 +129,7 @@ async function handlePlaceOrderAction({ request, platform, getClientAddress, loc
 		const payload = {
 			customerName,
 			customerPhone,
-			shippingAddress,
+			shippingAddress: finalShippingAddress,
 			deliveryArea,
 			paymentMethod,
 			orderNote,
@@ -186,7 +199,7 @@ async function handlePlaceOrderAction({ request, platform, getClientAddress, loc
 				customerName,
 				customerPhone,
 				customerEmail: payload.customerEmail || customerPhone,
-				shippingAddress,
+				shippingAddress: finalShippingAddress,
 				total,
 				items,
 				currency: 'BDT',
@@ -217,7 +230,7 @@ async function handlePlaceOrderAction({ request, platform, getClientAddress, loc
 			customerName,
 			customerEmail: customerPhone,
 			customerPhone,
-			shippingAddress,
+			shippingAddress: finalShippingAddress,
 			deliveryArea,
 			paymentMethod,
 			orderNote,

@@ -111,6 +111,7 @@
 	// Dynamic delivery charge based on productSettings, district, storeConfig and first-order offer
 	const deliveryFee = $derived.by(() => {
 		if (data?.productSettings?.enableDeliveryCharge === false) return 0;
+		if (data?.productSettings?.productType === 'digital') return 0;
 		if (cart.subtotal === 0) return 0;
 		if (firstOrderFreeDeliveryOffer) return 0; // First order free delivery
 		if (
@@ -230,7 +231,16 @@
 			return;
 		}
 
-		if (!address.trim()) {
+		const isDigital = data?.productSettings?.productType === 'digital';
+		const requireAddress = !isDigital || Boolean(data?.productSettings?.enableAddress);
+		const requireEmail = isDigital && Boolean(data?.productSettings?.enableEmail) && !data?.productSettings?.isEmailOptional;
+
+		if (requireEmail && (!email.trim() || !email.includes('@'))) {
+			errorMessage = 'অনুগ্রহ করে সঠিক ইমেইল এড্রেস লিখুন (ডাউনলোড বা ডেলিভারি নিশ্চিত করতে আবশ্যক)।';
+			return;
+		}
+
+		if (requireAddress && !address.trim()) {
 			console.log('[DEBUG] Address missing');
 			errorMessage = 'অনুগ্রহ করে পূর্ণ ডেলিভারি ঠিকানা লিখুন।';
 			return;
@@ -249,7 +259,7 @@
 			const formData = new FormData();
 			formData.append('customerName', name.trim());
 			formData.append('customerPhone', phone.trim());
-			formData.append('shippingAddress', address.trim());
+			formData.append('shippingAddress', address.trim() || (isDigital ? 'ডিজিটাল ডেলিভারি (অনলাইন)' : ''));
 			formData.append('deliveryArea', district === 'dhaka' ? 'inside_dhaka' : 'outside_dhaka');
 			formData.append('paymentMethod', paymentMethod);
 			const fullNotes = [];
@@ -558,23 +568,44 @@
 								</div>
 							</div>
 
-							<!-- বিস্তারিত ঠিকানা * -->
-							<div>
-								<label for="co-address" class="block text-xs sm:text-sm font-semibold text-slate-800 mb-1.5">
-									বিস্তারিত ঠিকানা <span class="text-rose-500">*</span>
-								</label>
-								<div class="relative">
-									<MapPin class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-									<Input
-										id="co-address"
-										type="text"
-										required
-										bind:value={address}
-										placeholder="এখানে আপনার সম্পূর্ণ ঠিকানা লিখুন"
-										class="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-2xl bg-white border-slate-200/90 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-[#2563eb] transition-all"
-									/>
+							<!-- বিস্তারিত ঠিকানা * (ফিজিক্যাল প্রোডাক্ট বা এনাবল থাকলে) -->
+							{#if !data?.productSettings?.productType || data?.productSettings?.productType === 'physical' || data?.productSettings?.enableAddress}
+								<div>
+									<label for="co-address" class="block text-xs sm:text-sm font-semibold text-slate-800 mb-1.5">
+										বিস্তারিত ঠিকানা <span class="text-rose-500">*</span>
+									</label>
+									<div class="relative">
+										<MapPin class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+										<Input
+											id="co-address"
+											type="text"
+											required
+											bind:value={address}
+											placeholder="এখানে আপনার সম্পূর্ণ ঠিকানা লিখুন"
+											class="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-2xl bg-white border-slate-200/90 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-[#2563eb] transition-all"
+										/>
+									</div>
 								</div>
-							</div>
+							{/if}
+
+							<!-- ডিজিটাল প্রোডাক্ট ইমেইল এড্রেস -->
+							{#if data?.productSettings?.productType === 'digital' && data?.productSettings?.enableEmail}
+								<div>
+									<label for="co-email-digital" class="block text-xs sm:text-sm font-semibold text-slate-800 mb-1.5">
+										ইমেইল এড্রেস {#if !data?.productSettings?.isEmailOptional}<span class="text-rose-500">*</span>{:else}<span class="text-slate-400 font-normal text-xs">(ঐচ্ছিক)</span>{/if}
+									</label>
+									<div class="relative">
+										<Mail class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+										<Input
+											id="co-email-digital"
+											type="email"
+											bind:value={email}
+											placeholder="yourname@gmail.com (ডেলিভারি/ডাউনলোড লিংক পাঠানো হবে)"
+											class="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-2xl bg-white border-slate-200/90 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-[#2563eb] transition-all"
+										/>
+									</div>
+								</div>
+							{/if}
 
 							<!-- Action Chips Divider -->
 							<div class="border-t border-slate-100 pt-3">
@@ -674,7 +705,8 @@
 						</CardContent>
 					</Card>
 
-					<!-- Section 2: Delivery Area Selection Card -->
+					<!-- Section 2: Delivery Area Selection Card (ফিজিক্যাল প্রোডাক্ট বা ডিভিশন এনাবল থাকলে) -->
+					{#if !data?.productSettings?.productType || data?.productSettings?.productType === 'physical' || data?.productSettings?.enableDivision}
 					<Card class="rounded-2xl sm:rounded-3xl border-slate-200/90 shadow-xs overflow-hidden bg-white">
 						<CardHeader class="p-5 sm:p-6 pb-3 border-b border-slate-100">
 							<div class="flex items-center gap-2.5">
@@ -722,6 +754,7 @@
 							</div>
 						</CardContent>
 					</Card>
+					{/if}
 
 					<!-- Section 3: Payment Method Card -->
 					<Card class="rounded-2xl sm:rounded-3xl border-slate-200/90 shadow-xs overflow-hidden">

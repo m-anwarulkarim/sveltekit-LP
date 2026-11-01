@@ -39,6 +39,10 @@
 
 	// 1. Product Type
 	let productType = $state<'physical' | 'digital'>(data?.settings?.productType || 'physical');
+	let enableEmail = $state(Boolean(data?.settings?.enableEmail));
+	let isEmailOptional = $state(Boolean(data?.settings?.isEmailOptional));
+	let enableAddress = $state(Boolean(data?.settings?.enableAddress));
+	let enableDivision = $state(Boolean(data?.settings?.enableDivision));
 
 	// 2. Product List & Sorting
 	let enableSoldQtySort = $state(Boolean(data?.settings?.enableSoldQtySort));
@@ -92,6 +96,10 @@
 		isSaving = true;
 		const payload = {
 			productType,
+			enableEmail,
+			isEmailOptional,
+			enableAddress,
+			enableDivision,
 			enableSoldQtySort,
 			enablePrioritySort,
 			enableMultipleCategory,
@@ -229,56 +237,88 @@
 				<Card class="p-6 bg-white border-slate-200/80 shadow-2xs rounded-2xl">
 					<div class="border-b border-slate-100 pb-4 mb-5">
 						<h2 class="text-sm sm:text-base font-black text-slate-900 tracking-tight">
-							Product Type <span class="text-xs font-normal text-slate-400 font-mono">(productSetting.productType)</span>
+							productSetting.productType
 						</h2>
 						<p class="text-xs text-slate-500 mt-0.5">
-							আপনার স্টোরে বিক্রিত পণ্যের ধরন নির্ধারণ করুন
+							productSetting.productTypeSub
 						</p>
 					</div>
 
-					<div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+					<!-- Radio Options matching PDF: physicalProduct & digitalProduct -->
+					<div class="flex flex-wrap items-center gap-6 sm:gap-10">
 						<!-- Physical Product -->
 						<button
 							type="button"
+							class="inline-flex items-center gap-2.5 cursor-pointer select-none text-left"
 							onclick={() => { productType = 'physical'; markDirty(); }}
-							class="text-left p-4 rounded-xl border-2 transition-all cursor-pointer relative {productType === 'physical'
-								? 'border-[#5845eb] bg-indigo-50/20 shadow-2xs'
-								: 'border-slate-200 hover:border-slate-300 bg-white'}"
 						>
-							<div class="flex items-center gap-3">
-								<div class="w-4 h-4 rounded-full border-2 flex items-center justify-center {productType === 'physical' ? 'border-[#5845eb]' : 'border-slate-300'}">
-									{#if productType === 'physical'}
-										<div class="w-2 h-2 rounded-full bg-[#5845eb]"></div>
-									{/if}
-								</div>
-								<div>
-									<div class="text-xs font-bold text-slate-900">Physical Product</div>
-									<div class="text-[11px] text-slate-500 mt-0.5">কুরিয়ারের মাধ্যমে ডেলিভারিযোগ্য পণ্য (বস্ত্র, গ্যাজেট ইত্যাদি)</div>
-								</div>
+							<div class="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all {productType === 'physical' ? 'border-[#5845eb]' : 'border-slate-300'}">
+								{#if productType === 'physical'}
+									<div class="w-2 h-2 rounded-full bg-[#5845eb]"></div>
+								{/if}
 							</div>
+							<span class="text-xs font-bold text-slate-800">
+								productSetting.physicalProduct
+							</span>
 						</button>
 
 						<!-- Digital Product -->
 						<button
 							type="button"
+							class="inline-flex items-center gap-2.5 cursor-pointer select-none text-left"
 							onclick={() => { productType = 'digital'; markDirty(); }}
-							class="text-left p-4 rounded-xl border-2 transition-all cursor-pointer relative {productType === 'digital'
-								? 'border-[#5845eb] bg-indigo-50/20 shadow-2xs'
-								: 'border-slate-200 hover:border-slate-300 bg-white'}"
 						>
-							<div class="flex items-center gap-3">
-								<div class="w-4 h-4 rounded-full border-2 flex items-center justify-center {productType === 'digital' ? 'border-[#5845eb]' : 'border-slate-300'}">
-									{#if productType === 'digital'}
-										<div class="w-2 h-2 rounded-full bg-[#5845eb]"></div>
-									{/if}
-								</div>
-								<div>
-									<div class="text-xs font-bold text-slate-900">Digital Product</div>
-									<div class="text-[11px] text-slate-500 mt-0.5">ডাউনলোড বা অনলাইন অ্যাক্সেসযোগ্য পণ্য (ইবুক, কোর্স ইত্যাদি)</div>
-								</div>
+							<div class="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all {productType === 'digital' ? 'border-[#5845eb]' : 'border-slate-300'}">
+								{#if productType === 'digital'}
+									<div class="w-2 h-2 rounded-full bg-[#5845eb]"></div>
+								{/if}
 							</div>
+							<span class="text-xs font-bold text-slate-800">
+								productSetting.digitalProduct
+							</span>
 						</button>
 					</div>
+
+					<!-- Digital Product Specific Options (Exact match to PDF) -->
+					{#if productType === 'digital'}
+						<div class="mt-6 pt-5 border-t border-slate-100 space-y-4 divide-y divide-slate-100">
+							<!-- 1. Enable Email -->
+							<div class="pt-3.5 first:pt-0 flex items-center justify-between gap-4">
+								<div class="space-y-0.5">
+									<div class="text-xs font-bold text-slate-800">productSetting.enableEmail</div>
+									<div class="text-[11px] text-slate-500">productSetting.enableEmailDesc</div>
+								</div>
+								<Switch bind:checked={enableEmail} onchange={markDirty} />
+							</div>
+
+							<!-- 2. Is Email Optional -->
+							<div class="pt-3.5 flex items-center justify-between gap-4">
+								<div class="space-y-0.5">
+									<div class="text-xs font-bold text-slate-800">productSetting.isEmailOptional</div>
+									<div class="text-[11px] text-slate-500">productSetting.isEmailOptionalDesc</div>
+								</div>
+								<Switch bind:checked={isEmailOptional} onchange={markDirty} />
+							</div>
+
+							<!-- 3. Enable Address -->
+							<div class="pt-3.5 flex items-center justify-between gap-4">
+								<div class="space-y-0.5">
+									<div class="text-xs font-bold text-slate-800">productSetting.enableAddress</div>
+									<div class="text-[11px] text-slate-500">productSetting.enableAddressDesc</div>
+								</div>
+								<Switch bind:checked={enableAddress} onchange={markDirty} />
+							</div>
+
+							<!-- 4. Enable Division -->
+							<div class="pt-3.5 flex items-center justify-between gap-4">
+								<div class="space-y-0.5">
+									<div class="text-xs font-bold text-slate-800">productSetting.enableDivision</div>
+									<div class="text-[11px] text-slate-500">productSetting.enableDivisionDesc</div>
+								</div>
+								<Switch bind:checked={enableDivision} onchange={markDirty} />
+							</div>
+						</div>
+					{/if}
 				</Card>
 			</section>
 

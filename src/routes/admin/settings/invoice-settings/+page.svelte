@@ -38,23 +38,56 @@
 		}, 3000);
 	}
 
-	function activateTemplate(id: string, name: string) {
-		selectedTemplate = id;
-		// Trigger submission to persist in database immediately
-		const formEl = document.getElementById('invoice-form') as HTMLFormElement;
-		if (formEl) {
-			formEl.requestSubmit();
-		} else {
-			showToast(`"${name}" ইনভয়েস ডিজাইন সক্রিয় করা হয়েছে!`);
+	// Direct async save function to guarantee immediate D1 persistence without DOM race conditions
+	async function saveSettings(templateToSave?: string) {
+		isSaving = true;
+		const targetTemplate = templateToSave || selectedTemplate;
+
+		const fd = new FormData();
+		fd.set('template', targetTemplate);
+		fd.set('disablePrice', disablePrice ? 'true' : 'false');
+		fd.set('enableCourier', enableCourier ? 'true' : 'false');
+		fd.set('enableReturnPolicy', enableReturnPolicy ? 'true' : 'false');
+
+		try {
+			const res = await fetch('?/save', {
+				method: 'POST',
+				body: fd,
+				headers: {
+					'x-sveltekit-action': 'true'
+				}
+			});
+
+			const responseData = await res.json();
+			isSaving = false;
+
+			if (responseData.type === 'success' || res.ok) {
+				selectedTemplate = targetTemplate;
+				const templateObj = TEMPLATES.find((t) => t.id === targetTemplate);
+				const templateName = templateObj ? templateObj.name : targetTemplate;
+				showToast(`"${templateName}" ইনভয়েস ডিজাইন ডাটাবেসে সফলভাবে সংরক্ষিত হয়েছে!`);
+			} else {
+				showToast('ইনভয়েস সেটিংস সংরক্ষণে সমস্যা হয়েছে।', 'info');
+			}
+		} catch (err) {
+			isSaving = false;
+			console.error('Save failed:', err);
+			showToast('সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি।', 'info');
 		}
 	}
 
-	// Watch server action response
+	function activateTemplate(id: string) {
+		selectedTemplate = id;
+		saveSettings(id);
+	}
+
+	// Keep states synchronized when server data updates
 	$effect(() => {
-		if (form?.success) {
-			showToast(form.message || 'ইনভয়েস সেটিংস সফলভাবে সংরক্ষিত হয়েছে!');
-		} else if (form?.message && !form?.success) {
-			showToast(form.message, 'info');
+		if (data?.invoiceConfig) {
+			selectedTemplate = data.invoiceConfig.template || 'classicDesign';
+			disablePrice = Boolean(data.invoiceConfig.disablePrice);
+			enableCourier = data.invoiceConfig.enableCourier !== false;
+			enableReturnPolicy = data.invoiceConfig.enableReturnPolicy !== false;
 		}
 	});
 
@@ -152,425 +185,403 @@
 		</div>
 	</div>
 
-	<!-- Form with SvelteKit Enhance -->
-	<form
-		id="invoice-form"
-		method="POST"
-		action="?/save"
-		use:enhance={() => {
-			isSaving = true;
-			return async ({ result, update }) => {
-				isSaving = false;
-				if (result.type === 'success') {
-					showToast((result.data as any)?.message || 'ইনভয়েস ডিজাইন সফলভাবে সংরক্ষিত হয়েছে!');
-					await update({ reset: false });
-				} else if (result.type === 'failure') {
-					showToast((result.data as any)?.message || 'সংরক্ষণ ব্যর্থ হয়েছে!', 'info');
-				}
-			};
-		}}
-		class="space-y-8"
-	>
-		<!-- Hidden Inputs to submit state to Cloudflare D1 Backend -->
-		<input type="hidden" name="template" value={selectedTemplate} />
-		<input type="hidden" name="disablePrice" value={disablePrice ? 'true' : 'false'} />
-		<input type="hidden" name="enableCourier" value={enableCourier ? 'true' : 'false'} />
-		<input type="hidden" name="enableReturnPolicy" value={enableReturnPolicy ? 'true' : 'false'} />
-
-		<!-- Templates 3-Column Grid Matching Screenshots -->
-		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-			{#each TEMPLATES as t (t.id)}
-				{@const isSelected = selectedTemplate === t.id}
-				<Card
-					class="p-4 sm:p-5 flex flex-col justify-between transition-all duration-200 bg-white rounded-3xl border {isSelected
-						? 'border-2 border-emerald-500 shadow-md ring-4 ring-emerald-500/10'
-						: 'border-slate-200 hover:border-slate-300 shadow-2xs hover:shadow-sm'}"
+	<!-- Templates 3-Column Grid Matching Screenshots -->
+	<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+		{#each TEMPLATES as t (t.id)}
+			{@const isSelected = selectedTemplate === t.id}
+			<Card
+				class="p-4 sm:p-5 flex flex-col justify-between transition-all duration-200 bg-white rounded-3xl border {isSelected
+					? 'border-2 border-emerald-500 shadow-md ring-4 ring-emerald-500/10'
+					: 'border-slate-200 hover:border-slate-300 shadow-2xs hover:shadow-sm'}"
+			>
+				<!-- Visual Miniature Mockup -->
+				<div
+					class="w-full aspect-[1/1.28] bg-white rounded-2xl border border-slate-200/90 p-3 sm:p-3.5 flex flex-col justify-between overflow-hidden shadow-inner text-slate-800 font-sans select-none"
 				>
-					<!-- Visual Miniature Mockup -->
-					<div
-						class="w-full aspect-[1/1.28] bg-white rounded-2xl border border-slate-200/90 p-3 sm:p-3.5 flex flex-col justify-between overflow-hidden shadow-inner text-slate-800 font-sans select-none"
-					>
-						<!-- TEMPLATE 1: CLASSIC DESIGN -->
-						{#if t.type === 'standard'}
+					<!-- TEMPLATE 1: CLASSIC DESIGN -->
+					{#if t.type === 'standard'}
+						<div class="space-y-2">
+							<div class="flex justify-between items-start border-b pb-1.5 border-slate-200">
+								<div>
+									<div class="font-bold text-[9px] text-slate-900">AURA STORE</div>
+									<div class="text-[7px] text-slate-400">Order: #0043</div>
+								</div>
+								<div class="text-right text-[7px] text-slate-500">
+									<div>Date: 2026-01-14</div>
+									<div>01860-229546</div>
+								</div>
+							</div>
+
+							<div class="text-[7.5px] bg-slate-50 p-1.5 rounded border border-slate-100">
+								<span class="font-bold">Ship To:</span> কামরুল হাসান, মিরপুর-১০, ঢাকা।
+							</div>
+
+							<!-- Table -->
+							<div class="space-y-1">
+								<div class="grid grid-cols-4 font-bold text-[7px] text-slate-400 border-b pb-0.5 border-slate-100">
+									<span class="col-span-2">Product</span>
+									<span class="text-center">Qty</span>
+									<span class="text-right">Total</span>
+								</div>
+								<div class="grid grid-cols-4 text-[7px] py-0.5 border-b border-dashed border-slate-100">
+									<span class="col-span-2 font-medium truncate">Aura Pro Earbuds</span>
+									<span class="text-center">1</span>
+									<span class="text-right font-mono">৳ 1,790</span>
+								</div>
+							</div>
+						</div>
+
+						<div class="pt-1.5 border-t border-slate-200 space-y-1 text-[7px]">
+							<div class="flex justify-between text-slate-500">
+								<span>Subtotal:</span>
+								<span class="font-mono">৳ 1,790</span>
+							</div>
+							<div class="flex justify-between text-slate-500">
+								<span>Delivery Fee:</span>
+								<span class="font-mono">৳ 60</span>
+							</div>
+							<div class="flex justify-between font-bold text-[8px] text-slate-900 pt-0.5 border-t border-slate-100">
+								<span>Grand Total:</span>
+								<span class="font-mono text-emerald-600">৳ 1,850</span>
+							</div>
+							<div class="text-[6.5px] text-center text-slate-400 pt-1">Thank you for your order!</div>
+						</div>
+
+					<!-- TEMPLATE 2: MODERN DESIGN (THERMAL 3-INCH) -->
+					{:else}
+						{#if t.type === 'thermal'}
 							<div class="space-y-2">
-								<div class="flex justify-between items-start border-b pb-1.5 border-slate-200">
-									<div>
-										<div class="font-bold text-[9px] text-slate-900">AURA STORE</div>
-										<div class="text-[7px] text-slate-400">Order: #0043</div>
+								<!-- Top Barcode -->
+								<div class="text-center border-b pb-1 border-slate-200">
+									<div class="font-mono text-[9px] tracking-widest text-slate-800">||| | ||||| ||| ||||</div>
+									<div class="font-bold text-[8px] tracking-widest">0043</div>
+								</div>
+
+								<!-- 2 Large Courier Metric Boxes -->
+								<div class="grid grid-cols-2 gap-1.5">
+									<div class="border border-slate-800 rounded p-1 text-center bg-slate-50">
+										<div class="text-[6px] text-slate-500">HUB CODE</div>
+										<div class="font-black text-[11px] text-slate-900">65B</div>
 									</div>
-									<div class="text-right text-[7px] text-slate-500">
-										<div>Date: 2026-01-14</div>
-										<div>01860-229546</div>
+									<div class="border border-slate-800 rounded p-1 text-center bg-slate-50">
+										<div class="text-[6px] text-slate-500">COD AMOUNT</div>
+										<div class="font-black text-[11px] text-slate-900">1840Tk</div>
 									</div>
 								</div>
 
-								<div class="text-[7.5px] bg-slate-50 p-1.5 rounded border border-slate-100">
-									<span class="font-bold">Ship To:</span> কামরুল হাসান, মিরপুর-১০, ঢাকা।
+								<!-- Receiver & QR -->
+								<div class="flex items-center justify-between gap-1 border border-slate-200 p-1.5 rounded">
+									<div class="text-[7px] space-y-0.5">
+										<div class="font-bold">Receiver: ফাহিম হোসেন</div>
+										<div class="text-slate-500 text-[6.5px]">01712-XXXXXX</div>
+										<div class="text-slate-500 text-[6.5px]">ধানমন্ডি, ঢাকা</div>
+									</div>
+									<div class="w-8 h-8 border border-slate-300 rounded flex items-center justify-center shrink-0">
+										<QrCode class="w-6 h-6 text-slate-800" />
+									</div>
+								</div>
+							</div>
+
+							<div class="text-[6.5px] text-center text-slate-400 border-t pt-1 border-slate-200">
+								Shop Name: AURA Store • Halal Delivery
+							</div>
+
+						<!-- TEMPLATE 3: MINIMAL DESIGN -->
+						{:else if t.type === 'sticker'}
+							<div class="space-y-2">
+								<div class="flex items-start justify-between border-b pb-1.5 border-slate-200">
+									<div class="text-[7px] space-y-0.5">
+										<div class="font-black text-[8px] text-emerald-700">AURA LOGISTICS</div>
+										<div class="text-slate-500">Shipped From: Mirpur, Dhaka</div>
+										<div class="text-slate-500">+8801860229546</div>
+									</div>
+									<div class="w-9 h-9 border border-slate-300 rounded p-0.5 flex items-center justify-center">
+										<QrCode class="w-7 h-7 text-slate-900" />
+									</div>
 								</div>
 
-								<!-- Table -->
-								<div class="space-y-1">
-									<div class="grid grid-cols-4 font-bold text-[7px] text-slate-400 border-b pb-0.5 border-slate-100">
-										<span class="col-span-2">Product</span>
+								<div class="space-y-1 p-2 rounded bg-slate-50 border border-slate-200/80 text-[7.5px]">
+									<div><span class="font-bold text-slate-500">Shipped To:</span> <strong>হাসান চৌধুরী</strong></div>
+									<div><span class="font-bold text-slate-500">Phone:</span> 01886-446845</div>
+									<div><span class="font-bold text-slate-500">Address:</span> মারুকা, দাউদকান্দি, কুমিল্লা।</div>
+								</div>
+							</div>
+
+							<div class="border-t pt-1.5 border-slate-200 flex justify-between items-center text-[7px]">
+								<span class="font-bold text-slate-700">Parcel COD: ৳ 1,450</span>
+								<span class="font-mono text-slate-400">TRK-88210</span>
+							</div>
+
+						<!-- TEMPLATE 4: CLASSIC DETAILED -->
+						{:else if t.type === 'detailed'}
+							<div class="space-y-1.5">
+								<div class="flex justify-between items-center border-b pb-1 border-slate-200">
+									<span class="font-black text-[8.5px]">INVOICE SLIP</span>
+									<span class="font-mono text-[7px] text-slate-500">|||| | |||| 8801</span>
+								</div>
+
+								<div class="text-[6.5px] text-slate-600 space-y-0.5">
+									<div>Customer: শফিউল আলম • 01912-345678</div>
+									<div>Address: সিলেট সদর, সিলেট</div>
+								</div>
+
+								<!-- Multi-item table -->
+								<div class="border border-slate-200 rounded text-[6.5px]">
+									<div class="grid grid-cols-5 font-bold bg-slate-50 p-1 border-b">
+										<span class="col-span-2">Item</span>
 										<span class="text-center">Qty</span>
+										<span class="text-center">Rate</span>
 										<span class="text-right">Total</span>
 									</div>
-									<div class="grid grid-cols-4 text-[7px] py-0.5 border-b border-dashed border-slate-100">
-										<span class="col-span-2 font-medium truncate">Aura Pro Earbuds</span>
+									<div class="grid grid-cols-5 p-1 border-b border-dashed border-slate-100">
+										<span class="col-span-2 truncate">Wireless Headphone</span>
 										<span class="text-center">1</span>
-										<span class="text-right font-mono">৳ 1,790</span>
+										<span class="text-center font-mono">1500</span>
+										<span class="text-right font-mono">1500</span>
+									</div>
+									<div class="grid grid-cols-5 p-1">
+										<span class="col-span-2 truncate">Fast Charger 33W</span>
+										<span class="text-center">1</span>
+										<span class="text-center font-mono">450</span>
+										<span class="text-right font-mono">450</span>
 									</div>
 								</div>
 							</div>
 
-							<div class="pt-1.5 border-t border-slate-200 space-y-1 text-[7px]">
-								<div class="flex justify-between text-slate-500">
-									<span>Subtotal:</span>
-									<span class="font-mono">৳ 1,790</span>
+							<div class="flex justify-between items-end border-t pt-1 border-slate-200 text-[6.5px]">
+								<div class="w-6 h-6 border rounded flex items-center justify-center">
+									<QrCode class="w-5 h-5 text-slate-700" />
 								</div>
-								<div class="flex justify-between text-slate-500">
-									<span>Delivery Fee:</span>
-									<span class="font-mono">৳ 60</span>
+								<div class="text-right space-y-0.5">
+									<div class="text-slate-500">SubTotal: ৳ 1,950</div>
+									<div class="font-bold text-[7.5px] text-slate-900">Total: ৳ 2,070</div>
 								</div>
-								<div class="flex justify-between font-bold text-[8px] text-slate-900 pt-0.5 border-t border-slate-100">
-									<span>Grand Total:</span>
-									<span class="font-mono text-emerald-600">৳ 1,850</span>
-								</div>
-								<div class="text-[6.5px] text-center text-slate-400 pt-1">Thank you for your order!</div>
 							</div>
 
-						<!-- TEMPLATE 2: MODERN DESIGN (THERMAL 3-INCH) -->
-						{:else}
-							{#if t.type === 'thermal'}
-								<div class="space-y-2">
-									<!-- Top Barcode -->
-									<div class="text-center border-b pb-1 border-slate-200">
-										<div class="font-mono text-[9px] tracking-widest text-slate-800">||| | ||||| ||| ||||</div>
-										<div class="font-bold text-[8px] tracking-widest">0043</div>
-									</div>
+						<!-- TEMPLATE 5: MINIMAL DETAILED WITH PRODUCT THUMBNAILS -->
+						{:else if t.type === 'detailed_photo'}
+							<div class="space-y-1.5">
+								<div class="flex justify-between items-center border-b pb-1 border-slate-200">
+									<div class="font-bold text-[8px] text-slate-900">AURA STORE</div>
+									<div class="font-mono text-[7px] text-slate-400">||| ||||| |||</div>
+								</div>
 
-									<!-- 2 Large Courier Metric Boxes -->
-									<div class="grid grid-cols-2 gap-1.5">
-										<div class="border border-slate-800 rounded p-1 text-center bg-slate-50">
-											<div class="text-[6px] text-slate-500">HUB CODE</div>
-											<div class="font-black text-[11px] text-slate-900">65B</div>
-										</div>
-										<div class="border border-slate-800 rounded p-1 text-center bg-slate-50">
-											<div class="text-[6px] text-slate-500">COD AMOUNT</div>
-											<div class="font-black text-[11px] text-slate-900">1840Tk</div>
-										</div>
-									</div>
+								<div class="text-[6.5px] text-slate-500">
+									Inv: #INV-2026-90 • কাস্টমার: জাহিদুল ইসলাম
+								</div>
 
-									<!-- Receiver & QR -->
-									<div class="flex items-center justify-between gap-1 border border-slate-200 p-1.5 rounded">
-										<div class="text-[7px] space-y-0.5">
-											<div class="font-bold">Receiver: ফাহিম হোসেন</div>
-											<div class="text-slate-500 text-[6.5px]">01712-XXXXXX</div>
-											<div class="text-slate-500 text-[6.5px]">ধানমন্ডি, ঢাকা</div>
-										</div>
-										<div class="w-8 h-8 border border-slate-300 rounded flex items-center justify-center shrink-0">
-											<QrCode class="w-6 h-6 text-slate-800" />
-										</div>
+								<!-- Items with mini icon -->
+								<div class="space-y-1 text-[6.5px]">
+									<div class="flex items-center gap-1.5 p-1 rounded bg-slate-50 border border-slate-100">
+										<div class="w-4 h-4 bg-emerald-100 rounded flex items-center justify-center shrink-0 text-[6px]">🎧</div>
+										<div class="truncate flex-1 font-medium">Pro Studio Headphone</div>
+										<div class="font-mono text-[7px]">৳1,850</div>
+									</div>
+									<div class="flex items-center gap-1.5 p-1 rounded bg-slate-50 border border-slate-100">
+										<div class="w-4 h-4 bg-indigo-100 rounded flex items-center justify-center shrink-0 text-[6px]">⌚</div>
+										<div class="truncate flex-1 font-medium">Smart Watch Fit 2</div>
+										<div class="font-mono text-[7px]">৳2,200</div>
+									</div>
+								</div>
+							</div>
+
+							<div class="border-t pt-1 border-slate-200 text-[6.5px] space-y-0.5">
+								<div class="flex justify-between text-slate-500">
+									<span>Delivered by Steadfast:</span>
+									<span class="font-mono text-emerald-600">PAID</span>
+								</div>
+								<div class="flex justify-between font-bold text-[7.5px]">
+									<span>Net Payable:</span>
+									<span class="font-mono">৳ 4,050</span>
+								</div>
+							</div>
+
+						<!-- TEMPLATE 6: STICKER PRINT (4X6 THERMAL) -->
+						{:else if t.type === 'parcel_sticker'}
+							<div class="space-y-1.5">
+								<div class="flex justify-between items-start border-b pb-1 border-slate-200">
+									<div>
+										<div class="font-bold text-[8px] text-slate-900">Aura Organic</div>
+										<div class="text-[6px] text-slate-500">Shipped From: Dhaka</div>
+									</div>
+									<div class="w-7 h-7 border rounded p-0.5 flex items-center justify-center">
+										<QrCode class="w-5 h-5 text-slate-800" />
 									</div>
 								</div>
 
-								<div class="text-[6.5px] text-center text-slate-400 border-t pt-1 border-slate-200">
-									Shop Name: AURA Store • Halal Delivery
+								<div class="p-1 rounded bg-amber-50/50 border border-amber-100 text-[6.5px] space-y-0.5">
+									<div><strong>Shipped To:</strong> শফিক মৃধা</div>
+									<div><strong>Phone:</strong> 01723-456789</div>
+									<div><strong>Address:</strong> বরিশাল সদর, বরিশাল।</div>
 								</div>
 
-							<!-- TEMPLATE 3: MINIMAL DESIGN -->
-							{:else if t.type === 'sticker'}
-								<div class="space-y-2">
-									<div class="flex items-start justify-between border-b pb-1.5 border-slate-200">
-										<div class="text-[7px] space-y-0.5">
-											<div class="font-black text-[8px] text-emerald-700">AURA LOGISTICS</div>
-											<div class="text-slate-500">Shipped From: Mirpur, Dhaka</div>
-											<div class="text-slate-500">+8801860229546</div>
-										</div>
-										<div class="w-9 h-9 border border-slate-300 rounded p-0.5 flex items-center justify-center">
-											<QrCode class="w-7 h-7 text-slate-900" />
-										</div>
+								<div class="border border-slate-200 rounded p-1 text-[6.5px] space-y-0.5 bg-slate-50">
+									<div class="flex justify-between">
+										<span>Winter Combo x 1</span>
+										<span class="font-mono">৳ 3,200</span>
 									</div>
-
-									<div class="space-y-1 p-2 rounded bg-slate-50 border border-slate-200/80 text-[7.5px]">
-										<div><span class="font-bold text-slate-500">Shipped To:</span> <strong>হাসান চৌধুরী</strong></div>
-										<div><span class="font-bold text-slate-500">Phone:</span> 01886-446845</div>
-										<div><span class="font-bold text-slate-500">Address:</span> মারুকা, দাউদকান্দি, কুমিল্লা।</div>
-									</div>
-								</div>
-
-								<div class="border-t pt-1.5 border-slate-200 flex justify-between items-center text-[7px]">
-									<span class="font-bold text-slate-700">Parcel COD: ৳ 1,450</span>
-									<span class="font-mono text-slate-400">TRK-88210</span>
-								</div>
-
-							<!-- TEMPLATE 4: CLASSIC DETAILED -->
-							{:else if t.type === 'detailed'}
-								<div class="space-y-1.5">
-									<div class="flex justify-between items-center border-b pb-1 border-slate-200">
-										<span class="font-black text-[8.5px]">INVOICE SLIP</span>
-										<span class="font-mono text-[7px] text-slate-500">|||| | |||| 8801</span>
-									</div>
-
-									<div class="text-[6.5px] text-slate-600 space-y-0.5">
-										<div>Customer: শফিউল আলম • 01912-345678</div>
-										<div>Address: সিলেট সদর, সিলেট</div>
-									</div>
-
-									<!-- Multi-item table -->
-									<div class="border border-slate-200 rounded text-[6.5px]">
-										<div class="grid grid-cols-5 font-bold bg-slate-50 p-1 border-b">
-											<span class="col-span-2">Item</span>
-											<span class="text-center">Qty</span>
-											<span class="text-center">Rate</span>
-											<span class="text-right">Total</span>
-										</div>
-										<div class="grid grid-cols-5 p-1 border-b border-dashed border-slate-100">
-											<span class="col-span-2 truncate">Wireless Headphone</span>
-											<span class="text-center">1</span>
-											<span class="text-center font-mono">1500</span>
-											<span class="text-right font-mono">1500</span>
-										</div>
-										<div class="grid grid-cols-5 p-1">
-											<span class="col-span-2 truncate">Fast Charger 33W</span>
-											<span class="text-center">1</span>
-											<span class="text-center font-mono">450</span>
-											<span class="text-right font-mono">450</span>
-										</div>
-									</div>
-								</div>
-
-								<div class="flex justify-between items-end border-t pt-1 border-slate-200 text-[6.5px]">
-									<div class="w-6 h-6 border rounded flex items-center justify-center">
-										<QrCode class="w-5 h-5 text-slate-700" />
-									</div>
-									<div class="text-right space-y-0.5">
-										<div class="text-slate-500">SubTotal: ৳ 1,950</div>
-										<div class="font-bold text-[7.5px] text-slate-900">Total: ৳ 2,070</div>
-									</div>
-								</div>
-
-							<!-- TEMPLATE 5: MINIMAL DETAILED WITH PRODUCT THUMBNAILS -->
-							{:else if t.type === 'detailed_photo'}
-								<div class="space-y-1.5">
-									<div class="flex justify-between items-center border-b pb-1 border-slate-200">
-										<div class="font-bold text-[8px] text-slate-900">AURA STORE</div>
-										<div class="font-mono text-[7px] text-slate-400">||| ||||| |||</div>
-									</div>
-
-									<div class="text-[6.5px] text-slate-500">
-										Inv: #INV-2026-90 • কাস্টমার: জাহিদুল ইসলাম
-									</div>
-
-									<!-- Items with mini icon -->
-									<div class="space-y-1 text-[6.5px]">
-										<div class="flex items-center gap-1.5 p-1 rounded bg-slate-50 border border-slate-100">
-											<div class="w-4 h-4 bg-emerald-100 rounded flex items-center justify-center shrink-0 text-[6px]">🎧</div>
-											<div class="truncate flex-1 font-medium">Pro Studio Headphone</div>
-											<div class="font-mono text-[7px]">৳1,850</div>
-										</div>
-										<div class="flex items-center gap-1.5 p-1 rounded bg-slate-50 border border-slate-100">
-											<div class="w-4 h-4 bg-indigo-100 rounded flex items-center justify-center shrink-0 text-[6px]">⌚</div>
-											<div class="truncate flex-1 font-medium">Smart Watch Fit 2</div>
-											<div class="font-mono text-[7px]">৳2,200</div>
-										</div>
-									</div>
-								</div>
-
-								<div class="border-t pt-1 border-slate-200 text-[6.5px] space-y-0.5">
 									<div class="flex justify-between text-slate-500">
-										<span>Delivered by Steadfast:</span>
-										<span class="font-mono text-emerald-600">PAID</span>
-									</div>
-									<div class="flex justify-between font-bold text-[7.5px]">
-										<span>Net Payable:</span>
-										<span class="font-mono">৳ 4,050</span>
+										<span>Delivery:</span>
+										<span class="font-mono">৳ 100</span>
 									</div>
 								</div>
+							</div>
 
-							<!-- TEMPLATE 6: STICKER PRINT (4X6 THERMAL) -->
-							{:else if t.type === 'parcel_sticker'}
-								<div class="space-y-1.5">
-									<div class="flex justify-between items-start border-b pb-1 border-slate-200">
-										<div>
-											<div class="font-bold text-[8px] text-slate-900">Aura Organic</div>
-											<div class="text-[6px] text-slate-500">Shipped From: Dhaka</div>
-										</div>
-										<div class="w-7 h-7 border rounded p-0.5 flex items-center justify-center">
-											<QrCode class="w-5 h-5 text-slate-800" />
-										</div>
-									</div>
+							<div class="border-t pt-1 border-slate-200 flex justify-between items-center text-[7.5px]">
+								<span class="font-bold">Grand Total:</span>
+								<span class="font-bold font-mono text-emerald-600">৳ 3,300</span>
+							</div>
 
-									<div class="p-1 rounded bg-amber-50/50 border border-amber-100 text-[6.5px] space-y-0.5">
-										<div><strong>Shipped To:</strong> শফিক মৃধা</div>
-										<div><strong>Phone:</strong> 01723-456789</div>
-										<div><strong>Address:</strong> বরিশাল সদর, বরিশাল।</div>
-									</div>
-
-									<div class="border border-slate-200 rounded p-1 text-[6.5px] space-y-0.5 bg-slate-50">
-										<div class="flex justify-between">
-											<span>Winter Combo x 1</span>
-											<span class="font-mono">৳ 3,200</span>
-										</div>
-										<div class="flex justify-between text-slate-500">
-											<span>Delivery:</span>
-											<span class="font-mono">৳ 100</span>
-										</div>
-									</div>
-								</div>
-
-								<div class="border-t pt-1 border-slate-200 flex justify-between items-center text-[7.5px]">
-									<span class="font-bold">Grand Total:</span>
-									<span class="font-bold font-mono text-emerald-600">৳ 3,300</span>
-								</div>
-
-							<!-- TEMPLATE 7: PREMIUM ELEGANT -->
-							{:else}
-								<div class="space-y-1.5">
-									<div class="flex justify-between items-center border-b pb-1 border-slate-200">
-										<div class="font-serif font-black text-[9px] tracking-wide text-slate-900">ELEGANT LUXE</div>
-										<div class="font-mono text-[7px] text-slate-400">||| |||| ||||</div>
-									</div>
-
-									<div class="border-l-2 border-[#5845eb] pl-1.5 py-0.5 text-[6.5px] text-slate-600">
-										<div class="font-bold text-slate-900">Customer: মেহজাবিন চৌধুরী</div>
-										<div>গুলশান-২, ঢাকা • 01711-223344</div>
-									</div>
-
-									<div class="border border-slate-200 rounded text-[6.5px] p-1 bg-slate-50 space-y-0.5">
-										<div class="flex justify-between font-semibold">
-											<span>Premium Silk Saree</span>
-											<span class="font-mono">৳ 6,500</span>
-										</div>
-										<div class="flex justify-between text-slate-400 text-[6px]">
-											<span>SKU: LUX-882 • Qty: 1</span>
-											<span>Vat: Included</span>
-										</div>
-									</div>
-								</div>
-
-								<div class="border-t pt-1 border-slate-200 flex justify-between items-center text-[6.5px]">
-									<div class="text-[6px] text-slate-400">Authorized Signature: ______</div>
-									<div class="font-bold font-mono text-[7.5px] text-slate-900">৳ 6,500</div>
-								</div>
-							{/if}
-						{/if}
-					</div>
-
-					<!-- Card Footer / Action Button -->
-					<div class="mt-4 pt-3 border-t border-slate-100 flex flex-col gap-2">
-						<div class="text-center">
-							<h3 class="text-sm font-bold text-slate-900">{t.name}</h3>
-							<p class="text-[11px] text-slate-500 mt-0.5 line-clamp-1">{t.desc}</p>
-						</div>
-
-						{#if isSelected}
-							<Button
-								type="button"
-								class="w-full bg-[#10b981] hover:bg-[#059669] text-white font-bold text-xs rounded-xl gap-1.5 shadow-sm"
-							>
-								<CheckCircle2 class="w-4 h-4" />
-								<span>সক্রিয় রয়েছে (Active)</span>
-							</Button>
+						<!-- TEMPLATE 7: PREMIUM ELEGANT -->
 						{:else}
-							<Button
-								type="button"
-								disabled={isSaving}
-								onclick={() => activateTemplate(t.id, t.name)}
-								class="w-full bg-[#1d6ee5] hover:bg-[#1557b0] text-white font-bold text-xs rounded-xl shadow-sm transition-transform active:scale-[0.98]"
-							>
-								<span>অ্যাক্টিভ করুন</span>
-							</Button>
+							<div class="space-y-1.5">
+								<div class="flex justify-between items-center border-b pb-1 border-slate-200">
+									<div class="font-serif font-black text-[9px] tracking-wide text-slate-900">ELEGANT LUXE</div>
+									<div class="font-mono text-[7px] text-slate-400">||| |||| ||||</div>
+								</div>
+
+								<div class="border-l-2 border-[#5845eb] pl-1.5 py-0.5 text-[6.5px] text-slate-600">
+									<div class="font-bold text-slate-900">Customer: মেহজাবিন চৌধুরী</div>
+									<div>গুলশান-২, ঢাকা • 01711-223344</div>
+								</div>
+
+								<div class="border border-slate-200 rounded text-[6.5px] p-1 bg-slate-50 space-y-0.5">
+									<div class="flex justify-between font-semibold">
+										<span>Premium Silk Saree</span>
+										<span class="font-mono">৳ 6,500</span>
+									</div>
+									<div class="flex justify-between text-slate-400 text-[6px]">
+										<span>SKU: LUX-882 • Qty: 1</span>
+										<span>Vat: Included</span>
+									</div>
+								</div>
+							</div>
+
+							<div class="border-t pt-1 border-slate-200 flex justify-between items-center text-[6.5px]">
+								<div class="text-[6px] text-slate-400">Authorized Signature: ______</div>
+								<div class="font-bold font-mono text-[7.5px] text-slate-900">৳ 6,500</div>
+							</div>
 						{/if}
+					{/if}
+				</div>
+
+				<!-- Card Footer / Action Button -->
+				<div class="mt-4 pt-3 border-t border-slate-100 flex flex-col gap-2">
+					<div class="text-center">
+						<h3 class="text-sm font-bold text-slate-900">{t.name}</h3>
+						<p class="text-[11px] text-slate-500 mt-0.5 line-clamp-1">{t.desc}</p>
 					</div>
-				</Card>
-			{/each}
+
+					{#if isSelected}
+						<Button
+							type="button"
+							class="w-full bg-[#10b981] hover:bg-[#059669] text-white font-bold text-xs rounded-xl gap-1.5 shadow-sm"
+						>
+							<CheckCircle2 class="w-4 h-4" />
+							<span>সক্রিয় রয়েছে (Active)</span>
+						</Button>
+					{:else}
+						<Button
+							type="button"
+							disabled={isSaving}
+							onclick={() => activateTemplate(t.id)}
+							class="w-full bg-[#1d6ee5] hover:bg-[#1557b0] text-white font-bold text-xs rounded-xl shadow-sm transition-transform active:scale-[0.98]"
+						>
+							{#if isSaving}
+								<Loader2 class="w-3.5 h-3.5 animate-spin mr-1" />
+							{/if}
+							<span>অ্যাক্টিভ করুন</span>
+						</Button>
+					{/if}
+				</div>
+			</Card>
+		{/each}
+	</div>
+
+	<!-- Configuration & Checkbox Options Matching Screenshot 2 -->
+	<Card class="p-6 sm:p-7 space-y-6 bg-white border border-slate-200/90 shadow-sm rounded-3xl mt-8">
+		<div class="flex items-center gap-3.5 pb-4 border-b border-slate-100">
+			<div class="w-10 h-10 rounded-2xl bg-[#5845eb]/10 flex items-center justify-center text-[#5845eb]">
+				<SlidersHorizontal class="w-5 h-5" />
+			</div>
+			<div>
+				<h3 class="text-base sm:text-lg font-bold text-slate-900">ইনভয়েস ডিসপ্লে অপশন ও সেটিংস</h3>
+				<p class="text-xs text-slate-500">প্রিন্ট কপি ও স্লিপে কোন কোন তথ্য দৃশ্যমান হবে তা নির্ধারণ করুন</p>
+			</div>
 		</div>
 
-		<!-- Configuration & Checkbox Options Matching Screenshot 2 -->
-		<Card class="p-6 sm:p-7 space-y-6 bg-white border border-slate-200/90 shadow-sm rounded-3xl mt-8">
-			<div class="flex items-center gap-3.5 pb-4 border-b border-slate-100">
-				<div class="w-10 h-10 rounded-2xl bg-[#5845eb]/10 flex items-center justify-center text-[#5845eb]">
-					<SlidersHorizontal class="w-5 h-5" />
-				</div>
-				<div>
-					<h3 class="text-base sm:text-lg font-bold text-slate-900">ইনভয়েস ডিসপ্লে অপশন ও সেটিংস</h3>
-					<p class="text-xs text-slate-500">প্রিন্ট কপি ও স্লিপে কোন কোন তথ্য দৃশ্যমান হবে তা নির্ধারণ করুন</p>
+		<div class="space-y-5">
+			<!-- Option 1: Disable Price on Invoice -->
+			<div class="space-y-2">
+				<label class="text-xs sm:text-sm font-bold text-slate-900 block">
+					ইনভয়েসে পণ্যের দাম প্রদর্শন (Price Visibility)
+				</label>
+				<div class="flex items-start gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 hover:bg-slate-100/50 transition-colors">
+					<div class="pt-0.5">
+						<Checkbox id="disable-price" bind:checked={disablePrice} />
+					</div>
+					<label for="disable-price" class="text-xs sm:text-sm text-slate-700 cursor-pointer select-none leading-relaxed">
+						<span class="font-bold text-slate-900 block">ইনভয়েসে পণ্যের মূল্য ও টাকার পরিমাণ গোপন রাখুন</span>
+						<span class="text-[11px] sm:text-xs text-slate-500 block mt-0.5">
+							ইনভয়েস বা ডেলিভারি স্লিপে পণ্যের একক মূল্য, সাব-টোটাল ও মোট টাকা প্রদর্শন করবেন না (ড্রপশিপিং বা গিফট অর্ডারের ক্ষেত্রে প্রযোজ্য)
+						</span>
+					</label>
 				</div>
 			</div>
 
-			<div class="space-y-5">
-				<!-- Option 1: Disable Price on Invoice -->
-				<div class="space-y-2">
-					<label class="text-xs sm:text-sm font-bold text-slate-900 block">
-						ইনভয়েসে পণ্যের দাম প্রদর্শন (Price Visibility)
-					</label>
-					<div class="flex items-start gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 hover:bg-slate-100/50 transition-colors">
-						<div class="pt-0.5">
-							<Checkbox id="disable-price" bind:checked={disablePrice} />
-						</div>
-						<label for="disable-price" class="text-xs sm:text-sm text-slate-700 cursor-pointer select-none leading-relaxed">
-							<span class="font-bold text-slate-900 block">ইনভয়েসে পণ্যের মূল্য ও টাকার পরিমাণ গোপন রাখুন</span>
-							<span class="text-[11px] sm:text-xs text-slate-500 block mt-0.5">
-								ইনভয়েস বা ডেলিভারি স্লিপে পণ্যের একক মূল্য, সাব-টোটাল ও মোট টাকা প্রদর্শন করবেন না (ড্রপশিপিং বা গিফট অর্ডারের ক্ষেত্রে প্রযোজ্য)
-							</span>
-						</label>
+			<!-- Option 2: Enable Courier Label / Barcode & QR -->
+			<div class="space-y-2">
+				<label class="text-xs sm:text-sm font-bold text-slate-900 block">
+					কুরিয়ার বারকোড ও ট্র্যাকিং কিউআর কোড (Courier Tracking Label)
+				</label>
+				<div class="flex items-start gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 hover:bg-slate-100/50 transition-colors">
+					<div class="pt-0.5">
+						<Checkbox id="enable-courier" bind:checked={enableCourier} />
 					</div>
-				</div>
-
-				<!-- Option 2: Enable Courier Label / Barcode & QR -->
-				<div class="space-y-2">
-					<label class="text-xs sm:text-sm font-bold text-slate-900 block">
-						কুরিয়ার বারকোড ও ট্র্যাকিং কিউআর কোড (Courier Tracking Label)
+					<label for="enable-courier" class="text-xs sm:text-sm text-slate-700 cursor-pointer select-none leading-relaxed">
+						<span class="font-bold text-slate-900 block">ইনভয়েসে কুরিয়ার ট্র্যাকিং বারকোড ও কিউআর কোড যুক্ত করুন</span>
+						<span class="text-[11px] sm:text-xs text-slate-500 block mt-0.5">
+							ইনভয়েসের উপর স্বয়ংক্রিয়ভাবে কুরিয়ার ট্র্যাকিং বারকোড ও পার্সেল স্ক্যান কোড প্রিন্ট হবে, যাতে ডেলিভারি ম্যান সহজেই স্ক্যান করতে পারেন
+						</span>
 					</label>
-					<div class="flex items-start gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 hover:bg-slate-100/50 transition-colors">
-						<div class="pt-0.5">
-							<Checkbox id="enable-courier" bind:checked={enableCourier} />
-						</div>
-						<label for="enable-courier" class="text-xs sm:text-sm text-slate-700 cursor-pointer select-none leading-relaxed">
-							<span class="font-bold text-slate-900 block">ইনভয়েসে কুরিয়ার ট্র্যাকিং বারকোড ও কিউআর কোড যুক্ত করুন</span>
-							<span class="text-[11px] sm:text-xs text-slate-500 block mt-0.5">
-								ইনভয়েসের উপর স্বয়ংক্রিয়ভাবে কুরিয়ার ট্র্যাকিং বারকোড ও পার্সেল স্ক্যান কোড প্রিন্ট হবে, যাতে ডেলিভারি ম্যান সহজেই স্ক্যান করতে পারেন
-							</span>
-						</label>
-					</div>
-				</div>
-
-				<!-- Option 3: Return Policy / Footer Note -->
-				<div class="space-y-2">
-					<label class="text-xs sm:text-sm font-bold text-slate-900 block">
-						রিটার্ন পলিসি ও গ্রাহক নির্দেশনাবলী
-					</label>
-					<div class="flex items-start gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 hover:bg-slate-100/50 transition-colors">
-						<div class="pt-0.5">
-							<Checkbox id="enable-return-policy" bind:checked={enableReturnPolicy} />
-						</div>
-						<label for="enable-return-policy" class="text-xs sm:text-sm text-slate-700 cursor-pointer select-none leading-relaxed">
-							<span class="font-bold text-slate-900 block">ইনভয়েসের নিচে ডেলিভারি চেক নোট ও হেল্পলাইন নাম্বার প্রিন্ট করুন</span>
-							<span class="text-[11px] sm:text-xs text-slate-500 block mt-0.5">
-								পণ্য রিসিভ করার সময় চেক করার অনুরোধ এবং রিটার্ন পলিসির সংক্ষিপ্ত বিবরণ প্রতিটি চালানের নিচে প্রিন্ট হবে
-							</span>
-						</label>
-					</div>
 				</div>
 			</div>
 
-			<!-- Save Changes Button Matching Screenshot 2 -->
-			<div class="pt-4 border-t border-slate-100 flex items-center justify-start">
-				<Button
-					type="submit"
-					disabled={isSaving}
-					class="bg-[#5845eb] hover:bg-[#4734d6] text-white font-bold px-8 py-2.5 rounded-xl shadow-md shadow-[#5845eb]/20 flex items-center gap-2 text-xs sm:text-sm transition-all duration-200 active:scale-[0.98]"
-				>
-					{#if isSaving}
-						<Loader2 class="w-4 h-4 animate-spin" />
-						<span>সংরক্ষণ হচ্ছে...</span>
-					{:else}
-						<Check class="w-4 h-4 stroke-[3]" />
-						<span>পরিবর্তন সংরক্ষণ করুন</span>
-					{/if}
-				</Button>
+			<!-- Option 3: Return Policy / Footer Note -->
+			<div class="space-y-2">
+				<label class="text-xs sm:text-sm font-bold text-slate-900 block">
+					রিটার্ন পলিসি ও গ্রাহক নির্দেশনাবলী
+				</label>
+				<div class="flex items-start gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 hover:bg-slate-100/50 transition-colors">
+					<div class="pt-0.5">
+						<Checkbox id="enable-return-policy" bind:checked={enableReturnPolicy} />
+					</div>
+					<label for="enable-return-policy" class="text-xs sm:text-sm text-slate-700 cursor-pointer select-none leading-relaxed">
+						<span class="font-bold text-slate-900 block">ইনভয়েসের নিচে ডেলিভারি চেক নোট ও হেল্পলাইন নাম্বার প্রিন্ট করুন</span>
+						<span class="text-[11px] sm:text-xs text-slate-500 block mt-0.5">
+							পণ্য রিসিভ করার সময় চেক করার অনুরোধ এবং রিটার্ন পলিসির সংক্ষিপ্ত বিবরণ প্রতিটি চালানের নিচে প্রিন্ট হবে
+						</span>
+					</label>
+				</div>
 			</div>
-		</Card>
-	</form>
+		</div>
+
+		<!-- Save Changes Button Matching Screenshot 2 -->
+		<div class="pt-4 border-t border-slate-100 flex items-center justify-start">
+			<Button
+				type="button"
+				disabled={isSaving}
+				onclick={() => saveSettings()}
+				class="bg-[#5845eb] hover:bg-[#4734d6] text-white font-bold px-8 py-2.5 rounded-xl shadow-md shadow-[#5845eb]/20 flex items-center gap-2 text-xs sm:text-sm transition-all duration-200 active:scale-[0.98]"
+			>
+				{#if isSaving}
+					<Loader2 class="w-4 h-4 animate-spin" />
+					<span>সংরক্ষণ হচ্ছে...</span>
+				{:else}
+					<Check class="w-4 h-4 stroke-[3]" />
+					<span>পরিবর্তন সংরক্ষণ করুন</span>
+				{/if}
+			</Button>
+		</div>
+	</Card>
 </div>

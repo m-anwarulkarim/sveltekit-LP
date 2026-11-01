@@ -12,7 +12,9 @@
 		ChevronLeft,
 		ChevronRight,
 		CheckCircle2,
-		X
+		X,
+		ExternalLink,
+		SlidersHorizontal
 	} from 'lucide-svelte';
 
 	interface BannerItem {
@@ -20,8 +22,9 @@
 		image: string;
 		title: string;
 		url: string;
-		serial: string;
-		status: 'PUBLISHED' | 'DRAFT';
+		serial?: string;
+		priority?: string;
+		status: 'PUBLISHED' | 'DRAFT' | 'Publish' | 'Draft' | string;
 	}
 
 	let { data }: { data?: any } = $props();
@@ -48,18 +51,15 @@
 	let selectedIds = $state<string[]>([]);
 	let activeActionId = $state<string | null>(null);
 
-	// Modal State
-	let isModalOpen = $state(false);
-	let editingItem = $state<BannerItem | null>(null);
-	let modalTitle = $state('');
-	let modalUrl = $state('/home');
-	let modalSerial = $state('10');
-	let modalStatus = $state<'PUBLISHED' | 'DRAFT'>('DRAFT');
-	let modalImage = $state('/images/banners/banner-home.svg');
-
-	function showToast(msg: string) {
-		toast.success(msg);
-	}
+	// Dynamic tab counts based on actual data
+	let allCount = $derived(banners.length);
+	let publishedCount = $derived(
+		banners.filter((b) => (b.status || '').toUpperCase().startsWith('PUB')).length
+	);
+	let draftCount = $derived(
+		banners.filter((b) => (b.status || '').toUpperCase().startsWith('DRAFT')).length
+	);
+	let trashCount = $derived(0);
 
 	function handleActionClick(id: string, e: MouseEvent) {
 		e.stopPropagation();
@@ -73,16 +73,20 @@
 	let filteredBanners = $derived.by(() => {
 		let list = [...banners];
 		if (activeTab === 'published') {
-			list = list.filter((b) => b.status === 'PUBLISHED');
+			list = list.filter((b) => (b.status || '').toUpperCase().startsWith('PUB'));
 		} else if (activeTab === 'draft') {
-			list = list.filter((b) => b.status === 'DRAFT');
+			list = list.filter((b) => (b.status || '').toUpperCase().startsWith('DRAFT'));
 		} else if (activeTab === 'trash') {
 			list = [];
 		}
 
 		if (searchQuery.trim()) {
 			const q = searchQuery.toLowerCase().trim();
-			list = list.filter((b) => b.title.toLowerCase().includes(q) || b.url.toLowerCase().includes(q));
+			list = list.filter(
+				(b) =>
+					b.title.toLowerCase().includes(q) ||
+					(b.url && b.url.toLowerCase().includes(q))
+			);
 		}
 		return list;
 	});
@@ -107,60 +111,39 @@
 		}
 	}
 
-	function openAddModal() {
-		editingItem = null;
-		modalTitle = '';
-		modalUrl = '/home';
-		modalSerial = '1';
-		modalStatus = 'PUBLISHED';
-		modalImage = '/images/banners/banner-home.svg';
-		isModalOpen = true;
-	}
+	async function toggleStatus(item: BannerItem) {
+		const oldStatus = item.status;
+		const isCurrentlyPub = (oldStatus || '').toUpperCase().startsWith('PUB');
+		const nextStatus = isCurrentlyPub ? 'Draft' : 'Publish';
 
-	function openEditModal(item: BannerItem) {
-		editingItem = item;
-		modalTitle = item.title;
-		modalUrl = item.url;
-		modalSerial = item.serial;
-		modalStatus = item.status;
-		modalImage = item.image;
-		isModalOpen = true;
-	}
+		// Optimistic UI update
+		item.status = nextStatus;
+		activeActionId = null;
 
-	function handleSave(e: SubmitEvent) {
-		e.preventDefault();
-		if (!modalTitle.trim()) return;
+		try {
+			const fd = new FormData();
+			fd.append('id', item.id);
+			fd.append('status', oldStatus);
 
-		if (editingItem) {
-			banners = banners.map((b) =>
-				b.id === editingItem!.id
-					? {
-							...b,
-							title: modalTitle,
-							url: modalUrl,
-							serial: modalSerial,
-							status: modalStatus,
-							image: modalImage
-					  }
-					: b
-			);
-			showToast(`"${modalTitle}" ব্যানার আপডেট করা হয়েছে`);
-		} else {
-			const newItem: BannerItem = {
-				id: `ban-${Date.now()}`,
-				title: modalTitle,
-				url: modalUrl,
-				serial: modalSerial,
-				status: modalStatus,
-				image: modalImage
-			};
-			banners = [...banners, newItem];
-			showToast(`নতুন ব্যানার যুক্ত করা হয়েছে`);
+			const res = await fetch('?/toggleStatus', {
+				method: 'POST',
+				body: fd
+			});
+			const result = await res.json();
+			if (result.type === 'success' || result.status === 200) {
+				toast.success(`স্ট্যাটাস পরিবর্তন হয়েছে: ${nextStatus}`);
+			} else {
+				item.status = oldStatus;
+				toast.error('স্ট্যাটাস আপডেট ব্যর্থ হয়েছে!');
+			}
+		} catch (e) {
+			item.status = oldStatus;
+			toast.error('সার্ভারে যোগাযোগ করা যায়নি!');
 		}
-		isModalOpen = false;
 	}
 
 	async function handleDelete(item: BannerItem) {
+		activeActionId = null;
 		const confirmed = await confirmModal({
 			title: 'ব্যানার মুছে ফেলা',
 			message: `আপনি কি "${item.title}" ব্যানারটি মুছে ফেলতে চান?`,
@@ -170,9 +153,30 @@
 		});
 		if (!confirmed) return;
 
+		// Optimistic UI update
+		const previousList = [...banners];
 		banners = banners.filter((b) => b.id !== item.id);
 		selectedIds = selectedIds.filter((id) => id !== item.id);
-		showToast(`ব্যানারটি মুছে ফেলা হয়েছে`);
+
+		try {
+			const fd = new FormData();
+			fd.append('id', item.id);
+
+			const res = await fetch('?/deleteBanner', {
+				method: 'POST',
+				body: fd
+			});
+			const result = await res.json();
+			if (result.type === 'success' || result.status === 200) {
+				toast.success(`"${item.title}" ব্যানারটি মুছে ফেলা হয়েছে`);
+			} else {
+				banners = previousList;
+				toast.error('ব্যানার ডিলিট করা যায়নি!');
+			}
+		} catch (e) {
+			banners = previousList;
+			toast.error('সার্ভারে যোগাযোগ করা যায়নি!');
+		}
 	}
 </script>
 
@@ -182,21 +186,22 @@
 	<title>Banner - Customization - AURA Admin</title>
 </svelte:head>
 
-<div class="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
-	<!-- Top Search & Add Banner Row (Matches Screenshot 2) -->
-	<div class="space-y-3">
-		<!-- Search with integrated purple search button -->
-		<div class="relative w-full sm:w-96 flex items-center">
+<div class="p-3 sm:p-6 lg:p-8 space-y-5 max-w-7xl mx-auto font-['Anek_Bangla',sans-serif]">
+	
+	<!-- Top Controls: Search Bar & Add Banner Button (Fully Responsive Row) -->
+	<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+		<!-- Search with integrated search button -->
+		<div class="relative w-full sm:w-80 md:w-96 flex items-center">
 			<Input
 				type="text"
 				placeholder="Search banners..."
 				bind:value={searchQuery}
-				class="rounded-r-none border-r-0 rounded-l-2xl pl-4 pr-3 py-2.5 text-xs sm:text-sm shadow-2xs"
+				class="rounded-r-none border-r-0 rounded-l-2xl pl-4 pr-3 py-2 text-xs sm:text-sm shadow-2xs h-10 w-full bg-white"
 			/>
 			<Button
 				type="button"
 				variant="secondary"
-				class="bg-[#e9e6fd] hover:bg-[#d8d3fc] text-[#5845eb] px-4 py-2.5 rounded-l-none rounded-r-2xl border border-l-0 border-indigo-200 shadow-2xs"
+				class="bg-[#e9e6fd] hover:bg-[#d8d3fc] text-[#5845eb] px-4 py-2 rounded-l-none rounded-r-2xl border border-l-0 border-indigo-200 shadow-2xs h-10 shrink-0 cursor-pointer"
 				aria-label="Search"
 			>
 				<Search class="w-4 h-4" />
@@ -204,76 +209,171 @@
 		</div>
 
 		<!-- + Add Banner Button -->
-		<div>
-			<a
-				href="/admin/customization/banner/edit-banner/new"
-				class="inline-flex items-center gap-1.5 rounded-xl bg-[#5845eb] hover:bg-[#4936d6] text-white px-5 py-2.5 text-xs font-bold shadow-md shadow-indigo-500/25 active:scale-95 shrink-0 transition-all cursor-pointer"
-			>
-				<Plus class="w-4 h-4 stroke-[2.5]" />
-				<span>Add Banner</span>
-			</a>
-		</div>
+		<a
+			href="/admin/customization/banner/edit-banner/new"
+			class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-[#5845eb] hover:bg-[#4936d6] text-white px-5 py-2.5 text-xs font-bold shadow-md shadow-indigo-500/20 active:scale-95 transition-all cursor-pointer shrink-0 h-10"
+		>
+			<Plus class="w-4 h-4 stroke-[2.5]" />
+			<span>Add Banner</span>
+		</a>
 	</div>
 
-	<!-- Filter Tabs Capsule (All Banners [1], Published [0], Draft [1], Trash [0]) -->
-	<div class="flex items-center">
-		<div class="inline-flex items-center p-1 bg-slate-100/90 rounded-2xl border border-slate-200/70 shadow-2xs gap-1">
+	<!-- Filter Tabs Capsule with horizontal scroll support on small screens -->
+	<div class="w-full overflow-x-auto no-scrollbar py-1">
+		<div class="inline-flex items-center p-1 bg-slate-100/90 rounded-2xl border border-slate-200/70 shadow-2xs gap-1 min-w-max">
 			<button
 				type="button"
 				onclick={() => (activeTab = 'all')}
-				class="px-4 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer {activeTab === 'all'
+				class="px-3.5 sm:px-4 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer {activeTab === 'all'
 					? 'bg-white text-slate-900 shadow-xs'
 					: 'text-slate-600 hover:text-slate-900'}"
 			>
 				<span>All Banners</span>
 				<span class="px-1.5 py-0.2 rounded-full text-[10px] font-black {activeTab === 'all' ? 'bg-[#5845eb] text-white' : 'bg-slate-200/80 text-slate-700'}">
-					1
+					{allCount}
 				</span>
 			</button>
 
 			<button
 				type="button"
 				onclick={() => (activeTab = 'published')}
-				class="px-4 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer {activeTab === 'published'
+				class="px-3.5 sm:px-4 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer {activeTab === 'published'
 					? 'bg-white text-slate-900 shadow-xs'
 					: 'text-slate-600 hover:text-slate-900'}"
 			>
 				<span>Published</span>
 				<span class="px-1.5 py-0.2 rounded-full text-[10px] font-black {activeTab === 'published' ? 'bg-[#5845eb] text-white' : 'bg-slate-200/80 text-slate-700'}">
-					0
+					{publishedCount}
 				</span>
 			</button>
 
 			<button
 				type="button"
 				onclick={() => (activeTab = 'draft')}
-				class="px-4 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer {activeTab === 'draft'
+				class="px-3.5 sm:px-4 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer {activeTab === 'draft'
 					? 'bg-white text-slate-900 shadow-xs'
 					: 'text-slate-600 hover:text-slate-900'}"
 			>
 				<span>Draft</span>
 				<span class="px-1.5 py-0.2 rounded-full text-[10px] font-black {activeTab === 'draft' ? 'bg-[#5845eb] text-white' : 'bg-slate-200/80 text-slate-700'}">
-					1
+					{draftCount}
 				</span>
 			</button>
 
 			<button
 				type="button"
 				onclick={() => (activeTab = 'trash')}
-				class="px-4 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer {activeTab === 'trash'
+				class="px-3.5 sm:px-4 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer {activeTab === 'trash'
 					? 'bg-white text-slate-900 shadow-xs'
 					: 'text-slate-600 hover:text-slate-900'}"
 			>
 				<span>Trash</span>
 				<span class="px-1.5 py-0.2 rounded-full text-[10px] font-black {activeTab === 'trash' ? 'bg-[#5845eb] text-white' : 'bg-slate-200/80 text-slate-700'}">
-					0
+					{trashCount}
 				</span>
 			</button>
 		</div>
 	</div>
 
-	<!-- Table Card (Exact match to Screenshot 2) -->
-	<div class="bg-white border border-slate-200/90 rounded-3xl shadow-xs min-h-[360px] pb-12">
+	<!-- Bulk Selection Bar (Shows when 1 or more items are selected) -->
+	{#if selectedIds.length > 0}
+		<div class="bg-indigo-50/80 border border-indigo-200/80 rounded-2xl p-3 flex items-center justify-between gap-3 text-xs text-indigo-900 animate-in fade-in">
+			<div class="flex items-center gap-2 font-bold">
+				<span class="w-5 h-5 rounded-full bg-[#5845eb] text-white flex items-center justify-center text-[10px]">
+					{selectedIds.length}
+				</span>
+				<span>ব্যানার সিলেক্ট করা হয়েছে</span>
+			</div>
+			<button
+				type="button"
+				onclick={() => (selectedIds = [])}
+				class="text-xs font-semibold text-slate-500 hover:text-slate-800 underline cursor-pointer"
+			>
+				Clear
+			</button>
+		</div>
+	{/if}
+
+	<!-- 1. MOBILE VIEW (< md): Responsive Cards List -->
+	<div class="block md:hidden space-y-3">
+		{#if filteredBanners.length === 0}
+			<div class="bg-white border border-slate-200/80 rounded-3xl p-8 text-center space-y-2">
+				<p class="text-sm font-bold text-slate-700">কোনো ব্যানার পাওয়া যায়নি</p>
+				<p class="text-xs text-slate-400">ফিল্টার পরিবর্তন করে আবার চেষ্টা করুন</p>
+			</div>
+		{:else}
+			{#each filteredBanners as item (item.id)}
+				{@const isSelected = selectedIds.includes(item.id)}
+				{@const isPub = (item.status || '').toUpperCase().startsWith('PUB')}
+				<div class="bg-white border border-slate-200/90 rounded-2xl p-3.5 shadow-2xs space-y-3 transition-colors {isSelected ? 'bg-indigo-50/20 border-indigo-200' : ''}">
+					<!-- Top Row: Checkbox + Thumbnail + Title + Status -->
+					<div class="flex items-start gap-3">
+						<input
+							type="checkbox"
+							checked={isSelected}
+							onchange={() => toggleSelectRow(item.id)}
+							class="w-4 h-4 mt-1 rounded-md border-slate-300 text-[#5845eb] focus:ring-[#5845eb] cursor-pointer shrink-0"
+							aria-label="Select {item.title}"
+						/>
+
+						<div class="w-18 h-10 rounded-xl border border-slate-200/80 bg-slate-50 overflow-hidden shadow-2xs shrink-0 flex items-center justify-center p-0.5">
+							<img src={item.image} alt={item.title} class="w-full h-full object-cover rounded-lg" />
+						</div>
+
+						<div class="flex-1 min-w-0">
+							<div class="flex items-center justify-between gap-2">
+								<h4 class="font-bold text-slate-900 text-sm truncate">{item.title}</h4>
+								<span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shrink-0 {isPub ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">
+									{isPub ? 'Published' : 'Draft'}
+								</span>
+							</div>
+							<p class="text-xs text-slate-500 font-mono truncate mt-0.5">{item.url}</p>
+						</div>
+					</div>
+
+					<!-- Bottom Row: Serial & Actions -->
+					<div class="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2">
+						<span class="text-xs text-slate-500 font-medium">
+							Serial: <strong class="text-slate-800 font-mono">{item.serial || item.priority || '10'}</strong>
+						</span>
+
+						<div class="flex items-center gap-1.5">
+							<button
+								type="button"
+								onclick={() => toggleStatus(item)}
+								class="px-2.5 py-1.5 rounded-xl border border-slate-200/90 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+								title="Toggle Status"
+							>
+								<Eye class="w-3.5 h-3.5 text-slate-500" />
+								<span>{isPub ? 'Draft' : 'Publish'}</span>
+							</button>
+
+							<a
+								href="/admin/customization/banner/edit-banner/{item.id}"
+								class="px-2.5 py-1.5 rounded-xl border border-slate-200/90 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+								title="Edit"
+							>
+								<Edit3 class="w-3.5 h-3.5 text-slate-500" />
+								<span>Edit</span>
+							</a>
+
+							<button
+								type="button"
+								onclick={() => handleDelete(item)}
+								class="p-2 rounded-xl border border-rose-200 hover:bg-rose-50 text-rose-600 transition-colors cursor-pointer"
+								title="Delete"
+							>
+								<Trash2 class="w-3.5 h-3.5 text-rose-500" />
+							</button>
+						</div>
+					</div>
+				</div>
+			{/each}
+		{/if}
+	</div>
+
+	<!-- 2. DESKTOP VIEW (>= md): Full Data Table (Non-Clipping Dropdowns) -->
+	<div class="hidden md:block bg-white border border-slate-200/90 rounded-3xl shadow-xs min-h-[380px] pb-16">
 		<div class="overflow-x-auto no-scrollbar">
 			<table class="w-full text-left border-collapse">
 				<thead>
@@ -287,223 +387,155 @@
 								aria-label="Select all"
 							/>
 						</th>
-						<th class="py-4 px-4 min-w-[120px]">IMAGE</th>
+						<th class="py-4 px-4 min-w-[110px]">IMAGE</th>
 						<th class="py-4 px-4 min-w-[140px]">TITLE</th>
-						<th class="py-4 px-4 min-w-[200px]">URL</th>
-						<th class="py-4 px-4 min-w-[100px]">SERIAL</th>
-						<th class="py-4 px-4 min-w-[120px]">STATUS</th>
-						<th class="py-4 pr-6 pl-3 w-16 text-right">ACTIONS</th>
+						<th class="py-4 px-4 min-w-[180px]">URL</th>
+						<th class="py-4 px-4 min-w-[90px]">SERIAL</th>
+						<th class="py-4 px-4 min-w-[110px]">STATUS</th>
+						<th class="py-4 pr-6 pl-3 w-20 text-right">ACTIONS</th>
 					</tr>
 				</thead>
 
 				<tbody class="divide-y divide-slate-100 text-slate-700 text-xs font-medium">
-					{#each filteredBanners as item, index (item.id)}
-						{@const isSelected = selectedIds.includes(item.id)}
-						{@const isNearBottom = index >= filteredBanners.length - 1 || filteredBanners.length <= 2}
-						<tr class="hover:bg-slate-50/70 transition-colors {isSelected ? 'bg-indigo-50/30' : ''}">
-							<!-- Checkbox -->
-							<td class="py-4 pl-5 pr-2">
-								<input
-									type="checkbox"
-									checked={isSelected}
-									onchange={() => toggleSelectRow(item.id)}
-									class="w-4 h-4 rounded-md border-slate-300 text-[#5845eb] focus:ring-[#5845eb] cursor-pointer"
-									aria-label="Select {item.title}"
-								/>
-							</td>
-
-							<!-- Image Thumbnail -->
-							<td class="py-4 px-4">
-								<div class="w-20 h-10 rounded-xl border border-slate-200/80 bg-slate-50 overflow-hidden shadow-2xs flex items-center justify-center p-0.5">
-									<img src={item.image} alt={item.title} class="w-full h-full object-cover rounded-lg" />
-								</div>
-							</td>
-
-							<!-- Title -->
-							<td class="py-4 px-4">
-								<span class="font-bold text-slate-900 text-xs sm:text-sm">{item.title}</span>
-							</td>
-
-							<!-- URL -->
-							<td class="py-4 px-4">
-								<span class="text-xs text-slate-700 font-mono">{item.url}</span>
-							</td>
-
-							<!-- Serial -->
-							<td class="py-4 px-4">
-								<span class="text-xs font-semibold text-slate-800 font-mono">{item.serial}</span>
-							</td>
-
-							<!-- Status -->
-							<td class="py-4 px-4">
-								<span class="font-bold text-slate-900 uppercase text-xs tracking-wider">
-									{item.status}
-								</span>
-							</td>
-
-							<!-- Actions -->
-							<td class="py-4 pr-6 pl-3 text-right relative">
-								<button
-									type="button"
-									onclick={(e) => handleActionClick(item.id, e)}
-									class="w-8 h-8 rounded-xl border border-slate-200/80 hover:bg-slate-100 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-colors ml-auto shadow-2xs cursor-pointer"
-									aria-label="Action menu"
-								>
-									<MoreVertical class="w-4 h-4" />
-								</button>
-
-								{#if activeActionId === item.id}
-									<div
-										class="absolute right-6 {isNearBottom
-											? 'bottom-11 top-auto origin-bottom-right'
-											: 'top-11 origin-top-right'} w-40 bg-white border border-slate-200/90 rounded-2xl shadow-xl py-1.5 z-50 text-xs font-medium text-left animate-in fade-in zoom-in-95 duration-100"
-									>
-										<a
-											href="/admin/customization/banner/edit-banner/{item.id}"
-											class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"
-										>
-											<Edit3 class="w-3.5 h-3.5 text-slate-400" />
-											<span>Edit</span>
-										</a>
-										<button
-											type="button"
-											onclick={() => {
-												item.status = item.status === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED';
-												activeActionId = null;
-												showToast(`স্ট্যাটাস পরিবর্তন হয়েছে`);
-											}}
-											class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer"
-										>
-											<Eye class="w-3.5 h-3.5 text-slate-400" />
-											<span>Toggle Status</span>
-										</button>
-										<div class="h-px bg-slate-100 my-1"></div>
-										<button
-											type="button"
-											onclick={() => {
-												handleDelete(item);
-												activeActionId = null;
-											}}
-											class="w-full text-left px-3.5 py-2 hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer"
-										>
-											<Trash2 class="w-3.5 h-3.5 text-rose-500" />
-											<span>Delete</span>
-										</button>
-									</div>
-								{/if}
+					{#if filteredBanners.length === 0}
+						<tr>
+							<td colspan="7" class="py-12 text-center text-slate-400">
+								<p class="font-bold text-slate-700 text-sm">কোনো ব্যানার পাওয়া যায়নি</p>
+								<p class="text-xs text-slate-400 mt-1">অনুসন্ধান বা ফিল্টার পরিবর্তন করে দেখুন</p>
 							</td>
 						</tr>
-					{/each}
+					{:else}
+						{#each filteredBanners as item (item.id)}
+							{@const isSelected = selectedIds.includes(item.id)}
+							{@const isPub = (item.status || '').toUpperCase().startsWith('PUB')}
+							<tr class="hover:bg-slate-50/70 transition-colors {isSelected ? 'bg-indigo-50/30' : ''}">
+								<!-- Checkbox -->
+								<td class="py-4 pl-5 pr-2">
+									<input
+										type="checkbox"
+										checked={isSelected}
+										onchange={() => toggleSelectRow(item.id)}
+										class="w-4 h-4 rounded-md border-slate-300 text-[#5845eb] focus:ring-[#5845eb] cursor-pointer"
+										aria-label="Select {item.title}"
+									/>
+								</td>
+
+								<!-- Image Thumbnail -->
+								<td class="py-4 px-4">
+									<div class="w-20 h-10 rounded-xl border border-slate-200/80 bg-slate-50 overflow-hidden shadow-2xs flex items-center justify-center p-0.5">
+										<img src={item.image} alt={item.title} class="w-full h-full object-cover rounded-lg" />
+									</div>
+								</td>
+
+								<!-- Title -->
+								<td class="py-4 px-4">
+									<span class="font-bold text-slate-900 text-xs sm:text-sm">{item.title}</span>
+								</td>
+
+								<!-- URL -->
+								<td class="py-4 px-4">
+									<span class="text-xs text-slate-700 font-mono">{item.url}</span>
+								</td>
+
+								<!-- Serial -->
+								<td class="py-4 px-4">
+									<span class="text-xs font-semibold text-slate-800 font-mono">{item.serial || item.priority || '10'}</span>
+								</td>
+
+								<!-- Status Badge -->
+								<td class="py-4 px-4">
+									<span class="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider {isPub ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">
+										{isPub ? 'PUBLISHED' : 'DRAFT'}
+									</span>
+								</td>
+
+								<!-- Actions Dropdown (Positioned safely downwards without top clipping) -->
+								<td class="py-4 pr-6 pl-3 text-right relative">
+									<button
+										type="button"
+										onclick={(e) => handleActionClick(item.id, e)}
+										class="w-8 h-8 rounded-xl border border-slate-200/80 hover:bg-slate-100 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-colors ml-auto shadow-2xs cursor-pointer"
+										aria-label="Action menu"
+									>
+										<MoreVertical class="w-4 h-4" />
+									</button>
+
+									{#if activeActionId === item.id}
+										<!-- Fixed click-outside backdrop -->
+										<button
+											type="button"
+											class="fixed inset-0 z-40 bg-transparent cursor-default"
+											tabindex="-1"
+											aria-hidden="true"
+											onclick={() => (activeActionId = null)}
+										></button>
+
+										<!-- Dropdown menu positioned downwards from the button -->
+										<div
+											class="absolute right-0 top-full mt-1.5 w-44 bg-white border border-slate-200/90 rounded-2xl shadow-xl py-1.5 z-50 text-xs font-medium text-left animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5"
+										>
+											<a
+												href="/admin/customization/banner/edit-banner/{item.id}"
+												class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"
+											>
+												<Edit3 class="w-3.5 h-3.5 text-slate-400" />
+												<span>Edit</span>
+											</a>
+
+											<button
+												type="button"
+												onclick={() => toggleStatus(item)}
+												class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"
+											>
+												<Eye class="w-3.5 h-3.5 text-slate-400" />
+												<span>Toggle Status</span>
+											</button>
+
+											<div class="h-px bg-slate-100 my-1"></div>
+
+											<button
+												type="button"
+												onclick={() => handleDelete(item)}
+												class="w-full text-left px-3.5 py-2 hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer transition-colors"
+											>
+												<Trash2 class="w-3.5 h-3.5 text-rose-500" />
+												<span>Delete</span>
+											</button>
+										</div>
+									{/if}
+								</td>
+							</tr>
+						{/each}
+					{/if}
 				</tbody>
 			</table>
 		</div>
 	</div>
 
-	<!-- Pagination (< 1 of 1 >) -->
-	<div class="flex items-center justify-end gap-2 text-xs font-semibold text-slate-600 pt-2">
-		<button
-			type="button"
-			disabled
-			class="w-8 h-8 rounded-xl border border-slate-200 bg-white flex items-center justify-center opacity-40 cursor-not-allowed"
-		>
-			<ChevronLeft class="w-4 h-4" />
-		</button>
-		<span class="px-3 py-1 bg-white border border-slate-200 rounded-xl shadow-2xs font-mono">
-			1
-		</span>
-		<span class="text-slate-400">of 1</span>
-		<button
-			type="button"
-			disabled
-			class="w-8 h-8 rounded-xl border border-slate-200 bg-white flex items-center justify-center opacity-40 cursor-not-allowed"
-		>
-			<ChevronRight class="w-4 h-4" />
-		</button>
-	</div>
-</div>
-
-<!-- Modal -->
-{#if isModalOpen}
-	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
-		<div class="bg-white rounded-3xl border border-slate-200/90 shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-150">
-			<div class="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-				<h3 class="text-base font-bold text-slate-900">
-					{editingItem ? 'ব্যানার এডিট করুন' : 'নতুন ব্যানার যুক্ত করুন'}
-				</h3>
-				<button type="button" onclick={() => (isModalOpen = false)} class="p-2 text-slate-400 hover:text-slate-700">
-					<X class="w-5 h-5" />
-				</button>
-			</div>
-
-			<form onsubmit={handleSave} class="p-6 space-y-4">
-				<div>
-					<label class="block text-xs font-bold text-slate-700 mb-1.5">ব্যানার টাইটেল *</label>
-					<Input
-						type="text"
-						bind:value={modalTitle}
-						required
-						placeholder="যেমন: Top Promo Banner"
-						class="bg-slate-50 border-slate-200 text-xs"
-					/>
-				</div>
-
-				<div class="grid grid-cols-2 gap-3">
-					<div>
-						<label class="block text-xs font-bold text-slate-700 mb-1.5">টার্গেট URL</label>
-						<Input
-							type="text"
-							bind:value={modalUrl}
-							class="bg-slate-50 border-slate-200 text-xs font-mono"
-						/>
-					</div>
-					<div>
-						<label class="block text-xs font-bold text-slate-700 mb-1.5">সিরিয়াল নম্বর</label>
-						<Input
-							type="text"
-							bind:value={modalSerial}
-							class="bg-slate-50 border-slate-200 text-xs font-mono"
-						/>
-					</div>
-				</div>
-
-				<div class="grid grid-cols-2 gap-3">
-					<div>
-						<label class="block text-xs font-bold text-slate-700 mb-1.5">স্ট্যাটাস</label>
-						<select
-							bind:value={modalStatus}
-							class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-[#5845eb]"
-						>
-							<option value="PUBLISHED">PUBLISHED</option>
-							<option value="DRAFT">DRAFT</option>
-						</select>
-					</div>
-					<div>
-						<label class="block text-xs font-bold text-slate-700 mb-1.5">ইমেজ পাথ</label>
-						<Input
-							type="text"
-							bind:value={modalImage}
-							class="bg-slate-50 border-slate-200 text-xs font-mono"
-						/>
-					</div>
-				</div>
-
-				<div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
-					<Button
-						type="button"
-						variant="outline"
-						onclick={() => (isModalOpen = false)}
-						class="px-4 py-2 text-xs font-bold"
-					>
-						বাতিল
-					</Button>
-					<Button
-						type="submit"
-						class="px-5 py-2 bg-[#5845eb] hover:bg-[#4936d6] text-white text-xs font-bold"
-					>
-						সংরক্ষণ
-					</Button>
-				</div>
-			</form>
+	<!-- Pagination Bar -->
+	<div class="flex items-center justify-between sm:justify-end gap-2 text-xs font-semibold text-slate-600 pt-2">
+		<span class="text-xs text-slate-400 sm:hidden">Showing {filteredBanners.length} banners</span>
+		<div class="flex items-center gap-1.5 ml-auto sm:ml-0">
+			<button
+				type="button"
+				disabled
+				class="w-8 h-8 rounded-xl border border-slate-200 bg-white flex items-center justify-center opacity-40 cursor-not-allowed"
+				aria-label="Previous page"
+			>
+				<ChevronLeft class="w-4 h-4" />
+			</button>
+			<span class="px-3 py-1 bg-white border border-slate-200 rounded-xl shadow-2xs font-mono">
+				1
+			</span>
+			<span class="text-slate-400">of 1</span>
+			<button
+				type="button"
+				disabled
+				class="w-8 h-8 rounded-xl border border-slate-200 bg-white flex items-center justify-center opacity-40 cursor-not-allowed"
+				aria-label="Next page"
+			>
+				<ChevronRight class="w-4 h-4" />
+			</button>
 		</div>
 	</div>
-{/if}
+</div>

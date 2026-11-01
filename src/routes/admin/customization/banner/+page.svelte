@@ -49,7 +49,10 @@
 	let searchQuery = $state('');
 	let activeTab = $state<'all' | 'published' | 'draft' | 'trash'>('all');
 	let selectedIds = $state<string[]>([]);
-	let activeActionId = $state<string | null>(null);
+
+	// Fixed Coordinate Dropdown State (Completely eliminates table clipping)
+	let activeActionItem = $state<BannerItem | null>(null);
+	let menuPosition = $state<{ top: number; left: number } | null>(null);
 
 	// Dynamic tab counts based on actual data
 	let allCount = $derived(banners.length);
@@ -61,13 +64,31 @@
 	);
 	let trashCount = $derived(0);
 
-	function handleActionClick(id: string, e: MouseEvent) {
+	function handleActionClick(item: BannerItem, e: MouseEvent) {
 		e.stopPropagation();
-		activeActionId = activeActionId === id ? null : id;
+		if (activeActionItem?.id === item.id) {
+			closeActionMenu();
+			return;
+		}
+		const button = e.currentTarget as HTMLElement;
+		const rect = button.getBoundingClientRect();
+
+		const menuWidth = 176; // w-44
+		const menuHeight = 140; // 3 items + divider
+
+		const spaceBelow = window.innerHeight - rect.bottom;
+		const openUpwards = spaceBelow < menuHeight + 20 && rect.top > menuHeight;
+
+		const top = openUpwards ? rect.top - menuHeight - 4 : rect.bottom + 6;
+		const left = Math.max(10, rect.right - menuWidth);
+
+		menuPosition = { top, left };
+		activeActionItem = item;
 	}
 
-	function handleWindowClick() {
-		activeActionId = null;
+	function closeActionMenu() {
+		activeActionItem = null;
+		menuPosition = null;
 	}
 
 	let filteredBanners = $derived.by(() => {
@@ -118,7 +139,7 @@
 
 		// Optimistic UI update
 		item.status = nextStatus;
-		activeActionId = null;
+		closeActionMenu();
 
 		try {
 			const fd = new FormData();
@@ -143,7 +164,7 @@
 	}
 
 	async function handleDelete(item: BannerItem) {
-		activeActionId = null;
+		closeActionMenu();
 		const confirmed = await confirmModal({
 			title: 'ব্যানার মুছে ফেলা',
 			message: `আপনি কি "${item.title}" ব্যানারটি মুছে ফেলতে চান?`,
@@ -180,7 +201,7 @@
 	}
 </script>
 
-<svelte:window onclick={handleWindowClick} />
+<svelte:window onclick={closeActionMenu} onscroll={closeActionMenu} onresize={closeActionMenu} />
 
 <svelte:head>
 	<title>Banner - Customization - AURA Admin</title>
@@ -372,7 +393,7 @@
 		{/if}
 	</div>
 
-	<!-- 2. DESKTOP VIEW (>= md): Full Data Table (Non-Clipping Dropdowns) -->
+	<!-- 2. DESKTOP VIEW (>= md): Full Data Table -->
 	<div class="hidden md:block bg-white border border-slate-200/90 rounded-3xl shadow-xs min-h-[380px] pb-16">
 		<div class="overflow-x-auto no-scrollbar">
 			<table class="w-full text-left border-collapse">
@@ -449,60 +470,16 @@
 									</span>
 								</td>
 
-								<!-- Actions Dropdown (Positioned safely downwards without top clipping) -->
-								<td class="py-4 pr-6 pl-3 text-right relative">
+								<!-- Actions Trigger Button -->
+								<td class="py-4 pr-6 pl-3 text-right">
 									<button
 										type="button"
-										onclick={(e) => handleActionClick(item.id, e)}
-										class="w-8 h-8 rounded-xl border border-slate-200/80 hover:bg-slate-100 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-colors ml-auto shadow-2xs cursor-pointer"
+										onclick={(e) => handleActionClick(item, e)}
+										class="w-8 h-8 rounded-xl border border-slate-200/80 hover:bg-slate-100 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-colors ml-auto shadow-2xs cursor-pointer {activeActionItem?.id === item.id ? 'bg-slate-100 border-indigo-300 text-[#5845eb]' : ''}"
 										aria-label="Action menu"
 									>
 										<MoreVertical class="w-4 h-4" />
 									</button>
-
-									{#if activeActionId === item.id}
-										<!-- Fixed click-outside backdrop -->
-										<button
-											type="button"
-											class="fixed inset-0 z-40 bg-transparent cursor-default"
-											tabindex="-1"
-											aria-hidden="true"
-											onclick={() => (activeActionId = null)}
-										></button>
-
-										<!-- Dropdown menu positioned downwards from the button -->
-										<div
-											class="absolute right-0 top-full mt-1.5 w-44 bg-white border border-slate-200/90 rounded-2xl shadow-xl py-1.5 z-50 text-xs font-medium text-left animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5"
-										>
-											<a
-												href="/admin/customization/banner/edit-banner/{item.id}"
-												class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"
-											>
-												<Edit3 class="w-3.5 h-3.5 text-slate-400" />
-												<span>Edit</span>
-											</a>
-
-											<button
-												type="button"
-												onclick={() => toggleStatus(item)}
-												class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"
-											>
-												<Eye class="w-3.5 h-3.5 text-slate-400" />
-												<span>Toggle Status</span>
-											</button>
-
-											<div class="h-px bg-slate-100 my-1"></div>
-
-											<button
-												type="button"
-												onclick={() => handleDelete(item)}
-												class="w-full text-left px-3.5 py-2 hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer transition-colors"
-											>
-												<Trash2 class="w-3.5 h-3.5 text-rose-500" />
-												<span>Delete</span>
-											</button>
-										</div>
-									{/if}
 								</td>
 							</tr>
 						{/each}
@@ -539,3 +516,49 @@
 		</div>
 	</div>
 </div>
+
+<!-- FLOATING FIXED-COORDINATE ACTION MENU (Never clipped by table or cards overflow!) -->
+{#if activeActionItem && menuPosition}
+	<!-- Fixed click-outside backdrop -->
+	<button
+		type="button"
+		class="fixed inset-0 z-40 bg-transparent cursor-default"
+		tabindex="-1"
+		aria-hidden="true"
+		onclick={closeActionMenu}
+	></button>
+
+	<!-- Dropdown Menu Box (Fixed Positioning at calculated coordinates) -->
+	<div
+		style="position: fixed; top: {menuPosition.top}px; left: {menuPosition.left}px;"
+		class="w-44 bg-white border border-slate-200/90 rounded-2xl shadow-2xl py-1.5 z-50 text-xs font-medium text-left animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5"
+	>
+		<a
+			href="/admin/customization/banner/edit-banner/{activeActionItem.id}"
+			class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"
+		>
+			<Edit3 class="w-3.5 h-3.5 text-slate-400" />
+			<span>Edit</span>
+		</a>
+
+		<button
+			type="button"
+			onclick={() => toggleStatus(activeActionItem!)}
+			class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"
+		>
+			<Eye class="w-3.5 h-3.5 text-slate-400" />
+			<span>Toggle Status</span>
+		</button>
+
+		<div class="h-px bg-slate-100 my-1"></div>
+
+		<button
+			type="button"
+			onclick={() => handleDelete(activeActionItem!)}
+			class="w-full text-left px-3.5 py-2 hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer transition-colors"
+		>
+			<Trash2 class="w-3.5 h-3.5 text-rose-500" />
+			<span>Delete</span>
+		</button>
+	</div>
+{/if}

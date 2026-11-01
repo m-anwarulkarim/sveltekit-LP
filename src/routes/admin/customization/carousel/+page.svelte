@@ -68,7 +68,10 @@
 	let searchQuery = $state('');
 	let activeTab = $state<'all' | 'publish' | 'draft' | 'low_stock' | 'trash'>('all');
 	let selectedIds = $state<string[]>([]);
-	let activeActionId = $state<string | null>(null);
+
+	// Fixed Floating Dropdown (Immune to Table / Card overflow clipping)
+	let activeActionItem = $state<CarouselItem | null>(null);
+	let menuPosition = $state<{ top: number; left: number } | null>(null);
 
 	// Modal State
 	let isModalOpen = $state(false);
@@ -84,13 +87,31 @@
 		toast.success(msg);
 	}
 
-	function handleActionClick(id: string, e: MouseEvent) {
+	function handleActionClick(item: CarouselItem, e: MouseEvent) {
 		e.stopPropagation();
-		activeActionId = activeActionId === id ? null : id;
+		if (activeActionItem?.id === item.id) {
+			closeActionMenu();
+			return;
+		}
+		const button = e.currentTarget as HTMLElement;
+		const rect = button.getBoundingClientRect();
+
+		const menuWidth = 176; // w-44
+		const menuHeight = 170; // 4 items (Edit, Duplicate, Toggle Status, Delete)
+
+		const spaceBelow = window.innerHeight - rect.bottom;
+		const openUpwards = spaceBelow < menuHeight + 20 && rect.top > menuHeight;
+
+		const top = openUpwards ? rect.top - menuHeight - 4 : rect.bottom + 6;
+		const left = Math.max(10, rect.right - menuWidth);
+
+		menuPosition = { top, left };
+		activeActionItem = item;
 	}
 
-	function handleWindowClick() {
-		activeActionId = null;
+	function closeActionMenu() {
+		activeActionItem = null;
+		menuPosition = null;
 	}
 
 	let filteredCarousels = $derived.by(() => {
@@ -273,7 +294,7 @@
 	}
 </script>
 
-<svelte:window onclick={handleWindowClick} />
+<svelte:window onclick={closeActionMenu} onscroll={closeActionMenu} onresize={closeActionMenu} />
 
 <svelte:head>
 	<title>Carousel - Customization - AURA Admin</title>
@@ -451,59 +472,15 @@
 							</td>
 
 							<!-- Actions (3-dots vertical) -->
-							<td class="py-4 pr-6 pl-3 text-right relative">
+							<td class="py-4 pr-6 pl-3 text-right">
 								<button
 									type="button"
-									onclick={(e) => handleActionClick(item.id, e)}
-									class="w-8 h-8 rounded-xl border border-slate-200/80 hover:bg-slate-100 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-colors ml-auto shadow-2xs cursor-pointer"
+									onclick={(e) => handleActionClick(item, e)}
+									class="w-8 h-8 rounded-xl border border-slate-200/80 hover:bg-slate-100 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-colors ml-auto shadow-2xs cursor-pointer {activeActionItem?.id === item.id ? 'bg-slate-100 border-indigo-300 text-[#5845eb]' : ''}"
 									aria-label="Action menu"
 								>
 									<MoreVertical class="w-4 h-4" />
 								</button>
-
-								{#if activeActionId === item.id}
-									<div
-										class="absolute right-6 {isNearBottom
-											? 'bottom-11 top-auto origin-bottom-right'
-											: 'top-11 origin-top-right'} w-40 bg-white border border-slate-200/90 rounded-2xl shadow-xl py-1.5 z-50 text-xs font-medium text-left animate-in fade-in zoom-in-95 duration-100"
-									>
-										<a
-											href="/admin/customization/edit-carousel/{item.id}"
-											class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"
-										>
-											<Edit3 class="w-3.5 h-3.5 text-slate-400" />
-											<span>Edit</span>
-										</a>
-										<button
-											type="button"
-											onclick={() => handleDuplicate(item)}
-											class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"
-										>
-											<Copy class="w-3.5 h-3.5 text-slate-400" />
-											<span>Duplicate</span>
-										</button>
-										<button
-											type="button"
-											onclick={() => handleToggleStatus(item)}
-											class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"
-										>
-											<Eye class="w-3.5 h-3.5 text-slate-400" />
-											<span>Toggle Status</span>
-										</button>
-										<div class="h-px bg-slate-100 my-1"></div>
-										<button
-											type="button"
-											onclick={() => {
-												handleDelete(item);
-												activeActionId = null;
-											}}
-											class="w-full text-left px-3.5 py-2 hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer"
-										>
-											<Trash2 class="w-3.5 h-3.5 text-rose-500" />
-											<span>Delete</span>
-										</button>
-									</div>
-								{/if}
 							</td>
 						</tr>
 					{/each}
@@ -630,5 +607,70 @@
 				</div>
 			</form>
 		</div>
+	</div>
+{/if}
+
+<!-- FLOATING FIXED-COORDINATE ACTION MENU (Never clipped by table overflow!) -->
+{#if activeActionItem && menuPosition}
+	<button
+		type="button"
+		class="fixed inset-0 z-40 bg-transparent cursor-default"
+		tabindex="-1"
+		aria-hidden="true"
+		onclick={closeActionMenu}
+	></button>
+
+	<div
+		style="position: fixed; top: {menuPosition.top}px; left: {menuPosition.left}px;"
+		class="w-44 bg-white border border-slate-200/90 rounded-2xl shadow-2xl py-1.5 z-50 text-xs font-medium text-left animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5"
+	>
+		<a
+			href="/admin/customization/edit-carousel/{activeActionItem.id}"
+			class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"
+		>
+			<Edit3 class="w-3.5 h-3.5 text-slate-400" />
+			<span>Edit</span>
+		</a>
+
+		<button
+			type="button"
+			onclick={() => {
+				const itm = activeActionItem;
+				closeActionMenu();
+				if (itm) handleDuplicate(itm);
+			}}
+			class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"
+		>
+			<Copy class="w-3.5 h-3.5 text-slate-400" />
+			<span>Duplicate</span>
+		</button>
+
+		<button
+			type="button"
+			onclick={() => {
+				const itm = activeActionItem;
+				closeActionMenu();
+				if (itm) handleToggleStatus(itm);
+			}}
+			class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"
+		>
+			<Eye class="w-3.5 h-3.5 text-slate-400" />
+			<span>Toggle Status</span>
+		</button>
+
+		<div class="h-px bg-slate-100 my-1"></div>
+
+		<button
+			type="button"
+			onclick={() => {
+				const itm = activeActionItem;
+				closeActionMenu();
+				if (itm) handleDelete(itm);
+			}}
+			class="w-full text-left px-3.5 py-2 hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer transition-colors"
+		>
+			<Trash2 class="w-3.5 h-3.5 text-rose-500" />
+			<span>Delete</span>
+		</button>
 	</div>
 {/if}

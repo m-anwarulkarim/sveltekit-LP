@@ -47,15 +47,36 @@
 	let searchQuery = $state('');
 	let activeTab = $state<'all' | 'publish' | 'draft' | 'trash'>('all');
 	let selectedIds = $state<string[]>([]);
-	let activeActionId = $state<string | null>(null);
 
-	function handleActionClick(id: string, e: MouseEvent) {
+	// Fixed Floating Dropdown (Immune to Table / Card overflow clipping)
+	let activeActionItem = $state<PopupItem | null>(null);
+	let menuPosition = $state<{ top: number; left: number } | null>(null);
+
+	function handleActionClick(item: PopupItem, e: MouseEvent) {
 		e.stopPropagation();
-		activeActionId = activeActionId === id ? null : id;
+		if (activeActionItem?.id === item.id) {
+			closeActionMenu();
+			return;
+		}
+		const button = e.currentTarget as HTMLElement;
+		const rect = button.getBoundingClientRect();
+
+		const menuWidth = 176; // w-44
+		const menuHeight = 140; // 3 items (Edit, Toggle Status, Delete)
+
+		const spaceBelow = window.innerHeight - rect.bottom;
+		const openUpwards = spaceBelow < menuHeight + 20 && rect.top > menuHeight;
+
+		const top = openUpwards ? rect.top - menuHeight - 4 : rect.bottom + 6;
+		const left = Math.max(10, rect.right - menuWidth);
+
+		menuPosition = { top, left };
+		activeActionItem = item;
 	}
 
-	function handleWindowClick() {
-		activeActionId = null;
+	function closeActionMenu() {
+		activeActionItem = null;
+		menuPosition = null;
 	}
 
 	let filteredPopups = $derived.by(() => {
@@ -192,7 +213,7 @@
 	}
 </script>
 
-<svelte:window onclick={handleWindowClick} />
+<svelte:window onclick={closeActionMenu} onscroll={closeActionMenu} onresize={closeActionMenu} />
 
 <svelte:head>
 	<title>Popup & Offers - Customization - AURA Admin</title>
@@ -435,55 +456,15 @@
 										</Badge>
 									</button>
 								</td>
-								<td class="py-4 pr-6 pl-3 text-right relative">
+								<td class="py-4 pr-6 pl-3 text-right">
 									<button
 										type="button"
-										onclick={(e) => handleActionClick(item.id, e)}
-										class="w-8 h-8 rounded-xl border border-slate-200/90 hover:bg-slate-100 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-colors ml-auto shadow-2xs cursor-pointer"
+										onclick={(e) => handleActionClick(item, e)}
+										class="w-8 h-8 rounded-xl border border-slate-200/90 hover:bg-slate-100 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-colors ml-auto shadow-2xs cursor-pointer {activeActionItem?.id === item.id ? 'bg-slate-100 border-indigo-300 text-[#5845eb]' : ''}"
 										aria-label="Action menu"
 									>
 										<MoreVertical class="w-4 h-4" />
 									</button>
-
-									{#if activeActionId === item.id}
-										<div
-											class="absolute right-6 {isNearBottom
-												? 'bottom-11 top-auto origin-bottom-right'
-												: 'top-11 origin-top-right'} w-44 bg-white border border-slate-200/90 rounded-2xl shadow-xl py-1.5 z-50 text-xs font-medium text-left animate-in fade-in zoom-in-95 duration-100"
-										>
-											<!-- Edit Links to Dedicated Separate Page -->
-											<a
-												href="/admin/customization/popup/edit-popup/{item.id}"
-												class="w-full text-left px-3.5 py-2.5 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"
-											>
-												<Edit3 class="w-3.5 h-3.5 text-slate-400" />
-												<span>এডিট করুন</span>
-											</a>
-											<button
-												type="button"
-												onclick={() => {
-													toggleStatus(item);
-													activeActionId = null;
-												}}
-												class="w-full text-left px-3.5 py-2.5 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"
-											>
-												<Eye class="w-3.5 h-3.5 text-slate-400" />
-												<span>স্ট্যাটাস পরিবর্তন</span>
-											</button>
-											<div class="h-px bg-slate-100 my-1"></div>
-											<button
-												type="button"
-												onclick={() => {
-													handleDelete(item);
-													activeActionId = null;
-												}}
-												class="w-full text-left px-3.5 py-2.5 hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer transition-colors"
-											>
-												<Trash2 class="w-3.5 h-3.5 text-rose-500" />
-												<span>মুছে ফেলুন</span>
-											</button>
-										</div>
-									{/if}
 								</td>
 							</tr>
 						{/each}
@@ -503,3 +484,55 @@
 		</div>
 	</div>
 </div>
+
+<!-- FLOATING FIXED-COORDINATE ACTION MENU (Never clipped by card or table overflow!) -->
+{#if activeActionItem && menuPosition}
+	<button
+		type="button"
+		class="fixed inset-0 z-40 bg-transparent cursor-default"
+		tabindex="-1"
+		aria-hidden="true"
+		onclick={closeActionMenu}
+	></button>
+
+	<div
+		style="position: fixed; top: {menuPosition.top}px; left: {menuPosition.left}px;"
+		class="w-44 bg-white border border-slate-200/90 rounded-2xl shadow-2xl py-1.5 z-50 text-xs font-medium text-left animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5"
+	>
+		<a
+			href="/admin/customization/popup/edit-popup/{activeActionItem.id}"
+			class="w-full text-left px-3.5 py-2.5 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"
+		>
+			<Edit3 class="w-3.5 h-3.5 text-slate-400" />
+			<span>এডিট করুন</span>
+		</a>
+
+		<button
+			type="button"
+			onclick={() => {
+				const itm = activeActionItem;
+				closeActionMenu();
+				if (itm) toggleStatus(itm);
+			}}
+			class="w-full text-left px-3.5 py-2.5 hover:bg-slate-50 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors"
+		>
+			<Eye class="w-3.5 h-3.5 text-slate-400" />
+			<span>স্ট্যাটাস পরিবর্তন</span>
+		</button>
+
+		<div class="h-px bg-slate-100 my-1"></div>
+
+		<button
+			type="button"
+			onclick={() => {
+				const itm = activeActionItem;
+				closeActionMenu();
+				if (itm) handleDelete(itm);
+			}}
+			class="w-full text-left px-3.5 py-2.5 hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer transition-colors"
+		>
+			<Trash2 class="w-3.5 h-3.5 text-rose-500" />
+			<span>মুছে ফেলুন</span>
+		</button>
+	</div>
+{/if}

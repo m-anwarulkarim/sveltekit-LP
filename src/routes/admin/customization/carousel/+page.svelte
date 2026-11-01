@@ -225,7 +225,7 @@
 		const oldStatus = item.status;
 		const newStatus = oldStatus === 'PUBLISH' || oldStatus === 'Publish' ? 'DRAFT' : 'PUBLISH';
 		item.status = newStatus as any;
-		activeActionId = null;
+		closeActionMenu();
 		showToast(`স্ট্যাটাস পরিবর্তিত হয়েছে: ${newStatus}`);
 
 		try {
@@ -242,7 +242,7 @@
 	}
 
 	async function handleDuplicate(item: CarouselItem) {
-		activeActionId = null;
+		closeActionMenu();
 
 		try {
 			const fd = new FormData();

@@ -140,7 +140,7 @@
 				method: 'POST',
 				body: formData
 			});
-			const result = await res.json();
+			const result: any = await res.json();
 
 			if (result.type === 'success' || result.status === 200) {
 				item.status = item.status === 'PUBLISH' ? 'DRAFT' : 'PUBLISH';
@@ -171,7 +171,7 @@
 				method: 'POST',
 				body: formData
 			});
-			const result = await res.json();
+			const result: any = await res.json();
 
 			if (result.type === 'success' || result.status === 200) {
 				popups = popups.filter((p) => p.id !== item.id);
@@ -206,7 +206,7 @@
 				method: 'POST',
 				body: formData
 			});
-			const result = await res.json();
+			const result: any = await res.json();
 
 			if (result.type === 'success' || result.status === 200) {
 				popups = popups.filter((p) => !selectedIds.includes(p.id));

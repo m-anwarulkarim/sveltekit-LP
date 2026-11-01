@@ -23,7 +23,7 @@ export const load: PageServerLoad = async ({ parent, platform }) => {
 			endDate: r.endDate ? new Date(r.endDate).toISOString() : null,
 			viewCount: r.viewCount || 0,
 			clickCount: r.clickCount || 0,
-			ctr: r.viewCount ? ((r.clickCount / r.viewCount) * 100).toFixed(1) : '0.0'
+			ctr: r.viewCount ? (((r.clickCount || 0) / r.viewCount) * 100).toFixed(1) : '0.0'
 		}));
 	} catch (e) {
 		console.error('Failed to load carousels from D1:', e);

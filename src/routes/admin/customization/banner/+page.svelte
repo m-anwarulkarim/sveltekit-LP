@@ -159,7 +159,7 @@
 				method: 'POST',
 				body: fd
 			});
-			const result = await res.json();
+			const result: any = await res.json();
 			if (result.type === 'success' || result.status === 200) {
 				toast.success(`স্ট্যাটাস পরিবর্তন হয়েছে: ${nextStatus}`);
 			} else {
@@ -196,7 +196,7 @@
 				method: 'POST',
 				body: fd
 			});
-			const result = await res.json();
+			const result: any = await res.json();
 			if (result.type === 'success' || result.status === 200) {
 				toast.success(`"${item.title}" ব্যানারটি মুছে ফেলা হয়েছে`);
 			} else {

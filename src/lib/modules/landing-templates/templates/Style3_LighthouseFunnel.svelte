@@ -28,12 +28,22 @@
 		CheckCircle
 	} from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
+	import LandingNavbar from '../components/LandingNavbar.svelte';
 
 	interface Props {
 		landingPage: any;
 	}
 
 	let { landingPage }: Props = $props();
+
+	const navItems = [
+		{ label: 'হোম', targetId: 'lh-hero' },
+		{ label: 'প্যাকেজসমূহ', targetId: 'lighthouse-packages-step' },
+		{ label: 'অর্ডার ফর্ম', targetId: 'lighthouse-checkout-step' },
+		{ label: 'উপকারিতা', targetId: 'lighthouse-benefits-step' },
+		{ label: 'রিভিউ', targetId: 'lighthouse-reviews-step' },
+		{ label: 'প্রশ্ন-উত্তর', targetId: 'lighthouse-faqs-step' }
+	];
 
 	let product = $derived(landingPage?.product || {});
 	let config = $derived(landingPage?.config || {});
@@ -271,63 +281,26 @@
 <!-- Style 3: Lighthouse Funnel Container -->
 <div class="min-h-screen bg-white text-slate-800 antialiased selection:bg-[#e8007c] selection:text-white pb-24 md:pb-12 font-sans">
 
-	<!-- 1. Top Announcement Bar -->
-	<div class="bg-[#e8007c] text-white py-2 px-4 text-[11px] sm:text-xs font-black tracking-wide text-center flex items-center justify-center gap-2 shadow-xs">
-		<span class="inline-block animate-pulse">🎉</span>
-		<span>The Color Lighthouse স্পেশাল অফার! ফ্রি ভেলক্রো বেল্ট ও ক্যাশ অন ডেলিভারি সুবিধা!</span>
-	</div>
-
-	<!-- 2. Sticky Brand Header -->
-	<header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-2xs">
-		<div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-			<!-- Brand Identity -->
-			<div class="flex items-center gap-3">
-				<div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-br from-[#e8007c] to-[#ff2b9c] text-white flex items-center justify-center font-black shadow-sm shadow-[#e8007c]/25">
-					✨
-				</div>
-				<div>
-					<h2 class="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-tight">
-						{landingPage?.title?.split('-')[0]?.trim() || 'The Color Lighthouse'}
-					</h2>
-					<p class="text-[10.5px] sm:text-[11px] text-[#e8007c] font-black flex items-center gap-1">
-						<span>১০০% অরিজিনাল ও এক্সক্লুসিভ কোয়ালিটি</span>
-					</p>
-				</div>
-			</div>
-
-			<!-- Quick Actions -->
-			<div class="flex items-center gap-2 sm:gap-3">
-				{#if contactPhone}
-					<a
-						href="tel:{contactPhone}"
-						class="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 text-xs font-bold transition-all shadow-2xs"
-					>
-						<PhoneCall class="w-3.5 h-3.5 text-[#e8007c]" />
-						<span>{contactPhone}</span>
-					</a>
-				{/if}
-
-				<Button
-					size="sm"
-					class="gap-1.5 bg-[#e8007c] hover:bg-[#c70068] text-white font-extrabold rounded-xl shadow-md shadow-[#e8007c]/25 text-xs px-4 py-2 cursor-pointer transition-all active:scale-95"
-					onclick={scrollToPackages}
-				>
-					<ShoppingCart class="w-3.5 h-3.5" />
-					<span>অর্ডার করুন</span>
-				</Button>
-			</div>
-		</div>
-	</header>
+	<!-- 1 & 2. Responsive Landing Page Navbar & Announcement Bar -->
+	<LandingNavbar
+		title={landingPage?.title?.split('-')[0]?.trim() || product?.name || headline || 'স্পেশাল অফার'}
+		badgeText="১০০% অরিজিনাল ও এক্সক্লুসিভ কোয়ালিটি"
+		announcementText={config?.offerBadge ? `${config.offerBadge} • ফ্রি ডেলিভারি ও ক্যাশ অন ডেলিভারি সুবিধা!` : `${headline} স্পেশাল অফার! ফ্রি ডেলিভারি ও ক্যাশ অন ডেলিভারি সুবিধা!`}
+		contactPhone={contactPhone}
+		accentColor="#e8007c"
+		{navItems}
+		onOrderClick={scrollToPackages}
+	/>
 
 	<!-- 3. SECTION 1: HERO SPOTLIGHT -->
-	<section class="relative pt-8 pb-12 md:pt-14 md:pb-16 overflow-hidden bg-gradient-to-b from-[#e8007c]/5 via-white to-slate-50 border-b border-slate-200/80">
+	<section id="lh-hero" class="relative pt-8 pb-12 md:pt-14 md:pb-16 overflow-hidden bg-gradient-to-b from-[#e8007c]/5 via-white to-slate-50 border-b border-slate-200/80 scroll-mt-16">
 		<div class="max-w-5xl mx-auto px-4 space-y-6">
 
 			<div class="text-center max-w-3xl mx-auto space-y-3">
 				<!-- Pill Tag -->
 				<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e8007c]/10 text-[#e8007c] border border-[#e8007c]/20 text-xs font-black shadow-2xs">
 					<Sparkles class="w-3.5 h-3.5 text-[#e8007c]" />
-					<span>{landingPage?.tag || 'The Color Lighthouse এক্সক্লুসিভ সল্যুশন'}</span>
+					<span>{landingPage?.tag || 'স্পেশাল ধামাকা অফার'}</span>
 				</div>
 
 				<!-- Main Headline -->
@@ -342,18 +315,27 @@
 
 				<!-- 3 Quick Hero Feature Pills -->
 				<div class="flex flex-wrap items-center justify-center gap-2 pt-2">
-					<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 shadow-2xs">
-						<ShieldCheck class="w-4 h-4 text-[#e8007c]" />
-						<span>মেডিকেল গ্রেড ফিল্টার</span>
-					</span>
-					<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 shadow-2xs">
-						<Gift class="w-4 h-4 text-emerald-600" />
-						<span>ফ্রি ভেলক্রো বেল্ট</span>
-					</span>
-					<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 shadow-2xs">
-						<Truck class="w-4 h-4 text-indigo-600" />
-						<span>ক্যাশ অন ডেলিভারি</span>
-					</span>
+					{#if config?.bulletPoints && Array.isArray(config.bulletPoints) && config.bulletPoints.length > 0}
+						{#each config.bulletPoints.slice(0, 3) as point}
+							<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 shadow-2xs">
+								<ShieldCheck class="w-4 h-4 text-[#e8007c]" />
+								<span>{point}</span>
+							</span>
+						{/each}
+					{:else}
+						<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 shadow-2xs">
+							<ShieldCheck class="w-4 h-4 text-[#e8007c]" />
+							<span>১০০% অরিজিনাল কোয়ালিটি</span>
+						</span>
+						<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 shadow-2xs">
+							<Truck class="w-4 h-4 text-indigo-600" />
+							<span>সরাসরি ক্যাশ অন ডেলিভারি</span>
+						</span>
+						<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 shadow-2xs">
+							<Gift class="w-4 h-4 text-emerald-600" />
+							<span>পণ্য দেখে মূল্য পরিশোধ</span>
+						</span>
+					{/if}
 				</div>
 
 				<!-- Hero CTA Button -->
@@ -802,17 +784,17 @@
 	</section>
 
 	<!-- 6. SECTION 4: VISUAL BENEFIT HIGHLIGHTS (Before/After & Core Capabilities) -->
-	<section class="py-12 md:py-16 bg-white border-b border-slate-200/80">
+	<section id="lighthouse-benefits-step" class="py-12 md:py-16 bg-white border-b border-slate-200/80 scroll-mt-16">
 		<div class="max-w-5xl mx-auto px-4 space-y-8">
 			<div class="text-center space-y-2 max-w-xl mx-auto">
 				<Badge variant="outline" class="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider">
 					আসল কার্যকারিতা
 				</Badge>
 				<h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-					ট্যাপ ফিল্টার ব্যবহারের স্পষ্ট উপকারিতা
+					{headline} এর স্পষ্ট উপকারিতা
 				</h2>
 				<p class="text-xs sm:text-sm text-slate-500 font-medium">
-					The Color Lighthouse ওয়াটার ট্যাপ ফিল্টার ব্যবহারের সাথে সাথেই পানির গুণগত মানে আকাশ-পাতাল পরিবর্তন অনুভব করবেন।
+					{subheadline || 'প্রিমিয়াম কোয়ালিটি উপাদান ও নির্ভরযোগ্য মান যা ব্যবহারের সাথে সাথেই স্পষ্ট পরিবর্তন অনুভব করাবে।'}
 				</p>
 			</div>
 
@@ -903,14 +885,14 @@
 	</section>
 
 	<!-- 8. SECTION 6: CUSTOMER REVIEWS -->
-	<section class="py-12 md:py-16 bg-white border-b border-slate-200/80">
+	<section id="lighthouse-reviews-step" class="py-12 md:py-16 bg-white border-b border-slate-200/80 scroll-mt-16">
 		<div class="max-w-5xl mx-auto px-4 space-y-8">
 			<div class="text-center space-y-2 max-w-xl mx-auto">
 				<Badge variant="outline" class="bg-amber-50 text-amber-700 border-amber-200 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider">
 					সন্তুষ্ট গ্রাহকদের মতামত
 				</Badge>
 				<h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-					The Color Lighthouse কাস্টমার রিভিউ
+					{headline} কাস্টমার রিভিউ
 				</h2>
 			</div>
 
@@ -985,14 +967,14 @@
 	</section>
 
 	<!-- 9. SECTION 7: INTERACTIVE ACCORDION FAQ -->
-	<section class="py-12 md:py-16 bg-slate-50">
+	<section id="lighthouse-faqs-step" class="py-12 md:py-16 bg-slate-50 scroll-mt-16">
 		<div class="max-w-3xl mx-auto px-4 space-y-6">
 			<div class="text-center space-y-2">
 				<Badge variant="outline" class="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider">
 					সচরাচর জিজ্ঞাসিত প্রশ্নাবলী (FAQ)
 				</Badge>
 				<h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-					ফিল্টার ও ডেলিভারি সম্পর্কে সাধারণ প্রশ্নের উত্তর
+					পণ্য ও ডেলিভারি সম্পর্কে সাধারণ প্রশ্নের উত্তর
 				</h2>
 			</div>
 

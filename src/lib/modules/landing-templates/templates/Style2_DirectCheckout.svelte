@@ -22,12 +22,20 @@
 		HelpCircle
 	} from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
+	import LandingNavbar from '../components/LandingNavbar.svelte';
 
 	interface Props {
 		landingPage: any;
 	}
 
 	let { landingPage }: Props = $props();
+
+	const navItems = [
+		{ label: 'হোম', targetId: 'direct-hero' },
+		{ label: 'প্যাকেজ ও অফার', targetId: 'direct-packages' },
+		{ label: 'গ্যালারি', targetId: 'direct-gallery' },
+		{ label: 'অর্ডার ফর্ম', targetId: 'direct-checkout-form' }
+	];
 
 	let product = $derived(landingPage?.product || {});
 	let config = $derived(landingPage?.config || {});
@@ -247,48 +255,19 @@
 <!-- Outer Container -->
 <div class="min-h-screen bg-slate-50 text-slate-800 antialiased selection:bg-emerald-500 selection:text-white pb-24 md:pb-12">
 
-	<!-- 1. Top Navbar / Store Identity Bar -->
-	<header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
-		<div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-			<div class="flex items-center gap-2.5">
-				<div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black shadow-sm shadow-emerald-500/20">
-					✨
-				</div>
-				<div>
-					<h2 class="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-tight">
-						{landingPage?.title?.split('-')[0]?.trim() || 'Aura Store'}
-					</h2>
-					<p class="text-[11px] text-emerald-700 font-bold flex items-center gap-1">
-						<span>শতভাগ খাঁটি ও অরিজিনাল পণ্য</span>
-					</p>
-				</div>
-			</div>
-
-			<div class="flex items-center gap-2 sm:gap-3">
-				{#if config?.contactPhone}
-					<a
-						href="tel:{config.contactPhone}"
-						class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 text-xs font-bold transition-colors"
-					>
-						<PhoneCall class="w-3.5 h-3.5 text-emerald-600" />
-						<span>{config.contactPhone}</span>
-					</a>
-				{/if}
-
-				<Button
-					size="sm"
-					class="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-sm shadow-emerald-600/30 text-xs px-3.5 py-2 cursor-pointer"
-					onclick={scrollToCheckout}
-				>
-					<ShoppingCart class="w-3.5 h-3.5" />
-					<span>অর্ডার করুন</span>
-				</Button>
-			</div>
-		</div>
-	</header>
+	<!-- 1. Responsive Landing Page Navbar & Announcement Bar -->
+	<LandingNavbar
+		title={landingPage?.title?.split('-')[0]?.trim() || product?.name || headline || 'Aura Store'}
+		badgeText="শতভাগ খাঁটি ও অরিজিনাল পণ্য"
+		announcementText={config?.offerBadge ? `${config.offerBadge} • ফ্রি ডেলিভারি ও ক্যাশ অন ডেলিভারি সুবিধা!` : `${headline} স্পেশাল অফার চলছে!`}
+		contactPhone={config?.contactPhone}
+		accentColor="#059669"
+		{navItems}
+		onOrderClick={scrollToCheckout}
+	/>
 
 	<!-- Main Body Wrapper -->
-	<main class="max-w-3xl mx-auto px-4 py-6 sm:py-8 space-y-6">
+	<main id="direct-hero" class="max-w-3xl mx-auto px-4 py-6 sm:py-8 space-y-6 scroll-mt-16">
 
 		<!-- 2. Product Hero Title & Bullet Highlights -->
 		<div class="space-y-3">

@@ -19,12 +19,20 @@
 	} from 'lucide-svelte';
 	import LandingCountdown from '../components/LandingCountdown.svelte';
 	import LandingOrderForm from '../components/LandingOrderForm.svelte';
+	import LandingNavbar from '../components/LandingNavbar.svelte';
 
 	interface Props {
 		landingPage: any;
 	}
 
 	let { landingPage }: Props = $props();
+
+	const navItems = [
+		{ label: 'হোম', targetId: 'animated-hero' },
+		{ label: 'পণ্য বিবরণ', targetId: 'animated-product' },
+		{ label: 'অর্ডার ফর্ম', targetId: 'order-form-section' },
+		{ label: 'গ্রাহক রিভিউ', targetId: 'animated-reviews' }
+	];
 
 	let product = $derived(landingPage?.product || {});
 	let config = $derived(landingPage?.config || {});
@@ -99,21 +107,20 @@
 </svelte:head>
 
 <div class="min-h-screen bg-[#fafaf9] text-slate-900 font-['Anek_Bangla',sans-serif] selection:bg-emerald-500/20 selection:text-emerald-900 pb-24 md:pb-16 antialiased">
-	<!-- 1. Top Urgent Banner -->
-	<header class="bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 text-white text-xs py-2.5 px-4 text-center border-b border-emerald-900/50 shadow-xs">
-		<div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-2">
-			<span class="inline-flex items-center gap-1.5 font-bold">
-				<Sparkles class="w-3.5 h-3.5 text-amber-400 animate-spin" />
-				<span>বিশেষ অফার চলছে • পণ্য হাতে পেয়ে চেক করে সম্পূর্ণ মূল্য পরিশোধ করুন</span>
-			</span>
-			<span class="hidden sm:inline text-emerald-400/80">•</span>
-			<span class="text-emerald-300 font-medium">সারা দেশে দ্রুত ক্যাশ অন ডেলিভারি</span>
-		</div>
-	</header>
+	<!-- 1. Responsive Landing Page Navbar & Announcement Bar -->
+	<LandingNavbar
+		title={landingPage?.title?.split('-')[0]?.trim() || product?.name || config?.headline || 'Aura Store'}
+		badgeText="১০০% প্রিমিয়াম ও অরিজিনাল পণ্য"
+		announcementText="বিশেষ অফার চলছে • পণ্য হাতে পেয়ে চেক করে সম্পূর্ণ মূল্য পরিশোধ করুন"
+		contactPhone={config?.contactPhone}
+		accentColor="#059669"
+		{navItems}
+		onOrderClick={scrollToOrderForm}
+	/>
 
 	<main class="max-w-5xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10 space-y-12 sm:space-y-16">
 		<!-- 2. Hero Section: Catchy Headline & Live Urgency -->
-		<section class="text-center space-y-4">
+		<section id="animated-hero" class="text-center space-y-4 scroll-mt-16">
 			<!-- Floating Tag Badge -->
 			<div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-600 text-xs sm:text-sm font-bold shadow-2xs animate-pulse">
 				<Flame class="w-4 h-4 text-rose-500" />

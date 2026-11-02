@@ -6,17 +6,15 @@ import { desc, eq, and, sql } from 'drizzle-orm';
 
 export const load: PageServerLoad = async ({ parent, platform }) => {
 	const parentData = await parent();
-	const allOrders: any[] = platform?.env?.DB
-		? await OrderService.getAllOrders(getDb(platform.env.DB))
-		: [];
+	const allOrders: any[] = await OrderService.getAllOrders(getDb(platform)).catch(() => []);
 
 	let myOrders: any[] = [];
 	let recentNotes: any[] = [];
 	let recentAuditLogs: any[] = [];
 
-	if (platform?.env?.DB) {
-		try {
-			const db = getDb(platform.env.DB);
+	try {
+		{
+			const db = getDb(platform);
 
 			// 1. Fetch recent order call notes
 			recentNotes = await db
@@ -70,9 +68,9 @@ export const load: PageServerLoad = async ({ parent, platform }) => {
 					callStatus: o.status === 'confirmed' || o.status === 'delivered' ? 'Call Completed' : 'Pending Action'
 				};
 			});
-		} catch (e) {
-			console.error('Failed to query admin activity from D1:', e);
 		}
+	} catch (e) {
+		console.error('Failed to query admin activity from D1:', e);
 	}
 
 	// Dynamic 14-day telemetry calculation
@@ -97,6 +95,8 @@ export const load: PageServerLoad = async ({ parent, platform }) => {
 		dynamicDays.push({ date: dateLabel, count });
 	}
 
+	const chartMaxY = Math.max(4, ...dynamicDays.map((d) => d.count));
+
 	// Performance Stats
 	const totalProcessed = myOrders.length || allOrders.length || 0;
 	const confirmedProcessed = (myOrders.length > 0 ? myOrders : allOrders).filter((o: any) =>
@@ -114,6 +114,7 @@ export const load: PageServerLoad = async ({ parent, platform }) => {
 		recentNotes,
 		recentAuditLogs,
 		activityDays: dynamicDays,
+		chartMaxY,
 		activityStats: {
 			totalProcessed,
 			confirmedProcessed,

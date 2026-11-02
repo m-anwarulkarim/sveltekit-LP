@@ -29,6 +29,8 @@
 		HardDrive
 	} from 'lucide-svelte';
 
+	import { invalidateAll } from '$app/navigation';
+
 	let { data }: { data: any } = $props();
 
 	// Filters & Local State
@@ -50,20 +52,26 @@
 		}, 3000);
 	}
 
-	function handleRefresh() {
+	async function handleRefresh() {
 		isRefreshing = true;
-		setTimeout(() => {
-			isRefreshing = false;
-			showToast('Bot traffic and telemetry data refreshed');
-		}, 500);
+		await invalidateAll();
+		isRefreshing = false;
+		showToast('বট ট্রাফিক ডেটা রিফ্রেশ হয়েছে!');
 	}
 
 	async function clearOldLogs() {
 		try {
-			await fetch('?/clearOldLogs', { method: 'POST', body: new FormData() });
-			showToast('Logs older than 30 days have been cleared successfully.');
+			const fd = new FormData();
+			const res = await fetch('?/clearOldLogs', { method: 'POST', body: fd });
+			const result = await res.json().catch(() => null) as any;
+			if (result?.type === 'failure') {
+				showToast(result?.data?.message || 'লগ মুছতে ব্যর্থ হয়েছে।');
+			} else {
+				showToast('৩০ দিনের পুরনো লগ সফলভাবে মুছে ফেলা হয়েছে!');
+				await invalidateAll();
+			}
 		} catch {
-			showToast('Logs cleared.');
+			showToast('লগ মুছতে ব্যর্থ হয়েছে।');
 		}
 	}
 
@@ -99,13 +107,16 @@
 			const fd = new FormData();
 			fd.append('botKey', botKey);
 			fd.append('isAllowed', String(isAllowed));
-			await fetch('?/updateFirewallRule', {
-				method: 'POST',
-				body: fd
-			});
-			showToast(`${botKey} firewall rule updated successfully!`);
+			const res = await fetch('?/updateFirewallRule', { method: 'POST', body: fd });
+			const result = await res.json().catch(() => null) as any;
+			if (result?.type === 'failure') {
+				showToast(result?.data?.message || 'ফায়ারওয়াল আপডেট করতে ব্যর্থ হয়েছে।');
+			} else {
+				showToast(`${botKey} ফায়ারওয়াল নিয়ম আপডেট হয়েছে!`);
+			}
 		} catch (e) {
 			console.error('Failed to update firewall rule:', e);
+			showToast('ফায়ারওয়াল আপডেট করতে ব্যর্থ হয়েছে।');
 		}
 	}
 
@@ -199,17 +210,13 @@
 	async function toggleBlockBot(ip: string, userAgent: string) {
 		const currentlyBlocked = localBlockedIps.includes(ip);
 		const nextState = !currentlyBlocked;
+
+		// Optimistic UI update
 		if (currentlyBlocked) {
 			localBlockedIps = localBlockedIps.filter((item) => item !== ip);
 		} else {
 			localBlockedIps = [...localBlockedIps, ip];
 		}
-
-		showToast(
-			nextState
-				? `Blocked IP ${ip} and added to Firewall Blocklist!`
-				: `Unblocked IP ${ip}. Traffic is now permitted.`
-		);
 
 		try {
 			const fd = new FormData();
@@ -217,12 +224,33 @@
 			fd.append('action', nextState ? 'block' : 'unblock');
 			fd.append('userAgent', userAgent);
 
-			await fetch('?/toggleBlockIp', {
-				method: 'POST',
-				body: fd
-			});
+			const res = await fetch('?/toggleBlockIp', { method: 'POST', body: fd });
+			const result = await res.json().catch(() => null) as any;
+
+			if (result?.type === 'failure') {
+				// Rollback optimistic update
+				if (nextState) {
+					localBlockedIps = localBlockedIps.filter((item) => item !== ip);
+				} else {
+					localBlockedIps = [...localBlockedIps, ip];
+				}
+				showToast(result?.data?.message || 'IP ব্লক আপডেট করতে ব্যর্থ হয়েছে।');
+			} else {
+				showToast(
+					nextState
+						? `IP ${ip} ব্লক করা হয়েছে!`
+						: `IP ${ip} আনব্লক করা হয়েছে।`
+				);
+			}
 		} catch (e) {
+			// Rollback on network error
+			if (nextState) {
+				localBlockedIps = localBlockedIps.filter((item) => item !== ip);
+			} else {
+				localBlockedIps = [...localBlockedIps, ip];
+			}
 			console.error('Failed to sync block status:', e);
+			showToast('IP ব্লক আপডেট করতে ব্যর্থ হয়েছে।');
 		}
 	}
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { invalidateAll } from '$app/navigation';
 	import { Button, Input, Badge } from '#lib/components/ui';
 	import {
 		RefreshCw,
@@ -39,21 +40,25 @@
 		}, 3000);
 	}
 
-	function handleRefresh() {
+	async function handleRefresh() {
 		isRefreshing = true;
-		setTimeout(() => {
-			isRefreshing = false;
-			showToast('Activity telemetry refreshed successfully!');
-		}, 600);
+		await invalidateAll();
+		isRefreshing = false;
+		showToast('অ্যাক্টিভিটি ডেটা রিফ্রেশ হয়েছে!');
 	}
 
-	// Dynamic Greeting according to current time
+	let adminName = $derived(data?.currentAdmin?.name ?? 'Admin');
+	let adminEmail = $derived(data?.currentAdmin?.email ?? '');
+	let adminRole = $derived(data?.currentAdmin?.role ?? 'Admin');
+	let adminInitial = $derived(adminName.charAt(0).toUpperCase());
+
+	// Dynamic Greeting according to current time (Bengali)
 	let greeting = $derived.by(() => {
 		const hour = new Date().getHours();
-		if (hour >= 5 && hour < 12) return 'Good morning';
-		if (hour >= 12 && hour < 16) return 'Good afternoon';
-		if (hour >= 16 && hour < 19) return 'Good evening';
-		return 'Good night';
+		if (hour >= 5 && hour < 12) return 'শুভ সকাল';
+		if (hour >= 12 && hour < 16) return 'শুভ দুপুর';
+		if (hour >= 16 && hour < 19) return 'শুভ বিকেল';
+		return 'শুভ রাত';
 	});
 
 	// Orders data from layout
@@ -89,6 +94,7 @@
 
 	// Real 14-day Activity Data directly from server/database
 	let activityDays = $derived(data?.activityDays || []);
+	let chartMaxY = $derived(data?.chartMaxY ?? 4);
 
 	let totalTrackedOrders = $derived(
 		activityDays.reduce((sum: number, d: any) => sum + d.count, 0)
@@ -130,7 +136,7 @@
 			<!-- Avatar with Green Online Status Dot -->
 			<div class="relative shrink-0">
 				<div class="w-14 h-14 sm:w-16 sm:h-16 rounded-3xl bg-gradient-to-tr from-[#ecfdf5] via-[#dcfce7] to-[#bbf7d0] border border-emerald-300 flex items-center justify-center text-emerald-800 font-black text-2xl font-['Outfit'] shadow-xs">
-					S
+					{adminInitial}
 				</div>
 				<span class="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white shadow-2xs"></span>
 			</div>
@@ -139,18 +145,18 @@
 			<div class="space-y-1">
 				<div class="flex flex-wrap items-center gap-2">
 					<h1 class="text-lg sm:text-xl font-black text-slate-900 tracking-tight font-['Outfit']">
-						AURA Super Admin
+						{adminName}
 					</h1>
 					<Badge variant="purple" class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold px-2 py-0.5">
-						Super Admin
+						{adminRole}
 					</Badge>
 				</div>
 				<p class="text-xs text-slate-400 font-mono">
-					admin@aura-store.com
+					{adminEmail}
 				</p>
 				<p class="text-xs sm:text-[13px] font-bold text-[#5845eb] flex items-center gap-1.5 pt-0.5">
 					<Sparkles class="w-3.5 h-3.5 text-[#5845eb] animate-pulse" />
-					<span>{greeting}, Super Admin! Here is your operational performance summary for today.</span>
+					<span>{greeting}, {adminName}! আজকের কার্যক্ষমতার সারসংক্ষেপ নিচে দেখুন।</span>
 				</p>
 			</div>
 		</div>
@@ -208,7 +214,7 @@
 				<ShieldCheck class="w-3.5 h-3.5 {activeTab === 'store' ? 'text-[#5845eb]' : 'text-slate-400'}" />
 				<span>Storewide Activity</span>
 				<span class="px-2 py-0.2 rounded-full text-[10px] font-black {activeTab === 'store' ? 'bg-[#5845eb] text-white' : 'bg-slate-200 text-slate-700'}">
-					{allOrders.length > 0 ? allOrders.length : 12}
+					{allOrders.length}
 				</span>
 			</button>
 		</div>
@@ -390,17 +396,17 @@
 
 				<!-- Y-Axis Labels -->
 				<div class="absolute left-0 top-0 bottom-6 flex flex-col justify-between text-[11px] font-mono text-slate-400">
-					<span>4</span>
-					<span>3</span>
-					<span>2</span>
-					<span>1</span>
+					<span>{chartMaxY}</span>
+					<span>{Math.round(chartMaxY * 0.75)}</span>
+					<span>{Math.round(chartMaxY * 0.5)}</span>
+					<span>{Math.round(chartMaxY * 0.25)}</span>
 					<span>0</span>
 				</div>
 
 				<!-- Bars & Labels Area -->
 				<div class="ml-8 h-full flex items-end justify-between gap-2 z-10 pt-4">
 					{#each activityDays as day}
-						{@const heightPercent = (day.count / 4) * 100}
+						{@const heightPercent = (day.count / chartMaxY) * 100}
 						<div class="flex-1 flex flex-col items-center h-full justify-end group cursor-pointer relative">
 							
 							<!-- Hover Tooltip -->
@@ -487,7 +493,7 @@
 								</span>
 							</div>
 							<div class="text-[11px] text-slate-400 font-mono flex items-center gap-2">
-								<span>#{order.orderNumber || order.id.slice(0, 8)}</span>
+								<span>#{order.id}</span>
 								<span>•</span>
 								<span>{order.createdAt}</span>
 							</div>
@@ -497,13 +503,13 @@
 					<!-- Amount & Action -->
 					<div class="flex items-center justify-between w-full sm:w-auto gap-4 self-end sm:self-center border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100">
 						<span class="text-sm font-black text-emerald-700 font-['Outfit']">
-							৳{order.amount}
+							৳{Number(order.amount || 0).toLocaleString('en-BD')}
 						</span>
 
 						<Button
 							variant="outline"
 							size="sm"
-							href="/admin/orders/list"
+							href="/admin/orders/{order.id}"
 							class="rounded-xl border-slate-200 text-slate-700 hover:text-[#5845eb] text-xs font-bold gap-1 h-8 px-3"
 						>
 							<span>View</span>

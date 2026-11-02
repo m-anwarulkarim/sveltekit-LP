@@ -5,7 +5,7 @@ import { hashPassword, needsPasswordUpgrade, timingSafeEqual, verifyPassword } f
 import { normalizePermissions } from '../../constants/admin-permissions';
 
 export const ADMIN_SESSION_COOKIE = 'admin_session';
-export const ADMIN_SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+export const ADMIN_SESSION_MAX_AGE = 60 * 60 * 24 * 3; // 3 days
 
 export interface AuthenticatedAdmin {
 	id: string;

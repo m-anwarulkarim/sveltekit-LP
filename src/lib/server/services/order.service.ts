@@ -30,6 +30,8 @@ export interface OrderCreationContext {
 	source?: string;
 	deviceFingerprint?: string;
 	userId?: string | null;
+	/** Runs slow, non-critical work after the response (platform.ctx.waitUntil). */
+	defer?: (work: Promise<unknown>) => void;
 	/** Price set by a landing page offer. When present, cart pricing rules are skipped. */
 	landingOffer?: {
 		productId: string | null;
@@ -435,18 +437,21 @@ export class OrderService {
 		}
 
 		// 7. Non-critical follow-ups must never fail an order that is already saved
-		if (customerId) {
-			await CustomerService.incrementCustomerOrderStats(db, customerId, total).catch((e) =>
-				console.error('Customer stats increment failed:', e)
-			);
-		}
-
-		await NotificationService.createNotification(db, {
-			title: `নতুন অর্ডার #${orderNumber} প্রাপ্ত হয়েছে`,
-			description: `কাস্টমার ${data.customerName} (${data.customerPhone}) ${items.length}টি আইটেম অর্ডার করেছেন। মোট বিল: ৳${total.toLocaleString('en-US')}।`,
-			category: 'order',
-			link: `/admin/orders/${orderId}`
-		}).catch((e) => console.error('Failed to trigger order notification:', e));
+		const followUps = Promise.all([
+			customerId
+				? CustomerService.incrementCustomerOrderStats(db, customerId, total).catch((e) =>
+						console.error('Customer stats increment failed:', e)
+					)
+				: Promise.resolve(),
+			NotificationService.createNotification(db, {
+				title: `নতুন অর্ডার #${orderNumber} প্রাপ্ত হয়েছে`,
+				description: `কাস্টমার ${data.customerName} (${data.customerPhone}) ${items.length}টি আইটেম অর্ডার করেছেন। মোট বিল: ৳${total.toLocaleString('en-US')}।`,
+				category: 'order',
+				link: `/admin/orders/${orderId}`
+			}).catch((e) => console.error('Failed to trigger order notification:', e))
+		]);
+		if (context?.defer) context.defer(followUps);
+		else await followUps;
 
 		return {
 			orderId,

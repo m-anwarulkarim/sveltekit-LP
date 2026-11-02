@@ -151,34 +151,57 @@ export const load: PageServerLoad = async (event) => {
 	};
 };
 
+const REVIEW_LIMITS = { author: 80, title: 120, content: 2000 };
+
 export const actions: Actions = {
 	addReview: async ({ request, platform }) => {
 		try {
 			const data = await request.formData();
-			const productId = data.get('productId')?.toString();
+			const productId = data.get('productId')?.toString()?.trim();
 			const author = data.get('author')?.toString()?.trim();
-			const rating = parseInt(data.get('rating')?.toString() || '5');
-			const title = data.get('title')?.toString()?.trim();
+			const title = data.get('title')?.toString()?.trim() || '';
 			const content = data.get('content')?.toString()?.trim();
+			const rating = Number(data.get('rating')?.toString() || '5');
 
 			if (!productId || !author || !content) {
 				return fail(400, { message: 'সবগুলো আবশ্যক তথ্য পূরণ করুন।' });
 			}
+			if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+				return fail(400, { message: 'রেটিং ১ থেকে ৫ এর মধ্যে হতে হবে।' });
+			}
+			if (
+				author.length > REVIEW_LIMITS.author ||
+				title.length > REVIEW_LIMITS.title ||
+				content.length > REVIEW_LIMITS.content
+			) {
+				return fail(400, { message: 'নাম, শিরোনাম বা মতামত অনেক বড়। সংক্ষেপে লিখুন।' });
+			}
 
 			const db = getDb(platform);
+			const product = await db
+				.select({ id: schema.products.id })
+				.from(schema.products)
+				.where(eq(schema.products.id, productId))
+				.get();
+			if (!product) {
+				return fail(404, { message: 'পণ্যটি পাওয়া যায়নি।' });
+			}
+
+			// Nobody is signed in here, so the review cannot be marked as from a verified buyer.
 			await ReviewService.addReview(db, {
 				productId,
 				author,
 				rating,
 				title,
 				content,
-				role: 'ভেরিফাইড ক্রেতা'
+				role: 'কাস্টমার',
+				verified: false
 			});
 
-			return { success: true, message: 'আপনার রিভিউটি সফলভাবে গৃহীত হয়েছে!' };
-		} catch (err: any) {
+			return { success: true, message: 'আপনার রিভিউটি সফলভাবে গৃহীত হয়েছে!' };
+		} catch (err) {
 			console.error('Add review error:', err);
-			return fail(500, { message: err?.message || 'রিভিউ যুক্ত করতে সমস্যা হয়েছে।' });
+			return fail(500, { message: 'রিভিউ যুক্ত করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।' });
 		}
 	}
 };

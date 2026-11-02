@@ -156,7 +156,8 @@ export const actions: Actions = {
 					userAgent,
 					source: formData.get('source')?.toString()?.slice(0, 200) || 'Storefront Checkout',
 					deviceFingerprint: describeDevice(userAgent || '', locationTag),
-					userId: locals.user?.id
+					userId: locals.user?.id,
+					defer: (work) => platform?.ctx?.waitUntil?.(work)
 				}
 			);
 

@@ -45,6 +45,19 @@ const AI_CRAWLERS = /gptbot|chatgpt-user|claudebot|anthropic-ai|perplexitybot|by
 const HEADLESS_OR_SCRAPERS = /headlesschrome|puppeteer|playwright|python-requests|aiohttp|curl\/|wget\/|scrapy|postman|httpie|go-http-client/i;
 
 const IP_BLOCK_CACHE_TTL_MS = 60_000;
+const BOT_LOG_INTERVAL_MS = 5 * 60_000;
+const botLastLogged = new Map<string, number>();
+
+/** A crawler can send thousands of requests, but one row per interval says the same thing. */
+function shouldLogBot(ip: string, category: string): boolean {
+	const now = Date.now();
+	const key = `${ip}|${category}`;
+	const last = botLastLogged.get(key);
+	if (last && now - last < BOT_LOG_INTERVAL_MS) return false;
+	if (botLastLogged.size > 5000) botLastLogged.clear();
+	botLastLogged.set(key, now);
+	return true;
+}
 const CUSTOMER_SESSION_COOKIES = ['better-auth.session_token', '__Secure-better-auth.session_token'];
 
 function isAssetPath(pathname: string): boolean {
@@ -255,7 +268,7 @@ const handleRequest: Handle = async ({ event, resolve }) => {
 		event.url.hostname === 'localhost' ||
 		event.url.hostname === '127.0.0.1';
 
-	if (botCategory && !isLocalDev) {
+	if (botCategory && !isLocalDev && shouldLogBot(clientIp, botCategory)) {
 		try {
 			const logPromise = getDb(platform)
 				.insert(schema.botLogs)

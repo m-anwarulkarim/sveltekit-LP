@@ -31,7 +31,10 @@ function allowInMemory(key: string, tier: RateLimitTier): boolean {
 
 /** Which limit applies to a request, or null when the request is not rate limited. */
 export function getRateLimitTier(method: string, pathname: string): RateLimitTier | null {
+	if (pathname === '/api/cart' && (method === 'POST' || method === 'DELETE')) return 'default';
 	if (method !== 'POST') return null;
+	// Product pages accept review submissions, which anyone can send.
+	if (pathname.startsWith('/products/')) return 'strict';
 	if (
 		pathname.startsWith('/auth/') ||
 		pathname === '/track-order' ||

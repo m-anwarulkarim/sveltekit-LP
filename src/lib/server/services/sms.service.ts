@@ -49,7 +49,7 @@ export class SmsService {
 			}
 
 			if (config.provider === 'bulksmsbd') {
-				const url = `http://bulksmsbd.net/api/smsapi?api_key=${encodeURIComponent(
+				const url = `https://bulksmsbd.net/api/smsapi?api_key=${encodeURIComponent(
 					config.apiKey
 				)}&type=text&number=${encodeURIComponent(phone)}&senderid=${encodeURIComponent(
 					config.senderId || ''

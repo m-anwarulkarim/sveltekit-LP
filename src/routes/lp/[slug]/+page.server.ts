@@ -87,6 +87,7 @@ export const actions: Actions = {
 					source: `Landing Page (/lp/${params.slug})`,
 					deviceFingerprint: 'Landing Page Order',
 					userId: locals.user?.id,
+					defer: (work) => platform?.ctx?.waitUntil?.(work),
 					landingOffer: {
 						productId: product?.id || null,
 						productName: displayName,

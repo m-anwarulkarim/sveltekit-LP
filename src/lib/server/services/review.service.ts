@@ -59,11 +59,11 @@ export class ReviewService {
 			id: newId,
 			productId: input.productId,
 			author: input.author.trim(),
-			role: input.role?.trim() || 'ভেরিফাইড ক্রেতা',
+			role: input.role?.trim() || 'কাস্টমার',
 			rating: Math.max(1, Math.min(5, input.rating || 5)),
 			title: input.title?.trim() || 'চমৎকার পণ্য',
 			content: input.content.trim(),
-			verified: input.verified ?? true
+			verified: input.verified ?? false
 		});
 
 		// Recalculate average rating for the product

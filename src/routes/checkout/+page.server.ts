@@ -161,31 +161,16 @@ export const actions: Actions = {
 				}
 			);
 
-			// Dispatch asynchronous server-side Meta Conversions API (CAPI) Purchase event
-			try {
-				const capiPromise = PixelService.sendCAPIPurchase(db, {
-					orderId: result.orderId,
-					orderNumber: result.orderNumber,
-					customerName: result.customerName,
-					customerPhone: result.customerPhone,
-					customerEmail: result.customerPhone,
-					shippingAddress: finalShippingAddress,
-					total: result.total,
-					items: result.items,
-					currency: 'BDT',
-					ipAddress,
-					userAgent,
-					// Meta Browser ID and Click ID cookies improve event match quality
-					fbp: cookies.get('_fbp') || undefined,
-					fbc: cookies.get('_fbc') || undefined,
-					eventSourceUrl: `${url.origin}/checkout`
-				}).catch((err) => console.error('Background CAPI Purchase Error:', err));
-
-				// Keep the Worker alive until CAPI completes
-				platform?.ctx?.waitUntil?.(capiPromise);
-			} catch (capiErr) {
-				console.error('CAPI dispatch init error:', capiErr);
-			}
+			PixelService.dispatchOrderPurchase(db, result, {
+				request,
+				cookies,
+				origin: url.origin,
+				path: '/checkout',
+				ipAddress,
+				deliveryArea,
+				shippingAddress: finalShippingAddress,
+				waitUntil: (p) => platform?.ctx?.waitUntil?.(p)
+			});
 
 			return {
 				success: true,

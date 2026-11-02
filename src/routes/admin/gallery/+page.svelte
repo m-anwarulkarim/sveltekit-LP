@@ -93,9 +93,20 @@
 	}
 
 	// Client-side file drop / pick handler for instant preview
+	const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif'];
+	const MAX_BYTES = 5 * 1024 * 1024;
+
 	function handleFileSelected(file: File) {
+		if (!ALLOWED_TYPES.includes(file.type)) {
+			toast.error('শুধুমাত্র PNG, JPG, WEBP, GIF বা AVIF ছবি আপলোড করা যাবে।');
+			return;
+		}
+		if (file.size > MAX_BYTES) {
+			toast.error('ফাইলের সাইজ ৫ MB এর বেশি হতে পারবে না।');
+			return;
+		}
 		uploadName = file.name.replace(/\.[^/.]+$/, '');
-		uploadFileSize = `${(file.size / 1024).toFixed(0)} KB`;
+		uploadFileSize = file.size > 1024 * 1024 ? `${(file.size / 1024 / 1024).toFixed(1)} MB` : `${Math.round(file.size / 1024)} KB`;
 
 		const reader = new FileReader();
 		reader.onload = (e) => {
@@ -272,10 +283,12 @@
 								method="POST"
 								action="?/deleteImage"
 								use:enhance={() => {
-									const idToDelete = img.id;
-									galleryImages = galleryImages.filter((i) => i.id !== idToDelete);
-									toast.success('ছবি সফলভাবে মুছে ফেলা হয়েছে!');
-									return async ({ update }) => {
+									return async ({ result, update }) => {
+										if (result.type === 'success') {
+											toast.success('ছবি সফলভাবে মুছে ফেলা হয়েছে!');
+										} else {
+											toast.error((result as any).data?.message || 'ছবি মুছতে ব্যর্থ হয়েছে');
+										}
 										await update();
 									};
 								}}
@@ -362,204 +375,160 @@
 </div>
 
 <!-- 1. Upload New Image Modal -->
-{#if isUploadModalOpen}
-	<Dialog bind:open={isUploadModalOpen}>
-		<div class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in">
-			<div class="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-				
-				<!-- Modal Header -->
-				<div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-indigo-50/50">
-					<div class="flex items-center gap-2.5">
-						<div class="w-8 h-8 rounded-xl bg-[#5845eb] text-white flex items-center justify-center">
-							<UploadCloud class="w-4 h-4" />
-						</div>
-						<div>
-							<h3 class="text-sm font-bold text-slate-900">নতুন ছবি আপলোড করুন</h3>
-							<p class="text-[11px] text-slate-500">গ্যালারিতে যুক্ত করে যেকোনো জায়গায় ব্যবহার করুন</p>
-						</div>
-					</div>
-					<button
-						type="button"
-						onclick={() => (isUploadModalOpen = false)}
-						class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
-						aria-label="Close upload modal"
-					>
-						<X class="w-4 h-4" />
-					</button>
-				</div>
-
-				<!-- Modal Form -->
-				<form
-					method="POST"
-					action="?/uploadImage"
-					use:enhance={() => {
-						isUploading = true;
-						return async ({ result, update }) => {
-							isUploading = false;
-							if (result.type === 'success') {
-								isUploadModalOpen = false;
-								showToast('ছবি সফলভাবে গ্যালারিতে সংরক্ষিত হয়েছে!');
-								await update();
-							} else {
-								showToast('ছবি আপলোডে ত্রুটি হয়েছে');
-							}
-						};
-					}}
-					class="p-6 space-y-4"
+<Dialog
+	bind:open={isUploadModalOpen}
+	title="নতুন ছবি আপলোড করুন"
+	description="গ্যালারিতে যুক্ত করে যেকোনো জায়গায় ব্যবহার করুন"
+>
+	<form
+	method="POST"
+	action="?/uploadImage"
+	use:enhance={() => {
+		isUploading = true;
+		return async ({ result, update }) => {
+			isUploading = false;
+			if (result.type === 'success') {
+				isUploadModalOpen = false;
+				showToast('ছবি সফলভাবে গ্যালারিতে সংরক্ষিত হয়েছে!');
+				await update();
+			} else {
+				showToast('ছবি আপলোডে ত্রুটি হয়েছে');
+			}
+		};
+	}}
+	class="space-y-4"
 				>
-					<input type="hidden" name="url" value={uploadDataUrl} />
-					<input type="hidden" name="size" value={uploadFileSize} />
-					<input type="hidden" name="dimensions" value={uploadDimensions} />
+	<input type="hidden" name="url" value={uploadDataUrl} />
+	<input type="hidden" name="size" value={uploadFileSize} />
+	<input type="hidden" name="dimensions" value={uploadDimensions} />
 
-					<!-- Drag & Drop Area -->
-					<div
-						class="border-2 border-dashed rounded-2xl p-6 text-center transition-all cursor-pointer {isDragging
-							? 'border-[#5845eb] bg-indigo-50/50 scale-[0.99]'
-							: uploadDataUrl
-								? 'border-emerald-300 bg-emerald-50/20'
-								: 'border-slate-200 hover:border-indigo-300 bg-slate-50/50'}"
-						ondragover={(e) => {
-							e.preventDefault();
-							isDragging = true;
-						}}
-						ondragleave={() => (isDragging = false)}
-						ondrop={onDropFile}
-						role="region"
-						aria-label="File upload dropzone"
-					>
-						{#if uploadDataUrl}
-							<div class="space-y-3">
-								<div class="w-32 h-32 mx-auto rounded-xl bg-white border border-slate-200/80 p-2 shadow-2xs flex items-center justify-center overflow-hidden">
-									<img
-										src={uploadDataUrl}
-										alt="Preview"
-										class="w-full h-full object-contain"
-									/>
-								</div>
-								<div class="text-xs text-slate-600">
-									<span class="font-bold">{uploadFileSize}</span> • <span>{uploadDimensions}</span>
-								</div>
-								<label class="inline-block text-xs font-bold text-indigo-600 hover:underline cursor-pointer">
-									অন্য ছবি বেছে নিন
-									<input
-										type="file"
-										accept="image/*"
-										class="hidden"
-										onchange={onFileInputChange}
-									/>
-								</label>
-							</div>
-						{:else}
-							<div class="space-y-2">
-								<div class="w-12 h-12 mx-auto rounded-2xl bg-indigo-100/80 text-[#5845eb] flex items-center justify-center">
-									<UploadCloud class="w-6 h-6" />
-								</div>
-								<div>
-									<label class="cursor-pointer font-bold text-sm text-[#5845eb] hover:underline">
-										ছবি সিলেক্ট করুন
-										<input
-											type="file"
-											accept="image/*"
-											class="hidden"
-											onchange={onFileInputChange}
-											required
-										/>
-									</label>
-									<span class="text-slate-500 text-xs"> অথবা ড্র্যাগ করে ছেড়ে দিন</span>
-								</div>
-								<p class="text-[11px] text-slate-400">PNG, JPG, SVG, WebP (সর্বোচ্চ 5MB)</p>
-							</div>
-						{/if}
-					</div>
-
-					<!-- Image Name Input -->
-					<div>
-						<label for="img-name" class="block text-xs font-bold text-slate-700 mb-1">ছবির নাম / টাইটেল *</label>
-						<Input
-							id="img-name"
-							type="text"
-							name="name"
-							bind:value={uploadName}
-							placeholder="যেমন: AURA Spatial Earbuds Front View"
-							required
-							class="text-xs"
-						/>
-					</div>
-
-					<!-- Folder Selection -->
-					<div>
-						<label for="img-folder" class="block text-xs font-bold text-slate-700 mb-1">ফোল্ডার / ক্যাটাগরি *</label>
-						<select
-							id="img-folder"
-							name="folder"
-							bind:value={uploadFolder}
-							class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#5845eb] cursor-pointer"
-						>
-							<option value="products">Products (পণ্য)</option>
-							<option value="categories">Categories (ক্যাটাগরি)</option>
-							<option value="banners">Banners & Carousels (ব্যানার)</option>
-							<option value="stickers">3D Wall Stickers (ওয়াল স্টিকার)</option>
-							<option value="general">General & Others (সাধারণ)</option>
-						</select>
-					</div>
-
-					<!-- Footer Actions -->
-					<div class="pt-3 border-t border-slate-100 flex items-center justify-between">
-						<Button
-							type="button"
-							variant="outline"
-							onclick={() => (isUploadModalOpen = false)}
-							class="text-xs cursor-pointer"
-						>
-							বাতিল
-						</Button>
-
-						<Button
-							type="submit"
-							disabled={!uploadDataUrl || isUploading}
-							class="gap-1.5 text-xs font-bold bg-[#5845eb] text-white hover:bg-[#4836d4] disabled:opacity-50 cursor-pointer"
-						>
-							{#if isUploading}
-								<Loader2 class="w-4 h-4 animate-spin" />
-								<span>আপলোড হচ্ছে...</span>
-							{:else}
-								<Sparkles class="w-4 h-4" />
-								<span>গ্যালারিতে যুক্ত করুন</span>
-							{/if}
-						</Button>
-					</div>
-				</form>
-
+	<!-- Drag & Drop Area -->
+	<div
+		class="border-2 border-dashed rounded-2xl p-6 text-center transition-all cursor-pointer {isDragging
+			? 'border-[#5845eb] bg-indigo-50/50 scale-[0.99]'
+			: uploadDataUrl
+				? 'border-emerald-300 bg-emerald-50/20'
+				: 'border-slate-200 hover:border-indigo-300 bg-slate-50/50'}"
+		ondragover={(e) => {
+			e.preventDefault();
+			isDragging = true;
+		}}
+		ondragleave={() => (isDragging = false)}
+		ondrop={onDropFile}
+		role="region"
+		aria-label="File upload dropzone"
+	>
+		{#if uploadDataUrl}
+			<div class="space-y-3">
+				<div class="w-32 h-32 mx-auto rounded-xl bg-white border border-slate-200/80 p-2 shadow-2xs flex items-center justify-center overflow-hidden">
+					<img
+						src={uploadDataUrl}
+						alt="Preview"
+						class="w-full h-full object-contain"
+					/>
+				</div>
+				<div class="text-xs text-slate-600">
+					<span class="font-bold">{uploadFileSize}</span> • <span>{uploadDimensions}</span>
+				</div>
+				<label class="inline-block text-xs font-bold text-indigo-600 hover:underline cursor-pointer">
+					অন্য ছবি বেছে নিন
+					<input
+						type="file"
+						accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
+						class="hidden"
+						onchange={onFileInputChange}
+					/>
+				</label>
 			</div>
-		</div>
-	</Dialog>
-{/if}
+		{:else}
+			<div class="space-y-2">
+				<div class="w-12 h-12 mx-auto rounded-2xl bg-indigo-100/80 text-[#5845eb] flex items-center justify-center">
+					<UploadCloud class="w-6 h-6" />
+				</div>
+				<div>
+					<label class="cursor-pointer font-bold text-sm text-[#5845eb] hover:underline">
+						ছবি সিলেক্ট করুন
+						<input
+							type="file"
+							accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
+							class="hidden"
+							onchange={onFileInputChange}
+							required
+						/>
+					</label>
+					<span class="text-slate-500 text-xs"> অথবা ড্র্যাগ করে ছেড়ে দিন</span>
+				</div>
+				<p class="text-[11px] text-slate-400">PNG, JPG, WebP, GIF, AVIF (সর্বোচ্চ 5MB)</p>
+			</div>
+		{/if}
+	</div>
+
+	<!-- Image Name Input -->
+	<div>
+		<label for="img-name" class="block text-xs font-bold text-slate-700 mb-1">ছবির নাম / টাইটেল *</label>
+		<Input
+			id="img-name"
+			type="text"
+			name="name"
+			bind:value={uploadName}
+			placeholder="যেমন: AURA Spatial Earbuds Front View"
+			required
+			class="text-xs"
+		/>
+	</div>
+
+	<!-- Folder Selection -->
+	<div>
+		<label for="img-folder" class="block text-xs font-bold text-slate-700 mb-1">ফোল্ডার / ক্যাটাগরি *</label>
+		<select
+			id="img-folder"
+			name="folder"
+			bind:value={uploadFolder}
+			class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#5845eb] cursor-pointer"
+		>
+			<option value="products">Products (পণ্য)</option>
+			<option value="categories">Categories (ক্যাটাগরি)</option>
+			<option value="banners">Banners & Carousels (ব্যানার)</option>
+			<option value="stickers">3D Wall Stickers (ওয়াল স্টিকার)</option>
+			<option value="general">General & Others (সাধারণ)</option>
+		</select>
+	</div>
+
+	<!-- Footer Actions -->
+	<div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+		<Button
+			type="button"
+			variant="outline"
+			onclick={() => (isUploadModalOpen = false)}
+			class="text-xs cursor-pointer"
+		>
+			বাতিল
+		</Button>
+
+		<Button
+			type="submit"
+			disabled={!uploadDataUrl || isUploading}
+			class="gap-1.5 text-xs font-bold bg-[#5845eb] text-white hover:bg-[#4836d4] disabled:opacity-50 cursor-pointer"
+		>
+			{#if isUploading}
+				<Loader2 class="w-4 h-4 animate-spin" />
+				<span>আপলোড হচ্ছে...</span>
+			{:else}
+				<Sparkles class="w-4 h-4" />
+				<span>গ্যালারিতে যুক্ত করুন</span>
+			{/if}
+		</Button>
+	</div>
+				</form>
+</Dialog>
 
 <!-- 2. Image Full Preview & Details Modal -->
 {#if activePreviewImage}
-	<Dialog open={true}>
-		<div class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in">
-			<div class="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-				
-				<!-- Header -->
-				<div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-					<div class="flex items-center gap-2">
-						<h3 class="text-base font-black text-slate-900 line-clamp-1">{activePreviewImage.name}</h3>
-						<span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-200 text-slate-700">
-							{activePreviewImage.folder}
-						</span>
-					</div>
-					<button
-						type="button"
-						onclick={() => (activePreviewImage = null)}
-						class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 cursor-pointer"
-						aria-label="Close preview modal"
-					>
-						<X class="w-4 h-4" />
-					</button>
-				</div>
-
-				<!-- Preview Container -->
+	<Dialog open={true} onclose={() => (activePreviewImage = null)} title={activePreviewImage.name} class="max-w-2xl">
+		<span class="mb-3 inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-200 text-slate-700">
+			{activePreviewImage.folder}
+		</span>
+		<!-- Preview Container -->
 				<div class="p-6 bg-slate-100/60 flex items-center justify-center max-h-[50vh]">
 					<img
 						src={activePreviewImage.url}
@@ -634,8 +603,5 @@
 						</Button>
 					</div>
 				</div>
-
-			</div>
-		</div>
 	</Dialog>
 {/if}

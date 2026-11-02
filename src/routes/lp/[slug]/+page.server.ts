@@ -3,6 +3,7 @@ import { error, fail } from '@sveltejs/kit';
 import { getDb } from '#lib/server/db/index';
 import { LandingPageService } from '#lib/server/services/landing-page.service';
 import { OrderService, OrderValidationError } from '#lib/server/services/order.service';
+import { PixelService } from '#lib/server/services/pixel.service';
 import { resolveLandingOffer } from '#lib/utils/order-pricing';
 
 export const load: PageServerLoad = async ({ params, platform }) => {
@@ -23,7 +24,7 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 };
 
 export const actions: Actions = {
-	placeOrder: async ({ request, platform, getClientAddress, params, locals }) => {
+	placeOrder: async ({ request, cookies, platform, getClientAddress, params, locals, url }) => {
 		try {
 			const db = getDb(platform);
 			const formData = await request.formData();
@@ -99,6 +100,17 @@ export const actions: Actions = {
 					}
 				}
 			);
+
+			PixelService.dispatchOrderPurchase(db, result, {
+				request,
+				cookies,
+				origin: url.origin,
+				path: `/lp/${params.slug}`,
+				ipAddress,
+				deliveryArea,
+				shippingAddress,
+				waitUntil: (p) => platform?.ctx?.waitUntil?.(p)
+			});
 
 			return {
 				success: true,

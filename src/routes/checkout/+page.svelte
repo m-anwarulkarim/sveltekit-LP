@@ -122,7 +122,7 @@
 			trackMetaEvent('InitiateCheckout', {
 				content_ids: cart.items.map((i) => String(i.id)),
 				content_type: 'product',
-				num_items: cart.items.length,
+				num_items: cart.items.reduce((n, i) => n + i.quantity, 0),
 				value: Number(grandTotal) || Number(cart.total),
 				currency: 'BDT'
 			});

@@ -242,7 +242,7 @@ await test('finishing checkout closes the abandoned record', async () => {
 await test('landing order ignores a forged price', async () => {
 	const fd = new FormData();
 	Object.entries({ customerName: 'Karim Ali', customerPhone: '01722222222', shippingAddress: 'House 9, Road 9', packageIndex: '1', price: '1', quantity: '1' }).forEach(([k, v]) => fd.append(k, v));
-	const res: any = await (lpActions as any).placeOrder({ request: new Request('https://shop.test/lp/lp-test', { method: 'POST', body: fd }), platform, params: { slug: 'lp-test' }, getClientAddress: () => '1.1.1.1', locals: {} });
+	const res: any = await (lpActions as any).placeOrder({ request: new Request('https://shop.test/lp/lp-test', { method: 'POST', body: fd }), platform, params: { slug: 'lp-test' }, getClientAddress: () => '1.1.1.1', locals: {}, cookies: { get: () => undefined }, url: new URL('https://shop.test/lp/lp-test') });
 	assert.equal(res.success, true, JSON.stringify(res));
 	assert.equal(res.total, 1000);
 });

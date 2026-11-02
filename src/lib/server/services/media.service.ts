@@ -1,7 +1,6 @@
 import { eq, desc, and, sql, inArray } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from '../db/schema';
-import { INITIAL_GALLERY_IMAGES } from '../../../routes/admin/_data/gallery';
 import { R2Service } from './r2.service';
 
 export interface ListMediaOptions {
@@ -79,17 +78,6 @@ export class MediaService {
 		options: ListMediaOptions = {}
 	) {
 		try {
-			// Auto-seed if media table is empty
-			const countRes = await db
-				.select({ count: sql<number>`count(*)` })
-				.from(schema.mediaAssets)
-				.all();
-			const totalInDb = countRes[0]?.count ?? 0;
-
-			if (totalInDb === 0) {
-				await this.seedInitialMedia(db);
-			}
-
 			const conditions: any[] = [];
 
 			if (options.folder && options.folder !== 'all') {
@@ -206,11 +194,12 @@ export class MediaService {
 	 * Bulk delete media assets from D1 and R2/disk
 	 */
 	static async bulkDeleteMedia(db: DrizzleD1Database<typeof schema>, ids: string[], platform?: any) {
-		if (ids.length === 0) return { count: 0 };
+		let failed = 0;
 		for (const id of ids) {
-			await this.deleteMedia(db, id, platform);
+			const res = await this.deleteMedia(db, id, platform);
+			if (!res.success) failed++;
 		}
-		return { success: true, count: ids.length };
+		return { success: failed === 0, count: ids.length - failed, failed };
 	}
 
 	/**
@@ -234,31 +223,6 @@ export class MediaService {
 			}
 		} catch (e) {
 			console.error(`Failed to delete media by url ${url}:`, e);
-		}
-	}
-
-	/**
-	 * Seed initial gallery images into D1 database
-	 */
-	static async seedInitialMedia(db: DrizzleD1Database<typeof schema>) {
-		for (const img of INITIAL_GALLERY_IMAGES) {
-			try {
-				await db
-					.insert(schema.mediaAssets)
-					.values({
-						id: img.id,
-						name: img.name,
-						url: img.url,
-						folder: img.folder,
-						size: img.size,
-						dimensions: img.dimensions,
-						uploadedBy: 'System Admin',
-						createdAt: new Date()
-					})
-					.onConflictDoNothing();
-			} catch (e) {
-				console.error(`Failed to seed media ${img.name}:`, e);
-			}
 		}
 	}
 }

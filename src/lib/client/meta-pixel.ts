@@ -20,6 +20,16 @@ export interface ClientPixelConfig {
 let isPixelInitialized = false;
 let activeConfig: ClientPixelConfig | null = null;
 
+/**
+ * Child pages (product, thank-you) run their effects before the layout's onMount has loaded the pixel.
+ * On a hard page load their events would be lost, so they wait here until initMetaPixel has decided
+ * whether tracking is on. Bounded so a store with tracking off never grows it.
+ */
+type PendingEvent = { name: string; params: Record<string, any>; id?: string };
+const MAX_PENDING = 20;
+let pendingEvents: PendingEvent[] = [];
+let configResolved = false;
+
 declare global {
 	interface Window {
 		fbq: any;
@@ -33,7 +43,11 @@ declare global {
 export function initMetaPixel(config?: ClientPixelConfig | null): void {
 	if (typeof window === 'undefined' || !config) return;
 	activeConfig = config;
-	if (config.trackingMode !== 'native_direct' || !config.pixelId) return;
+	configResolved = true;
+	if (config.trackingMode !== 'native_direct' || !config.pixelId) {
+		pendingEvents = [];
+		return;
+	}
 	if (isPixelInitialized) return;
 
 	// Official Meta Pixel Bootstrap snippet
@@ -70,6 +84,10 @@ export function initMetaPixel(config?: ClientPixelConfig | null): void {
 
 		isPixelInitialized = true;
 	}
+
+	const queued = pendingEvents;
+	pendingEvents = [];
+	for (const e of queued) sendEvent(e.name, e.params, e.id);
 }
 
 /**
@@ -94,7 +112,20 @@ export function trackMetaEvent(
 	params: Record<string, any> = {},
 	eventId?: string
 ): void {
-	if (typeof window === 'undefined' || typeof window.fbq !== 'function') return;
+	if (typeof window === 'undefined') return;
+
+	if (typeof window.fbq !== 'function') {
+		// Pixel not loaded yet: keep the event until initMetaPixel runs (it drops them if tracking is off).
+		if (!configResolved && pendingEvents.length < MAX_PENDING) {
+			pendingEvents.push({ name: eventName, params, id: eventId });
+		}
+		return;
+	}
+	sendEvent(eventName, params, eventId);
+}
+
+function sendEvent(eventName: string, params: Record<string, any>, eventId?: string): void {
+	if (typeof window.fbq !== 'function') return;
 
 	// Check if this specific event has been disabled in Dashboard Settings
 	if (activeConfig?.events) {
@@ -111,4 +142,3 @@ export function trackMetaEvent(
 		window.fbq('track', eventName, params);
 	}
 }
-

@@ -68,7 +68,7 @@
 						content_ids: contentIds,
 						value: Number(data.dbOrder?.total || order?.total || 0),
 						currency: 'BDT',
-						num_items: items.length
+						num_items: items.reduce((n: number, i: any) => n + (Number(i.quantity) || 1), 0)
 					},
 					effectiveOrderId
 				);

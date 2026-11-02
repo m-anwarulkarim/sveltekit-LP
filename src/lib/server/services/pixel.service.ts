@@ -62,6 +62,8 @@ export const DEFAULT_PIXEL_SETTINGS: MetaPixelSettings = {
 	partnerSegmentId: ''
 };
 
+const GRAPH_API_VERSION = 'v23.0';
+
 export class PixelService {
 	/**
 	 * SHA-256 hasher for Advanced Matching customer privacy compliance
@@ -88,6 +90,15 @@ export class PixelService {
 			digits = '88' + digits;
 		}
 		return digits || undefined;
+	}
+
+	/**
+	 * Meta expects city as lowercase letters only (no spaces or punctuation). Returns undefined when unknown
+	 * so we never send a wrong value.
+	 */
+	static normalizeCity(city?: string | null): string | undefined {
+		const clean = (city || '').toLowerCase().replace(/[^\p{L}]/gu, '');
+		return clean || undefined;
 	}
 
 	/**
@@ -245,7 +256,7 @@ export class PixelService {
 		}
 
 		try {
-			const endpoint = `https://graph.facebook.com/v19.0/${cleanPixelId}/events?access_token=${encodeURIComponent(cleanToken)}`;
+			const endpoint = `https://graph.facebook.com/${GRAPH_API_VERSION}/${cleanPixelId}/events?access_token=${encodeURIComponent(cleanToken)}`;
 			const response = await fetch(endpoint, {
 				method: 'POST',
 				headers: {
@@ -331,7 +342,7 @@ export class PixelService {
 			}
 			const hashedFn = settings.advancedMatching.matchName ? await this.hashValue(firstName) : undefined;
 			const hashedLn = settings.advancedMatching.matchName ? await this.hashValue(lastName) : undefined;
-			const hashedCity = settings.advancedMatching.matchCity ? await this.hashValue(orderData.city || 'dhaka') : undefined;
+			const hashedCity = settings.advancedMatching.matchCity ? await this.hashValue(this.normalizeCity(orderData.city)) : undefined;
 			const hashedCountry = await this.hashValue('bd');
 
 			// 2. Format items for custom_data.contents
@@ -372,7 +383,7 @@ export class PixelService {
 							content_type: settings.contentType || 'product',
 							contents,
 							content_ids: contents.map((c) => c.id),
-							num_items: contents.length
+							num_items: contents.reduce((sum, c) => sum + c.quantity, 0)
 						}
 					}
 				]
@@ -382,7 +393,7 @@ export class PixelService {
 				payload.test_event_code = settings.testEventCode.trim();
 			}
 
-			const endpoint = `https://graph.facebook.com/v19.0/${settings.pixelId.trim()}/events?access_token=${encodeURIComponent(settings.capiToken.trim())}`;
+			const endpoint = `https://graph.facebook.com/${GRAPH_API_VERSION}/${settings.pixelId.trim()}/events?access_token=${encodeURIComponent(settings.capiToken.trim())}`;
 			const response = await fetch(endpoint, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -399,6 +410,57 @@ export class PixelService {
 		} catch (err: any) {
 			console.error('Meta CAPI Purchase exception:', err);
 			return { success: false, message: err?.message };
+		}
+	}
+
+	/**
+	 * Fires the server-side Purchase for a freshly created order without delaying the response.
+	 * Shared by the storefront checkout and landing pages so both report to Meta the same way.
+	 */
+	static dispatchOrderPurchase(
+		db: DrizzleD1Database<typeof schema>,
+		order: {
+			orderId: string;
+			orderNumber: string;
+			customerName?: string;
+			customerPhone?: string;
+			total: number;
+			items: any[];
+		},
+		ctx: {
+			request: Request;
+			cookies: { get(name: string): string | undefined };
+			origin: string;
+			path: string;
+			ipAddress?: string;
+			deliveryArea?: string;
+			shippingAddress?: string;
+			waitUntil?: (p: Promise<unknown>) => void;
+		}
+	): void {
+		try {
+			// Customers are not asked for an email, so none is sent (a phone number is not an email).
+			const ipCity = ctx.request.headers.get('cf-ipcity') || undefined;
+			const city = ctx.deliveryArea === 'inside_dhaka' ? 'Dhaka' : ipCity;
+			const work = this.sendCAPIPurchase(db, {
+				orderId: order.orderId,
+				orderNumber: order.orderNumber,
+				customerName: order.customerName,
+				customerPhone: order.customerPhone,
+				shippingAddress: ctx.shippingAddress,
+				city,
+				total: order.total,
+				items: order.items,
+				currency: 'BDT',
+				ipAddress: ctx.ipAddress,
+				userAgent: ctx.request.headers.get('user-agent') || undefined,
+				fbp: ctx.cookies.get('_fbp') || undefined,
+				fbc: ctx.cookies.get('_fbc') || undefined,
+				eventSourceUrl: `${ctx.origin}${ctx.path}`
+			}).catch((err) => console.error('Background CAPI Purchase Error:', err));
+			ctx.waitUntil?.(work);
+		} catch (err) {
+			console.error('CAPI dispatch init error:', err);
 		}
 	}
 

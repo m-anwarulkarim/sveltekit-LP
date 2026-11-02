@@ -37,28 +37,13 @@ export interface UpdateAdminUserInput {
  */
 export class AdminControlService {
 	/**
-	 * Creates the initial admin accounts the first time the table is empty
-	 */
-	static async ensureSeeded(db: DrizzleD1Database<typeof schema>) {
-		const countRes = await db
-			.select({ count: sql<number>`count(*)` })
-			.from(schema.adminUsers)
-			.all();
-		if ((countRes[0]?.count ?? 0) === 0) {
-			await this.seedInitialAdmins(db);
-		}
-	}
-
-	/**
-	 * Lists admin users with auto-seeding
+	 * Lists admin users
 	 */
 	static async listAdminUsers(
 		db: DrizzleD1Database<typeof schema>,
 		options: AdminUserFilterOptions = {}
 	) {
 		try {
-			await this.ensureSeeded(db);
-
 			const conditions: any[] = [];
 
 			if (options.isTrashed !== undefined) {
@@ -97,14 +82,14 @@ export class AdminControlService {
 				username: r.username,
 				email: r.email,
 				role: r.role,
-				lastLogin: r.lastLogin || 'Oct 28, 2026',
+				lastLogin: r.lastLogin || null,
 				registeredAt: r.createdAt
 					? new Date(r.createdAt).toLocaleDateString('en-US', {
 							month: 'short',
 							day: 'numeric',
 							year: 'numeric'
 						})
-					: 'Sep 3, 2025',
+					: null,
 				access: r.access as 'Allowed' | 'Restricted' | 'Suspended',
 				isTrashed: r.isTrashed,
 				avatarBg: r.avatarBg || 'bg-indigo-600 text-white border-indigo-400',
@@ -136,7 +121,10 @@ export class AdminControlService {
 			.toUpperCase()
 			.slice(0, 2) || 'AD';
 
-		const passwordHash = input.password ? await hashPassword(input.password) : null;
+		if (input.password && input.password.trim().length < 8) {
+			throw new Error('পাসওয়ার্ড ন্যূনতম ৮ অক্ষরের হতে হবে।');
+		}
+		const passwordHash = input.password ? await hashPassword(input.password.trim()) : null;
 		const permissions = JSON.stringify(input.permissions || (input.role === 'Owner' ? ['*'] : []));
 
 		await db.insert(schema.adminUsers).values({
@@ -214,6 +202,7 @@ export class AdminControlService {
 			updates.permissions = JSON.stringify(input.permissions);
 		}
 		if (input.password && input.password.trim()) {
+			if (input.password.trim().length < 8) throw new Error('পাসওয়ার্ড ন্যূনতম ৮ অক্ষরের হতে হবে।');
 			updates.passwordHash = await hashPassword(input.password.trim());
 		}
 
@@ -233,7 +222,7 @@ export class AdminControlService {
 		id: string,
 		newPassword: string
 	) {
-		if (!newPassword || newPassword.trim().length < 6) {
+		if (!newPassword || newPassword.trim().length < 8) {
 			throw new Error('পাসওয়ার্ড ন্যূনতম ৬ অক্ষরের হতে হবে!');
 		}
 
@@ -360,80 +349,5 @@ export class AdminControlService {
 		}
 
 		return { success: true, count: safeIds.length };
-	}
-
-	/**
-	 * Seed initial admins into database
-	 */
-	static async seedInitialAdmins(db: DrizzleD1Database<typeof schema>) {
-		const seedList = [
-			{
-				id: '1',
-				name: 'thecolorlighthouse',
-				username: 'thecolorlighthouse',
-				email: 'contact@thecolorlighthouse.com',
-				role: 'Owner',
-				access: 'Allowed',
-				isTrashed: false,
-				avatarBg: 'bg-black text-pink-500 border-pink-500/40',
-				avatarText: 'COLOR LIGHT'
-			},
-			{
-				id: '2',
-				name: 'Anwarul Karim',
-				username: 'anwarulkarim',
-				email: 'anwarul@haqplus.com',
-				role: 'Super Admin',
-				access: 'Allowed',
-				isTrashed: false,
-				avatarBg: 'bg-indigo-600 text-white border-indigo-400',
-				avatarText: 'AK'
-			},
-			{
-				id: '3',
-				name: 'AURA Support Desk',
-				username: 'aura_support',
-				email: 'support@haqplus.com',
-				role: 'Manager',
-				access: 'Allowed',
-				isTrashed: false,
-				avatarBg: 'bg-emerald-600 text-white border-emerald-400',
-				avatarText: 'AS'
-			},
-			{
-				id: '4',
-				name: 'Legacy Guest Tech',
-				username: 'test_contractor',
-				email: 'contractor@legacy.dev',
-				role: 'Developer',
-				access: 'Suspended',
-				isTrashed: true,
-				avatarBg: 'bg-slate-700 text-slate-300 border-slate-500',
-				avatarText: 'LG'
-			}
-		];
-
-		for (const admin of seedList) {
-			try {
-				await db
-					.insert(schema.adminUsers)
-					.values({
-						id: admin.id,
-						name: admin.name,
-						username: admin.username,
-						email: admin.email,
-						role: admin.role,
-						access: admin.access,
-						isTrashed: admin.isTrashed,
-						avatarBg: admin.avatarBg,
-						avatarText: admin.avatarText,
-						createdAt: new Date(),
-						updatedAt: new Date()
-					})
-					.onConflictDoNothing();
-			} catch (e) {
-				console.error(`Failed to seed admin user ${admin.username}:`, e);
-			}
-		}
 	}
 }

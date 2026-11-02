@@ -55,8 +55,8 @@
 		username: string;
 		email: string;
 		role: string;
-		lastLogin: string;
-		registeredAt: string;
+		lastLogin: string | null;
+		registeredAt: string | null;
 		access: 'Allowed' | 'Restricted' | 'Suspended';
 		isTrashed: boolean;
 		avatarBg: string;
@@ -482,7 +482,7 @@
 			.toUpperCase()
 			.slice(0, 2) || 'AD';
 
-		const finalEmail = newAdminEmail.trim() || `${newAdminUsername.trim().toLowerCase()}@gmail.com`;
+		const finalEmail = newAdminEmail.trim() || `${newAdminUsername.trim().toLowerCase()}@haqplus.com`;
 
 		const formData = new FormData();
 		formData.append('name', newAdminName.trim());
@@ -499,6 +499,12 @@
 				body: formData
 			});
 			const result: any = await res.json();
+			// result.type === 'failure' means the server returned fail(400/403)
+			if (!res.ok || result?.type === 'failure') {
+				const msg = result?.data?.message || result?.data?.error || 'অ্যাডমিন তৈরি করতে সমস্যা হয়েছে।';
+				toast.error(msg);
+				return;
+			}
 			const newId = result?.data?.admin?.id || 'adm-' + Date.now();
 
 			const newEntry: AdminUser = {
@@ -548,14 +554,21 @@
 		formData.append('access', editAccess);
 		formData.append('permissions', JSON.stringify(editPermissions));
 		if (editPassword.trim()) {
+			if (editPassword.trim().length < 8) {
+				toast.error('পাসওয়ার্ড ন্যূনতম ৮ অক্ষরের হতে হবে।');
+				return;
+			}
 			formData.append('password', editPassword.trim());
 		}
 
 		try {
-			await fetch('?/updateAdmin', {
-				method: 'POST',
-				body: formData
-			});
+			const editRes = await fetch('?/updateAdmin', { method: 'POST', body: formData });
+			const editResult: any = await editRes.json();
+			if (!editRes.ok || editResult?.type === 'failure') {
+				const msg = editResult?.data?.message || 'আপডেট করতে সমস্যা হয়েছে।';
+				toast.error(msg);
+				return;
+			}
 
 			admins = admins.map((a) => {
 				if (a.id === editingAdmin!.id) {
@@ -588,6 +601,10 @@
 	async function handleResetPasswordSubmit(e: SubmitEvent) {
 		e.preventDefault();
 		if (!passwordAdmin || !resetPasswordValue.trim()) return;
+		if (resetPasswordValue.trim().length < 8) {
+			toast.error('পাসওয়ার্ড ন্যূনতম ৮ অক্ষরের হতে হবে।');
+			return;
+		}
 
 		isSaving = true;
 		const formData = new FormData();
@@ -595,10 +612,13 @@
 		formData.append('password', resetPasswordValue.trim());
 
 		try {
-			await fetch('?/resetPassword', {
-				method: 'POST',
-				body: formData
-			});
+			const pwRes = await fetch('?/resetPassword', { method: 'POST', body: formData });
+			const pwResult: any = await pwRes.json();
+			if (!pwRes.ok || pwResult?.type === 'failure') {
+				const msg = pwResult?.data?.message || 'পাসওয়ার্ড পরিবর্তন করতে সমস্যা হয়েছে।';
+				toast.error(msg);
+				return;
+			}
 
 			admins = admins.map((a) => {
 				if (a.id === passwordAdmin!.id) {
@@ -1065,12 +1085,12 @@
 				<!-- Email & Password -->
 				<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 					<div>
-						<label for="new-admin-email" class="block text-xs font-bold text-slate-700 mb-1">লগইন ইমেইল (Gmail) *</label>
+						<label for="new-admin-email" class="block text-xs font-bold text-slate-700 mb-1">লগইন ইমেইল *</label>
 						<Input
 							id="new-admin-email"
 							type="email"
 							required
-							placeholder="যেমন: tanvir@gmail.com"
+							placeholder="যেমন: tanvir@haqplus.com"
 							bind:value={newAdminEmail}
 							class="bg-slate-50 border-slate-200 text-xs font-sans"
 						/>
@@ -1093,7 +1113,7 @@
 								id="new-admin-password"
 								type={showNewPassword ? 'text' : 'password'}
 								required
-								placeholder="কমপক্ষে ৬ অক্ষরের পাসওয়ার্ড"
+								placeholder="কমপক্ষে ৮ অক্ষরের পাসওয়ার্ড"
 								bind:value={newAdminPassword}
 								class="bg-slate-50 border-slate-200 font-mono text-xs pr-16"
 							/>
@@ -1336,7 +1356,8 @@
 						<Input
 							id="edit-admin-password"
 							type={showEditPassword ? 'text' : 'password'}
-							placeholder="অপরিবর্তিত রাখতে খালি রাখুন"
+							minlength={8}
+							placeholder="অপরিবর্তিত রাখতে খালি রাখুন (দিলে ন্যূনতম ৮ অক্ষর)"
 							bind:value={editPassword}
 							class="bg-slate-50 border-slate-200 font-mono text-xs pr-10"
 						/>
@@ -1490,6 +1511,8 @@
 							id="reset-pass-val"
 							type={showResetPassword ? 'text' : 'password'}
 							required
+							minlength={8}
+							placeholder="ন্যূনতম ৮ অক্ষরের পাসওয়ার্ড"
 							bind:value={resetPasswordValue}
 							class="bg-slate-50 border-slate-200 font-mono text-xs pr-16"
 						/>

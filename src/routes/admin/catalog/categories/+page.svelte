@@ -38,7 +38,6 @@
 	let selectedIds = $state<string[]>([]);
 	let currentPage = $state(1);
 	let itemsPerPage = 10;
-	let isSaving = $state(false);
 
 	function showToast(msg: string) {
 		toast.success(msg);
@@ -122,8 +121,17 @@
 
 	async function moveToTrash(id: string) {
 		openActionMenuId = null;
+		const confirmed = await confirmModal({
+			title: 'ক্যাটাগরি মুছে ফেলা',
+			message: 'আপনি কি নিশ্চিতভাবে এই ক্যাটাগরিটি মুছে ফেলতে চান?',
+			confirmText: 'হ্যাঁ, মুছে ফেলুন',
+			variant: 'destructive',
+			icon: 'trash'
+		});
+		if (!confirmed) return;
+
 		categories = categories.map((c) => (c.id === id ? { ...c, isTrash: true } : c));
-		showToast('ক্যাটাগরি ট্র্যাশে পাঠানো হয়েছে');
+		showToast('ক্যাটাগরি মুছে ফেলা হয়েছে');
 
 		try {
 			const fd = new FormData();
@@ -208,7 +216,18 @@
 				placeholder="Search Category..."
 				class="w-full bg-white border border-slate-200/90 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#5845eb] shadow-2xs pr-9"
 			/>
-			<Search class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+			{#if searchQuery}
+				<button
+					type="button"
+					onclick={() => { searchQuery = ''; currentPage = 1; }}
+					class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+					aria-label="Clear search"
+				>
+					<X class="w-4 h-4" />
+				</button>
+			{:else}
+				<Search class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+			{/if}
 		</div>
 
 		<!-- Action Buttons -->
@@ -287,7 +306,14 @@
 					{#if paginatedCategories.length === 0}
 						<tr>
 							<td colspan="7" class="py-12 text-center text-slate-400 text-xs">
-								কোনো ক্যাটাগরি পাওয়া যায়নি।
+								{#if searchQuery.trim()}
+									<div class="flex flex-col items-center gap-2">
+										<span>&#39;{searchQuery}&#39; এর জন্য কোনো ক্যাটাগরি পাওয়া যায়নি।</span>
+										<button type="button" onclick={() => { searchQuery = ''; currentPage = 1; }} class="text-[#5845eb] hover:underline font-semibold cursor-pointer">সার্চ ক্লিয়ার করুন</button>
+									</div>
+								{:else}
+									কোনো ক্যাটাগরি পাওয়া যায়নি।
+								{/if}
 							</td>
 						</tr>
 					{:else}

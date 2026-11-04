@@ -1,4 +1,5 @@
 import type { PageServerLoad, Actions } from './$types';
+import { fail } from '@sveltejs/kit';
 import { getDb } from '#lib/server/db/index';
 import { CategoryService } from '#lib/server/services/category.service';
 
@@ -29,7 +30,7 @@ export const actions: Actions = {
 		const status = data.get('status')?.toString() || 'publish';
 
 		if (!name) {
-			return { success: false, message: 'Category Name is required' };
+			return fail(400, { success: false, message: 'Category Name is required' });
 		}
 
 		try {
@@ -44,7 +45,7 @@ export const actions: Actions = {
 			return { success: true, category: result, message: 'ক্যাটাগরি সফলভাবে তৈরি করা হয়েছে!' };
 		} catch (e: any) {
 			console.error('Failed to create category in D1:', e);
-			return { success: false, message: e.message || 'ক্যাটাগরি তৈরি করতে সমস্যা হয়েছে' };
+			return fail(500, { success: false, message: e.message || 'ক্যাটাগরি তৈরি করতে সমস্যা হয়েছে' });
 		}
 	},
 
@@ -57,7 +58,7 @@ export const actions: Actions = {
 		const status = data.get('status')?.toString();
 
 		if (!id || !name) {
-			return { success: false, message: 'ID and Category Name are required' };
+			return fail(400, { success: false, message: 'ID and Category Name are required' });
 		}
 
 		try {
@@ -71,7 +72,7 @@ export const actions: Actions = {
 			return { success: true, message: 'ক্যাটাগরি সফলভাবে আপডেট করা হয়েছে!' };
 		} catch (e: any) {
 			console.error('Failed to update category in D1:', e);
-			return { success: false, message: e.message || 'ক্যাটাগরি আপডেট করতে সমস্যা হয়েছে' };
+			return fail(500, { success: false, message: e.message || 'ক্যাটাগরি আপডেট করতে সমস্যা হয়েছে' });
 		}
 	},
 
@@ -80,7 +81,7 @@ export const actions: Actions = {
 		const id = data.get('id')?.toString();
 
 		if (!id) {
-			return { success: false, message: 'Category ID required' };
+			return fail(400, { success: false, message: 'Category ID required' });
 		}
 
 		try {
@@ -89,7 +90,7 @@ export const actions: Actions = {
 			return { success: true, status: res.statusLabel, message: `স্ট্যাটাস ${res.statusLabel}-এ পরিবর্তিত হয়েছে` };
 		} catch (e: any) {
 			console.error('Failed to toggle status in D1:', e);
-			return { success: false, message: e.message };
+			return fail(500, { success: false, message: e.message });
 		}
 	},
 
@@ -98,7 +99,7 @@ export const actions: Actions = {
 		const id = data.get('id')?.toString();
 
 		if (!id) {
-			return { success: false, message: 'Category ID required' };
+			return fail(400, { success: false, message: 'Category ID required' });
 		}
 
 		try {
@@ -107,7 +108,7 @@ export const actions: Actions = {
 			return { success: true, message: 'ক্যাটাগরি সফলভাবে মুছে ফেলা হয়েছে' };
 		} catch (e: any) {
 			console.error('Failed to delete category in D1:', e);
-			return { success: false, message: e.message };
+			return fail(500, { success: false, message: e.message });
 		}
 	},
 
@@ -123,7 +124,7 @@ export const actions: Actions = {
 		}
 
 		if (ids.length === 0) {
-			return { success: false, message: 'No category IDs provided' };
+			return fail(400, { success: false, message: 'No category IDs provided' });
 		}
 
 		try {
@@ -132,7 +133,7 @@ export const actions: Actions = {
 			return { success: true, message: `${ids.length}টি ক্যাটাগরি সফলভাবে মুছে ফেলা হয়েছে` };
 		} catch (e: any) {
 			console.error('Failed to bulk delete categories in D1:', e);
-			return { success: false, message: e.message };
+			return fail(500, { success: false, message: e.message });
 		}
 	}
 };

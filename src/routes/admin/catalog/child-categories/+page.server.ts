@@ -1,4 +1,5 @@
 import type { PageServerLoad, Actions } from './$types';
+import { fail } from '@sveltejs/kit';
 import { getDb } from '#lib/server/db/index';
 import { CategoryService } from '#lib/server/services/category.service';
 
@@ -40,10 +41,10 @@ export const actions: Actions = {
 		const status = data.get('status')?.toString() || 'publish';
 
 		if (!name) {
-			return { success: false, message: 'Child Category Name is required' };
+			return fail(400, { success: false, message: 'Child Category Name is required' });
 		}
 		if (!subCategoryId) {
-			return { success: false, message: 'Parent Sub-Category is required' };
+			return fail(400, { success: false, message: 'Parent Sub-Category is required' });
 		}
 
 		try {
@@ -58,7 +59,7 @@ export const actions: Actions = {
 			return { success: true, childCategory: result, message: 'চাইল্ড ক্যাটাগরি সফলভাবে তৈরি করা হয়েছে!' };
 		} catch (e: any) {
 			console.error('Failed to create child-category in D1:', e);
-			return { success: false, message: e.message || 'চাইল্ড ক্যাটাগরি তৈরিতে সমস্যা হয়েছে' };
+			return fail(500, { success: false, message: e.message || 'চাইল্ড ক্যাটাগরি তৈরিতে সমস্যা হয়েছে' });
 		}
 	},
 
@@ -72,7 +73,7 @@ export const actions: Actions = {
 		const status = data.get('status')?.toString();
 
 		if (!id || !name) {
-			return { success: false, message: 'ID and Name are required' };
+			return fail(400, { success: false, message: 'ID and Name are required' });
 		}
 
 		try {
@@ -87,7 +88,7 @@ export const actions: Actions = {
 			return { success: true, message: 'চাইল্ড ক্যাটাগরি সফলভাবে আপডেট করা হয়েছে!' };
 		} catch (e: any) {
 			console.error('Failed to update child-category in D1:', e);
-			return { success: false, message: e.message || 'চাইল্ড ক্যাটাগরি আপডেটে সমস্যা হয়েছে' };
+			return fail(500, { success: false, message: e.message || 'চাইল্ড ক্যাটাগরি আপডেটে সমস্যা হয়েছে' });
 		}
 	},
 
@@ -96,7 +97,7 @@ export const actions: Actions = {
 		const id = data.get('id')?.toString();
 
 		if (!id) {
-			return { success: false, message: 'ID is required' };
+			return fail(400, { success: false, message: 'ID is required' });
 		}
 
 		try {
@@ -105,7 +106,7 @@ export const actions: Actions = {
 			return { success: true, status: res.statusLabel, message: `স্ট্যাটাস ${res.statusLabel}-এ পরিবর্তিত হয়েছে` };
 		} catch (e: any) {
 			console.error('Failed to toggle status in D1:', e);
-			return { success: false, message: e.message };
+			return fail(500, { success: false, message: e.message });
 		}
 	},
 
@@ -114,7 +115,7 @@ export const actions: Actions = {
 		const id = data.get('id')?.toString();
 
 		if (!id) {
-			return { success: false, message: 'ID is required' };
+			return fail(400, { success: false, message: 'ID is required' });
 		}
 
 		try {
@@ -123,7 +124,7 @@ export const actions: Actions = {
 			return { success: true, message: 'চাইল্ড ক্যাটাগরি সফলভাবে মুছে ফেলা হয়েছে' };
 		} catch (e: any) {
 			console.error('Failed to delete child-category in D1:', e);
-			return { success: false, message: e.message };
+			return fail(500, { success: false, message: e.message });
 		}
 	},
 
@@ -139,7 +140,7 @@ export const actions: Actions = {
 		}
 
 		if (ids.length === 0) {
-			return { success: false, message: 'No IDs provided' };
+			return fail(400, { success: false, message: 'No IDs provided' });
 		}
 
 		try {
@@ -148,7 +149,7 @@ export const actions: Actions = {
 			return { success: true, message: `${ids.length}টি চাইল্ড ক্যাটাগরি মুছে ফেলা হয়েছে` };
 		} catch (e: any) {
 			console.error('Failed to bulk delete child-categories in D1:', e);
-			return { success: false, message: e.message };
+			return fail(500, { success: false, message: e.message });
 		}
 	}
 };

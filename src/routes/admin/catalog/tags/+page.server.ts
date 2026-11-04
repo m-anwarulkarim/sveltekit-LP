@@ -1,4 +1,5 @@
 import type { PageServerLoad, Actions } from './$types';
+import { fail } from '@sveltejs/kit';
 import { getDb } from '#lib/server/db/index';
 import { TagService } from '#lib/server/services/tag.service';
 
@@ -29,7 +30,7 @@ export const actions: Actions = {
 		const status = (data.get('status')?.toString() as 'publish' | 'draft') || 'publish';
 
 		if (!name) {
-			return { success: false, message: 'Tag Name is required' };
+			return fail(400, { success: false, message: 'Tag Name is required' });
 		}
 
 		try {
@@ -43,7 +44,7 @@ export const actions: Actions = {
 			return { success: true, tag: result, message: 'ট্যাগ সফলভাবে তৈরি করা হয়েছে!' };
 		} catch (e: any) {
 			console.error('Failed to create tag in D1:', e);
-			return { success: false, message: e.message || 'ট্যাগ তৈরিতে সমস্যা হয়েছে' };
+			return fail(500, { success: false, message: e.message || 'ট্যাগ তৈরিতে সমস্যা হয়েছে' });
 		}
 	},
 
@@ -56,7 +57,7 @@ export const actions: Actions = {
 		const status = (data.get('status')?.toString() as 'publish' | 'draft') || 'publish';
 
 		if (!id || !name) {
-			return { success: false, message: 'Tag ID and Name are required' };
+			return fail(400, { success: false, message: 'Tag ID and Name are required' });
 		}
 
 		try {
@@ -70,7 +71,7 @@ export const actions: Actions = {
 			return { success: true, message: 'ট্যাগ সফলভাবে আপডেট করা হয়েছে!' };
 		} catch (e: any) {
 			console.error('Failed to update tag in D1:', e);
-			return { success: false, message: e.message || 'ট্যাগ আপডেটে সমস্যা হয়েছে' };
+			return fail(500, { success: false, message: e.message || 'ট্যাগ আপডেটে সমস্যা হয়েছে' });
 		}
 	},
 
@@ -79,7 +80,7 @@ export const actions: Actions = {
 		const id = data.get('id')?.toString();
 
 		if (!id) {
-			return { success: false, message: 'Tag ID required' };
+			return fail(400, { success: false, message: 'Tag ID required' });
 		}
 
 		try {
@@ -88,7 +89,7 @@ export const actions: Actions = {
 			return { success: true, status: res.statusLabel, message: `স্ট্যাটাস ${res.statusLabel}-এ পরিবর্তিত হয়েছে` };
 		} catch (e: any) {
 			console.error('Failed to toggle tag status in D1:', e);
-			return { success: false, message: e.message };
+			return fail(500, { success: false, message: e.message });
 		}
 	},
 
@@ -97,7 +98,7 @@ export const actions: Actions = {
 		const id = data.get('id')?.toString();
 
 		if (!id) {
-			return { success: false, message: 'Tag ID required' };
+			return fail(400, { success: false, message: 'Tag ID required' });
 		}
 
 		try {
@@ -106,7 +107,7 @@ export const actions: Actions = {
 			return { success: true, message: 'ট্যাগ সফলভাবে মুছে ফেলা হয়েছে' };
 		} catch (e: any) {
 			console.error('Failed to delete tag in D1:', e);
-			return { success: false, message: e.message };
+			return fail(500, { success: false, message: e.message });
 		}
 	},
 
@@ -122,7 +123,7 @@ export const actions: Actions = {
 		}
 
 		if (ids.length === 0) {
-			return { success: false, message: 'No tag IDs provided' };
+			return fail(400, { success: false, message: 'No tag IDs provided' });
 		}
 
 		try {
@@ -131,7 +132,7 @@ export const actions: Actions = {
 			return { success: true, message: `${ids.length}টি ট্যাগ সফলভাবে মুছে ফেলা হয়েছে` };
 		} catch (e: any) {
 			console.error('Failed to bulk delete tags in D1:', e);
-			return { success: false, message: e.message };
+			return fail(500, { success: false, message: e.message });
 		}
 	}
 };

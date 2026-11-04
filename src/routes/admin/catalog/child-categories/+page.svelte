@@ -39,7 +39,6 @@
 	let selectedIds = $state<string[]>([]);
 	let currentPage = $state(1);
 	let itemsPerPage = 10;
-	let isSaving = $state(false);
 
 	function showToast(msg: string) {
 		toast.success(msg);
@@ -123,8 +122,17 @@
 	}
 
 	async function moveToTrash(id: string) {
-		childCategories = childCategories.map((c) => (c.id === id ? { ...c, isTrash: true } : c));
 		openActionMenuId = null;
+		const confirmed = await confirmModal({
+			title: 'চাইল্ড ক্যাটাগরি মুছে ফেলা',
+			message: 'আপনি কি নিশ্চিতভাবে এই চাইল্ড ক্যাটাগরিটি মুছে ফেলতে চান?',
+			confirmText: 'হ্যাঁ, মুছে ফেলুন',
+			variant: 'destructive',
+			icon: 'trash'
+		});
+		if (!confirmed) return;
+
+		childCategories = childCategories.map((c) => (c.id === id ? { ...c, isTrash: true } : c));
 		showToast('চাইল্ড ক্যাটাগরি মুছে ফেলা হয়েছে');
 
 		try {
@@ -207,7 +215,18 @@
 				placeholder="Search Child Category..."
 				class="w-full bg-white border border-slate-200/90 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#5845eb] shadow-2xs pr-9"
 			/>
-			<Search class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+			{#if searchQuery}
+				<button
+					type="button"
+					onclick={() => { searchQuery = ''; currentPage = 1; }}
+					class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+					aria-label="Clear search"
+				>
+					<X class="w-4 h-4" />
+				</button>
+			{:else}
+				<Search class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+			{/if}
 		</div>
 
 		<!-- + Add Child Category Button -->

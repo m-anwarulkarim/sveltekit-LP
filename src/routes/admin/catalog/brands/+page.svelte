@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { confirmModal } from '#lib/stores/confirm.svelte';
 	import {
 		Search,
 		Plus,
@@ -127,9 +128,18 @@
 	}
 
 	async function moveToTrash(id: string) {
+		openActionMenuId = null;
+		const confirmed = await confirmModal({
+			title: 'ব্র্যান্ড ট্র্যাশে পাঠানো',
+			message: 'আপনি কি নিশ্চিতভাবে এই ব্র্যান্ডটি ট্র্যাশে পাঠাতে চান?',
+			confirmText: 'হ্যাঁ, ট্র্যাশে পাঠান',
+			variant: 'destructive',
+			icon: 'trash'
+		});
+		if (!confirmed) return;
+
 		const fd = new FormData();
 		fd.append('id', id);
-		openActionMenuId = null;
 
 		try {
 			const res = await fetch('?/trashBrand', { method: 'POST', body: fd });
@@ -165,10 +175,18 @@
 	}
 
 	async function deletePermanently(id: string) {
-		if (!confirm('আপনি কি নিশ্চিত যে এই ব্র্যান্ডটি স্থায়ীভাবে মুছে ফেলতে চান?')) return;
+		openActionMenuId = null;
+		const confirmed = await confirmModal({
+			title: 'ব্র্যান্ড স্থায়ীভাবে মুছে ফেলা',
+			message: 'এই ব্র্যান্ডটি স্থায়ীভাবে মুছে ফেলা হবে এবং পুনরুদ্ধার করা সম্ভব হবে না।',
+			confirmText: 'হ্যাঁ, মুছে ফেলুন',
+			variant: 'destructive',
+			icon: 'trash'
+		});
+		if (!confirmed) return;
+
 		const fd = new FormData();
 		fd.append('id', id);
-		openActionMenuId = null;
 
 		try {
 			const res = await fetch('?/deleteBrand', { method: 'POST', body: fd });
@@ -186,8 +204,15 @@
 
 	async function handleBulkAction(action: 'publish' | 'draft' | 'trash' | 'restore' | 'delete') {
 		if (selectedIds.length === 0) return;
-		if (action === 'delete' && !confirm(`নির্বাচিত ${selectedIds.length} টি ব্র্যান্ড স্থায়ীভাবে মুছে ফেলতে চান?`)) {
-			return;
+		if (action === 'delete') {
+			const confirmed = await confirmModal({
+				title: 'ব্র্যান্ড স্থায়ীভাবে মুছে ফেলা',
+				message: `নির্বাচিত ${selectedIds.length} টি ব্র্যান্ড স্থায়ীভাবে মুছে ফেলা হবে এবং পুনরুদ্ধার করা সম্ভব হবে না।`,
+				confirmText: 'হ্যাঁ, মুছে ফেলুন',
+				variant: 'destructive',
+				icon: 'trash'
+			});
+			if (!confirmed) return;
 		}
 
 		const fd = new FormData();
@@ -243,7 +268,18 @@
 				placeholder="Search Brand by name or slug..."
 				class="w-full bg-white border border-slate-200/90 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#5845eb] shadow-2xs pr-9"
 			/>
-			<Search class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+			{#if searchQuery}
+				<button
+					type="button"
+					onclick={() => { searchQuery = ''; currentPage = 1; }}
+					class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+					aria-label="Clear search"
+				>
+					<X class="w-4 h-4" />
+				</button>
+			{:else}
+				<Search class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+			{/if}
 		</div>
 
 		<!-- + Add Brand Button -->

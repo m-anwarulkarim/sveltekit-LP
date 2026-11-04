@@ -42,10 +42,10 @@
 			goto(`/products/${product.slug || product.id}`);
 		}
 	}}
-	class="group relative bg-white/80 hover:bg-white rounded-2xl p-3 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-slate-100 flex flex-col justify-between cursor-pointer"
+	class="group relative bg-white/80 hover:bg-white rounded-xl sm:rounded-2xl p-2 sm:p-3 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-slate-100 flex flex-col justify-between cursor-pointer"
 >
 	<!-- Thumbnail & Overlay Badges -->
-	<div class="relative w-full aspect-square rounded-xl bg-slate-50/80 overflow-hidden mb-3">
+	<div class="relative w-full aspect-square rounded-lg sm:rounded-xl bg-slate-50/80 overflow-hidden mb-2 sm:mb-3">
 		<img
 			src={product.image}
 			alt={product.name}
@@ -54,13 +54,13 @@
 		/>
 
 		{#if discountPercent > 0}
-			<span class="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full bg-slate-900/90 text-white text-[10px] font-bold tracking-wider backdrop-blur-xs shadow-xs">
+			<span class="absolute top-1.5 left-1.5 sm:top-2.5 sm:left-2.5 px-2 py-0.5 rounded-full bg-slate-900/90 text-white text-[9px] sm:text-[10px] font-bold tracking-wider backdrop-blur-xs shadow-xs">
 				-{discountPercent}%
 			</span>
 		{/if}
 
-		<!-- Floating Action Bar -->
-		<div class="absolute inset-x-2 bottom-2 flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+		<!-- Floating Action Bar (Always visible on mobile touch, hover on desktop) -->
+		<div class="absolute inset-x-1.5 bottom-1.5 sm:inset-x-2 sm:bottom-2 flex items-center justify-center gap-1.5 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
 			{#if onQuickView}
 				<button
 					type="button"

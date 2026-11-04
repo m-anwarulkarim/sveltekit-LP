@@ -188,31 +188,31 @@ export class CustomizationService {
 		const defaults = [
 			{
 				id: 'car-seed-1',
-				name: 'উন্নত জাতের সবজি ও ফল বীজ',
+				name: 'উন্নত জাতের বিষমুক্ত সবজি বীজ',
 				image: '/images/hero/vegetable-seeds-hero.webp',
-				targetUrl: '/catalog/all-product',
+				targetUrl: '/catalog/all-product?category=cat-vegetable',
 				urlType: 'Internal',
-				description: 'শতভাগ অঙ্কুরোদগম ক্ষমতাসম্পন্ন দেশি ও হাইব্রিড বীজ সংগ্রহ',
+				description: 'কালো তাল বেগুন, এরাবিয়ান শসা, লাল শিম, বেগুনি বাঁধাকপি ও লাল ঢেঁড়স — শতভাগ অঙ্কুরোদগম',
 				sortOrder: 1,
 				status: 'Publish'
 			},
 			{
 				id: 'car-seed-2',
-				name: 'ছাদবাগান ও কিচেন গার্ডেনিং স্পেশাল',
-				image: '/images/hero/rooftop-gardening-hero.webp',
-				targetUrl: '/catalog/all-product?tag=rooftop-garden',
+				name: 'রঙিন ছাদবাগান এক্সক্লুসিভ ফুল বীজ',
+				image: '/images/hero/flower-seeds-hero.webp',
+				targetUrl: '/catalog/all-product?category=cat-flower',
 				urlType: 'Internal',
-				description: 'শহুরে ছাদবাগান ও বারান্দার জন্য উপযুক্ত জাত ও পরামর্শ',
+				description: 'মাল্টি-কালার জিনিয়া, সূর্যমুখী, পর্তুলিকা ও ওয়াইল্ড ফ্লাওয়ার — বারান্দা ও ছাদবাগানের জন্য উপযুক্ত',
 				sortOrder: 2,
 				status: 'Publish'
 			},
 			{
 				id: 'car-seed-3',
-				name: 'আধুনিক কৃষি সরঞ্জাম ও সুরক্ষা',
-				image: '/images/hero/garden-tools-hero.webp',
-				targetUrl: '/catalog/all-product?category=krishi-tools',
+				name: 'ছাদবাগান স্পেশাল ও পুষ্টিকর রোজেলা বীজ',
+				image: '/images/hero/rooftop-gardening-hero.webp',
+				targetUrl: '/catalog/all-product?tag=rooftop-garden',
 				urlType: 'Internal',
-				description: 'বাগান পরিচর্যা ও ফসল সুরক্ষায় সেরা কৃষি যন্ত্রপাতি',
+				description: 'সুস্বাদু ভেষজ চা ও পুষ্টিগুণে সমৃদ্ধ অর্গানিক রোজেলা এবং কিচেন গার্ডেনিং ফ্রেন্ডলি বীজ কালেকশন',
 				sortOrder: 3,
 				status: 'Publish'
 			}

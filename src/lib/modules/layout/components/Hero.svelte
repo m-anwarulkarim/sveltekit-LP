@@ -44,37 +44,37 @@
 		{
 			id: 'slide-1',
 			type: 'db-banner',
-			title: 'উন্নত জাতের সবজি ও ফল বীজ',
-			subtitle: 'শতভাগ অঙ্কুরোদগম ক্ষমতাসম্পন্ন দেশি ও হাইব্রিড বীজ সংগ্রহ',
+			title: 'উন্নত জাতের বিষমুক্ত সবজি বীজ',
+			subtitle: 'কালো তাল বেগুন, এরাবিয়ান শসা, লাল শিম, বেগুনি বাঁধাকপি ও লাল ঢেঁড়স — শতভাগ অঙ্কুরোদগম',
 			image: '/images/hero/vegetable-seeds-hero.webp',
-			linkUrl: '/catalog/all-product',
+			linkUrl: '/catalog/all-product?category=cat-vegetable',
 			bgGradient: 'from-emerald-950 via-emerald-900 to-green-950',
 			textColor: 'text-white'
 		},
 		{
 			id: 'slide-2',
 			type: 'db-banner',
-			title: 'ছাদবাগান ও কিচেন গার্ডেনিং স্পেশাল',
-			subtitle: 'শহুরে ছাদবাগান ও বারান্দার জন্য উপযুক্ত জাত ও পরামর্শ',
-			image: '/images/hero/rooftop-gardening-hero.webp',
-			linkUrl: '/catalog/all-product?tag=rooftop-garden',
-			bgGradient: 'from-teal-950 via-emerald-900 to-stone-900',
+			title: 'রঙিন ছাদবাগান এক্সক্লুসিভ ফুল বীজ',
+			subtitle: 'মাল্টি-কালার জিনিয়া, সূর্যমুখী, পর্তুলিকা ও ওয়াইল্ড ফ্লাওয়ার — বারান্দা ও ছাদবাগানের জন্য উপযুক্ত',
+			image: '/images/hero/flower-seeds-hero.webp',
+			linkUrl: '/catalog/all-product?category=cat-flower',
+			bgGradient: 'from-rose-950 via-pink-900 to-purple-950',
 			textColor: 'text-white'
 		},
 		{
 			id: 'slide-3',
 			type: 'db-banner',
-			title: 'আধুনিক কৃষি সরঞ্জাম ও সুরক্ষা',
-			subtitle: 'বাগান পরিচর্যা ও ফসল সুরক্ষায় সেরা কৃষি যন্ত্রপাতি',
-			image: '/images/hero/garden-tools-hero.webp',
-			linkUrl: '/catalog/all-product?category=krishi-tools',
-			bgGradient: 'from-stone-900 via-emerald-950 to-teal-950',
+			title: 'ছাদবাগান স্পেশাল ও পুষ্টিকর রোজেলা বীজ',
+			subtitle: 'সুস্বাদু ভেষজ চা ও পুষ্টিগুণে সমৃদ্ধ অর্গানিক রোজেলা এবং কিচেন গার্ডেনিং ফ্রেন্ডলি বীজ কালেকশন',
+			image: '/images/hero/rooftop-gardening-hero.webp',
+			linkUrl: '/catalog/all-product?tag=rooftop-garden',
+			bgGradient: 'from-teal-950 via-emerald-900 to-stone-900',
 			textColor: 'text-white'
 		}
 	];
 
 	// Derived slides: database-driven when carousels exist, fallback to default promo slides
-	const PHOTO_SLIDE_BACKGROUNDS = ['bg-emerald-950', 'bg-teal-950', 'bg-stone-900'];
+	const PHOTO_SLIDE_BACKGROUNDS = ['bg-emerald-950', 'bg-rose-950', 'bg-teal-950'];
 
 	// A designed banner already contains its own text. A photo needs a text panel beside it.
 	function isPhotoImage(image?: string): boolean {

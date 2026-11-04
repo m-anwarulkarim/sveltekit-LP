@@ -73,6 +73,15 @@ export const INITIAL_GALLERY_IMAGES: GalleryImage[] = [
 		uploadedAt: 'গতকাল, ০১:১০ PM'
 	},
 	{
+		id: 'img-hero-flower-seeds',
+		name: 'রঙিন ছাদবাগান এক্সক্লুসিভ ফুল বীজ হিরো ব্যানার',
+		url: '/images/hero/flower-seeds-hero.webp',
+		folder: 'banners',
+		size: '162 KB',
+		dimensions: '1376 x 768',
+		uploadedAt: 'আজ, নতুন'
+	},
+	{
 		id: 'img-banner-vegetable-combo',
 		name: 'বিষমুক্ত তাজা সবজি বীজ মেগা কম্বো ব্যানার',
 		url: '/images/banners/banner-vegetable-combo.svg',

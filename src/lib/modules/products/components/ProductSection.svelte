@@ -113,39 +113,49 @@
 				</div>
 			</div>
 
-			<!-- Right: See All Link -->
-			<a
-				href={seeAllLink}
-				class="text-[11px] sm:text-xs md:text-sm font-semibold text-slate-500 hover:text-[#5845eb] transition-colors flex items-center gap-0.5 sm:gap-1 shrink-0 ml-auto whitespace-nowrap pl-1 group"
-			>
-				<span>see all</span>
-				<ArrowRight class="w-3 h-3 sm:w-3.5 sm:h-3.5 group-hover:translate-x-0.5 transition-transform" />
-			</a>
+			<!-- Right: See All Link & Nav Controls -->
+			<div class="flex items-center gap-2 sm:gap-3 shrink-0 ml-auto whitespace-nowrap pl-1">
+				<a
+					href={seeAllLink}
+					class="text-[11px] sm:text-xs md:text-sm font-semibold text-slate-500 hover:text-emerald-600 transition-colors flex items-center gap-0.5 sm:gap-1 group"
+				>
+					<span>see all</span>
+					<ArrowRight class="w-3 h-3 sm:w-3.5 sm:h-3.5 group-hover:translate-x-0.5 transition-transform" />
+				</a>
+
+				<!-- Desktop/Tablet Nav Controls (in header, zero overlay on cards) -->
+				<div class="hidden sm:flex items-center gap-1 border-l border-slate-200 pl-2">
+					<button
+						type="button"
+						onclick={() => scroll('left')}
+						disabled={!canScrollLeft}
+						class="w-6.5 h-6.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer active:scale-95"
+						title="Scroll Left"
+						aria-label="Scroll Left"
+					>
+						<ChevronLeft class="w-3.5 h-3.5 stroke-[2.5]" />
+					</button>
+					<button
+						type="button"
+						onclick={() => scroll('right')}
+						disabled={!canScrollRight}
+						class="w-6.5 h-6.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer active:scale-95"
+						title="Scroll Right"
+						aria-label="Scroll Right"
+					>
+						<ChevronRight class="w-3.5 h-3.5 stroke-[2.5]" />
+					</button>
+				</div>
+			</div>
 		</div>
 
-		<!-- Product Carousel Row: Exactly 2 cards clearly visible in 1 line on mobile -->
-		<div class="relative group/picks">
-			
-			<!-- Left Circular Navigation Button (appears when scrolled right) -->
-			{#if canScrollLeft}
-				<Button
-					type="button"
-					variant="outline"
-					size="icon"
-					onclick={() => scroll('left')}
-					class="absolute -left-1.5 sm:-left-3 top-1/2 -translate-y-1/2 z-20 w-7 h-7 sm:w-9 sm:h-9 bg-white/95 backdrop-blur-xs rounded-full border border-slate-200 shadow-md flex items-center justify-center text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-all cursor-pointer active:scale-95 p-0"
-					title="Scroll Left"
-					aria-label="Scroll Left"
-				>
-					<ChevronLeft class="w-3.5 h-3.5 sm:w-5 sm:h-5 stroke-[2.5]" />
-				</Button>
-			{/if}
-
+		<!-- Product Carousel Row: Exactly 2 cards clearly visible with 0 collision on mobile -->
+		<div class="relative">
 			<!-- Scrollable Products Track: 2 cards per row on mobile (w-[calc((100%-10px)/2)]) -->
 			<div
 				bind:this={trackEl}
 				onscroll={updateScrollState}
-				class="flex items-stretch gap-2.5 sm:gap-4 md:gap-5 overflow-x-auto no-scrollbar scroll-smooth py-1 px-0.5 snap-x snap-mandatory"
+				class="flex items-stretch gap-2.5 sm:gap-4 md:gap-5 overflow-x-auto no-scrollbar scroll-smooth py-1 px-0.5 snap-x snap-mandatory touch-pan-x"
 			>
 				{#each products as product (product.id)}
 					<div class="w-[calc((100%-10px)/2)] sm:w-48 md:w-52 shrink-0 flex snap-start">
@@ -153,22 +163,6 @@
 					</div>
 				{/each}
 			</div>
-
-			<!-- Right Circular Navigation Button -->
-			{#if canScrollRight}
-				<Button
-					type="button"
-					variant="outline"
-					size="icon"
-					onclick={() => scroll('right')}
-					class="absolute -right-1.5 sm:-right-3 top-1/2 -translate-y-1/2 z-20 w-7 h-7 sm:w-9 sm:h-9 bg-white/95 backdrop-blur-xs rounded-full border border-slate-200 shadow-md flex items-center justify-center text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-all cursor-pointer active:scale-95 p-0"
-					title="Scroll Right"
-					aria-label="Scroll Right"
-				>
-					<ChevronRight class="w-3.5 h-3.5 sm:w-5 sm:h-5 stroke-[2.5]" />
-				</Button>
-			{/if}
-
 		</div>
 
 	</div>

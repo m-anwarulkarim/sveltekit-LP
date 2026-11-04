@@ -330,9 +330,9 @@ export class CustomizationService {
 		const defaults = [
 			{
 				id: 'ban-1',
-				title: 'bannar1',
-				image: '/images/banners/banner-home.svg',
-				targetUrl: '/catalog/all-product',
+				title: 'বিষমুক্ত তাজা সবজি বীজ মেগা কম্বো',
+				image: '/images/banners/banner-vegetable-combo.svg',
+				targetUrl: '/catalog/all-product?category=cat-vegetable',
 				urlType: 'Internal',
 				placement: 'Home Page Top Banner',
 				displayOptions: 'Show on Home',
@@ -341,9 +341,9 @@ export class CustomizationService {
 			},
 			{
 				id: 'ban-2',
-				title: 'bannar2',
-				image: '/images/banners/banner-combo.svg',
-				targetUrl: '/catalog/all-product?filter=best-sale',
+				title: 'রঙিন ছাদবাগান এক্সোটিক ফুল বীজ কালেকশন',
+				image: '/images/banners/banner-flower-collection.svg',
+				targetUrl: '/catalog/all-product?category=cat-flower',
 				urlType: 'Internal',
 				placement: 'Category Middle Banner',
 				displayOptions: 'Show on Home',

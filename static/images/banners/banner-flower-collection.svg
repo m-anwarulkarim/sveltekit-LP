@@ -1,0 +1,142 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" width="1200" height="520">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="flowerBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#701a75" />
+      <stop offset="40%" stop-color="#831843" />
+      <stop offset="100%" stop-color="#be185d" />
+    </linearGradient>
+
+    <!-- Badge Gradient -->
+    <linearGradient id="badgeRose" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f43f5e" />
+      <stop offset="100%" stop-color="#fb7185" />
+    </linearGradient>
+
+    <!-- Glow Filter -->
+    <filter id="flowerGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="30" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background Base -->
+  <rect width="1200" height="520" rx="28" fill="url(#flowerBg)" />
+
+  <!-- Ambient Glow Orbs -->
+  <circle cx="1020" cy="260" r="230" fill="#f43f5e" opacity="0.18" filter="url(#flowerGlow)" />
+  <circle cx="1130" cy="110" r="150" fill="#fb7185" opacity="0.15" filter="url(#flowerGlow)" />
+  <circle cx="100" cy="470" r="180" fill="#db2777" opacity="0.25" filter="url(#flowerGlow)" />
+
+  <!-- Decorative Floral Geometry Circles -->
+  <circle cx="990" cy="260" r="210" fill="none" stroke="#f472b6" stroke-width="2" stroke-dasharray="8 8" opacity="0.3" />
+  <circle cx="990" cy="260" r="160" fill="none" stroke="#fbcfe8" stroke-width="1.5" opacity="0.2" />
+
+  <!-- LEFT CONTENT AREA -->
+  <g transform="translate(80, 0)">
+    
+    <!-- 1. Offer Pill Badge -->
+    <g transform="translate(0, 72)">
+      <rect width="330" height="42" rx="21" fill="#ffffff" />
+      <text x="24" y="27" font-family="'Plus Jakarta Sans', 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="16" fill="#be185d">
+        🌸 সিজনাল অফার • বাই ২ গেট ১ ফ্রি
+      </text>
+    </g>
+
+    <!-- 2. Main Headline -->
+    <text x="0" y="180" font-family="'Plus Jakarta Sans', 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="44" fill="#ffffff" letter-spacing="-0.5">
+      রঙিন ফুলে সাজিয়ে তুলুন আপনার ছাদবাগান!
+    </text>
+
+    <!-- 3. Subtitle / Product Highlights -->
+    <text x="0" y="235" font-family="'Plus Jakarta Sans', 'Segoe UI', Roboto, sans-serif" font-weight="700" font-size="22" fill="#fbcfe8">
+      উন্নত জাতের মাল্টি-কালার বিদেশি ফুল বীজের এক্সক্লুসিভ কালেকশন
+    </text>
+
+    <text x="0" y="272" font-family="'Plus Jakarta Sans', 'Segoe UI', Roboto, sans-serif" font-weight="500" font-size="16" fill="#fce7f3">
+      মাল্টি কালার জিনিয়া • মিক্স সূর্যমুখী • পর্তুলিকা • ওয়াইল্ড ফ্লাওয়ার • রোজেলা
+    </text>
+
+    <!-- 4. Feature Trust Bullets -->
+    <g transform="translate(0, 318)">
+      <!-- Bullet 1 -->
+      <g>
+        <circle cx="14" cy="14" r="14" fill="#9d174d" />
+        <path d="M9 14 L12 17 L19 10" fill="none" stroke="#f472b6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+        <text x="36" y="20" font-family="'Plus Jakarta Sans', 'Segoe UI', Roboto, sans-serif" font-weight="700" font-size="16" fill="#fff1f2">
+          সহজ অঙ্কুরোদগম ও দীর্ঘস্থায়ী ফুল
+        </text>
+      </g>
+
+      <!-- Bullet 2 -->
+      <g transform="translate(290, 0)">
+        <circle cx="14" cy="14" r="14" fill="#9d174d" />
+        <path d="M9 14 L12 17 L19 10" fill="none" stroke="#f472b6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+        <text x="36" y="20" font-family="'Plus Jakarta Sans', 'Segoe UI', Roboto, sans-serif" font-weight="700" font-size="16" fill="#fff1f2">
+          ফ্রি সিডলিং জার্মিনেশন গাইড
+        </text>
+      </g>
+
+      <!-- Bullet 3 -->
+      <g transform="translate(560, 0)">
+        <circle cx="14" cy="14" r="14" fill="#9d174d" />
+        <path d="M9 14 L12 17 L19 10" fill="none" stroke="#f472b6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+        <text x="36" y="20" font-family="'Plus Jakarta Sans', 'Segoe UI', Roboto, sans-serif" font-weight="700" font-size="16" fill="#fff1f2">
+          ক্যাশ অন ডেলিভারি
+        </text>
+      </g>
+    </g>
+
+    <!-- 5. CTA Button Graphic -->
+    <g transform="translate(0, 388)">
+      <rect width="210" height="54" rx="27" fill="#ffffff" filter="url(#flowerGlow)" opacity="0.3" />
+      <rect width="200" height="52" rx="26" fill="#ffffff" />
+      <text x="38" y="33" font-family="'Plus Jakarta Sans', 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="17" fill="#9d174d">
+        পছন্দ করুন
+      </text>
+      <!-- Arrow Icon -->
+      <path d="M138 26 L154 26 M148 20 L154 26 L148 32" fill="none" stroke="#9d174d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+
+  </g>
+
+  <!-- RIGHT VISUAL / FLOWER MOTIF COMPOSITION -->
+  <g transform="translate(980, 260)">
+    
+    <!-- Center Disc -->
+    <circle cx="0" cy="0" r="145" fill="#701a75" stroke="#f472b6" stroke-width="3" />
+    <circle cx="0" cy="0" r="125" fill="#831843" opacity="0.7" />
+
+    <!-- Blooming Flower Petals Geometry -->
+    <g opacity="0.95">
+      <!-- 8-Petal Rosette -->
+      <circle cx="0" cy="-55" r="42" fill="#fb7185" opacity="0.8" />
+      <circle cx="39" cy="-39" r="42" fill="#f43f5e" opacity="0.8" />
+      <circle cx="55" cy="0" r="42" fill="#e11d48" opacity="0.8" />
+      <circle cx="39" cy="39" r="42" fill="#be123c" opacity="0.8" />
+      <circle cx="0" cy="55" r="42" fill="#f43f5e" opacity="0.8" />
+      <circle cx="-39" cy="39" r="42" fill="#fb7185" opacity="0.8" />
+      <circle cx="-55" cy="0" r="42" fill="#f472b6" opacity="0.8" />
+      <circle cx="-39" cy="-39" r="42" fill="#f43f5e" opacity="0.8" />
+      <!-- Flower Center Core -->
+      <circle cx="0" cy="0" r="32" fill="#fde047" stroke="#ca8a04" stroke-width="3" />
+      <circle cx="0" cy="0" r="20" fill="#f59e0b" />
+    </g>
+
+    <!-- Floating Badge: Buy 2 Get 1 Free -->
+    <g transform="translate(-110, 80)">
+      <rect width="220" height="46" rx="23" fill="#0f172a" stroke="#f472b6" stroke-width="2" />
+      <text x="24" y="29" font-family="'Plus Jakarta Sans', 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="15" fill="#fef08a">
+        🌸 ২টিতে ১টি ফ্রি!
+      </text>
+    </g>
+
+    <!-- Floating Mini Badge: Colorful Seeds -->
+    <g transform="translate(-130, -110)">
+      <rect width="160" height="38" rx="19" fill="#581c87" stroke="#f472b6" stroke-width="1.5" />
+      <text x="18" y="24" font-family="'Plus Jakarta Sans', 'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="13" fill="#ffffff">
+        🌺 ৫ রঙের ফুল বীজ
+      </text>
+    </g>
+  </g>
+</svg>

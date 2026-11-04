@@ -73,6 +73,24 @@ export const INITIAL_GALLERY_IMAGES: GalleryImage[] = [
 		uploadedAt: 'গতকাল, ০১:১০ PM'
 	},
 	{
+		id: 'img-banner-vegetable-combo',
+		name: 'বিষমুক্ত তাজা সবজি বীজ মেগা কম্বো ব্যানার',
+		url: '/images/banners/banner-vegetable-combo.svg',
+		folder: 'banners',
+		size: '85 KB',
+		dimensions: '1200 x 520',
+		uploadedAt: 'আজ, নতুন'
+	},
+	{
+		id: 'img-banner-flower-collection',
+		name: 'রঙিন ছাদবাগান এক্সোটিক ফুল বীজ কালেকশন ব্যানার',
+		url: '/images/banners/banner-flower-collection.svg',
+		folder: 'banners',
+		size: '92 KB',
+		dimensions: '1200 x 520',
+		uploadedAt: 'আজ, নতুন'
+	},
+	{
 		id: 'img-banner-home',
 		name: 'AURA Storefront Mega Hero Banner',
 		url: '/images/banners/banner-home.svg',

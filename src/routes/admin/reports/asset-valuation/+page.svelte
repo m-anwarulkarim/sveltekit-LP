@@ -13,7 +13,8 @@
 		ChevronLeft,
 		ChevronRight,
 		SlidersHorizontal,
-		FileDown
+		FileDown,
+		AlertTriangle
 	} from 'lucide-svelte';
 	import type { AssetValuationReportData, AssetValuationProduct } from '#lib/server/services/report.service';
 
@@ -25,6 +26,7 @@
 	let potentialProfit = $derived(data?.report?.potentialProfit || 0);
 	let publishedCount = $derived(data?.report?.publishedCount || 0);
 	let totalCount = $derived(data?.report?.totalCount || 0);
+	let totalStockQty = $derived(data?.report?.totalStockQty || 0);
 
 	let searchQuery = $state('');
 	let isRefreshing = $state(false);
@@ -36,9 +38,9 @@
 		isRefreshing = true;
 		try {
 			await invalidateAll();
-			toast.success('ইনভেন্টরি এসেট ডাটা সফলভাবে রিফ্রেশ হয়েছে!');
+			toast.success('ইনভেন্টরি এসেট ডাটা সফলভাবে রিফ্রেশ হয়েছে!');
 		} catch (e) {
-			toast.error('ডাটা রিফ্রেশ করতে সমস্যা হয়েছে');
+			toast.error('ডাটা রিফ্রেশ করতে সমস্যা হয়েছে');
 		} finally {
 			isRefreshing = false;
 		}
@@ -53,18 +55,17 @@
 		});
 
 		if (isQuantityMode) {
-			// In quantity mode, sort descending by stock
 			list = [...list].sort((a, b) => b.stock - a.stock);
 		}
 
 		return list;
 	});
 
-	// Reset page when search or mode changes
+	// Always reset page when search or mode changes
 	$effect(() => {
-		if (searchQuery || isQuantityMode) {
-			currentPage = 1;
-		}
+		searchQuery;
+		isQuantityMode;
+		currentPage = 1;
 	});
 
 	let totalPages = $derived(Math.max(1, Math.ceil(filteredProducts.length / pageSize)));
@@ -73,9 +74,13 @@
 		filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 	);
 
-	let pageStockQty = $derived(paginatedProducts.reduce((sum, p) => sum + p.stock, 0));
-	let pageTotalCost = $derived(paginatedProducts.reduce((sum, p) => sum + p.totalCost, 0));
-	let pageTotalRetail = $derived(paginatedProducts.reduce((sum, p) => sum + p.totalRetail, 0));
+	// Stats for ALL filtered products (not just current page)
+	let filteredStockQty = $derived(filteredProducts.reduce((sum, p) => sum + p.stock, 0));
+	let filteredTotalCost = $derived(filteredProducts.reduce((sum, p) => sum + p.totalCost, 0));
+	let filteredTotalRetail = $derived(filteredProducts.reduce((sum, p) => sum + p.totalRetail, 0));
+
+	// Low stock count for warning badge
+	let lowStockCount = $derived(filteredProducts.filter((p) => p.stock <= 5).length);
 
 	function goToPrevPage() {
 		if (currentPage > 1) currentPage--;
@@ -114,7 +119,7 @@
 			p.status
 		]);
 
-		const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+		const csvContent = '﻿' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
 		const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
 		const url = URL.createObjectURL(blob);
 		const link = document.createElement('a');
@@ -126,7 +131,7 @@
 		document.body.appendChild(link);
 		link.click();
 		document.body.removeChild(link);
-		toast.success('ইনভেন্টরি এসেট রিপোর্ট CSV ফাইলে ডাউনলোড হয়েছে!');
+		toast.success('ইনভেন্টরি এসেট রিপোর্ট CSV ফাইলে ডাউনলোড হয়েছে!');
 	}
 </script>
 
@@ -147,7 +152,7 @@
 			</div>
 			<div>
 				<h2 class="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
-					Asset Valuation Report
+					এসেট ভ্যালুয়েশন রিপোর্ট
 				</h2>
 				<p class="text-xs text-slate-600 mt-0.5">
 					Total inventory value at cost and retail price, including product variations & live stock.
@@ -161,14 +166,14 @@
 				type="button"
 				onclick={() => {
 					isQuantityMode = !isQuantityMode;
-					toast.info(isQuantityMode ? 'Quantity mode সক্রিয়: সর্বোচ্চ স্টক অনুযায়ী সাজানো হয়েছে' : 'স্ট্যান্ডার্ড ভিউ সক্রিয়');
+					toast.info(isQuantityMode ? 'স্টক মোড সক্রিয়: সর্বোচ্চ স্টক অনুযায়ী সাজানো হয়েছে' : 'স্ট্যান্ডার্ড ভিউ সক্রিয়');
 				}}
 				class="px-3.5 py-2 rounded-xl border {isQuantityMode
 					? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
 					: 'border-emerald-300 bg-emerald-50/70 hover:bg-emerald-100/60 text-emerald-800'} text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
 			>
 				<SlidersHorizontal class="w-3.5 h-3.5 {isQuantityMode ? 'text-white' : 'text-emerald-700'}" />
-				<span>Quantity mode</span>
+				<span>স্টক অনুযায়ী সাজান</span>
 			</button>
 
 			<!-- Refresh Button -->
@@ -179,7 +184,7 @@
 				class="px-3.5 py-2 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs disabled:opacity-60"
 			>
 				<RefreshCw class="w-3.5 h-3.5 text-slate-500 {isRefreshing ? 'animate-spin' : ''}" />
-				<span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+				<span>{isRefreshing ? 'রিফ্রেশ হচ্ছে...' : 'রিফ্রেশ'}</span>
 			</button>
 
 			<!-- Export CSV Button -->
@@ -189,7 +194,7 @@
 				class="px-3.5 py-2 rounded-xl border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100/70 text-indigo-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
 			>
 				<FileDown class="w-3.5 h-3.5 text-indigo-600" />
-				<span>Export CSV</span>
+				<span>CSV ডাউনলোড</span>
 			</button>
 		</div>
 	</div>
@@ -205,12 +210,12 @@
 			</div>
 			<div>
 				<div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-					TOTAL ASSET VALUE (COST)
+					মোট এসেট মূল্য (ক্রয়)
 				</div>
 				<div class="text-lg md:text-xl font-black text-slate-900 tracking-tight mt-0.5">
 					৳ {totalAssetCost.toLocaleString()}
 				</div>
-				<span class="text-[10px] text-slate-400 font-semibold">ক্রয়মূল্য অনুযায়ী মোট মজুদ</span>
+				<span class="text-[10px] text-slate-400 font-semibold">ক্রয়মূল্য অনুযায়ী মোট মজুদ</span>
 			</div>
 		</div>
 
@@ -223,12 +228,12 @@
 			</div>
 			<div>
 				<div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-					RETAIL VALUE
+					রিটেইল মূল্য
 				</div>
 				<div class="text-lg md:text-xl font-black text-slate-900 tracking-tight mt-0.5">
 					৳ {totalRetailValue.toLocaleString()}
 				</div>
-				<span class="text-[10px] text-slate-400 font-semibold">বিক্রয়মূল্য অনুযায়ী স্টক মূল্য</span>
+				<span class="text-[10px] text-slate-400 font-semibold">বিক্রয়মূল্য অনুযায়ী স্টক মূল্য</span>
 			</div>
 		</div>
 
@@ -241,7 +246,7 @@
 			</div>
 			<div>
 				<div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-					POTENTIAL PROFIT
+					সম্ভাব্য লাভ
 				</div>
 				<div class="text-lg md:text-xl font-black text-slate-900 tracking-tight mt-0.5">
 					৳ {potentialProfit.toLocaleString()}
@@ -250,7 +255,7 @@
 			</div>
 		</div>
 
-		<!-- 4. Products -->
+		<!-- 4. Products + Stock Qty -->
 		<div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs flex items-center gap-4">
 			<div
 				class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center shrink-0"
@@ -259,12 +264,13 @@
 			</div>
 			<div>
 				<div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-					PRODUCTS
+					প্রোডাক্ট সংখ্যা
 				</div>
 				<div class="text-lg md:text-xl font-black text-slate-900 tracking-tight mt-0.5">
 					{publishedCount} / {totalCount}
 				</div>
-				<span class="text-[10px] text-slate-400 font-semibold">Published / Total Products</span>
+				<span class="text-[10px] text-slate-400 font-semibold">প্রকাশিত / মোট প্রোডাক্ট</span>
+				<span class="text-[10px] text-slate-400 font-semibold block mt-0.5">মোট স্টক: {totalStockQty.toLocaleString()} পিস</span>
 			</div>
 		</div>
 	</div>
@@ -276,22 +282,22 @@
 			<Search class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
 			<input
 				type="text"
-				placeholder="প্রোডাক্ট নাম বা SKU দিয়ে খুঁজুন..."
+				placeholder="প্রোডাক্ট নাম বা SKU দিয়ে খুঁজুন..."
 				bind:value={searchQuery}
 				class="w-full bg-white border border-slate-200/90 rounded-2xl pl-10 pr-4 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#5845eb] transition-all shadow-2xs"
 			/>
 		</div>
 
-		<!-- Live Aggregated Chips on Right -->
+		<!-- Live Aggregated Chips on Right (total filtered, not per-page) -->
 		<div class="flex flex-wrap items-center gap-3 text-xs text-slate-600 font-medium">
 			<div class="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200/80">
-				Page stock qty: <strong class="text-slate-900">{pageStockQty.toLocaleString()}</strong>
+				মোট স্টক: <strong class="text-slate-900">{filteredStockQty.toLocaleString()}</strong>
 			</div>
 			<div class="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200/80">
-				Page cost: <strong class="text-slate-900">৳ {pageTotalCost.toLocaleString()}</strong>
+				মোট ক্রয় মূল্য: <strong class="text-slate-900">৳ {filteredTotalCost.toLocaleString()}</strong>
 			</div>
 			<div class="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200/80">
-				Page retail: <strong class="text-slate-900">৳ {pageTotalRetail.toLocaleString()}</strong>
+				মোট বিক্রয় মূল্য: <strong class="text-slate-900">৳ {filteredTotalRetail.toLocaleString()}</strong>
 			</div>
 		</div>
 	</div>
@@ -305,11 +311,16 @@
 					<Layers class="w-3.5 h-3.5" />
 				</div>
 				<h3 class="font-bold text-slate-800 text-sm">
-					Stock Valuation Lines
+					স্টক ভ্যালুয়েশন তালিকা
 				</h3>
 				<span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
-					{filteredProducts.length} items
+					{filteredProducts.length} টি
 				</span>
+				{#if lowStockCount > 0}
+					<span class="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold flex items-center gap-1">
+						<AlertTriangle class="w-3 h-3" /> {lowStockCount} লো স্টক
+					</span>
+				{/if}
 			</div>
 
 			<!-- Table Pagination -->
@@ -323,8 +334,7 @@
 					>
 						<ChevronLeft class="w-3.5 h-3.5" />
 					</button>
-					<span class="font-bold text-slate-800 px-1">{currentPage}</span>
-					<span>of {totalPages}</span>
+					<span class="font-bold text-slate-800 px-1">{currentPage} / {totalPages}</span>
 					<button
 						type="button"
 						onclick={goToNextPage}
@@ -342,21 +352,23 @@
 			<table class="w-full text-left border-collapse">
 				<thead>
 					<tr class="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-						<th class="py-3 px-4">PRODUCT</th>
+						<th class="py-3 px-4">প্রোডাক্ট</th>
 						<th class="py-3 px-4 text-center">SKU</th>
-						<th class="py-3 px-4 text-center">VARIANT</th>
-						<th class="py-3 px-4 text-right">STOCK</th>
-						<th class="py-3 px-4 text-right">COST / UNIT</th>
-						<th class="py-3 px-4 text-right">SALE / UNIT</th>
-						<th class="py-3 px-4 text-right">COST VALUE</th>
-						<th class="py-3 px-4 text-right pr-6">RETAIL VALUE</th>
+						<th class="py-3 px-4 text-center">ভেরিয়েন্ট</th>
+						<th class="py-3 px-4 text-right">স্টক</th>
+						<th class="py-3 px-4 text-right">ক্রয়মূল্য/পিস</th>
+						<th class="py-3 px-4 text-right">বিক্রয়মূল্য/পিস</th>
+						<th class="py-3 px-4 text-right">ক্রয় মূল্যমান</th>
+						<th class="py-3 px-4 text-right pr-6">বিক্রয় মূল্যমান</th>
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-slate-100 text-xs">
 					{#if paginatedProducts.length === 0}
 						<tr>
-							<td colspan="8" class="py-12 text-center text-slate-400">
-								কোনো প্রোডাক্ট পাওয়া যায়নি
+							<td colspan="8" class="py-14 text-center text-slate-400">
+								<Search class="w-8 h-8 mx-auto mb-2 text-slate-300" />
+								<p class="font-medium text-slate-600">কোনো প্রোডাক্ট পাওয়া যায়নি</p>
+								<p class="text-[11px] text-slate-400 mt-0.5">অনুসন্ধান পরিবর্তন করে আবার চেষ্টা করুন</p>
 							</td>
 						</tr>
 					{:else}
@@ -378,7 +390,7 @@
 												{product.name}
 											</span>
 											{#if product.status !== 'published'}
-												<span class="inline-block mt-0.5 text-[9px] uppercase px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 font-bold border border-amber-200">
+												<span class="inline-block mt-0.5 text-[9px] uppercase px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 font-bold border border-amber-200">
 													{product.status}
 												</span>
 											{/if}

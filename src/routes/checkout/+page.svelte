@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { submitAction } from '#lib/client/submit-action';
 	import { computeDeliveryCharge, computeOfferDiscount } from '#lib/utils/order-pricing';
 	import { onMount } from 'svelte';
@@ -79,6 +79,7 @@
 	let couponInput = $state('');
 	let honeypot = $state('');
 	let isSubmitting = $state(false);
+	let isApplyingCoupon = $state(false);
 	let errorMessage = $state('');
 
 	function formatTaka(amount: number) {
@@ -154,9 +155,15 @@
 		}
 	});
 
-	function handleApplyCoupon() {
-		if (!couponInput.trim()) return;
-		cart.applyCoupon(couponInput);
+	async function handleApplyCoupon() {
+		if (!couponInput.trim() || isApplyingCoupon) return;
+		isApplyingCoupon = true;
+		try {
+			const ok = await cart.applyCoupon(couponInput.trim());
+			if (ok) couponInput = '';
+		} finally {
+			isApplyingCoupon = false;
+		}
 	}
 
 	// Debounced auto-capture of incomplete drop-off checkout leads
@@ -887,28 +894,52 @@
 
 							<!-- Promo Coupon Code Box -->
 							<div class="space-y-1">
-								<div class="flex items-center gap-2">
-									<div class="relative flex-1">
-										<Tag class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 z-10" />
-										<Input
-											type="text"
-											bind:value={couponInput}
-											placeholder="কুপন কোড (AURA20)"
-											class="pl-9 rounded-xl bg-slate-50 border-slate-200/90 uppercase font-mono tracking-wider text-xs"
-										/>
+								{#if cart.couponCode}
+									<div class="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200">
+										<div class="flex items-center gap-2 min-w-0">
+											<Tag class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+											<span class="text-xs font-bold text-emerald-800 font-mono truncate">{cart.couponCode}</span>
+											<span class="text-[11px] text-emerald-700">প্রয়োগ হয়েছে</span>
+										</div>
+										<Button
+											type="button"
+											variant="ghost"
+											onclick={() => cart.removeCoupon()}
+											class="h-auto p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 shrink-0"
+											aria-label="কুপন সরান"
+										>
+											<Trash2 class="w-3.5 h-3.5" />
+										</Button>
 									</div>
-									<Button
-										type="button"
-										variant="default"
-										onclick={handleApplyCoupon}
-										class="h-auto py-2 px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shrink-0 shadow-2xs"
-									>
-										প্রয়োগ
-									</Button>
-								</div>
+								{:else}
+									<div class="flex items-center gap-2">
+										<div class="relative flex-1">
+											<Tag class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 z-10" />
+											<Input
+												type="text"
+												bind:value={couponInput}
+												placeholder="কুপন কোড (AURA20)"
+												class="pl-9 rounded-xl bg-slate-50 border-slate-200/90 uppercase font-mono tracking-wider text-xs"
+											/>
+										</div>
+										<Button
+											type="button"
+											variant="default"
+											onclick={handleApplyCoupon}
+											disabled={isApplyingCoupon}
+											class="h-auto py-2 px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shrink-0 shadow-2xs"
+										>
+											{#if isApplyingCoupon}
+												<div class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+											{:else}
+												প্রয়োগ
+											{/if}
+										</Button>
+									</div>
+								{/if}
 
-								{#if cart.couponMessage}
-									<div class="text-[11px] font-semibold {cart.couponCode ? 'text-emerald-600' : 'text-rose-600'} px-1">
+								{#if cart.couponMessage && !cart.couponCode}
+									<div class="text-[11px] font-semibold text-rose-600 px-1">
 										{cart.couponMessage}
 									</div>
 								{/if}
@@ -925,7 +956,7 @@
 
 								{#if cart.discountAmount > 0}
 									<div class="flex justify-between items-center text-emerald-600 font-medium">
-										<span>ডিসকাউন্ট ({cart.discountPercent}%)</span>
+											<span>ডিসকাউন্ট {cart.couponTerms?.discountType === 'percentage' ? "({cart.discountPercent}%)" : ''}</span>
 										<span class="font-bold font-mono">-{formatTaka(cart.discountAmount)}</span>
 									</div>
 								{/if}

@@ -1,6 +1,7 @@
 import { productsData } from '#lib/modules/products/products.data';
 
 export interface ProductVariant {
+	id?: string;
 	name: string;
 	stock: number;
 	openingStock?: number;

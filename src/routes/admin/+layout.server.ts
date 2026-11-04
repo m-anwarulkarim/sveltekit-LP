@@ -21,8 +21,7 @@ const PRE_CONFIRMATION_STATUSES = new Set([
 	'no_response',
 	'good_no_response',
 	'busy',
-	'hold',
-	'recall'
+	'hold'
 ]);
 
 const POST_CONFIRMATION_STATUSES = new Set([

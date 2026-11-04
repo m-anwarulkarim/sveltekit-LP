@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { enhance, deserialize } from '$app/forms';
+	import { toast } from 'svelte-sonner';
+	import { confirmModal } from '#lib/stores/confirm.svelte';
 	import { Card, Button, Badge } from '#lib/components/ui';
 	import { CheckCircle2, Check, Printer, AlertCircle, MessageCircle } from 'lucide-svelte';
 	import {
@@ -85,15 +87,6 @@
 	let isBanned = $state(false);
 	let isSaving = $state(false);
 
-	// Toast Feedback
-	let toastMessage = $state<string | null>(null);
-	function showToast(msg: string) {
-		toastMessage = msg;
-		setTimeout(() => {
-			if (toastMessage === msg) toastMessage = null;
-		}, 3000);
-	}
-
 	// Subtotal & Total
 	let subtotal = $derived.by(() => {
 		if (!Array.isArray(items)) return 0;
@@ -120,14 +113,14 @@
 	function handleRemoveItem(index: number) {
 		const removed = items[index];
 		items = items.filter((_, i: number) => i !== index);
-		showToast(`"${removed.name}" আইটেমটি সরানো হয়েছে`);
+		toast.info(`"${removed.name}" আইটেমটি সরানো হয়েছে`);
 	}
 
 	function handleAddProduct(product: any) {
 		const existingIndex = items.findIndex((it: any) => it.id === product.id);
 		if (existingIndex > -1) {
 			items[existingIndex].quantity += 1;
-			showToast(`"${product.name}" এর পরিমাণ বৃদ্ধি করা হয়েছে (+১)`);
+			toast.info(`"${product.name}" এর পরিমাণ বৃদ্ধি করা হয়েছে (+১)`);
 		} else {
 			items = [
 				...items,
@@ -140,7 +133,7 @@
 					variant: product.category !== '-' ? product.category : ''
 				}
 			];
-			showToast(`"${product.name}" অর্ডারে যুক্ত হয়েছে!`);
+			toast.success(`"${product.name}" অর্ডারে যুক্ত হয়েছে!`);
 		}
 	}
 
@@ -148,15 +141,9 @@
 	let saveFormEl: HTMLFormElement | null = $state(null);
 
 	function handleSave() {
+		if (!saveFormEl) return;
 		isSaving = true;
-		if (saveFormEl) {
-			saveFormEl.requestSubmit();
-		} else {
-			setTimeout(() => {
-				isSaving = false;
-				showToast('অর্ডার তথ্য সফলভাবে সংরক্ষিত হয়েছে!');
-			}, 600);
-		}
+		saveFormEl.requestSubmit();
 	}
 
 	function handleStatusChange(newStatus: string) {
@@ -167,13 +154,18 @@
 	function handleConfirm() {
 		status = 'confirmed';
 		handleSave();
-		showToast('অর্ডার কনফার্ম করা হয়েছে এবং কনফার্মড লিস্টে সরানো হয়েছে!');
 	}
 
-	function handleCancel() {
+	async function handleCancel() {
+		const ok = await confirmModal({
+			title: 'অর্ডার বাতিল করবেন?',
+			description: 'এই অর্ডারটি বাতিল হিসেবে চিহ্নিত হবে। স্ট্যাটাস পর্তনযোগ্য নাও হতে পারে।',
+			confirmLabel: 'হ্যাঁ, বাতিল করুন',
+			variant: 'destructive'
+		});
+		if (!ok) return;
 		status = 'cancelled';
 		handleSave();
-		showToast('অর্ডার বাতিল করা হয়েছে!');
 	}
 
 	function handlePrint() {
@@ -209,18 +201,18 @@
 				callNotes = [savedNote, ...callNotes];
 				if ((result.data as any)?.updatedStatus) {
 					status = (result.data as any).updatedStatus;
-					showToast(`নোট সংরক্ষিত হয়েছে এবং অর্ডারের স্ট্যাটাস আপডেট হয়েছে!`);
+					toast.success(`নোট সংরক্ষিত হয়েছে এবং অর্ডারের স্ট্যাটাস আপডেট হয়েছে!`);
 				} else {
-					showToast('নোট সফলভাবে ডাটাবেজে সংরক্ষণ করা হয়েছে!');
+					toast.success('নোট সফলভাবে ডাটাবেজে সংরক্ষণ করা হয়েছে!');
 				}
 			} else if (result.type === 'failure') {
-				showToast((result.data as any)?.message || 'নোট সেভ করতে সমস্যা হয়েছে!');
+				toast.error((result.data as any)?.message || 'নোট সেভ করতে সমস্যা হয়েছে!');
 			} else {
-				showToast('নোট সংরক্ষিত হয়েছে!');
+				toast.success('নোট সংরক্ষিত হয়েছে!');
 			}
 		} catch (err) {
 			console.error('Failed to save order note:', err);
-			showToast('নোট সংরক্ষণ ব্যর্থ হয়েছে!');
+			toast.error('নোট সংরক্ষণ ব্যর্থ হয়েছে!');
 		}
 	}
 
@@ -241,22 +233,22 @@
 			const result = deserialize(await res.text());
 			if (result.type === 'success') {
 				callNotes = callNotes.filter((n) => n.id !== noteId);
-				showToast('নোট মুছে ফেলা হয়েছে!');
+				toast.success('নোট মুছে ফেলা হয়েছে!');
 			} else {
-				showToast('নোট মুছতে সমস্যা হয়েছে!');
+				toast.error('নোট মুছতে সমস্যা হয়েছে!');
 			}
 		} catch (err) {
 			console.error('Failed to delete note:', err);
-			showToast('নোট মুছতে সমস্যা হয়েছে!');
+			toast.error('নোট মুছতে সমস্যা হয়েছে!');
 		}
 	}
 
 	function handleToggleBan() {
 		isBanned = !isBanned;
 		if (isBanned) {
-			showToast(`কাস্টমার (${customerPhone}) এবং আইপি ব্লক করা হয়েছে!`);
+			toast.info(`কাস্টমার (${customerPhone}) এবং আইপি ব্লক করা হয়েছে!`);
 		} else {
-			showToast(`কাস্টমার ব্লক প্রত্যাহার করা হয়েছে!`);
+			toast.info(`কাস্টমার ব্লক প্রত্যাহার করা হয়েছে!`);
 		}
 	}
 </script>
@@ -334,7 +326,7 @@
 			bind:customerPhone
 			bind:altPhone
 			bind:shippingAddress
-			onShowToast={showToast}
+			onShowToast={(msg) => toast.success(msg)}
 		/>
 	</div>
 
@@ -442,12 +434,13 @@
 	action="?/saveOrder"
 	method="POST"
 	use:enhance={() => {
-		isSaving = true;
 		return async ({ result, update }) => {
 			await update();
 			isSaving = false;
 			if (result.type === 'success') {
-				showToast('অর্ডার তথ্য সফলভাবে ডাটাবেজে সংরক্ষিত হয়েছে!');
+				toast.success('অর্ডার তথ্য সফলভাবে ডাটাবেজে সংরক্ষিত হয়েছে!');
+			} else if (result.type === 'failure') {
+				toast.error((result.data as any)?.message || 'সেভ করতে সমস্যা হয়েছে!');
 			}
 		};
 	}}
@@ -466,13 +459,6 @@
 	<input type="hidden" name="status" value={status} />
 </form>
 
-<!-- Toast Notification -->
-{#if toastMessage}
-	<div class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-bold border border-slate-700 animate-in fade-in slide-in-from-bottom-3 duration-200">
-		<CheckCircle2 class="w-4 h-4 text-emerald-400 shrink-0" />
-		<span>{toastMessage}</span>
-	</div>
-{/if}
 
 <!-- Printable Invoice / Challan Template (Active on window.print) -->
 <div class="hidden print:block p-8 bg-white text-black font-sans max-w-2xl mx-auto border border-black/20 rounded">

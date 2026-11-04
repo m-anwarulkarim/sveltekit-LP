@@ -8,6 +8,11 @@
 		stockValue?: number;
 		lowStockQty?: number;
 		openingStock?: number;
+		/** Stock on hand right now. Shown only when editing an existing product. */
+		currentStock?: number;
+		showCurrentStock?: boolean;
+		/** True when variants exist, because then the stock is the sum of the variants. */
+		stockLocked?: boolean;
 		sku?: string;
 		isWholesale?: boolean;
 	}
@@ -17,8 +22,11 @@
 		salesPrice = $bindable(0),
 		costPrice = $bindable(0),
 		stockValue = $bindable(0),
-		lowStockQty = $bindable(10),
+		lowStockQty = $bindable(5),
 		openingStock = $bindable(0),
+		currentStock = $bindable(0),
+		showCurrentStock = false,
+		stockLocked = false,
 		sku = $bindable(''),
 		isWholesale = $bindable(false)
 	}: Props = $props();
@@ -45,8 +53,9 @@
 	// Auto-calculate stock value if cost price or sales price exists
 	$effect(() => {
 		const unitValue = (costPrice && costPrice > 0) ? costPrice : salesPrice;
-		if (openingStock && openingStock > 0 && unitValue > 0) {
-			stockValue = openingStock * unitValue;
+		const units = showCurrentStock ? currentStock : openingStock;
+		if (units && units > 0 && unitValue > 0) {
+			stockValue = units * unitValue;
 		}
 	});
 </script>
@@ -161,13 +170,15 @@
 	<!-- Opening Stock & SKU -->
 	<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 		<div class="space-y-1.5">
-			<label for="opening-stock-input" class="block text-xs font-bold text-slate-700">Opening Stock</label>
+			<label for="opening-stock-input" class="block text-xs font-bold text-slate-700">
+				Opening Stock <span class="text-slate-400 font-normal">(শুরুর স্টক)</span>
+			</label>
 			<input
 				id="opening-stock-input"
 				type="number"
 				min="0"
 				bind:value={openingStock}
-				placeholder="50000"
+				placeholder="যেমন: 100"
 				class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:border-[#5845eb] focus:ring-3 focus:ring-[#5845eb]/10 text-sm font-medium transition-all"
 			/>
 		</div>
@@ -183,6 +194,27 @@
 			/>
 		</div>
 	</div>
+
+	{#if showCurrentStock}
+		<div class="space-y-1.5">
+			<label for="current-stock-input" class="block text-xs font-bold text-slate-700">
+				Current Stock <span class="text-slate-400 font-normal">(এখন হাতে আছে)</span>
+			</label>
+			<input
+				id="current-stock-input"
+				type="number"
+				min="0"
+				bind:value={currentStock}
+				disabled={stockLocked}
+				class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-800 focus:outline-hidden focus:border-[#5845eb] focus:ring-3 focus:ring-[#5845eb]/10 text-sm transition-all disabled:bg-slate-50 disabled:text-slate-500"
+			/>
+			<p class="text-[11px] text-slate-500">
+				{stockLocked
+					? 'ভ্যারিয়েন্ট থাকায় স্টক ভ্যারিয়েন্টের যোগফল থেকে আসে।'
+					: 'অর্ডারে এই সংখ্যা নিজে থেকে কমে। শুধু গণনা ঠিক করতে চাইলে বদলান।'}
+			</p>
+		</div>
+	{/if}
 
 	<!-- Profit Margin Indicator (Helper UX) -->
 	{#if profitPerUnit > 0}

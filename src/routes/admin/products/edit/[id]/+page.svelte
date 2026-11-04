@@ -16,6 +16,7 @@
 			isEditMode={true}
 			existingGallery={data.galleryImages || []}
 			taxonomyTree={data.taxonomyTree || []}
+			brands={data.brands || []}
 		/>
 	{:else}
 		<div class="max-w-md mx-auto text-center py-16 space-y-4">

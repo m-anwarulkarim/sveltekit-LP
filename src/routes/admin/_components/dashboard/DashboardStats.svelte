@@ -16,8 +16,7 @@
 		ThumbsUp,
 		Phone,
 		PauseCircle,
-		RotateCcw,
-		Printer,
+			Printer,
 		ClipboardCheck,
 		ShieldCheck,
 		PackageCheck,
@@ -39,7 +38,7 @@
 	// Summary counts
 	let webOrders = $derived(
 		orders.filter((o: any) =>
-			['pending', 'incomplete', 'no_response', 'no_response_3', 'good_no_response', 'busy', 'hold', 'recall'].includes(o.status)
+			['pending', 'incomplete', 'no_response', 'no_response_3', 'good_no_response', 'busy', 'hold'].includes(o.status)
 		)
 	);
 
@@ -58,7 +57,6 @@
 	let goodNoResponseCount = $derived(orders.filter((o: any) => o.status === 'good_no_response').length);
 	let busyCount = $derived(orders.filter((o: any) => o.status === 'busy').length);
 	let holdCount = $derived(orders.filter((o: any) => o.status === 'hold').length);
-	let recallCount = $derived(orders.filter((o: any) => o.status === 'recall').length);
 
 	// Order List (Post-Confirmation) Status Counts
 	let processingCount = $derived(orders.filter((o: any) => o.status === 'processing').length);
@@ -145,17 +143,6 @@
 			badgeClass: 'text-indigo-800 bg-indigo-100/80',
 			href: '/admin/orders?status=hold'
 		},
-		{
-			id: 'recall',
-			label: 'রি-কল',
-			enLabel: 'Recall',
-			count: recallCount,
-			icon: RotateCcw,
-			cardClass: 'bg-[#faf5ff] border-[#e9d5ff] hover:border-purple-400 text-purple-950',
-			iconBox: 'bg-purple-600 text-white shadow-xs shadow-purple-500/20',
-			badgeClass: 'text-purple-800 bg-purple-100/80',
-			href: '/admin/orders?status=recall'
-		}
 	]);
 
 	// Order List (Post-Confirmation) Statuses - Colorful Tints

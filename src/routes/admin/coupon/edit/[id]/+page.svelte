@@ -31,6 +31,7 @@
 	let endDate = $state(coupon?.endDate || '');
 	let status = $state<'publish' | 'draft' | 'trash'>((coupon?.status as any) || 'publish');
 	let isSubmitting = $state(false);
+	let usageLimit = $state(coupon?.usageLimit != null ? String(coupon.usageLimit) : '');
 
 	$effect(() => {
 		if (form?.message) {
@@ -260,7 +261,26 @@
 				</div>
 			</div>
 
-			<!-- 6. Status Selector -->
+			<!-- 6. Usage Limit -->
+			<div>
+				<label for="edit-usage-limit" class="block text-xs font-bold text-slate-700 mb-1.5">
+					ব্যবহারের সীমা (Usage Limit) <span class="text-slate-400 font-normal">(ঐচ্ছিক — খালি রাখলে সীমাহীন)</span>
+				</label>
+				<Input
+					id="edit-usage-limit"
+					name="usageLimit"
+					type="number"
+					min="1"
+					placeholder="যেমন: 100 (সর্বোচ্চ ১০০ বার ব্যবহারযোগ্য)"
+					bind:value={usageLimit}
+					class="text-xs h-10 rounded-xl bg-slate-50/60 border-slate-200 focus:bg-white font-mono font-bold"
+				/>
+				{#if coupon?.usageCount}
+					<p class="text-[11px] text-slate-500 mt-1">এই কুপনটি এখন পর্যন্ত <strong>{coupon.usageCount}</strong> বার ব্যবহৃত হয়েছে।</p>
+				{/if}
+			</div>
+
+			<!-- 7. Status Selector -->
 			<div>
 				<span class="block text-xs font-bold text-slate-700 mb-2">প্রকাশের অবস্থা (Status)</span>
 				<div class="flex items-center gap-3">

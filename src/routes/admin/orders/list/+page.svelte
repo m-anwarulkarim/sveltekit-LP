@@ -48,9 +48,7 @@
 		}
 	});
 
-	function showToast(msg: string) {
-		toast.success(msg);
-	}
+
 
 	// 1. Tab sequence: confirmed -> processing -> ... -> all (last)
 	const ORDER_LIST_STATUS_TABS = [
@@ -147,7 +145,7 @@
 	function copyToClipboard(text: string) {
 		if (typeof navigator !== 'undefined') {
 			navigator.clipboard.writeText(text);
-			showToast(`কপি করা হয়েছে: ${text}`);
+			toast.success(`কপি করা হয়েছে: ${text}`);
 		}
 	}
 
@@ -162,6 +160,21 @@
 			? orderListOrders.filter((o: any) => selectedOrderIds.includes(o.id))
 			: filteredOrders
 	);
+
+	function formatTimeAgo(dateInput: any): string {
+		if (!dateInput) return '';
+		try {
+			const d = new Date(dateInput);
+			const diffMins = Math.floor((Date.now() - d.getTime()) / 60000);
+			if (diffMins < 1) return 'এইমাত্র';
+			if (diffMins < 60) return `${diffMins} মিনিট আগে`;
+			const diffHours = Math.floor(diffMins / 60);
+			if (diffHours < 24) return `${diffHours} ঘণ্টা আগে`;
+			const diffDays = Math.floor(diffHours / 24);
+			if (diffDays < 7) return `${diffDays} দিন আগে`;
+			return d.toLocaleDateString('bn-BD');
+		} catch { return ''; }
+	}
 </script>
 
 <svelte:head>
@@ -179,7 +192,7 @@
 				<div class="flex items-center gap-3">
 					<h1 class="text-2xl font-black text-slate-900 tracking-tight">Order List</h1>
 					<Badge variant="purple" class="px-2.5 py-0.5 text-xs font-bold">
-						{orderListOrders.length} টি কনফার্মড অর্ডার
+						{orderListOrders.length} টি অর্ডার
 					</Badge>
 				</div>
 				<p class="text-xs text-slate-500 mt-1">
@@ -218,13 +231,21 @@
 
 				<div class="flex flex-wrap items-center gap-2">
 					<!-- Bulk Courier Book -->
-					<form action="?/bulkBookCourier" method="POST" use:enhance class="inline">
+					<form action="?/bulkBookCourier" method="POST" use:enhance={() => {
+					isBooking = true;
+					return async ({ result, update }) => {
+						isBooking = false;
+						if (result.type === 'success') selectedOrderIds = [];
+						await update();
+					};
+				}} class="inline">
 						<input type="hidden" name="orderIds" value={JSON.stringify(selectedOrderIds)} />
 						<input type="hidden" name="provider" value="Steadfast" />
 						<Button
 							type="submit"
 							size="sm"
 							class="gap-1.5 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20 text-xs font-bold"
+							disabled={isBooking}
 						>
 							<Truck class="w-3.5 h-3.5" />
 							<span>Steadfast কুরিয়ার বুক ({selectedOrderIds.length})</span>
@@ -232,7 +253,12 @@
 					</form>
 
 					<!-- Bulk Status Update -->
-					<form action="?/bulkUpdateStatus" method="POST" use:enhance class="flex items-center gap-1.5">
+					<form action="?/bulkUpdateStatus" method="POST" use:enhance={() => {
+					return async ({ result, update }) => {
+						if (result.type === 'success') selectedOrderIds = [];
+						await update();
+					};
+				}} class="flex items-center gap-1.5">
 						<input type="hidden" name="orderIds" value={JSON.stringify(selectedOrderIds)} />
 						<select
 							name="status"
@@ -371,7 +397,7 @@
 											<ExternalLink class="w-3 h-3 opacity-60" />
 										</a>
 										<span class="text-[10px] text-slate-400 font-sans block mt-0.5">
-											{order.createdAt ? new Date(order.createdAt).toLocaleDateString('bn-BD') : 'আজ'}
+											{formatTimeAgo(order.createdAt)}
 										</span>
 									</td>
 
@@ -529,7 +555,7 @@
 											orderId={order.id}
 											status={order.status}
 											mode="list"
-											onStatusUpdated={(newSt) => showToast(`স্ট্যাটাস পরিবর্তন করে '${newSt}' করা হয়েছে!`)}
+
 										/>
 									</td>
 
@@ -564,14 +590,13 @@
 														await update();
 													};
 												}}
-												use:confirmSubmit={{
+												use:confirmSubmit={() => ({
 													title: 'অর্ডার ট্র্যাশে পাঠান',
 													message: 'আপনি কি এই অর্ডারটি ট্র্যাশে পাঠাতে চান?',
 													confirmText: 'হ্যাঁ, ট্র্যাশে পাঠান',
 													variant: 'destructive',
 													icon: 'trash'
-												}}
-												class="inline"
+												})}
 											>
 												<input type="hidden" name="orderId" value={order.id} />
 												<Button
@@ -612,7 +637,7 @@
 					<div class="text-right">
 						<h2 class="text-lg font-bold font-mono">ইনভয়েস</h2>
 						<p class="text-xs font-mono font-bold">{order.orderNumber ? (order.orderNumber.startsWith('#') ? order.orderNumber : '#' + order.orderNumber) : '#' + order.id.slice(0, 8)}</p>
-						<p class="text-xs text-gray-700">{order.createdAt ? new Date(order.createdAt).toLocaleDateString('bn-BD') : ''}</p>
+						<p class="text-xs text-gray-700">{formatTimeAgo(order.createdAt)}</p>
 					</div>
 				</div>
 

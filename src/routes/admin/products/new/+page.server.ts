@@ -3,69 +3,38 @@ import { getDb } from '#lib/server/db/index';
 import { ProductService } from '#lib/server/services/product.service';
 import { MediaService } from '#lib/server/services/media.service';
 import { CategoryService } from '#lib/server/services/category.service';
-import { fail } from '@sveltejs/kit';
+import { productActionError, readProductPayload } from '#lib/server/utils/product-action';
 
-export const load: PageServerLoad = async ({ parent, platform }) => {
-	const parentData = await parent();
+export const load: PageServerLoad = async ({ platform }) => {
 	let galleryImages: any[] = [];
 	let taxonomyTree: any[] = [];
+	let brands: string[] = [];
 
 	try {
 		const db = getDb(platform);
-		const [mediaList, tree] = await Promise.all([
+		const [mediaList, tree, brandNames] = await Promise.all([
 			MediaService.listMedia(db, { limit: 60 }),
-			CategoryService.getTaxonomyTree(db)
+			CategoryService.getTaxonomyTree(db),
+			ProductService.listBrandNames(db)
 		]);
 		galleryImages = mediaList || [];
 		taxonomyTree = tree || [];
+		brands = brandNames;
 	} catch (e) {
 		console.error('Failed to query data in product new:', e);
 	}
 
-	return {
-		...parentData,
-		galleryImages,
-		taxonomyTree
-	};
+	return { galleryImages, taxonomyTree, brands };
 };
 
 export const actions: Actions = {
 	createProduct: async ({ request, platform }) => {
-		const formData = await request.formData();
-		const productDataRaw = formData.get('productData')?.toString();
-
-		let payload: any = {};
-		if (productDataRaw) {
-			try {
-				payload = JSON.parse(productDataRaw);
-			} catch {
-				return fail(400, { message: 'Invalid product data format' });
-			}
-		} else {
-			// Extract direct fields
-			payload = {
-				name: formData.get('name')?.toString() || '',
-				slug: formData.get('slug')?.toString() || '',
-				price: Number(formData.get('price')) || 0,
-				regularPrice: Number(formData.get('regularPrice')) || 0,
-				stock: Number(formData.get('stock')) || 0,
-				category: formData.get('category')?.toString() || 'General',
-				description: formData.get('description')?.toString() || '',
-				image: formData.get('image')?.toString() || '/images/products/soundcore.svg'
-			};
-		}
-
-		if (!payload.name) {
-			return fail(400, { message: 'প্রোডাক্টের নাম অবশ্যই প্রদান করতে হবে' });
-		}
-
 		try {
-			const db = getDb(platform);
-			const created = await ProductService.createProduct(db, payload);
-			return { success: true, createdProduct: created, message: 'নতুন প্রোডাক্ট সফলভাবে সেভ হয়েছে!' };
-		} catch (e: any) {
-			console.error('Failed to create product in DB:', e);
-			return fail(500, { message: e?.message || 'প্রোডাক্ট তৈরিতে সমস্যা হয়েছে' });
+			const payload = readProductPayload(await request.formData());
+			const created = await ProductService.createProduct(getDb(platform), payload);
+			return { success: true, id: created.id, message: 'নতুন প্রোডাক্ট সফলভাবে সেভ হয়েছে!' };
+		} catch (e) {
+			return productActionError(e, 'প্রোডাক্ট তৈরিতে সমস্যা হয়েছে', 'Failed to create product');
 		}
 	}
 };

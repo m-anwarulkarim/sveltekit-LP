@@ -104,7 +104,7 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 	let realProducts: any[] = [];
 	try {
 		const db = getDb(platform);
-		realProducts = await ProductService.listProducts(db);
+		realProducts = await ProductService.listProducts(db, { status: 'published' });
 	} catch (e) {
 		console.error('Failed to load products from D1 in admin/orders/[id]:', e);
 	}
@@ -182,10 +182,10 @@ export const actions: Actions = {
 			await db
 				.update(schema.orders)
 				.set({
-					customerName: customerName || 'Unnamed Customer',
-					customerEmail: customerPhone || '01700000000',
-					customerPhone: customerPhone || '01700000000',
-					shippingAddress: shippingAddress || 'Dhaka',
+					customerName: customerName || '',
+					customerEmail: customerPhone || '',
+					customerPhone: customerPhone || '',
+					shippingAddress: shippingAddress || '',
 					items: itemsJson,
 					subtotal: calculatedSubtotal,
 					discountAmount,

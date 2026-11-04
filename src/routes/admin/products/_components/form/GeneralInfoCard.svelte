@@ -1,13 +1,12 @@
 <script lang="ts">
-	import { Sparkles, Globe, Link2 } from 'lucide-svelte';
 	import RichTextEditor from './RichTextEditor.svelte';
+	import { slugify } from '#lib/utils/slug';
 
 	interface Props {
 		name: string;
 		slug: string;
 		autoSlug: boolean;
 		isPreOrder: boolean;
-		landingPageLink: string;
 		description: string;
 	}
 
@@ -16,18 +15,8 @@
 		slug = $bindable(''),
 		autoSlug = $bindable(true),
 		isPreOrder = $bindable(false),
-		landingPageLink = $bindable(''),
 		description = $bindable('')
 	}: Props = $props();
-
-	function slugify(text: string) {
-		return text
-			.toString()
-			.toLowerCase()
-			.trim()
-			.replace(/[\s\W-]+/g, '-')
-			.replace(/^-+|-+$/g, '');
-	}
 
 	$effect(() => {
 		if (autoSlug && name) {
@@ -97,24 +86,8 @@
 				bind:value={slug}
 				disabled={autoSlug}
 				placeholder="product-unique-slug"
+				autocomplete="off"
 				class="w-full px-4 py-2.5 rounded-xl border text-sm font-mono transition-all {autoSlug ? 'bg-slate-50 text-slate-500 border-slate-200' : 'bg-white text-slate-800 border-slate-300 focus:border-[#5845eb] focus:ring-2 focus:ring-[#5845eb]/10'}"
-			/>
-		</div>
-	</div>
-
-	<!-- Landing page link override -->
-	<div class="space-y-1.5">
-		<label for="landing-page-input" class="block text-xs font-bold text-slate-700">
-			Landing Page Link <span class="text-slate-400 font-normal">(Optional Override)</span>
-		</label>
-		<div class="relative">
-			<Globe class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-			<input
-				id="landing-page-input"
-				type="url"
-				bind:value={landingPageLink}
-				placeholder="https://lp.yourstore.com/offer-page"
-				class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:border-[#5845eb] focus:ring-3 focus:ring-[#5845eb]/10 text-sm transition-all"
 			/>
 		</div>
 	</div>

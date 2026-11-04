@@ -20,11 +20,12 @@
 		ShoppingBag
 	} from 'lucide-svelte';
 
-	let { data }: { data: any } = $props();
+	let { data, form }: { data: any; form: any } = $props();
 
 	// Search & Filter State
 	let searchQuery = $state('');
 	let recoveryStatusFilter = $state('all');
+	let convertingIds = $state<Record<string, boolean>>({});
 
 	// Helper to extract items safely
 	function parseOrderItems(itemsJson: any) {
@@ -49,7 +50,7 @@
 					dropOffStage: firstItem.dropOffStage || order.dropOffStage || 'Step 2: ফর্ম অসম্পূর্ণ',
 					recoveryStatus: firstItem.recoveryStatus || order.recoveryStatus || 'uncontacted',
 					notes: firstItem.notes || order.notes || '',
-					timeAgo: firstItem.timeAgo || order.timeAgo || 'কিছুক্ষণ আগে',
+					timeAgo: formatTimeAgo(order.createdAt),
 					source: firstItem.source || 'Direct Funnel'
 				};
 			})
@@ -162,6 +163,21 @@
 			default:
 				return { label: 'পেন্ডিং', bg: 'bg-slate-50 text-slate-700 border-slate-200' };
 		}
+	}
+
+	function formatTimeAgo(dateInput: any): string {
+		if (!dateInput) return '';
+		try {
+			const d = new Date(dateInput);
+			const diffMins = Math.floor((Date.now() - d.getTime()) / 60000);
+			if (diffMins < 1) return 'এইমাত্র';
+			if (diffMins < 60) return `${diffMins} মিনিট আগে`;
+			const diffHours = Math.floor(diffMins / 60);
+			if (diffHours < 24) return `${diffHours} ঘণ্টা আগে`;
+			const diffDays = Math.floor(diffHours / 24);
+			if (diffDays < 7) return `${diffDays} দিন আগে`;
+			return d.toLocaleDateString('bn-BD');
+		} catch { return ''; }
 	}
 </script>
 
@@ -331,8 +347,8 @@
 							<td colspan="7" class="py-12 text-center text-slate-400">
 								<div class="flex flex-col items-center justify-center gap-2">
 									<AlertCircle class="w-8 h-8 text-slate-300" />
-									<p class="font-semibold text-sm text-slate-600">কোনো ইনকমপ্লিট অর্ডার পাওয়া যায়নি</p>
-									<p class="text-xs text-slate-400">অন্য কোনো ফিল্টার বা সার্চ কি-ওয়ার্ড চেষ্টা করুন</p>
+									<p class="font-semibold text-sm text-slate-600">{totalIncompleteCount === 0 ? 'কোনো ইনকমপ্লিট লিড নেই' : 'ফিল্টারে কোনো অর্ডার পাওয়া যায়নি'}</p>
+									<p class="text-xs text-slate-400">{totalIncompleteCount === 0 ? 'ল্যান্ডিং পেজ থেকে নতুন ড্রপ-অফ হলে এখানে দেখাবে' : 'অন্য ফিল্টার বা সার্চ কি-ওয়ার্ড চেষ্টা করুন'}</p>
 								</div>
 							</td>
 						</tr>
@@ -401,14 +417,18 @@
 
 								<!-- 4. Abandoned Products & Total -->
 								<td class="py-3.5 px-4 min-w-[180px]">
-									{#each order.parsedItems as item}
-										<div class="font-bold text-slate-800 line-clamp-1" title={item.name}>
-											{item.name}
+									{#if order.parsedItems.length > 0}
+										{@const firstItem = order.parsedItems[0]}
+										<div class="font-bold text-slate-800 line-clamp-1" title={firstItem.name}>
+											{firstItem.name}
 										</div>
-										<div class="text-[11px] text-slate-500">
-											পরিমাণ: {item.quantity || 1} টি
+										<div class="text-[11px] text-slate-500 flex items-center gap-1.5">
+											<span>পরিমাণ: {firstItem.quantity || 1} টি</span>
+											{#if order.parsedItems.length > 1}
+												<span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold text-[10px]">+{order.parsedItems.length - 1} আরো</span>
+											{/if}
 										</div>
-									{/each}
+									{/if}
 									<div class="text-xs font-black text-slate-900 mt-1">
 										সম্ভাব্য বিল: ৳{(order.total || 0).toLocaleString()}
 									</div>
@@ -466,15 +486,20 @@
 										</a>
 
 										<!-- Convert to Confirmed Order -->
-										<form method="POST" action="?/convertOrder" use:enhance>
+										<form method="POST" action="?/convertOrder" use:enhance={() => { convertingIds[order.id] = true; return async ({ result, update }) => { await update(); convertingIds[order.id] = false; if (result.type === "success") { toast.success("ইনকমপ্লিট অর্ডার সফলভাবে কনফার্ম করা হয়েছে!"); } else if (result.type === "failure") { toast.error((result.data as any)?.["message"] || "কনভার্ট করতে সমস্যা হয়েছে!"); } }; }}>
 											<input type="hidden" name="orderId" value={order.id} />
 											<button
 												type="submit"
-												class="px-2.5 py-1.5 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-colors flex items-center gap-1 shadow-2xs cursor-pointer text-xs"
+												disabled={convertingIds[order.id]}
+												class="px-2.5 py-1.5 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center gap-1 shadow-2xs cursor-pointer text-xs"
 												title="সরাসরি কনফার্মড লাইভ অর্ডারে রূপান্তর করুন"
 											>
-												<CheckCircle2 class="w-3.5 h-3.5" />
-												<span class="hidden sm:inline">কনফার্ম</span>
+												{#if convertingIds[order.id]}
+													<span class="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin inline-block"></span>
+												{:else}
+													<CheckCircle2 class="w-3.5 h-3.5" />
+												{/if}
+												<span class="hidden sm:inline">{convertingIds[order.id] ? 'হচ্ছে...' : 'কনফার্ম'}</span>
 											</button>
 										</form>
 
@@ -499,13 +524,13 @@
 													await update();
 												};
 											}}
-											use:confirmSubmit={{
+											use:confirmSubmit={() => ({
 												title: 'অর্ডার ট্র্যাশে পাঠান',
 												message: 'আপনি কি এই ইনকমপ্লিট অর্ডারটি ট্র্যাশে পাঠাতে চান?',
 												confirmText: 'হ্যাঁ, ট্র্যাশে পাঠান',
 												variant: 'destructive',
 												icon: 'trash'
-											}}
+											})}
 										>
 											<input type="hidden" name="orderId" value={order.id} />
 											<button

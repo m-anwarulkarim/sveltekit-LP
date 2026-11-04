@@ -14,6 +14,7 @@
 		isEditMode={false}
 		existingGallery={data.galleryImages || []}
 		taxonomyTree={data.taxonomyTree || []}
+		brands={data.brands || []}
 	/>
 </div>
 

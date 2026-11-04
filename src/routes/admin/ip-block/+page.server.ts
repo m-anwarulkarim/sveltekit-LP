@@ -22,33 +22,6 @@ export const load: PageServerLoad = async ({ parent, platform, url }) => {
 	try {
 		const db = getDb(platform);
 
-		// Seed initial realistic fraud & spam blacklist if empty
-		const existingCount = await SecurityService.countBlocked(db).catch(() => 0);
-		if (existingCount === 0) {
-			await SecurityService.blockIp(db, {
-				ipAddress: '103.114.98.45',
-				phoneNo: '01711223344',
-				type: 'Manual Admin Block',
-				reason: 'Fake Cash on Delivery Orders',
-				isPermanent: true
-			});
-			await SecurityService.blockIp(db, {
-				ipAddress: '180.234.12.90',
-				phoneNo: '01899887766',
-				type: 'Auto Block After 3 Cancelled Orders',
-				reason: 'High Return / Cancellation Abuse',
-				isPermanent: false,
-				blockUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-			});
-			await SecurityService.blockIp(db, {
-				ipAddress: '45.145.22.102',
-				phoneNo: '01912345678',
-				type: 'Auto Bot Attack Block',
-				reason: 'Spam Order Bot Flood',
-				isPermanent: true
-			});
-		}
-
 		const result = await SecurityService.listBlockedIps(db, {
 			search: searchQuery,
 			filterType,
@@ -105,7 +78,7 @@ export const actions: Actions = {
 		try {
 			const db = getDb(platform);
 			const res = await SecurityService.blockIp(db, {
-				ipAddress: ipAddress || '103.45.12.89',
+				ipAddress: ipAddress || 'N/A',
 				phoneNo: phoneNo || undefined,
 				deviceId: deviceId !== '-' ? deviceId : undefined,
 				type,

@@ -2,6 +2,7 @@ import { eq, and, ne, sql } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from '../db/schema';
 import { hashPassword, verifyPassword } from '../utils/password';
+import { R2Service } from './r2.service';
 
 export interface UpdateProfileInput {
 	name: string;
@@ -54,7 +55,7 @@ export class AdminProfileService {
 				email: adm.email || 'contact@thecolorlighthouse.com',
 				phone: adm.phone || '01780081623',
 				role: adm.role || 'OWNER',
-				avatarUrl: adm.avatarUrl || null,
+				avatarUrl: R2Service.resolvePublicUrl(adm.avatarUrl),
 				avatarBg: adm.avatarBg || 'bg-black text-pink-500 border-pink-500/40',
 				avatarText: adm.avatarText || 'COLOR LIGHT',
 				hasPassword: Boolean(adm.passwordHash),
@@ -97,7 +98,7 @@ export class AdminProfileService {
 			email: adm.email,
 			phone: adm.phone || '',
 			role: adm.role,
-			avatarUrl: adm.avatarUrl || null,
+			avatarUrl: R2Service.resolvePublicUrl(adm.avatarUrl),
 			avatarBg: adm.avatarBg || 'bg-black text-pink-500 border-pink-500/40',
 			avatarText: adm.avatarText || adm.name.slice(0, 2).toUpperCase(),
 			hasPassword: Boolean(adm.passwordHash),

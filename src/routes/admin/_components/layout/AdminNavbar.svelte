@@ -257,6 +257,12 @@
 					src={page.data.ownerProfile.avatarUrl}
 					alt={page.data.ownerProfile.name || 'Owner'}
 					class="w-full h-full object-cover"
+					onerror={(e) => {
+						const img = e.currentTarget as HTMLImageElement;
+						if (img.src.includes('pub-fe7043cdba5e4550a7e594df8db06129.r2.dev/')) {
+							img.src = img.src.replace('https://pub-fe7043cdba5e4550a7e594df8db06129.r2.dev/', '/api/r2-local/');
+						}
+					}}
 				/>
 			{:else}
 				<div class="text-[7px] sm:text-[7.5px] font-black uppercase tracking-tighter text-center leading-[1.05] bg-gradient-to-tr from-pink-400 to-indigo-400 bg-clip-text text-transparent">

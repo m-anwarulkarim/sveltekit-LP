@@ -102,6 +102,7 @@ export const actions: Actions = {
 			return {
 				action: 'updateAvatar',
 				success: true,
+				avatarUrl: R2Service.resolvePublicUrl(avatarUrl),
 				message: res.message
 			};
 		} catch (error: any) {

@@ -8,7 +8,7 @@ export const load: PageServerLoad = async ({ platform }) => {
 	const db = getDb(platform);
 	const [orders, products] = await Promise.all([
 		OrderService.listOrderHistoryIndex(db),
-		ProductService.listProducts(db)
+		ProductService.listProducts(db, { status: 'published' })
 	]);
 	return { orders, products };
 };

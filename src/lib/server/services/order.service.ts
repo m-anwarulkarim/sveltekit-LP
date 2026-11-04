@@ -492,7 +492,7 @@ export class OrderService {
 		const conditions = {
 			active: eq(orders.isTrashed, false),
 			incomplete: and(eq(orders.isTrashed, false), eq(orders.status, 'incomplete')),
-			pre: or(gte(orders.total, 2500), eq(orders.status, 'pre_order'), eq(orders.source, 'Pre-Order')),
+			pre: and(eq(orders.isTrashed, false), or(gte(orders.total, 2500), eq(orders.status, 'pre_order'), eq(orders.source, 'Pre-Order'))),
 			trash: or(eq(orders.isTrashed, true), inArray(orders.status, ['cancelled', 'refunded']))
 		};
 
@@ -529,11 +529,13 @@ export class OrderService {
 				status: schema.orders.status,
 				total: schema.orders.total,
 				createdAt: schema.orders.createdAt,
+				customerPhone: schema.orders.customerPhone,
 				customerEmail: schema.orders.customerEmail
 			})
 			.from(schema.orders)
 			.where(eq(schema.orders.isTrashed, false))
 			.orderBy(desc(schema.orders.createdAt))
+			.limit(500)
 			.all();
 	}
 

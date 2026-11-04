@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Card, Badge, Input, Dialog } from '#lib/components/ui';
+	import { Button, Card, Badge, Input } from '#lib/components/ui';
 	import { toast } from 'svelte-sonner';
+	import { confirmModal } from '#lib/stores/confirm.svelte';
 	import {
 		Search,
 		PlusCircle,
@@ -14,7 +15,6 @@
 		ThumbsUp,
 		Phone,
 		PauseCircle,
-		RotateCcw,
 		Trash2,
 		FileEdit,
 		ShoppingBag,
@@ -28,13 +28,18 @@
 		OrderSourceBadge
 	} from '../_components/orders';
 
-	let { data }: { data: any } = $props();
+	let { data, form }: { data: any; form?: any } = $props();
+
+	$effect(() => {
+		if (form?.message) {
+			if (form.success) toast.success(form.message);
+			else toast.error(form.message);
+		}
+	});
 
 	let orderSearchQuery = $state('');
 	let selectedSourceFilter = $state('all');
 	let webStatusFilter = $state('pending');
-	let activeOrderForEdit = $state<any | null>(null);
-	let isEditDialogOpen = $state(false);
 
 	const WEB_ORDER_STATUS_TABS = [
 		{ id: 'pending', label: 'পেন্ডিং', icon: Clock },
@@ -43,7 +48,6 @@
 		{ id: 'good_no_response', label: 'গুড বাট নো রেসপন্স', icon: ThumbsUp },
 		{ id: 'busy', label: 'বিজি', icon: Phone },
 		{ id: 'hold', label: 'হোল্ড', icon: PauseCircle },
-		{ id: 'recall', label: 'রি-কল', icon: RotateCcw },
 		{ id: 'confirmed', label: 'কনফার্মড', icon: CheckCircle2 },
 		{ id: 'cancelled', label: 'বাতিল', icon: XCircle },
 		{ id: 'all', label: 'সব', icon: Clock }
@@ -52,7 +56,7 @@
 	let webOrders = $derived(
 		(data.orders || []).filter((o: any) =>
 			!o.isTrashed &&
-			['pending', 'incomplete', 'no_response', 'no_response_3', 'good_no_response', 'busy', 'hold', 'recall', 'confirmed', 'cancelled'].includes(o.status)
+			['pending', 'incomplete', 'no_response', 'no_response_3', 'good_no_response', 'busy', 'hold', 'confirmed', 'cancelled'].includes(o.status)
 		)
 	);
 
@@ -84,9 +88,7 @@
 	);
 
 	let statusCounts = $derived.by(() => {
-		const map: Record<string, number> = {
-			all: webOrders.length
-		};
+		const map: Record<string, number> = { all: webOrders.length };
 		WEB_ORDER_STATUS_TABS.forEach((tab) => {
 			if (tab.id === 'all') return;
 			if (tab.id === 'good_no_response') {
@@ -98,30 +100,37 @@
 		return map;
 	});
 
-	function openEditModal(order: any) {
-		activeOrderForEdit = { ...order };
-		isEditDialogOpen = true;
-	}
-
 	function parseItems(itemsJson: any) {
 		if (Array.isArray(itemsJson)) return itemsJson;
-		try {
-			return JSON.parse(itemsJson || '[]');
-		} catch {
-			return [];
-		}
+		try { return JSON.parse(itemsJson || '[]'); }
+		catch { return []; }
 	}
 
 	function copyPhoneNumber(phone: string) {
 		if (!phone) return;
 		navigator.clipboard?.writeText(phone);
-		toast.success(`নম্বর (${phone}) কপি করা হয়েছে!`);
+		toast.success(`নম্বর (${phone}) কপি করা হয়েছে!`);
+	}
+
+	function formatTimeAgo(dateInput: any): string {
+		if (!dateInput) return '';
+		try {
+			const d = new Date(dateInput);
+			const diffMins = Math.floor((Date.now() - d.getTime()) / 60000);
+			if (diffMins < 1) return 'এইমাত্র';
+			if (diffMins < 60) return `${diffMins} মিনিট আগে`;
+			const diffHours = Math.floor(diffMins / 60);
+			if (diffHours < 24) return `${diffHours} ঘণ্টা আগে`;
+			const diffDays = Math.floor(diffHours / 24);
+			if (diffDays < 7) return `${diffDays} দিন আগে`;
+			return d.toLocaleDateString('bn-BD');
+		} catch { return ''; }
 	}
 </script>
 
 <div class="space-y-6">
 
-	<!-- Header with Action -->
+	<!-- Header -->
 	<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2">
 		<div>
 			<div class="flex items-center gap-3">
@@ -134,7 +143,6 @@
 				ল্যান্ডিং পেজ থেকে আসা লাইভ কাস্টমার অর্ডারসমূহ কনফার্ম বা কল শিডিউল করুন
 			</p>
 		</div>
-
 		<div class="flex items-center gap-2">
 			<Button href="/admin/orders/new" class="gap-1.5 shadow-md shadow-indigo-600/20">
 				<PlusCircle class="w-4 h-4" />
@@ -143,7 +151,7 @@
 		</div>
 	</div>
 
-	<!-- Scrollable Status Filter Tabs with Wheel & Button Navigation -->
+	<!-- Scrollable Status Filter Tabs -->
 	<ScrollableStatusTabs
 		tabs={WEB_ORDER_STATUS_TABS}
 		activeTab={webStatusFilter}
@@ -166,11 +174,10 @@
 					/>
 				</div>
 
-				<!-- Source Filter Selector -->
 				<select
 					bind:value={selectedSourceFilter}
 					class="h-9 px-3 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl text-slate-700 hover:border-slate-300 focus:outline-none focus:border-[#5845eb] cursor-pointer shrink-0 transition-colors shadow-2xs"
-					title="সোর্স অনুযায়ী ফিল্টার করুন"
+					title="সোর্স অনুযায়ী ফিল্টার করুন"
 				>
 					<option value="all">সব সোর্স</option>
 					<option value="facebook">Facebook</option>
@@ -205,7 +212,7 @@
 					{#if filteredWebOrders.length === 0}
 						<tr>
 							<td colspan="8" class="py-12 text-center text-slate-400">
-								কোনো অর্ডার খুঁজে পাওয়া যায়নি
+								কোনো অর্ডার খুঁজে পাওয়া যায়নি
 							</td>
 						</tr>
 					{:else}
@@ -214,8 +221,8 @@
 							{@const phone = order.customerPhone || order.customerEmail || ''}
 							{@const cleanDigits = (phone || '').replace(/\D/g, '')}
 							<tr class="hover:bg-slate-50/70 transition-colors">
-								
-								<!-- 1. Order ID (Clean Sequential Display: e.g. #1001) -->
+
+								<!-- Order ID + Relative Time -->
 								<td class="py-4 px-4 font-mono font-bold text-slate-900">
 									<div class="flex items-center gap-1.5">
 										<a
@@ -227,25 +234,21 @@
 										</a>
 									</div>
 									<span class="text-[10px] text-slate-400 font-sans block mt-0.5">
-										{order.createdAt ? new Date(order.createdAt).toLocaleDateString('bn-BD') : 'আজ'}
+										{formatTimeAgo(order.createdAt)}
 									</span>
 								</td>
 
-								<!-- 2. Customer Info with 1-Click Call, WhatsApp & Copy Actions -->
+								<!-- Customer Info -->
 								<td class="py-4 px-4 min-w-[170px] max-w-[200px]">
 									<div class="font-bold text-slate-900 text-sm truncate">{order.customerName}</div>
-									
 									<div class="flex items-center gap-1.5 mt-1">
-										<!-- Clickable Phone Number (Direct Dial) -->
 										<a
 											href="tel:{phone}"
 											class="text-[#5845eb] hover:text-indigo-800 hover:underline font-mono font-bold text-xs shrink-0"
-											title="সরাসরি ডায়াল করুন: {phone}"
+											title="সরাসরি ডায়াল করুন: {phone}"
 										>
 											{phone}
 										</a>
-
-										<!-- 1-Click Call Button -->
 										<a
 											href="tel:{phone}"
 											class="w-6 h-6 rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white border border-emerald-200 flex items-center justify-center transition-colors shadow-2xs shrink-0"
@@ -253,11 +256,9 @@
 										>
 											<PhoneCall class="w-3 h-3" />
 										</a>
-
-										<!-- WhatsApp Quick Message Button -->
 										{#if cleanDigits}
 											<a
-												href="https://wa.me/{cleanDigits.startsWith('88') ? cleanDigits : '88' + cleanDigits}?text={encodeURIComponent(`আসসালামু আলাইকুম ${order.customerName || ''}, আপনার অর্ডারের (${order.orderNumber || ''}) ডেলিভারি সংক্রান্ত বিষয়ে যোগাযোগ করছি।`)}"
+												href="https://wa.me/{cleanDigits.startsWith('88') ? cleanDigits : '88' + cleanDigits}?text={encodeURIComponent(`আসসালামু আলাইকুম ${order.customerName || ''}, আপনার অর্ডারের (${order.orderNumber || ''}) ডেলিভারি সংক্রান্ত বিষয়ে যোগাযোগ করছি।`)}"
 												target="_blank"
 												rel="noopener noreferrer"
 												class="w-6 h-6 rounded-md bg-green-50 text-green-600 hover:bg-green-600 hover:text-white border border-green-200 flex items-center justify-center transition-colors shadow-2xs shrink-0"
@@ -266,8 +267,6 @@
 												<MessageSquare class="w-3 h-3" />
 											</a>
 										{/if}
-
-										<!-- Copy Phone Button -->
 										<button
 											type="button"
 											onclick={() => copyPhoneNumber(phone)}
@@ -279,53 +278,42 @@
 									</div>
 								</td>
 
-								<!-- 3. Delivery Location Column -->
+								<!-- Location -->
 								<td class="py-4 px-4 max-w-[190px]">
 									<div class="flex items-start gap-1.5">
 										<MapPin class="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
 										<div class="min-w-0">
 											{#if order.deliveryArea === 'inside_dhaka'}
-												<span class="inline-block text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 mb-0.5">
-													ঢাকা সিটি
-												</span>
+												<span class="inline-block text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 mb-0.5">ঢাকা সিটি</span>
 											{:else if order.deliveryArea === 'outside_dhaka'}
-												<span class="inline-block text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 mb-0.5">
-													ঢাকার বাইরে
-												</span>
+												<span class="inline-block text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 mb-0.5">ঢাকার বাইরে</span>
 											{:else if order.deliveryArea === 'sub_dhaka'}
-												<span class="inline-block text-[10px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200 mb-0.5">
-													উপশহর
-												</span>
+												<span class="inline-block text-[10px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200 mb-0.5">উপশহর</span>
 											{/if}
 											<p class="text-xs text-slate-700 font-medium line-clamp-2 leading-snug" title={order.shippingAddress}>
-												{order.shippingAddress || 'ঠিকানা দেওয়া হয়নি'}
+												{order.shippingAddress || 'ঠিকানা দেওয়া হয়নি'}
 											</p>
 										</div>
 									</div>
 								</td>
 
-								<!-- 3. Product Info with Small Thumbnail Image -->
+								<!-- Product -->
 								<td class="py-4 px-4">
 									<div class="space-y-1.5">
 										{#each items as item}
 											<div class="flex items-center gap-2.5">
-												<!-- Small Product Thumbnail -->
 												<div class="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200/90 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
 													{#if item.image}
 														<img
 															src={item.image}
 															alt={item.name}
 															class="w-full h-full object-cover"
-															onerror={(e) => {
-																(e.target as HTMLElement).style.display = 'none';
-															}}
+															onerror={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
 														/>
 													{:else}
 														<ShoppingBag class="w-4 h-4 text-slate-400" />
 													{/if}
 												</div>
-
-												<!-- Title & Quantity -->
 												<div class="min-w-0">
 													<div class="font-bold text-slate-900 text-xs truncate max-w-[170px]" title={item.name}>
 														{item.name || 'পণ্য আইটেম'}
@@ -339,32 +327,46 @@
 									</div>
 								</td>
 
-								<!-- 4. Total -->
+								<!-- Total -->
 								<td class="py-4 px-4 font-bold font-mono text-sm text-slate-900">
 									৳{(order.total || 0).toLocaleString('en-US')}
 								</td>
 
-								<!-- 5. Status Badge -->
+								<!-- Status Dropdown -->
 								<td class="py-4 px-4">
 									<OrderStatusDropdown orderId={order.id} status={order.status} mode="web" />
 								</td>
 
-								<!-- 6. Source Badge (Facebook, Google, Website, etc.) -->
+								<!-- Source -->
 								<td class="py-4 px-4">
 									<OrderSourceBadge source={order.source} />
 								</td>
 
-								<!-- 7. Actions -->
+								<!-- Actions -->
 								<td class="py-4 px-4 text-right">
 									<div class="flex items-center justify-end gap-1.5">
-										<!-- Quick Confirm Button -->
+										<!-- Quick Confirm -->
 										{#if order.status === 'confirmed'}
 											<Badge variant="success" class="text-xs font-bold gap-1 py-1 px-2.5">
 												<CheckCircle2 class="w-3.5 h-3.5" />
 												<span>কনফার্মড</span>
 											</Badge>
 										{:else}
-											<form action="?/quickConfirmOrder" method="POST" use:enhance class="inline">
+											<form
+												action="?/quickConfirmOrder"
+												method="POST"
+												use:enhance={() => {
+													return async ({ result, update }) => {
+														if (result.type === 'success') {
+															toast.success((result.data as any)?.message || 'অর্ডারটি সফলভাবে কনফার্ম করা হয়েছে!');
+														} else if (result.type === 'failure') {
+															toast.error((result.data as any)?.message || 'কনফার্মেশন ব্যর্থ হয়েছে!');
+														}
+														await update();
+													};
+												}}
+												class="inline"
+											>
 												<input type="hidden" name="orderId" value={order.id} />
 												<Button
 													type="submit"
@@ -378,7 +380,7 @@
 											</form>
 										{/if}
 
-										<!-- Go to Dedicated Order Details & Edit Page -->
+										<!-- Edit / Details -->
 										<Button
 											variant="outline"
 											size="icon"
@@ -389,19 +391,38 @@
 											<FileEdit class="w-3.5 h-3.5" />
 										</Button>
 
-										<!-- Trash/Cancel Button -->
-										<form action="?/quickCancelOrder" method="POST" use:enhance class="inline">
-											<input type="hidden" name="orderId" value={order.id} />
-											<Button
-												type="submit"
-												variant="ghost"
-												size="icon"
-												class="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-												title="বাতিল করুন"
-											>
-												<Trash2 class="w-3.5 h-3.5" />
-											</Button>
-										</form>
+										<!-- Cancel with confirm -->
+										<button
+											type="button"
+											onclick={async () => {
+												const ok = await confirmModal({
+													title: 'অর্ডার বাতিল করুন',
+													message: `"${order.customerName}" (${order.orderNumber ? '#' + order.orderNumber : ''})-এর অর্ডারটি বাতিল করতে চান?`,
+													confirmText: 'হ্যাঁ, বাতিল করুন',
+													variant: 'destructive',
+													icon: 'trash'
+												});
+												if (!ok) return;
+												const fd = new FormData();
+												fd.append('orderId', order.id);
+												const res = await fetch('?/quickCancelOrder', {
+													method: 'POST',
+													headers: { 'x-sveltekit-action': 'true' },
+													body: fd
+												});
+												if (res.ok) {
+													toast.success('অর্ডারটি সফলভাবে বাতিল করা হয়েছে!');
+													// Reload data
+													window.location.reload();
+												} else {
+													toast.error('বাতিল করা ব্যর্থ হয়েছে!');
+												}
+											}}
+											class="h-8 w-8 rounded-md flex items-center justify-center text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-slate-200 transition-colors cursor-pointer"
+											title="বাতিল করুন"
+										>
+											<Trash2 class="w-3.5 h-3.5" />
+										</button>
 									</div>
 								</td>
 
@@ -414,71 +435,3 @@
 	</Card>
 
 </div>
-
-<!-- Edit Order Dialog (using shadcn Dialog) -->
-<Dialog
-	bind:open={isEditDialogOpen}
-	title="অর্ডার তথ্য সম্পাদনা (#{activeOrderForEdit?.id})"
-	description="কাস্টমারের নাম, ফোন নম্বর বা ডেলিভারি ঠিকানা পরিবর্তন করুন"
->
-	{#if activeOrderForEdit}
-		<form
-			action="?/updateOrderStatus"
-			method="POST"
-			use:enhance={() => {
-				return async ({ update }) => {
-					await update();
-					isEditDialogOpen = false;
-				};
-			}}
-			class="space-y-4"
-		>
-			<input type="hidden" name="orderId" value={activeOrderForEdit.id} />
-
-			<div class="space-y-1.5">
-				<label for="edit-name" class="text-xs font-bold text-slate-700">কাস্টমার নাম</label>
-				<Input id="edit-name" bind:value={activeOrderForEdit.customerName} />
-			</div>
-
-			<div class="space-y-1.5">
-				<label for="edit-phone" class="text-xs font-bold text-slate-700">ফোন নম্বর</label>
-				<Input id="edit-phone" bind:value={activeOrderForEdit.customerEmail} />
-			</div>
-
-			<div class="space-y-1.5">
-				<label for="edit-address" class="text-xs font-bold text-slate-700">ডেলিভারি ঠিকানা</label>
-				<Input id="edit-address" bind:value={activeOrderForEdit.shippingAddress} />
-			</div>
-
-			<div class="space-y-1.5">
-				<label for="edit-status" class="text-xs font-bold text-slate-700">অর্ডার স্ট্যাটাস</label>
-				<select
-					id="edit-status"
-					name="status"
-					bind:value={activeOrderForEdit.status}
-					class="w-full text-xs font-bold rounded-xl border border-slate-200 bg-white p-2.5 text-slate-800 focus:outline-none focus:border-[#5845eb]"
-				>
-					<option value="pending">পেন্ডিং</option>
-					<option value="incomplete">ইনকমপ্লিট</option>
-					<option value="no_response">নো রেসপন্স</option>
-					<option value="good_no_response">গুড বাট নো রেসপন্স</option>
-					<option value="busy">বিজি</option>
-					<option value="hold">হোল্ড</option>
-					<option value="recall">রি</option>
-					<option value="processing">প্রসেসিং</option>
-					<option value="confirmed">কনফার্মড</option>
-					<option value="cancelled">বাতিল</option>
-				</select>
-			</div>
-
-			<div class="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
-				<Button type="button" variant="outline" onclick={() => (isEditDialogOpen = false)}>
-					বাতিল
-				</Button>
-				<Button type="submit">
-					পরিবর্তন সংরক্ষণ করুন
-				</Button>
-			</div>
-		</form>
-	{/if}
-</Dialog>

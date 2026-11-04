@@ -50,7 +50,6 @@
 		good_no_response: { label: 'গুড বাট নো রেসপন্স', color: 'text-sky-700 bg-sky-50 border-sky-200', badgeVariant: 'secondary' },
 		busy: { label: 'বিজি', color: 'text-purple-700 bg-purple-50 border-purple-200', badgeVariant: 'purple' },
 		hold: { label: 'হোল্ড', color: 'text-indigo-700 bg-indigo-50 border-indigo-200', badgeVariant: 'purple' },
-		recall: { label: 'রি-কল', color: 'text-yellow-700 bg-yellow-50 border-yellow-200', badgeVariant: 'warning' },
 		processing: { label: 'প্রসেসিং', color: 'text-blue-700 bg-blue-50 border-blue-200', badgeVariant: 'primary' },
 		confirmed: { label: 'কনফার্মড', color: 'text-emerald-700 bg-emerald-50 border-emerald-200', badgeVariant: 'success' },
 		shipped: { label: 'শিপড / ট্রানজিট', color: 'text-cyan-700 bg-cyan-50 border-cyan-200', badgeVariant: 'primary' },
@@ -116,7 +115,6 @@
 					<option value="good_no_response">গুড বাট নো রেসপন্স</option>
 					<option value="busy">বিজি (Busy)</option>
 					<option value="hold">হোল্ড (Hold)</option>
-					<option value="recall">রি-কল (Recall)</option>
 					<option value="processing">প্রসেসিং (Processing)</option>
 					<option value="confirmed">কনফার্মড (Confirmed)</option>
 					<option value="shipped">শিপড (Shipped)</option>

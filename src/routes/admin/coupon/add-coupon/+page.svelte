@@ -9,8 +9,7 @@
 		UploadCloud,
 		Image as ImageIcon,
 		Check,
-		AlertCircle,
-		Sparkles
+		AlertCircle
 	} from 'lucide-svelte';
 	import { Button, Input, Card, Textarea } from '#lib/components/ui';
 	import { toast } from 'svelte-sonner';
@@ -275,7 +274,22 @@
 				</div>
 			</div>
 
-			<!-- 6. Status Selector -->
+			<!-- 6. Usage Limit -->
+			<div>
+				<label for="usage-limit" class="block text-xs font-bold text-slate-700 mb-1.5">
+					ব্যবহারের সীমা (Usage Limit) <span class="text-slate-400 font-normal">(ঐচ্ছিক — খালি রাখলে সীমাহীন)</span>
+				</label>
+				<Input
+					id="usage-limit"
+					name="usageLimit"
+					type="number"
+					min="1"
+					placeholder="যেমন: 100 (সর্বোচ্চ ১০০ বার ব্যবহারযোগ্য)"
+					class="text-xs h-10 rounded-xl bg-slate-50/60 border-slate-200 focus:bg-white font-mono font-bold"
+				/>
+			</div>
+
+			<!-- 7. Status Selector -->
 			<div>
 				<span class="block text-xs font-bold text-slate-700 mb-2">প্রকাশের অবস্থা (Status)</span>
 				<div class="flex items-center gap-3">

@@ -38,6 +38,8 @@ export const actions: Actions = {
 		const startDate = data.get('startDate')?.toString()?.trim() || null;
 		const endDate = data.get('endDate')?.toString()?.trim() || null;
 		const status = (data.get('status')?.toString()?.trim() || 'publish') as 'publish' | 'draft' | 'trash';
+		const usageLimitStr = data.get('usageLimit')?.toString()?.trim() || '';
+		const usageLimit = usageLimitStr ? parseInt(usageLimitStr) : null;
 
 		if (!name) {
 			return fail(400, { success: false, message: 'কুপনের নাম দেওয়া আবশ্যক!' });
@@ -72,7 +74,8 @@ export const actions: Actions = {
 				description,
 				startDate,
 				endDate,
-				status
+				status,
+				usageLimit
 			});
 		} catch (e: any) {
 			console.error('Failed to update coupon:', e);

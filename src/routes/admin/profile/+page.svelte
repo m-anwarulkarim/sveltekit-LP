@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
+	import { enhance, deserialize } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 	import { Button, Input, Card } from '#lib/components/ui';
 	import { toast } from 'svelte-sonner';
 	import {
@@ -18,13 +19,14 @@
 
 	// Reactive Profile State
 	let profile = $derived(data?.profile || {});
-	let adminId = $derived(profile.id || '1');
-	let name = $state(data?.profile?.name || 'Thecolorlighthouse');
-	let username = $state(data?.profile?.username || 'thecolorlighthouse');
-	let phoneNumber = $state(data?.profile?.phone || '01780081623');
-	let emailAddress = $state(data?.profile?.email || 'contact@thecolorlighthouse.com');
+	let adminId = $derived(profile.id || '');
+	let name = $state(data?.profile?.name || '');
+	let username = $state(data?.profile?.username || '');
+	let phoneNumber = $state(data?.profile?.phone || '');
+	let emailAddress = $state(data?.profile?.email || '');
 	let role = $derived(profile.role || 'OWNER');
 	let avatarImage = $state<string | null>(data?.profile?.avatarUrl || null);
+	let imgError = $state(false);
 
 	// Synchronize when server updates data
 	$effect(() => {
@@ -34,6 +36,7 @@
 			phoneNumber = data.profile.phone || '';
 			emailAddress = data.profile.email || '';
 			avatarImage = data.profile.avatarUrl || null;
+			imgError = false;
 		}
 	});
 
@@ -45,7 +48,7 @@
 					day: 'numeric',
 					year: 'numeric'
 				})
-			: 'Sep 3, 2025'
+			: ''
 	);
 
 	let updatedAtDisplay = $derived(
@@ -55,7 +58,7 @@
 					day: 'numeric',
 					year: 'numeric'
 				})
-			: 'Oct 28, 2026'
+			: ''
 	);
 
 	// Loading & Modal States
@@ -70,104 +73,80 @@
 
 	let isPickImageOpen = $state(false);
 	let directImageUrl = $state('');
-	let avatarFormElement: HTMLFormElement | null = $state(null);
-	let avatarInputUrl = $state('');
 
-	function resizeImageToAvatar(file: File): Promise<string> {
-		return new Promise((resolve, reject) => {
-			const reader = new FileReader();
-			reader.onload = (e) => {
-				const img = new Image();
-				img.onload = () => {
-					const canvas = document.createElement('canvas');
-					const maxSize = 256;
-					let width = img.width;
-					let height = img.height;
-
-					if (width > height) {
-						if (width > maxSize) {
-							height = Math.round((height * maxSize) / width);
-							width = maxSize;
-						}
-					} else {
-						if (height > maxSize) {
-							width = Math.round((width * maxSize) / height);
-							height = maxSize;
-						}
-					}
-
-					canvas.width = width;
-					canvas.height = height;
-					const ctx = canvas.getContext('2d');
-					if (!ctx) {
-						resolve(e.target?.result as string);
-						return;
-					}
-
-					ctx.drawImage(img, 0, 0, width, height);
-					// Compress to standard JPEG at 82% quality (shrinks megabytes down to ~15-25 KB)
-					const compressedBase64 = canvas.toDataURL('image/jpeg', 0.82);
-					resolve(compressedBase64);
-				};
-				img.onerror = () => reject(new Error('ইমেজ লোড করতে ব্যর্থ হয়েছে'));
-				img.src = e.target?.result as string;
-			};
-			reader.onerror = () => reject(new Error('ফাইল পড়তে ব্যর্থ হয়েছে'));
-			reader.readAsDataURL(file);
-		});
+	/** Saves an avatar URL to the DB via the ?/updateAvatar action. */
+	async function saveAvatarUrl(url: string) {
+		isSubmittingAvatar = true;
+		const prevImage = avatarImage;
+		avatarImage = url;
+		imgError = false;
+		try {
+			const fd = new FormData();
+			fd.append('avatarUrl', url);
+			const res = await fetch('?/updateAvatar', { method: 'POST', body: fd });
+			const result = deserialize(await res.text());
+			if (result.type === 'success') {
+				isPickImageOpen = false;
+				directImageUrl = '';
+				toast.success((result.data as any)?.message || 'প্রোফাইল ছবি সফলভাবে আপডেট হয়েছে!');
+			} else {
+				avatarImage = prevImage;
+				toast.error((result.type === 'failure' ? (result.data as any)?.message : null) || 'ছবি আপডেট ব্যর্থ হয়েছে!');
+			}
+			await invalidateAll();
+		} catch (err) {
+			console.error('saveAvatarUrl error:', err);
+			avatarImage = prevImage;
+			toast.error('ছবি আপডেট করতে সমস্যা হয়েছে। পুনরায় চেষ্টা করুন।');
+		} finally {
+			isSubmittingAvatar = false;
+		}
 	}
 
 	async function handleLocalFileSelect(e: Event) {
 		const target = e.target as HTMLInputElement;
 		const file = target.files?.[0];
-		if (file) {
-			if (file.size > 5 * 1024 * 1024) {
-				toast.error('ফাইলের সাইজ ৫ মেগাবাইটের কম হতে হবে!');
-				return;
-			}
-			isSubmittingAvatar = true;
-			try {
-				const formData = new FormData();
-				formData.append('file', file);
-				formData.append('folder', 'avatars');
+		if (!file) return;
+		if (file.size > 5 * 1024 * 1024) {
+			toast.error('ফাইলের সাইজ ৫ মেগাবাইটের কম হতে হবে!');
+			return;
+		}
 
-				const res = await fetch('/api/admin/media/upload', {
-					method: 'POST',
-					body: formData
-				});
-				const uploadData: any = await res.json();
+		// Optimistic instant preview for immediate visual feedback
+		const previewUrl = URL.createObjectURL(file);
+		avatarImage = previewUrl;
+		imgError = false;
 
-				if (uploadData.success && uploadData.url) {
-					avatarInputUrl = uploadData.url;
-					avatarImage = uploadData.url;
-					submitAvatarForm();
-				} else {
-					toast.error(uploadData.message || 'ছবি আপলোড করতে ব্যর্থ হয়েছে!');
-				}
-			} catch (err) {
-				console.error('Avatar upload error:', err);
-				toast.error('ছবি আপলোড করতে ব্যর্থ হয়েছে! সংযোগ যাচাই করুন।');
-			} finally {
-				isSubmittingAvatar = false;
+		isSubmittingAvatar = true;
+		try {
+			const formData = new FormData();
+			formData.append('file', file);
+			formData.append('folder', 'avatars');
+			const res = await fetch('/api/admin/media/upload', { method: 'POST', body: formData });
+			const uploadData: any = await res.json();
+			if (uploadData.success && uploadData.url) {
+				await saveAvatarUrl(uploadData.url);
+			} else {
+				avatarImage = data?.profile?.avatarUrl || null;
+				toast.error(uploadData.message || 'ছবি আপলোড করতে ব্যর্থ হয়েছে!');
 			}
+		} catch (err) {
+			console.error('Avatar upload error:', err);
+			avatarImage = data?.profile?.avatarUrl || null;
+			toast.error('ছবি আপলোড করতে ব্যর্থ হয়েছে! সংযোগ যাচাই করুন।');
+		} finally {
+			isSubmittingAvatar = false;
+			if (target) target.value = '';
 		}
 	}
 
-	function handleDirectUrlSubmit(e: Event) {
+	async function handleDirectUrlSubmit(e: Event) {
 		e.preventDefault();
-		if (!directImageUrl.trim()) return;
-		avatarInputUrl = directImageUrl.trim();
-		avatarImage = directImageUrl.trim();
-		submitAvatarForm();
+		const url = directImageUrl.trim();
+		if (!url) return;
+		await saveAvatarUrl(url);
 	}
 
-	function submitAvatarForm() {
-		setTimeout(() => {
-			if (avatarFormElement) {
-				avatarFormElement.requestSubmit();
-			}
-		}, 20);
-	}
 </script>
 
 <svelte:head>
@@ -199,13 +178,20 @@
 				
 				<!-- Large Profile Logo / Circular Avatar -->
 				<div class="w-44 h-44 rounded-full bg-slate-100 flex items-center justify-center text-center border-4 border-slate-200/90 shadow-md relative overflow-hidden group">
-					{#if avatarImage}
+					{#if avatarImage && !imgError}
 						<img
 							src={avatarImage}
 							alt="Avatar"
 							class="w-full h-full object-cover rounded-full"
-							onerror={() => {
-								avatarImage = null;
+							onerror={(e) => {
+								const img = e.currentTarget as HTMLImageElement;
+								if (img.src.includes('pub-fe7043cdba5e4550a7e594df8db06129.r2.dev/')) {
+									const fallback = img.src.replace('https://pub-fe7043cdba5e4550a7e594df8db06129.r2.dev/', '/api/r2-local/');
+									img.src = fallback;
+									avatarImage = fallback;
+									return;
+								}
+								imgError = true;
 							}}
 						/>
 					{:else}
@@ -424,30 +410,6 @@
 
 </div>
 
-<!-- Hidden Avatar Form Action -->
-<form
-	bind:this={avatarFormElement}
-	action="?/updateAvatar"
-	method="POST"
-	use:enhance={() => {
-		isSubmittingAvatar = true;
-		return async ({ result, update }) => {
-			isSubmittingAvatar = false;
-			isPickImageOpen = false;
-			if (result.type === 'success') {
-				toast.success((result.data as any)?.message || 'প্রোফাইল ছবি সফলভাবে আপডেট হয়েছে!');
-			} else if (result.type === 'failure') {
-				toast.error((result.data as any)?.message || 'ছবি আপডেট ব্যর্থ হয়েছে!');
-			}
-			await update({ reset: false });
-		};
-	}}
-	class="hidden"
->
-	<input type="hidden" name="adminId" value={adminId} />
-	<input type="hidden" name="avatarUrl" value={avatarInputUrl} />
-</form>
-
 <!-- Pick Image Modal -->
 {#if isPickImageOpen}
 	<div class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
@@ -461,6 +423,7 @@
 					type="button"
 					onclick={() => (isPickImageOpen = false)}
 					class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+					aria-label="Close"
 				>
 					<X class="w-4 h-4" />
 				</button>
@@ -476,7 +439,7 @@
 					{:else}
 						<UploadCloud class="w-8 h-8 text-slate-400 group-hover:text-[#5845eb]" />
 						<span class="text-xs font-semibold text-slate-700">ফাইল আপলোড করতে ক্লিক করুন</span>
-						<span class="text-[10px] text-slate-400">PNG, JPG বা WebP (সর্বোচ্চ ৩ মেগাবাইট)</span>
+						<span class="text-[10px] text-slate-400">PNG, JPG বা WebP (সর্বোচ্চ ৫ মেগাবাইট)</span>
 					{/if}
 					<input type="file" accept="image/*" onchange={handleLocalFileSelect} class="hidden" />
 				</label>
@@ -523,6 +486,7 @@
 					type="button"
 					onclick={() => (isChangePasswordOpen = false)}
 					class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+					aria-label="Close"
 				>
 					<X class="w-4 h-4" />
 				</button>
@@ -552,12 +516,13 @@
 				<input type="hidden" name="adminId" value={adminId} />
 
 				<div class="space-y-1.5">
-					<label for="cur-pass" class="text-xs font-bold text-slate-700">Current Password (বর্তমান পাসওয়ার্ড)</label>
+					<label for="cur-pass" class="text-xs font-bold text-slate-700">Current Password (বর্তমান পাসওয়ার্ড){#if profile.hasPassword} <span class="text-rose-500">*</span>{/if}</label>
 					<Input
 						id="cur-pass"
 						type="password"
 						name="currentPassword"
 						bind:value={currentPassword}
+						required={profile.hasPassword}
 						placeholder="••••••••"
 						class="text-xs font-mono"
 					/>

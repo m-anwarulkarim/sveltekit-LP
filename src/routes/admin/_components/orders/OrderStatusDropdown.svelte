@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { ChevronDown, Check, Loader2 } from 'lucide-svelte';
+	import { toast } from 'svelte-sonner';
 
 	interface Props {
 		orderId: string;
@@ -147,12 +148,6 @@
 			badge: 'bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100/80',
 			group: 'web'
 		},
-		recall: {
-			label: 'রি-কল',
-			dot: 'bg-purple-500 shadow-purple-500/50',
-			badge: 'bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100/80',
-			group: 'web'
-		},
 		confirmed: {
 			label: 'কনফার্মড',
 			dot: 'bg-emerald-500 shadow-emerald-500/50',
@@ -272,10 +267,21 @@
 		method="POST"
 		use:enhance={() => {
 			isUpdating = true;
+			const targetLabel = STATUS_CATALOG[selectedTargetStatus]?.label || selectedTargetStatus;
 			return async ({ result, update }) => {
 				isUpdating = false;
 				if (result.type === 'success') {
+					const msg =
+						(result.data as any)?.message ||
+						`অর্ডার স্ট্যাটাস সফলভাবে "${targetLabel}" করা হয়েছে!`;
+					toast.success(msg);
 					onStatusUpdated?.(selectedTargetStatus);
+				} else if (result.type === 'failure') {
+					const errMsg =
+						(result.data as any)?.message || 'স্ট্যাটাস পরিবর্তন ব্যর্থ হয়েছে!';
+					toast.error(errMsg);
+				} else if (result.type === 'error') {
+					toast.error('সার্ভারে সমস্যা হয়েছে, পুনরায় চেষ্টা করুন!');
 				}
 				await update({ reset: false });
 			};

@@ -376,7 +376,7 @@
 					</h3>
 				</div>
 
-				<div class="grid gap-2 sm:gap-3 {packages.length === 1 ? 'grid-cols-1 max-w-sm mx-auto' : packages.length === 2 ? 'grid-cols-2 max-w-xl mx-auto' : 'grid-cols-3'}">
+				<div class="grid gap-2 sm:gap-3 {packages.length === 1 ? 'grid-cols-1 max-w-sm mx-auto' : packages.length === 2 ? 'grid-cols-2 max-w-xl mx-auto' : 'grid-cols-1 sm:grid-cols-3'}">
 					{#each packages as pkg, idx}
 						<button
 							type="button"

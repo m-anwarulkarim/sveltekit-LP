@@ -11,7 +11,7 @@
 
 	let webOrders = $derived(
 		allOrders.filter((o: any) =>
-			['pending', 'incomplete', 'no_response', 'no_response_3', 'good_no_response', 'busy', 'hold', 'recall'].includes(o.status)
+			['pending', 'incomplete', 'no_response', 'no_response_3', 'good_no_response', 'busy', 'hold'].includes(o.status)
 		)
 	);
 

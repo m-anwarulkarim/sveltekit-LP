@@ -60,7 +60,34 @@ export async function handleUpdateStatus(request: Request, platform: any) {
 			});
 		}
 
-		return { success: true, updatedOrder: orderId, newStatus };
+		const labelMap: Record<string, string> = {
+			pending: 'পেন্ডিং',
+			incomplete: 'ইনকমপ্লিট',
+			no_response: 'নো রেসপন্স',
+			good_no_response: 'গুড বাট নো রেসপন্স',
+			busy: 'বিজি',
+			hold: 'হোল্ড',
+			recall: 'রি-কল',
+			confirmed: 'কনফার্মড',
+			processing: 'প্রসেসিং',
+			printed: 'প্রিন্টেড',
+			entry_done: 'এন্ট্রি ডান',
+			shipped: 'শিপড',
+			delivered: 'ডেলিভারড',
+			partial_delivered: 'পার্শিয়াল',
+			pending_return: 'পেন্ডিং রিটার্ন',
+			returned: 'রিটার্ন',
+			cancelled: 'বাতিল',
+			missing: 'মিসিং'
+		};
+		const statusBangla = labelMap[newStatus] || newStatus;
+
+		return {
+			success: true,
+			updatedOrder: orderId,
+			newStatus,
+			message: `অর্ডারের স্ট্যাটাস সফলভাবে "${statusBangla}" করা হয়েছে!`
+		};
 	} catch (err: any) {
 		console.error('Failed to update order status:', err);
 		return fail(500, { message: SAVE_FAILED });
@@ -95,7 +122,12 @@ export async function handleQuickConfirm(request: Request, platform: any) {
 			callStatus: 'confirmed'
 		});
 
-		return { success: true, confirmedOrder: orderId, newStatus: 'confirmed' };
+		return {
+			success: true,
+			confirmedOrder: orderId,
+			newStatus: 'confirmed',
+			message: 'অর্ডারটি সফলভাবে কনফার্ম করা হয়েছে!'
+		};
 	} catch (err: any) {
 		console.error('Failed to confirm order in D1:', err);
 		return fail(500, { message: SAVE_FAILED });
@@ -131,7 +163,12 @@ export async function handleQuickCancel(request: Request, platform: any) {
 			callStatus: 'not_answering'
 		});
 
-		return { success: true, cancelledOrder: orderId };
+		return {
+			success: true,
+			cancelledOrder: orderId,
+			newStatus: 'cancelled',
+			message: 'অর্ডারটি সফলভাবে বাতিল করা হয়েছে!'
+		};
 	} catch (err: any) {
 		console.error('Failed to cancel order in D1:', err);
 		return fail(500, { message: SAVE_FAILED });
@@ -142,50 +179,48 @@ export async function handleCreateManualOrder(request: Request, platform: any) {
 	const data = await request.formData();
 	const customerName = data.get('customerName')?.toString()?.trim();
 	const customerPhone =
-		data.get('customerEmail')?.toString()?.trim() ||
 		data.get('customerPhone')?.toString()?.trim() ||
+		data.get('customerEmail')?.toString()?.trim() ||
 		'01700000000';
 	const shippingAddress = data.get('shippingAddress')?.toString()?.trim();
-	const productName = data.get('productName')?.toString()?.trim() || 'AURA Spectrum X';
-	const total = parseInt(data.get('total')?.toString() || '1200', 10);
+	const productName = data.get('productName')?.toString()?.trim() || 'AURA Product';
+	const total = parseInt(data.get('total')?.toString() || '0', 10);
 	const discountAmount = parseInt(data.get('discount')?.toString() || '0', 10);
 	const deliveryCharge = parseInt(data.get('deliveryFee')?.toString() || '60', 10);
 	const advancePayment = parseInt(data.get('advancePaid')?.toString() || '0', 10);
 	const status = data.get('status')?.toString() || 'pending';
 
-	if (!customerName || !shippingAddress) {
-		return fail(400, { message: 'কাস্টমার নাম এবং ঠিকানা আবশ্যক।' });
-	}
+	if (!customerName) return fail(400, { message: 'কাস্টমার নাম আবশ্যক।' });
+	if (!customerPhone || customerPhone === '01700000000') return fail(400, { message: 'কাস্টমারের ফোন নম্বর আবশ্যক।' });
+	if (!shippingAddress) return fail(400, { message: 'ডেলিভারি ঠিকানা আবশ্যক।' });
 
 	const newId = crypto.randomUUID();
-	const items =
-		data.get('items')?.toString() ||
-		JSON.stringify([
-			{
-				id: 'manual-prod',
-				name: productName,
-				price: total,
-				quantity: 1,
-				source: 'Manual Entry'
-			}
-		]);
+	const itemsRaw = data.get('items')?.toString();
 
 	let parsedItems: any[] = [];
-	try {
-		parsedItems = JSON.parse(items);
-	} catch {
-		parsedItems = [];
+	if (itemsRaw) {
+		try { parsedItems = JSON.parse(itemsRaw); } catch { parsedItems = []; }
 	}
+	if (parsedItems.length === 0) {
+		return fail(400, { message: 'অর্ডারে কমপক্ষে একটি পণ্য থাকা আবশ্যক।' });
+	}
+	const items = JSON.stringify(parsedItems);
 	const calculatedSubtotal = parsedItems.reduce(
 		(acc: number, it: any) => acc + (Number(it.price) * Number(it.quantity) || 0),
 		0
 	);
 
+	// Parse call notes added before save
+	let callNotes: Array<{ note: string; author: string }> = [];
+	const callNotesRaw = data.get('callNotes')?.toString();
+	if (callNotesRaw) {
+		try { callNotes = JSON.parse(callNotesRaw); } catch { callNotes = []; }
+	}
+
 	try {
 		const db = getDb(platform);
 		const orderNumber = await OrderService.generateNextOrderNumber(db);
 
-		// Upsert customer in real D1 database
 		const customer = await CustomerService.getOrCreateCustomer(db, {
 			name: customerName,
 			phone: customerPhone,
@@ -211,15 +246,27 @@ export async function handleCreateManualOrder(request: Request, platform: any) {
 			source: 'Manual Entry'
 		});
 
-		await db.insert(schema.orderNotes).values({
-			id: crypto.randomUUID(),
-			orderId: newId,
-			adminName: 'Admin Staff',
-			note: `ম্যানুয়াল অর্ডার তৈরি করা হয়েছে। পণ্য: ${productName}`,
-			callStatus: 'call_received'
-		});
+		// Insert creation note + any call notes added before save
+		const noteRows = [
+			{
+				id: crypto.randomUUID(),
+				orderId: newId,
+				adminName: 'Admin Staff',
+				note: `ম্যানুয়াল অর্ডার তৈরি করা হয়েছে। পণ্য: ${productName}`,
+				callStatus: 'call_received'
+			},
+			...callNotes.map((n) => ({
+				id: crypto.randomUUID(),
+				orderId: newId,
+				adminName: n.author || 'Admin Staff',
+				note: n.note,
+				callStatus: 'call_received'
+			}))
+		];
+		for (const row of noteRows) {
+			await db.insert(schema.orderNotes).values(row);
+		}
 
-		// Trigger real admin notification
 		await NotificationService.createNotification(db, {
 			title: `নতুন ম্যানুয়াল অর্ডার #${orderNumber} তৈরি হয়েছে`,
 			description: `কাস্টমার ${customerName} (${customerPhone})-এর জন্য নতুন অর্ডার #${orderNumber} তৈরি হয়েছে। মোট বিল: ৳${total}।`,
@@ -230,7 +277,7 @@ export async function handleCreateManualOrder(request: Request, platform: any) {
 		return { success: true, createdOrderId: newId, orderNumber };
 	} catch (err: any) {
 		console.error('Failed to create manual order in D1:', err);
-		return fail(500, { message: 'অর্ডার তৈরিতে সমস্যা হয়েছে' });
+		return fail(500, { message: err?.message || 'অর্ডার তৈরিতে সমস্যা হয়েছে' });
 	}
 }
 

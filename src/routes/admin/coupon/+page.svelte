@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { enhance } from '$app/forms';
 	import {
 		Tag,
@@ -57,7 +57,7 @@
 		try {
 			const d = new Date(dateStr);
 			if (isNaN(d.getTime())) return dateStr;
-			return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+			return d.toLocaleDateString('bn-BD', { year: 'numeric', month: 'short', day: 'numeric' });
 		} catch {
 			return dateStr;
 		}
@@ -162,7 +162,7 @@
 						? 'bg-white text-slate-900 shadow-xs'
 						: 'text-slate-600 hover:text-slate-900'}"
 				>
-					<span>All Data</span>
+					<span>সব কুপন</span>
 					<Badge variant="outline" class="h-4 px-1.5 text-[10px] font-mono {activeTab === 'all' ? 'bg-indigo-50 text-[#5845eb] border-indigo-200' : 'bg-slate-200/80 text-slate-600'}">
 						{data.counts.all}
 					</Badge>
@@ -174,7 +174,7 @@
 						? 'bg-white text-slate-900 shadow-xs'
 						: 'text-slate-600 hover:text-slate-900'}"
 				>
-					<span>Publish</span>
+					<span>প্রকাশিত</span>
 					<Badge variant="outline" class="h-4 px-1.5 text-[10px] font-mono {activeTab === 'publish' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-200/80 text-slate-600'}">
 						{data.counts.publish}
 					</Badge>
@@ -186,7 +186,7 @@
 						? 'bg-white text-slate-900 shadow-xs'
 						: 'text-slate-600 hover:text-slate-900'}"
 				>
-					<span>Draft</span>
+					<span>ড্রাফট</span>
 					<Badge variant="outline" class="h-4 px-1.5 text-[10px] font-mono {activeTab === 'draft' ? 'bg-slate-100 text-slate-700 border-slate-300' : 'bg-slate-200/80 text-slate-600'}">
 						{data.counts.draft}
 					</Badge>
@@ -198,7 +198,7 @@
 						? 'bg-white text-slate-900 shadow-xs'
 						: 'text-slate-600 hover:text-slate-900'}"
 				>
-					<span>Trash</span>
+					<span>ট্র্যাশ</span>
 					<Badge variant="outline" class="h-4 px-1.5 text-[10px] font-mono {activeTab === 'trash' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-200/80 text-slate-600'}">
 						{data.counts.trash}
 					</Badge>
@@ -254,6 +254,7 @@
 							<TableHead>কুপন কোড</TableHead>
 							<TableHead>ছাড়ের পরিমাণ</TableHead>
 							<TableHead>নূন্যতম অর্ডার</TableHead>
+							<TableHead class="text-center">ব্যবহার</TableHead>
 							<TableHead>মেয়াদকাল</TableHead>
 							<TableHead class="text-center">স্ট্যাটাস</TableHead>
 							<TableHead class="text-right">অ্যাকশন</TableHead>
@@ -321,6 +322,14 @@
 								<TableCell class="font-mono font-semibold text-slate-700">
 									{coupon.minOrderAmount > 0 ? formatTaka(coupon.minOrderAmount) : 'কোন শর্ত নেই'}
 								</TableCell>
+								<TableCell class="text-center text-xs">
+									<span class="font-bold text-slate-800">{coupon.usageCount ?? 0}</span>
+									{#if coupon.usageLimit}
+										<span class="text-slate-400"> / {coupon.usageLimit}</span>
+									{:else}
+										<span class="text-[10px] text-slate-400 block">সীমাহীন</span>
+									{/if}
+								</TableCell>
 
 								<!-- Validity (Start - End) -->
 								<TableCell class="text-[11px] text-slate-600">
@@ -368,7 +377,7 @@
 													<RotateCcw class="w-4 h-4" />
 												</Button>
 											</form>
-											<form method="POST" action="?/deletePermanent" use:enhance>
+											<form method="POST" action="?/deletePermanent" use:enhance={({ cancel }) => { if (!confirm(`"${coupon.code}" কুপনটি স্থায়ীভাবে মুছে ফেলবেন? এটি পূর্বাবস্থায় ফেরানো যাবে না!`)) cancel(); }}>
 												<input type="hidden" name="id" value={coupon.id} />
 												<Button
 													type="submit"
@@ -390,7 +399,7 @@
 											>
 												<Edit3 class="w-4 h-4" />
 											</Button>
-											<form method="POST" action="?/trash" use:enhance>
+											<form method="POST" action="?/trash" use:enhance={({ cancel }) => { if (!confirm(`"${coupon.name}" কুপনটি ট্র্যাশে সরাতে চান?`)) cancel(); }}>
 												<input type="hidden" name="id" value={coupon.id} />
 												<Button
 													type="submit"

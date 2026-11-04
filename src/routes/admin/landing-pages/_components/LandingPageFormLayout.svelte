@@ -3,6 +3,8 @@
 	import { page } from '$app/state';
 	import { Button, Input, Card, CardHeader, CardTitle, CardContent, Badge, Separator } from '#lib/components/ui';
 	import { toast } from 'svelte-sonner';
+	import { submitAction } from '#lib/client/submit-action';
+	import { slugify } from '#lib/utils/slug';
 	import ThemeComponentPreviewModal from '../../customization/theme-view/_components/ThemeComponentPreviewModal.svelte';
 	import Style1_ModernAnimated from '#lib/modules/landing-templates/templates/Style1_ModernAnimated.svelte';
 	import Style2_DirectCheckout from '#lib/modules/landing-templates/templates/Style2_DirectCheckout.svelte';
@@ -344,33 +346,43 @@
 		toast.success('ছবি সফলভাবে যুক্ত হয়েছে!');
 	}
 
-	function handleFileUpload(e: Event) {
+	async function handleFileUpload(e: Event) {
 		const target = e.target as HTMLInputElement;
 		const files = target.files;
 		if (!files || files.length === 0) return;
 
 		isUploadingImage = true;
-		let loadedCount = 0;
 		const newUrls: string[] = [];
+		const failed: string[] = [];
 
 		for (let i = 0; i < files.length; i++) {
 			const file = files[i];
-			const reader = new FileReader();
-			reader.onload = (event) => {
-				const result = event.target?.result as string;
-				if (result && !galleryImages.includes(result)) {
-					newUrls.push(result);
+			try {
+				const fd = new FormData();
+				fd.append('file', file);
+				fd.append('folder', 'landing-pages');
+				const res = await fetch('/api/admin/media/upload', { method: 'POST', body: fd });
+				const json = await res.json() as any;
+				if (res.ok && json?.item?.url) {
+					const url = json.item.url as string;
+					if (!galleryImages.includes(url)) newUrls.push(url);
+				} else {
+					failed.push(file.name);
 				}
-				loadedCount++;
-				if (loadedCount === files.length) {
-					galleryImages = [...galleryImages, ...newUrls];
-					isUploadingImage = false;
-					toast.success(`${newUrls.length} টি ছবি সফলভাবে যোগ হয়েছে!`);
-					target.value = '';
-				}
-			};
-			reader.readAsDataURL(file);
+			} catch {
+				failed.push(file.name);
+			}
 		}
+
+		if (newUrls.length > 0) {
+			galleryImages = [...galleryImages, ...newUrls];
+			toast.success(`${newUrls.length}তি ছবি সফলভাবে আপলোড হয়েছে!`);
+		}
+		if (failed.length > 0) {
+			toast.error(`${failed.length}তি ছবি আপলোড হয়নি: ${failed.join(', ')}`);
+		}
+		isUploadingImage = false;
+		target.value = '';
 	}
 
 	function removeImage(index: number) {
@@ -431,11 +443,7 @@
 				subheadline = prod.description || 'সীমিত সময়ের জন্য আকর্ষণীয় বিশেষ ছাড়ে আজই আপনার পছন্দের পণ্যটি সংগ্রহ করুন!';
 			}
 			if (!slug || !isEditMode) {
-				slug = (prod.slug || prod.name)
-					.toLowerCase()
-					.replace(/[^a-z0-9]/g, '-')
-					.replace(/-+/g, '-')
-					.replace(/^-|-$/g, '');
+				slug = slugify(prod.slug || prod.name) || `offer-${Date.now()}`;
 			}
 			customPrice = String(prod.price || '');
 			customOriginalPrice = String(prod.originalPrice || Math.round((prod.price || 100) * 1.5));
@@ -468,11 +476,7 @@
 		}
 
 		if (!slug.trim()) {
-			slug = title
-				.toLowerCase()
-				.replace(/[^a-z0-9]/g, '-')
-				.replace(/-+/g, '-')
-				.replace(/^-|-$/g, '');
+			slug = slugify(title) || `offer-${Date.now()}`;
 		}
 
 		isSubmitting = true;
@@ -512,18 +516,14 @@
 			}
 
 			const actionEndpoint = isEditMode ? '?/update' : '?/create';
-			const res = await fetch(actionEndpoint, {
-				method: 'POST',
-				headers: { 'x-sveltekit-action': 'true' },
-				body: formData
-			});
-
-			if (res.ok) {
-				toast.success(isEditMode ? 'ল্যান্ডিং পেজ সফলভাবে আপডেট করা হয়েছে!' : 'নতুন ল্যান্ডিং পেজ সফলভাবে তৈরি হয়েছে!');
-				goto('/admin/landing-pages');
-			} else {
-				toast.error('সংরক্ষণ করতে সমস্যা হয়েছে, অনুগ্রহ করে আবার চেষ্টা করুন।');
+			const result = await submitAction(actionEndpoint, formData, 'সংরক্ষণ করতে সমস্যা হয়েছে');
+			if (!result.ok) {
+				toast.error(result.message);
+				isSubmitting = false;
+				return;
 			}
+			toast.success(isEditMode ? 'আপডেট সফল!' : 'নতুন ল্যান্ডিং পেজ তৈরি হয়েছে!');
+			await goto('/admin/landing-pages');
 		} catch (err: any) {
 			console.error('Error saving landing page:', err);
 			toast.error(err.message || 'ব্যর্থ হয়েছে');
@@ -1301,7 +1301,7 @@
 		</div>
 
 		<!-- RIGHT COLUMN: Template Settings, Status & Live Preview (lg:col-span-4) -->
-		<div class="lg:col-span-4 space-y-6">
+		<div class="lg:col-span-4 space-y-6 order-first lg:order-last">
 
 			<!-- CARD 4: টেমপ্লেট নির্বাচন ও আর্কিটেকচার -->
 			<Card class="rounded-3xl border-slate-200/90 shadow-xs overflow-hidden bg-white">
@@ -1532,16 +1532,16 @@
 						{#if template === 'style_2_direct'}
 							<div class="space-y-1.5 pt-1 border-t border-slate-100 text-[11px]">
 								<div class="flex justify-between items-center text-slate-600">
-									<span>{style2Packages[0].title || '১ প্যাকেট'}</span>
-									<span class="font-bold text-slate-800">৳{style2Packages[0].price}</span>
+									<span>{style2Packages[0]?.title || '১ প্যাকেট'}</span>
+									<span class="font-bold text-slate-800">৳{style2Packages[0]?.price}</span>
 								</div>
 								<div class="flex justify-between items-center text-emerald-700 font-bold bg-emerald-50/70 p-1 rounded-lg">
-									<span>{style2Packages[1].title || '২ প্যাকেট'} (ফ্রি শিপিং)</span>
-									<span>৳{style2Packages[1].price}</span>
+									<span>{style2Packages[1]?.title || '২ প্যাকেট'} (ফ্রি শিপিং)</span>
+									<span>৳{style2Packages[1]?.price}</span>
 								</div>
 								<div class="flex justify-between items-center text-indigo-700 font-bold bg-indigo-50/70 p-1 rounded-lg">
-									<span>{style2Packages[2].title || '৩ প্যাকেট'} (ফ্রি শিপিং)</span>
-									<span>৳{style2Packages[2].price}</span>
+									<span>{style2Packages[2]?.title || '৩ প্যাকেট'} (ফ্রি শিপিং)</span>
+									<span>৳{style2Packages[2]?.price}</span>
 								</div>
 							</div>
 						{:else}

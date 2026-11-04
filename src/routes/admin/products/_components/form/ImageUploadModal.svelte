@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Button, Input, Badge } from '#lib/components/ui';
+	import { toast } from 'svelte-sonner';
 	import {
 		UploadCloud,
 		Link2,
@@ -166,34 +167,44 @@
 			if (uploadedFiles.length === 0) return;
 			isUploading = true;
 			const finalUrls: string[] = [];
+			const failed: typeof uploadedFiles = [];
+			let failureMessage = '';
 
 			for (const item of uploadedFiles) {
-				if (item.file) {
-					try {
-						const formData = new FormData();
-						formData.append('file', item.file);
-						formData.append('folder', 'products');
+				try {
+					const formData = new FormData();
+					formData.append('file', item.file);
+					formData.append('folder', 'products');
 
-						const res = await fetch('/api/admin/media/upload', {
-							method: 'POST',
-							body: formData
-						});
-						const data: any = await res.json();
-						if (data.success && data.url) {
-							finalUrls.push(data.url);
-							continue;
-						}
-					} catch (err) {
-						console.error('Failed to upload product image to R2:', err);
+					const res = await fetch('/api/admin/media/upload', {
+						method: 'POST',
+						body: formData
+					});
+					const data: any = await res.json().catch(() => ({}));
+					if (data.success && data.url) {
+						finalUrls.push(data.url);
+						continue;
 					}
+					failureMessage = data.message || 'ছবি আপলোড করা যায়নি';
+				} catch (err) {
+					console.error('Failed to upload product image:', err);
+					failureMessage = 'নেটওয়ার্কে সমস্যা হয়েছে';
 				}
-
-				// Fallback to preview if upload endpoint was unavailable
-				finalUrls.push(item.preview);
+				// The picture is never stored as base64 text: it would bloat the product record.
+				failed.push(item);
 			}
 
 			isUploading = false;
-			onSelectImages(finalUrls);
+
+			if (finalUrls.length > 0) onSelectImages(finalUrls);
+
+			if (failed.length > 0) {
+				// Keep the failed files so they can be retried or removed.
+				uploadedFiles = failed;
+				toast.error(`${failed.length}টি ছবি আপলোড হয়নি: ${failureMessage}`);
+				return;
+			}
+
 			resetAndClose();
 		} else if (activeTab === 'link') {
 			if (!linkInput.trim()) return;

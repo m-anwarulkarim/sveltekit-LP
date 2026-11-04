@@ -6,25 +6,23 @@
 		brand: string;
 		model: string;
 		specifications: ProductSpec[];
+		/** Brand names from the store's brand list. A new name is created when the product is saved. */
+		brands?: string[];
 	}
 
 	let {
 		brand = $bindable(''),
 		model = $bindable(''),
-		specifications = $bindable([])
+		specifications = $bindable([]),
+		brands = []
 	}: Props = $props();
 
-	// Preloaded brands list
-	let availableBrands = $state<string[]>([
-		'AURA Acoustics',
-		'Sony',
-		'Bose',
-		'Sennheiser',
-		'Apple',
-		'Samsung',
-		'Xiaomi',
-		'No Brand'
-	]);
+	// Start from the saved brands; keep this product's own brand even if it is not in the list.
+	const initialBrands = [...brands];
+	if (brand && !initialBrands.some((b) => b.toLowerCase() === brand.toLowerCase())) {
+		initialBrands.unshift(brand);
+	}
+	let availableBrands = $state<string[]>(initialBrands);
 
 	let isAddingBrandModal = $state(false);
 	let newBrandName = $state('');

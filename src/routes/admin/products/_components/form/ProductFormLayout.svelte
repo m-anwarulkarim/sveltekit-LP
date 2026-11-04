@@ -1,15 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import {
-		Check,
-		ArrowLeft,
-		Headphones,
-		Save,
-		Eye,
-		AlertCircle,
-		Sparkles,
-		CheckCircle2
-	} from 'lucide-svelte';
+	import { Check, ArrowLeft, Save, AlertCircle, Sparkles } from 'lucide-svelte';
+	import { toast } from 'svelte-sonner';
+	import { submitAction } from '#lib/client/submit-action';
+	import { confirmModal } from '#lib/stores/confirm.svelte';
 	import type { AdminProduct } from '../../../_data';
 	import GeneralInfoCard from './GeneralInfoCard.svelte';
 	import PricingStockCard from './PricingStockCard.svelte';
@@ -26,7 +20,7 @@
 		isEditMode?: boolean;
 		existingGallery?: any[];
 		taxonomyTree?: any[];
-		onSave?: (product: AdminProduct) => void;
+		brands?: string[];
 	}
 
 	let {
@@ -34,24 +28,29 @@
 		isEditMode = false,
 		existingGallery = [],
 		taxonomyTree = [],
-		onSave
+		brands = []
 	}: Props = $props();
+
+	// The first category in the store is a visible starting point, never a hidden demo value.
+	const firstCategory = taxonomyTree?.[0]?.name ?? '';
 
 	// Form State
 	let name = $state(initialProduct?.name || '');
 	let slug = $state(initialProduct?.slug || '');
 	let autoSlug = $state(!initialProduct?.slug);
 	let isPreOrder = $state(initialProduct?.isPreOrder || false);
-	let landingPageLink = $state(initialProduct?.landingPageLink || '');
 	let description = $state(initialProduct?.description || '');
 
 	// Price & Stock
 	let regularPrice = $state(initialProduct?.originalPrice || 0);
 	let salesPrice = $state(initialProduct?.price || 0);
 	let costPrice = $state(initialProduct?.costPrice || 0);
-	let stockValue = $state(initialProduct?.stockValue || 0);
-	let lowStockQty = $state(initialProduct?.lowStockQty || 50);
-	let openingStock = $state(initialProduct?.openingStock || 50000);
+	let stockValue = $state(0);
+	let lowStockQty = $state(initialProduct?.lowStockQty ?? 5);
+	let openingStock = $state(initialProduct?.openingStock ?? 0);
+	// Stock on hand now. Only sent to the server when the admin really changed it.
+	const initialStock = initialProduct?.stock ?? 0;
+	let currentStock = $state(initialStock);
 	let sku = $state(initialProduct?.sku || '');
 	let isWholesale = $state(initialProduct?.isWholesale || false);
 
@@ -60,9 +59,7 @@
 
 	// Processing Charges
 	let enableProcessing = $state(initialProduct?.enableProcessing || false);
-	let processingOptions = $state(
-		initialProduct?.processingOptions || ['Ready to Cook', 'Semi Cooked', 'Asto / Whole']
-	);
+	let processingOptions = $state<string[]>(initialProduct?.processingOptions || []);
 
 	// Specifications
 	let brand = $state(initialProduct?.brand || '');
@@ -79,66 +76,82 @@
 	let returnPolicy = $state(initialProduct?.returnPolicy || '');
 
 	// Media Assets
-	let image = $state(initialProduct?.image || '/images/products/soundcore.svg');
-	let images = $state(initialProduct?.images || [
-		initialProduct?.image || '/images/products/soundcore.svg',
-		'/images/products/trimmer.svg',
-		'/images/products/kirkland.svg'
-	]);
+	let image = $state(initialProduct?.image || '');
+	let images = $state<string[]>(initialProduct?.images || (initialProduct?.image ? [initialProduct.image] : []));
 
 	// Category & Status
-	let category = $state(initialProduct?.category || 'Audio');
-	let subCategory = $state(initialProduct?.subCategory || 'Earphones');
+	let category = $state(initialProduct?.category || firstCategory);
+	let subCategory = $state(initialProduct?.subCategory || '');
 	let childCategory = $state(initialProduct?.childCategory || '');
 	let status = $state<'published' | 'draft'>(initialProduct?.status || 'published');
-	let badge = $state<string | null>(initialProduct?.badge || 'Bestseller');
+	let badge = $state<string | null>(initialProduct?.badge ?? null);
 	let sizeChartImage = $state(initialProduct?.sizeChartImage || '');
 
 	// UI Feedback States
 	let isSaving = $state(false);
-	let toastMessage = $state<string | null>(null);
 	let validationError = $state<string | null>(null);
 
-	function showToast(msg: string) {
-		toastMessage = msg;
-		setTimeout(() => {
-			toastMessage = null;
-		}, 3500);
+	const hasVariants = $derived(variants.length > 0);
+	const variantStockTotal = $derived(variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0));
+
+	// With variants the product's stock is their sum, so the field follows it.
+	$effect(() => {
+		if (hasVariants) currentStock = variantStockTotal;
+	});
+
+	function fail(message: string, scrollTo = 0) {
+		validationError = message;
+		window.scrollTo({ top: scrollTo, behavior: 'smooth' });
 	}
 
 	async function handleSubmit() {
 		validationError = null;
 
-		if (!name.trim()) {
-			validationError = 'প্রোডাক্টের নাম (Product Name) অবশ্যই প্রদান করতে হবে।';
-			window.scrollTo({ top: 0, behavior: 'smooth' });
-			return;
+		if (!name.trim()) return fail('প্রোডাক্টের নাম (Product Name) অবশ্যই প্রদান করতে হবে।');
+		if (!salesPrice || salesPrice <= 0) {
+			return fail('প্রোডাক্টের বিক্রয় মূল্য (Sales Price) অবশ্যই দিতে হবে।', 300);
+		}
+		if (Number(regularPrice) > 0 && Number(regularPrice) < Number(salesPrice)) {
+			return fail('রেগুলার মূল্য বিক্রয় মূল্যের কম হতে পারে না।', 300);
+		}
+		if (!image && images.length === 0) {
+			return fail('কমপক্ষে একটি প্রোডাক্ট ছবি যোগ করুন।');
 		}
 
-		if (!salesPrice || salesPrice <= 0) {
-			validationError = 'প্রোডাক্টের বিক্রয় মূল্য (Sales Price) অবশ্যই দিতে হবে।';
-			window.scrollTo({ top: 300, behavior: 'smooth' });
-			return;
+		// A product with no stock cannot be ordered, so confirm before saving that by accident.
+		const stockWillBeZero = isEditMode
+			? hasVariants
+				? variantStockTotal === 0
+				: Number(currentStock) !== initialStock && Number(currentStock) === 0
+			: !hasVariants && Number(openingStock) === 0;
+		if (stockWillBeZero && !isPreOrder) {
+			const confirmed = await confirmModal({
+				title: 'স্টক ০',
+				message: 'স্টক ০ থাকলে প্রোডাক্টটি স্টকআউট দেখাবে এবং অর্ডার নেওয়া যাবে না। তবুও সেভ করবেন?',
+				confirmText: 'হ্যাঁ, সেভ করুন',
+				variant: 'warning',
+				icon: 'alert'
+			});
+			if (!confirmed) return;
 		}
 
 		isSaving = true;
 
-		const productData: AdminProduct = {
-			id: initialProduct?.id || `prod-${Date.now()}`,
+		const productData = {
 			name: name.trim(),
-			slug: slug || name.toLowerCase().replace(/[\s\W-]+/g, '-'),
+			slug: slug.trim(),
 			tagline: initialProduct?.tagline || name.trim(),
 			price: Number(salesPrice),
 			originalPrice: Number(regularPrice) || Number(salesPrice),
-			costPrice: Number(costPrice),
-			stockValue: Number(stockValue),
-			lowStockQty: Number(lowStockQty),
-			openingStock: Number(openingStock),
-			stock: variants.length > 0 ? variants.reduce((sum, v) => sum + (v.stock || 0), 0) : Number(openingStock),
-			sku: sku || `SKU-${Date.now().toString().slice(-6)}`,
-			rating: initialProduct?.rating || 48,
-			reviewsCount: initialProduct?.reviewsCount || 1,
-			image: image || images[0] || '/images/products/soundcore.svg',
+			costPrice: Number(costPrice) || 0,
+			lowStockQty: Number(lowStockQty) || 0,
+			openingStock: Number(openingStock) || 0,
+			// Create: the server starts stock at the opening stock. Edit: only a real change is sent.
+			...(isEditMode && (hasVariants || Number(currentStock) !== initialStock)
+				? { stock: Number(currentStock) || 0 }
+				: {}),
+			sku: sku.trim(),
+			image: image || images[0],
 			images,
 			category,
 			subCategory,
@@ -146,13 +159,10 @@
 			brand,
 			model,
 			badge,
-			inStock: Number(openingStock) > 0,
 			description,
 			status,
-			priority: initialProduct?.priority || '1',
 			isPreOrder,
 			isWholesale,
-			landingPageLink,
 			urgencyMessage,
 			enableProcessing,
 			processingOptions,
@@ -165,48 +175,32 @@
 			sizeChartImage
 		};
 
-		try {
-			const actionUrl = isEditMode ? '?/updateProduct' : '?/createProduct';
-			const fd = new FormData();
-			fd.append('productData', JSON.stringify(productData));
+		const fd = new FormData();
+		fd.append('productData', JSON.stringify(productData));
 
-			const res = await fetch(actionUrl, {
-				method: 'POST',
-				body: fd
-			});
+		const result = await submitAction(
+			isEditMode ? '?/updateProduct' : '?/createProduct',
+			fd,
+			'প্রোডাক্ট সেভ করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।'
+		);
+		isSaving = false;
 
-			if (!res.ok) {
-				const errorData: any = await res.json().catch(() => ({}));
-				throw new Error(errorData?.message || 'প্রোডাক্ট সেভ করতে সমস্যা হয়েছে');
-			}
-
-			if (onSave) {
-				onSave(productData);
-			}
-			showToast(isEditMode ? 'প্রোডাক্ট সফলভাবে আপডেট করা হয়েছে!' : 'নতুন প্রোডাক্ট সফলভাবে যুক্ত করা হয়েছে!');
-
-			setTimeout(() => {
-				goto('/admin/products');
-			}, 1000);
-		} catch (err: any) {
-			console.error('Save product error:', err);
-			showToast(err?.message || 'প্রোডাক্ট সেভ করতে সমস্যা হয়েছে');
-		} finally {
-			isSaving = false;
+		if (!result.ok) {
+			validationError = result.message;
+			toast.error(result.message);
+			window.scrollTo({ top: 0, behavior: 'smooth' });
+			return;
 		}
+
+		toast.success(
+			isEditMode ? 'প্রোডাক্ট সফলভাবে আপডেট করা হয়েছে!' : 'নতুন প্রোডাক্ট সফলভাবে যুক্ত করা হয়েছে!'
+		);
+		await goto('/admin/products', { invalidateAll: true });
 	}
 </script>
 
-<!-- Toast Notification -->
-{#if toastMessage}
-	<div class="fixed top-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-slate-700 animate-in slide-in-from-top-4 duration-300">
-		<CheckCircle2 class="w-5 h-5 text-emerald-400" />
-		<span class="text-sm font-semibold">{toastMessage}</span>
-	</div>
-{/if}
-
 <div class="space-y-6 max-w-7xl mx-auto font-['Plus_Jakarta_Sans',sans-serif]">
-	<!-- 1. Top Header & Action Bar matching Screenshot 1 -->
+	<!-- 1. Top Header & Action Bar -->
 	<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
 		<div class="flex items-center gap-3">
 			<a
@@ -228,15 +222,6 @@
 
 		<!-- Action Buttons -->
 		<div class="flex items-center gap-2.5">
-			<!-- Support Button matching screenshot -->
-			<button
-				type="button"
-				class="hidden sm:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#5845eb] text-white text-xs font-bold hover:bg-[#4834d4] transition-colors cursor-pointer shadow-xs"
-			>
-				<Headphones class="w-4 h-4" />
-				<span>Support</span>
-			</button>
-
 			<!-- Quick Status Toggle -->
 			<div class="flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs font-bold">
 				<button
@@ -255,7 +240,6 @@
 				</button>
 			</div>
 
-			<!-- Main Action Button matching Screenshot 1 (Purple Pill) -->
 			<button
 				type="button"
 				onclick={handleSubmit}
@@ -273,7 +257,7 @@
 		</div>
 	</div>
 
-	<!-- 2. Product Listing Instructions Banner matching Screenshot 1 -->
+	<!-- 2. Product Listing Instructions Banner -->
 	<div class="p-4 bg-blue-50/60 rounded-2xl border border-blue-100/90 flex items-start gap-3 text-slate-700">
 		<div class="p-1 rounded-full bg-blue-100 text-blue-600 shrink-0 mt-0.5">
 			<Sparkles class="w-4 h-4" />
@@ -288,7 +272,7 @@
 
 	<!-- Validation Error Alert if any -->
 	{#if validationError}
-		<div class="p-4 bg-rose-50 rounded-2xl border border-rose-200 flex items-center gap-3 text-xs text-rose-700 font-bold animate-in fade-in">
+		<div role="alert" class="p-4 bg-rose-50 rounded-2xl border border-rose-200 flex items-center gap-3 text-xs text-rose-700 font-bold animate-in fade-in">
 			<AlertCircle class="w-4 h-4 text-rose-500 shrink-0" />
 			<span>{validationError}</span>
 		</div>
@@ -296,19 +280,16 @@
 
 	<!-- 3. Main Form Grid (2 Columns) -->
 	<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-		<!-- Left Column (68% - 8 cols) -->
+		<!-- Left Column -->
 		<div class="lg:col-span-8 space-y-6">
-			<!-- 1. General Information -->
 			<GeneralInfoCard
 				bind:name
 				bind:slug
 				bind:autoSlug
 				bind:isPreOrder
-				bind:landingPageLink
 				bind:description
 			/>
 
-			<!-- 2. Price And Stock -->
 			<PricingStockCard
 				bind:regularPrice
 				bind:salesPrice
@@ -316,33 +297,32 @@
 				bind:stockValue
 				bind:lowStockQty
 				bind:openingStock
+				bind:currentStock
+				showCurrentStock={isEditMode}
+				stockLocked={hasVariants}
 				bind:sku
 				bind:isWholesale
 			/>
 
-			<!-- 3. Low Stock / Urgency Message -->
 			<LowStockUrgencyCard bind:urgencyMessage />
 
-			<!-- 4. Processing Charges -->
 			<ProcessingChargesCard
 				bind:enableProcessing
 				bind:processingOptions
 			/>
 
-			<!-- 5. Product Specification & Others Spec -->
 			<SpecificationsCard
 				bind:brand
 				bind:model
 				bind:specifications
+				{brands}
 			/>
 
-			<!-- 6. Multi-Variant Management -->
 			<VariantsCard
 				bind:variants
 				defaultPrice={salesPrice}
 			/>
 
-			<!-- 7. SEO & Return Policy -->
 			<SeoPolicyCard
 				bind:seoTitle
 				bind:seoDescription
@@ -353,16 +333,14 @@
 			/>
 		</div>
 
-		<!-- Right Column (32% - 4 cols, Sticky) -->
+		<!-- Right Column (Sticky) -->
 		<div class="lg:col-span-4 space-y-6 lg:sticky lg:top-24">
-			<!-- 1. Media Assets Gallery (Upload, Link & Gallery Picker) -->
 			<MediaAssetsCard
 				bind:image
 				bind:images
 				{existingGallery}
 			/>
 
-			<!-- 2. Category, Status & Badges -->
 			<CategoryStatusCard
 				bind:category
 				bind:subCategory
@@ -385,7 +363,7 @@
 					type="button"
 					onclick={handleSubmit}
 					disabled={isSaving}
-					class="flex-1 py-2.5 rounded-xl bg-[#5845eb] text-white text-xs font-bold hover:bg-[#4834d4] transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+					class="flex-1 py-2.5 rounded-xl bg-[#5845eb] text-white text-xs font-bold hover:bg-[#4834d4] transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
 				>
 					<Save class="w-4 h-4" />
 					<span>{isEditMode ? 'Update' : 'Save Product'}</span>
@@ -394,4 +372,3 @@
 		</div>
 	</div>
 </div>
-

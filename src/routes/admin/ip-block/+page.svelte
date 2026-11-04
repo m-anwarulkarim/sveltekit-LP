@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { Button, Input, Card, CardContent, Badge } from '#lib/components/ui';
 	import {
 		Search,
@@ -49,7 +50,32 @@
 		blockedList = data?.blockedList ? [...data.blockedList] : [];
 		totalBlocked = data?.totalCount ?? 0;
 		stats = data?.stats || { total: 0, permanent: 0, auto: 0, manual: 0 };
+		currentPage = data?.currentPage ?? 1;
+		perPage = data?.perPage ?? 10;
+		filterType = data?.filterType || 'all';
 	});
+
+	// Build navigation URL, preserving current params unless overridden
+	function navUrl(overrides: Record<string, string | number> = {}) {
+		const params = new URLSearchParams();
+		const f = String(overrides.filter ?? filterType);
+		const p = Number(overrides.page ?? currentPage);
+		const l = Number(overrides.limit ?? perPage);
+		const q = 'q' in overrides ? String(overrides.q) : searchQuery.trim();
+		if (f && f !== 'all') params.set('filter', f);
+		if (q) params.set('q', q);
+		if (p > 1) params.set('page', String(p));
+		if (l !== 10) params.set('limit', String(l));
+		const qs = params.toString();
+		return `/admin/ip-block${qs ? '?' + qs : ''}`;
+	}
+
+	// Debounced search navigation
+	let searchTimer: ReturnType<typeof setTimeout>;
+	function handleSearchInput() {
+		clearTimeout(searchTimer);
+		searchTimer = setTimeout(() => goto(navUrl({ q: searchQuery, page: 1 })), 350);
+	}
 
 	function showToast(msg: string) {
 		toast.success(msg);
@@ -78,32 +104,17 @@
 		'Automated Web Scraping Abuse'
 	];
 
-	// Filtered list by client-side search query
+	// Local search gives instant feedback while the debounced goto is pending
 	let filteredList = $derived.by(() => {
-		let list = blockedList;
-
-		if (filterType !== 'all') {
-			if (filterType === 'permanent') {
-				list = list.filter((i) => i.isPermanent);
-			} else if (filterType === 'auto') {
-				list = list.filter((i) => i.type?.toLowerCase().includes('auto'));
-			} else if (filterType === 'manual') {
-				list = list.filter((i) => i.type?.toLowerCase().includes('manual'));
-			}
-		}
-
-		if (searchQuery.trim()) {
-			const q = searchQuery.toLowerCase().trim();
-			list = list.filter(
-				(item) =>
-					item.ipAddress?.toLowerCase().includes(q) ||
-					item.phoneNo?.toLowerCase().includes(q) ||
-					item.reason?.toLowerCase().includes(q) ||
-					item.type?.toLowerCase().includes(q)
-			);
-		}
-
-		return list;
+		if (!searchQuery.trim()) return blockedList;
+		const q = searchQuery.toLowerCase().trim();
+		return blockedList.filter(
+			(item) =>
+				item.ipAddress?.toLowerCase().includes(q) ||
+				item.phoneNo?.toLowerCase().includes(q) ||
+				item.reason?.toLowerCase().includes(q) ||
+				item.type?.toLowerCase().includes(q)
+		);
 	});
 
 	let totalPages = $derived(Math.max(1, Math.ceil(totalBlocked / perPage)));
@@ -477,28 +488,28 @@
 		<div class="flex flex-wrap items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl">
 			<button
 				type="button"
-				onclick={() => (filterType = 'all')}
+				onclick={() => goto(navUrl({ filter: 'all', page: 1 }))}
 				class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer {filterType === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}"
 			>
 				All Blocks ({stats.total})
 			</button>
 			<button
 				type="button"
-				onclick={() => (filterType = 'permanent')}
+				onclick={() => goto(navUrl({ filter: 'permanent', page: 1 }))}
 				class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer {filterType === 'permanent' ? 'bg-white text-rose-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'}"
 			>
 				Permanent ({stats.permanent})
 			</button>
 			<button
 				type="button"
-				onclick={() => (filterType = 'auto')}
+				onclick={() => goto(navUrl({ filter: 'auto', page: 1 }))}
 				class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer {filterType === 'auto' ? 'bg-white text-amber-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'}"
 			>
 				Auto-Blocked ({stats.auto})
 			</button>
 			<button
 				type="button"
-				onclick={() => (filterType = 'manual')}
+				onclick={() => goto(navUrl({ filter: 'manual', page: 1 }))}
 				class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer {filterType === 'manual' ? 'bg-white text-[#5845eb] shadow-xs' : 'text-slate-500 hover:text-slate-800'}"
 			>
 				Manual ({stats.manual})
@@ -512,6 +523,7 @@
 				<input
 					type="text"
 					bind:value={searchQuery}
+					oninput={handleSearchInput}
 					placeholder="Search IP, phone or reason..."
 					class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#5845eb] focus:bg-white transition-colors"
 				/>
@@ -535,8 +547,8 @@
 							<button
 								type="button"
 								onclick={() => {
-									perPage = count;
 									isPerPageOpen = false;
+									goto(navUrl({ limit: count, page: 1 }));
 								}}
 								class="w-full text-left px-3 py-1.5 hover:bg-slate-50 flex items-center justify-between cursor-pointer {perPage === count ? 'text-[#5845eb] font-bold bg-indigo-50/50' : ''}"
 							>
@@ -570,7 +582,7 @@
 				<button
 					type="button"
 					disabled={currentPage <= 1}
-					onclick={() => (currentPage = Math.max(1, currentPage - 1))}
+					onclick={() => goto(navUrl({ page: Math.max(1, currentPage - 1) }))}
 					aria-label="Previous page"
 					class="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
 				>
@@ -586,7 +598,7 @@
 				<button
 					type="button"
 					disabled={currentPage >= totalPages}
-					onclick={() => (currentPage = Math.min(totalPages, currentPage + 1))}
+					onclick={() => goto(navUrl({ page: Math.min(totalPages, currentPage + 1) }))}
 					aria-label="Next page"
 					class="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
 				>
@@ -852,28 +864,28 @@
 					</div>
 				</div>
 
-				<!-- Reason Presets & Custom -->
+				<!-- Reason Presets -->
 				<div class="space-y-1.5">
-					<label for="block-reason-select" class="text-xs font-bold text-slate-700 block">Block Reason</label>
+					<label for="block-reason-select" class="text-xs font-bold text-slate-700 block">Quick Preset</label>
 					<select
 						id="block-reason-select"
-						bind:value={manualReason}
+						onchange={(e) => (manualReason = e.currentTarget.value)}
 						class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#5845eb] cursor-pointer"
 					>
 						{#each COMMON_REASONS as r}
-							<option value={r}>{r}</option>
+							<option value={r} selected={manualReason === r}>{r}</option>
 						{/each}
 					</select>
 				</div>
 
-				<!-- Optional Custom Reason Note -->
+				<!-- Final Reason (editable) -->
 				<div class="space-y-1.5">
-					<label for="block-reason-custom" class="text-[11px] font-semibold text-slate-500 block">Detailed Notes (Optional)</label>
+					<label for="block-reason-custom" class="text-xs font-bold text-slate-700 block">Block Reason <span class="text-rose-500">*</span></label>
 					<Input
 						id="block-reason-custom"
 						type="text"
 						bind:value={manualReason}
-						placeholder="Add specific incident notes..."
+						placeholder="Preset থেকে বেছে নিন বা এখানে লিখুন..."
 						class="text-xs rounded-xl"
 					/>
 				</div>

@@ -1,99 +1,52 @@
 import type { PageServerLoad, Actions } from './$types';
 import { getDb } from '#lib/server/db/index';
-import * as schema from '#lib/server/db/schema';
-import { eq, or } from 'drizzle-orm';
 import { ProductService } from '#lib/server/services/product.service';
 import { MediaService } from '#lib/server/services/media.service';
 import { CategoryService } from '#lib/server/services/category.service';
-import { fail } from '@sveltejs/kit';
+import { productActionError, readProductPayload } from '#lib/server/utils/product-action';
 
-export const load: PageServerLoad = async ({ params, parent, platform }) => {
-	const layoutData = await parent();
-	let foundProduct: any = null;
+export const load: PageServerLoad = async ({ params, platform }) => {
+	let product: Awaited<ReturnType<typeof ProductService.getForEdit>> = null;
 	let galleryImages: any[] = [];
 	let taxonomyTree: any[] = [];
+	let brands: string[] = [];
 
 	try {
 		const db = getDb(platform);
-		const [row, mediaList, tree] = await Promise.all([
-			db
-				.select()
-				.from(schema.products)
-				.where(or(eq(schema.products.id, params.id), eq(schema.products.slug, params.id)))
-				.get(),
+		const [found, mediaList, tree, brandNames] = await Promise.all([
+			ProductService.getForEdit(db, params.id),
 			MediaService.listMedia(db, { limit: 60 }),
-			CategoryService.getTaxonomyTree(db)
+			CategoryService.getTaxonomyTree(db),
+			ProductService.listBrandNames(db)
 		]);
-
+		product = found;
 		galleryImages = mediaList || [];
 		taxonomyTree = tree || [];
-
-		if (row) {
-			foundProduct = { ...row };
-			if (row.galleryImages) {
-				try {
-					foundProduct.images = JSON.parse(row.galleryImages);
-				} catch {
-					foundProduct.images = [row.image];
-				}
-			} else {
-				foundProduct.images = [row.image];
-			}
-		}
+		brands = brandNames;
 	} catch (e) {
 		console.error('Failed to query product/taxonomy from D1:', e);
 	}
 
-	return {
-		product: foundProduct,
-		productId: params.id,
-		galleryImages,
-		taxonomyTree
-	};
+	return { product, productId: params.id, galleryImages, taxonomyTree, brands };
 };
 
 export const actions: Actions = {
 	updateProduct: async ({ request, platform, params }) => {
-		const formData = await request.formData();
-		const productDataRaw = formData.get('productData')?.toString();
-
-		let payload: any = {};
-		if (productDataRaw) {
-			try {
-				payload = JSON.parse(productDataRaw);
-			} catch {
-				return fail(400, { message: 'Invalid product data format' });
-			}
-		} else {
-			payload = {
-				name: formData.get('name')?.toString() || '',
-				slug: formData.get('slug')?.toString() || '',
-				price: Number(formData.get('price')) || 0,
-				regularPrice: Number(formData.get('regularPrice')) || 0,
-				stock: Number(formData.get('stock')) || 0,
-				category: formData.get('category')?.toString() || 'General',
-				description: formData.get('description')?.toString() || '',
-				image: formData.get('image')?.toString() || '/images/products/soundcore.svg'
-			};
-		}
-
 		try {
-			const db = getDb(platform);
-			await ProductService.updateProduct(db, params.id, payload);
-			return { success: true, message: 'প্রোডাক্ট সফলভাবে আপডেট করা হয়েছে!' };
-		} catch (e: any) {
-			console.error('Update product failed in DB:', e);
-			return fail(500, { message: e?.message || 'প্রোডাক্ট আপডেট করতে সমস্যা হয়েছে' });
+			const payload = readProductPayload(await request.formData());
+			await ProductService.updateProduct(getDb(platform), params.id, payload);
+			return { success: true, message: 'প্রোডাক্ট সফলভাবে আপডেট করা হয়েছে!' };
+		} catch (e) {
+			return productActionError(e, 'প্রোডাক্ট আপডেট করতে সমস্যা হয়েছে', 'Update product failed');
 		}
 	},
 
 	deleteProduct: async ({ platform, params }) => {
 		try {
-			const db = getDb(platform);
-			await ProductService.deleteProduct(db, params.id);
-			return { success: true, message: 'প্রোডাক্ট সফলভাবে মুছে ফেলা হয়েছে!' };
-		} catch (e: any) {
-			return fail(500, { message: e?.message });
+			await ProductService.deleteProduct(getDb(platform), params.id);
+			return { success: true, message: 'প্রোডাক্ট সফলভাবে মুছে ফেলা হয়েছে!' };
+		} catch (e) {
+			return productActionError(e, 'ডিলিট করতে সমস্যা হয়েছে', 'Delete product failed');
 		}
 	}
 };

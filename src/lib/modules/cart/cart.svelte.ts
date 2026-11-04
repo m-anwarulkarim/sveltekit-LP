@@ -394,6 +394,15 @@ class CartStore {
 		return Boolean(result.valid);
 	}
 
+	removeCoupon() {
+		this.couponCode = '';
+		this.discountPercent = 0;
+		this.couponTerms = null;
+		this.couponMessage = '';
+		this.saveToStorage();
+		this.pushToServer();
+	}
+
 	clear() {
 		this.items = [];
 		this.couponCode = '';

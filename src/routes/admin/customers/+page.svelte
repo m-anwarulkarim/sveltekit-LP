@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { enhance } from '$app/forms';
 	import {
 		Users,
@@ -92,6 +92,37 @@
 		if (digits.startsWith('0')) return '88' + digits;
 		return '880' + digits;
 	}
+
+	// Save/Notes loading state
+	let isSaving = $state(false);
+	let isNotesSaving = $state(false);
+
+	// Bengali order status labels
+	const statusLabels: Record<string, string> = {
+		delivered: 'ডেলিভার্ড',
+		confirmed: 'কনফার্মড',
+		processing: 'প্রসেসিং',
+		shipped: 'শিপড',
+		cancelled: 'বাতিল',
+		pending: 'পেন্ডিং',
+		returned: 'ফেরত'
+	};
+
+	function getStatusLabel(status: string): string {
+		return statusLabels[status?.toLowerCase()] ?? status;
+	}
+
+	// Tab counts derived from all customers
+	let tabCounts = $derived.by(() => {
+		const all = data.customers || [];
+		return {
+			all: all.length,
+			vip: all.filter((c: any) => (c.totalSpent || 0) >= 5000 || (c.totalOrders || 0) >= 4).length,
+			safe: all.filter((c: any) => c.riskLevel === 'safe' && !c.isBanned).length,
+			high_risk: all.filter((c: any) => c.riskLevel === 'high_risk' && !c.isBanned).length,
+			banned: all.filter((c: any) => c.isBanned).length
+		};
+	});
 
 	// Filtered Customers derived reactively
 	let filteredCustomers = $derived.by(() => {
@@ -378,12 +409,13 @@
 				<button
 					type="button"
 					onclick={() => (selectedTab = 'all')}
-					class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer {selectedTab ===
+					class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 {selectedTab ===
 					'all'
 						? 'bg-slate-900 text-white shadow-xs'
 						: 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}"
 				>
-					সব ({data.customers?.length ?? 0})
+					<span>সব</span>
+					<span class="px-1.5 py-0.5 rounded-full text-[10px] font-black {selectedTab === 'all' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}">{tabCounts.all}</span>
 				</button>
 
 				<button
@@ -395,7 +427,10 @@
 						: 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}"
 				>
 					<Award class="w-3.5 h-3.5" />
-					<span>ভিআইপি ক্লাব</span>
+					<span>ভিআইপি</span>
+					{#if tabCounts.vip > 0}
+						<span class="px-1.5 py-0.5 rounded-full text-[10px] font-black {selectedTab === 'vip' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-700'}">{tabCounts.vip}</span>
+					{/if}
 				</button>
 
 				<button
@@ -408,6 +443,7 @@
 				>
 					<ShieldCheck class="w-3.5 h-3.5" />
 					<span>নিরাপদ</span>
+					<span class="px-1.5 py-0.5 rounded-full text-[10px] font-black {selectedTab === 'safe' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-700'}">{tabCounts.safe}</span>
 				</button>
 
 				<button
@@ -420,6 +456,9 @@
 				>
 					<AlertTriangle class="w-3.5 h-3.5" />
 					<span>হাই-রিস্ক</span>
+					{#if tabCounts.high_risk > 0}
+						<span class="px-1.5 py-0.5 rounded-full text-[10px] font-black {selectedTab === 'high_risk' ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-700'}">{tabCounts.high_risk}</span>
+					{/if}
 				</button>
 
 				<button
@@ -432,6 +471,9 @@
 				>
 					<Ban class="w-3.5 h-3.5" />
 					<span>ব্যানড</span>
+					{#if tabCounts.banned > 0}
+						<span class="px-1.5 py-0.5 rounded-full text-[10px] font-black {selectedTab === 'banned' ? 'bg-rose-400/30 text-rose-200' : 'bg-rose-100 text-rose-700'}">{tabCounts.banned}</span>
+					{/if}
 				</button>
 			</div>
 		</div>
@@ -644,28 +686,37 @@
 										<FileText class="w-4 h-4" />
 									</button>
 
-									<!-- Toggle Ban / Unban Form -->
-									<form method="POST" action="?/toggleBan" use:enhance class="inline-block">
-										<input type="hidden" name="id" value={cust.id} />
-										<input
-											type="hidden"
-											name="banReason"
-											value={cust.isBanned ? '' : 'অ্যাডমিন কর্তৃক নিরাপত্তা তালিকায় রাখা হয়েছে'}
-										/>
-										<button
-											type="submit"
-											title={cust.isBanned ? 'গ্রাহককে আনব্যান করুন' : 'গ্রাহককে ব্যান বা ব্লক করুন'}
-											class="p-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer {cust.isBanned
-												? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200'
-												: 'text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200'}"
-										>
-											{#if cust.isBanned}
-												<CheckCircle2 class="w-3.5 h-3.5" />
-											{:else}
-												<Ban class="w-3.5 h-3.5" />
-											{/if}
-										</button>
-									</form>
+								<!-- Toggle Ban / Unban Form -->
+								<form
+									method="POST"
+									action="?/toggleBan"
+									use:enhance={({ cancel }) => {
+										const action = cust.isBanned ? 'আনব্যান' : 'ব্যান (ব্ল্যাকলিস্ট)';
+										if (!confirm(`আপনি কি "${cust.name}" কে ${action} করতে চান?`)) cancel();
+									}}
+									class="inline-block"
+								>
+									<input type="hidden" name="id" value={cust.id} />
+									<input
+										type="hidden"
+										name="banReason"
+										value={cust.isBanned ? '' : 'অ্যাডমিন কর্তৃক নিরাপত্তা তালিকায় রাখা হয়েছে'}
+									/>
+									<button
+										type="submit"
+										title={cust.isBanned ? 'গ্রাহককে আনব্যান করুন' : 'গ্রাহককে ব্যান বা ব্লক করুন'}
+										class="p-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer {cust.isBanned
+											? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200'
+											: 'text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200'}
+"
+									>
+										{#if cust.isBanned}
+											<CheckCircle2 class="w-3.5 h-3.5" />
+										{:else}
+											<Ban class="w-3.5 h-3.5" />
+										{/if}
+									</button>
+								</form>
 
 									<!-- Delete Customer Form -->
 									<form
@@ -822,9 +873,11 @@
 					method="POST"
 					action="?/saveCustomer"
 					use:enhance={() => {
-						return async ({ update }) => {
+						isSaving = true;
+						return async ({ result, update }) => {
 							await update();
-							isCustomerModalOpen = false;
+							isSaving = false;
+							if (result.type === 'success') isCustomerModalOpen = false;
 						};
 					}}
 					class="p-6 space-y-4"
@@ -929,9 +982,15 @@
 						</button>
 						<button
 							type="submit"
-							class="px-5 py-2 bg-[#5845eb] hover:bg-[#4936d6] text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer"
+							disabled={isSaving}
+							class="px-5 py-2 bg-[#5845eb] hover:bg-[#4936d6] text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer disabled:opacity-60 flex items-center gap-1.5"
 						>
-							{customerModalMode === 'edit' ? 'আপডেট করুন' : 'সেভ করুন'}
+							{#if isSaving}
+								<RefreshCw class="w-3.5 h-3.5 animate-spin" />
+								<span>সংরক্ষণ হচ্ছে...</span>
+							{:else}
+								{customerModalMode === 'edit' ? 'আপডেট করুন' : 'সেভ করুন'}
+							{/if}
 						</button>
 					</div>
 				</form>
@@ -1001,7 +1060,7 @@
 
 									<div class="flex items-center gap-2">
 										<span
-											class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider {ord.status ===
+											class="px-2 py-0.5 rounded-full text-[10px] font-bold {ord.status ===
 											'delivered'
 												? 'bg-emerald-100 text-emerald-800'
 												: ord.status === 'confirmed'
@@ -1014,7 +1073,7 @@
 																? 'bg-rose-100 text-rose-800'
 																: 'bg-amber-100 text-amber-800'}"
 										>
-											{ord.status}
+											{getStatusLabel(ord.status)}
 										</span>
 										<span class="font-black text-slate-900 font-['Outfit'] text-sm">
 											{formatTaka(ord.total)}
@@ -1088,9 +1147,11 @@
 					method="POST"
 					action="?/updateNotes"
 					use:enhance={() => {
-						return async ({ update }) => {
+						isNotesSaving = true;
+						return async ({ result, update }) => {
 							await update();
-							selectedCustomerNotes = null;
+							isNotesSaving = false;
+							if (result.type === 'success') selectedCustomerNotes = null;
 						};
 					}}
 					class="p-5 space-y-4"

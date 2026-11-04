@@ -28,6 +28,15 @@ export class R2Service {
 	 * Resolves the public CDN URL for the R2 bucket
 	 */
 	static getPublicBaseUrl(platform?: any): string {
+		// In local development, always route via local proxy so local uploads are accessible
+		const isLocal =
+			dev ||
+			(typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production');
+
+		if (isLocal) {
+			return '/api/r2-local';
+		}
+
 		const envUrl =
 			platform?.env?.R2_PUBLIC_URL ||
 			(typeof process !== 'undefined' && process.env?.R2_PUBLIC_URL) ||
@@ -37,17 +46,31 @@ export class R2Service {
 			return envUrl.replace(/\/+$/, '');
 		}
 
-		// In local development or when public domain isn't attached, route via local proxy
+		return R2_DEFAULT_PUBLIC_URL.replace(/\/+$/, '');
+	}
+
+	/**
+	 * Normalizes any R2 asset URL so that in local dev it routes through the local proxy
+	 */
+	static resolvePublicUrl(url: string | null | undefined): string | null {
+		if (!url) return null;
 		const isLocal =
 			dev ||
-			(typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') ||
-			!platform?.env?.R2_PUBLIC_URL;
+			(typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production');
 
 		if (isLocal) {
-			return '/api/r2-local';
+			if (url.includes('pub-fe7043cdba5e4550a7e594df8db06129.r2.dev/')) {
+				return url.replace('https://pub-fe7043cdba5e4550a7e594df8db06129.r2.dev/', '/api/r2-local/');
+			}
+			return url;
 		}
 
-		return R2_DEFAULT_PUBLIC_URL.replace(/\/+$/, '');
+		// In production, convert any local proxy URLs to public R2 CDN
+		if (url.startsWith('/api/r2-local/')) {
+			return url.replace('/api/r2-local/', `${R2_DEFAULT_PUBLIC_URL}/`);
+		}
+
+		return url;
 	}
 
 	/**

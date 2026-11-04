@@ -28,14 +28,8 @@
 		OrderSourceBadge
 	} from '../_components/orders';
 
-	let { data, form }: { data: any; form?: any } = $props();
+	let { data }: { data: any } = $props();
 
-	$effect(() => {
-		if (form?.message && !form.confirmedOrder) {
-			if (form.success) toast.success(form.message);
-			else toast.error(form.message);
-		}
-	});
 
 	let orderSearchQuery = $state('');
 	let selectedSourceFilter = $state('all');

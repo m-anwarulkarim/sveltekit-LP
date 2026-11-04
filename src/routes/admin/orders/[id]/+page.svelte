@@ -159,9 +159,10 @@
 	async function handleCancel() {
 		const ok = await confirmModal({
 			title: 'অর্ডার বাতিল করবেন?',
-			description: 'এই অর্ডারটি বাতিল হিসেবে চিহ্নিত হবে। স্ট্যাটাস পর্তনযোগ্য নাও হতে পারে।',
-			confirmLabel: 'হ্যাঁ, বাতিল করুন',
-			variant: 'destructive'
+			message: 'এই অর্ডারটি বাতিল হিসেবে চিহ্নিত হবে। এরপর স্ট্যাটাস পরিবর্তন করা নাও যেতে পারে।',
+			confirmText: 'হ্যাঁ, বাতিল করুন',
+			variant: 'destructive',
+			icon: 'alert'
 		});
 		if (!ok) return;
 		status = 'cancelled';

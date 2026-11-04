@@ -187,32 +187,32 @@ export class CustomizationService {
 	private static async seedInitialCarousels(db: DrizzleD1Database<typeof schema>) {
 		const defaults = [
 			{
-				id: 'car-1',
-				name: 'Banner',
-				image: '/images/banners/banner-home.svg',
-				targetUrl: '/Home',
+				id: 'car-seed-1',
+				name: 'উন্নত জাতের সবজি ও ফল বীজ',
+				image: '/images/hero/vegetable-seeds-hero.webp',
+				targetUrl: '/catalog/all-product',
 				urlType: 'Internal',
-				description: 'Special hero banner for homepage showcase',
+				description: 'শতভাগ অঙ্কুরোদগম ক্ষমতাসম্পন্ন দেশি ও হাইব্রিড বীজ সংগ্রহ',
 				sortOrder: 1,
 				status: 'Publish'
 			},
 			{
-				id: 'car-2',
-				name: 'Citizens',
-				image: '/images/banners/banner-citizens.svg',
-				targetUrl: 'https://www.citizens.com.bd/',
-				urlType: 'External',
-				description: 'Citizens partner promotional banner',
+				id: 'car-seed-2',
+				name: 'ছাদবাগান ও কিচেন গার্ডেনিং স্পেশাল',
+				image: '/images/hero/rooftop-gardening-hero.webp',
+				targetUrl: '/catalog/all-product?tag=rooftop-garden',
+				urlType: 'Internal',
+				description: 'শহুরে ছাদবাগান ও বারান্দার জন্য উপযুক্ত জাত ও পরামর্শ',
 				sortOrder: 2,
 				status: 'Publish'
 			},
 			{
-				id: 'car-3',
-				name: 'Combo Offer',
-				image: '/images/banners/banner-combo.svg',
-				targetUrl: '/Products',
+				id: 'car-seed-3',
+				name: 'আধুনিক কৃষি সরঞ্জাম ও সুরক্ষা',
+				image: '/images/hero/garden-tools-hero.webp',
+				targetUrl: '/catalog/all-product?category=krishi-tools',
 				urlType: 'Internal',
-				description: 'Exclusive bundle discount on beauty products',
+				description: 'বাগান পরিচর্যা ও ফসল সুরক্ষায় সেরা কৃষি যন্ত্রপাতি',
 				sortOrder: 3,
 				status: 'Publish'
 			}
@@ -307,15 +307,6 @@ export class CustomizationService {
 		db: DrizzleD1Database<typeof schema>,
 		placement?: string
 	) {
-		const countRes = await db
-			.select({ count: sql<number>`count(*)` })
-			.from(schema.banners)
-			.all();
-		const total = countRes[0]?.count ?? 0;
-		if (total === 0) {
-			await this.seedInitialBanners(db);
-		}
-
 		if (placement) {
 			return await db
 				.select()
@@ -448,14 +439,6 @@ export class CustomizationService {
 	}
 
 	static async getActivePopupForStorefront(db: DrizzleD1Database<typeof schema>) {
-		const countRes = await db
-			.select({ count: sql<number>`count(*)` })
-			.from(schema.popups)
-			.all();
-		if ((countRes[0]?.count ?? 0) === 0) {
-			await this.seedInitialPopups(db);
-		}
-
 		const rows = await db
 			.select()
 			.from(schema.popups)

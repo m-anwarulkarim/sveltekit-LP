@@ -28,6 +28,14 @@ export function getAuthSecret(): string | null {
 	return secret;
 }
 
+export function getGoogleClientId(): string | null {
+	return readEnv('GOOGLE_CLIENT_ID') || null;
+}
+
+export function getGoogleClientSecret(): string | null {
+	return readEnv('GOOGLE_CLIENT_SECRET') || null;
+}
+
 /** Break-glass Owner password. Only set while bootstrapping or recovering access. */
 export function getAdminBootstrapPassword(): string | null {
 	return readEnv('ADMIN_BOOTSTRAP_PASSWORD') || null;

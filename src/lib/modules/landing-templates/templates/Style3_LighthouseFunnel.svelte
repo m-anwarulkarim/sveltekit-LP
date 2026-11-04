@@ -80,7 +80,7 @@
 	let originalBasePrice = $derived(Number(config?.customOriginalPrice) || Number(product?.originalPrice) || 1090);
 	let headline = $derived(config?.headline || product?.name || 'আপনার দৈনন্দিন জীবনের প্রতিটি মুহূর্তে সুরক্ষা');
 	let subheadline = $derived(config?.subheadline || product?.description || 'প্রিমিয়াম কোয়ালিটি পণ্য দিয়ে আপনার ও পরিবারের জন্য নিশ্চিত করুন ১০০% স্বাস্থ্যসম্মত সমাধান।');
-	let contactPhone = $derived(config?.contactPhone || '01712345678');
+	let contactPhone = $derived(config?.contactPhone || '');
 
 	// DYNAMIC PACKAGES (Supports 0, 1, 2, or 3 packages)
 	let rawPackages = $derived(config?.packages || []);
@@ -991,6 +991,7 @@
 			</div>
 
 			<!-- Direct Contact Hotline Box -->
+			{#if contactPhone}
 			<div class="text-center pt-4">
 				<p class="text-xs text-slate-500 font-medium">
 					আরো কোনো তথ্য বা সহায়তার জন্য সরাসরি কল করুন আমাদের হটলাইনে:
@@ -1003,6 +1004,7 @@
 					<span>{contactPhone}</span>
 				</a>
 			</div>
+			{/if}
 		</div>
 	</section>
 

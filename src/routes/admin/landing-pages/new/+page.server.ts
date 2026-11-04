@@ -2,7 +2,8 @@ import type { PageServerLoad, Actions } from './$types';
 import { getDb } from '#lib/server/db/index';
 import { LandingPageService } from '#lib/server/services/landing-page.service';
 import { ProductService } from '#lib/server/services/product.service';
-import { fail, redirect } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
+import { parseLandingPageForm } from '#lib/server/validations/landing-page.validation';
 
 export const load: PageServerLoad = async ({ parent, platform }) => {
 	const parentData = await parent();
@@ -23,95 +24,24 @@ export const load: PageServerLoad = async ({ parent, platform }) => {
 
 export const actions: Actions = {
 	create: async ({ request, platform }) => {
+		const db = getDb(platform);
+		const data = await request.formData();
+
+		const parsed = parseLandingPageForm(data);
+		if (!parsed.ok) {
+			return fail(400, { message: parsed.message });
+		}
+
 		try {
-			const db = getDb(platform);
-			const data = await request.formData();
-
-			const title = data.get('title')?.toString()?.trim() || '';
-			let slug = data.get('slug')?.toString()?.trim() || '';
-			const productId = data.get('productId')?.toString() || null;
-			const tag = data.get('tag')?.toString() || 'স্পেশাল অফার';
-			const headline = data.get('headline')?.toString()?.trim() || title;
-			const subheadline = data.get('subheadline')?.toString()?.trim() || '';
-			const offerBadge = data.get('offerBadge')?.toString() || tag;
-			const countdownMinutes = Number(data.get('countdownMinutes')) || 35;
-			const customPrice = data.get('customPrice') ? Number(data.get('customPrice')) : undefined;
-			const customOriginalPrice = data.get('customOriginalPrice')
-				? Number(data.get('customOriginalPrice'))
-				: undefined;
-
-			const bulletPointsRaw = data.get('bulletPoints')?.toString() || '';
-			const bulletPoints = bulletPointsRaw
-				.split('\n')
-				.map((s) => s.trim())
-				.filter(Boolean);
-
-			const galleryImagesRaw = data.get('galleryImages')?.toString() || '[]';
-			let galleryImages: string[] = [];
-			try {
-				galleryImages = JSON.parse(galleryImagesRaw);
-			} catch {
-				galleryImages = [];
-			}
-
-			const packagesRaw = data.get('packages')?.toString() || '[]';
-			let packages: any[] = [];
-			try {
-				packages = JSON.parse(packagesRaw);
-			} catch {
-				packages = [];
-			}
-
-			const trustBox1Title = data.get('trustBox1Title')?.toString() || undefined;
-			const trustBox1Desc = data.get('trustBox1Desc')?.toString() || undefined;
-			const trustBox2Title = data.get('trustBox2Title')?.toString() || undefined;
-			const trustBox2Desc = data.get('trustBox2Desc')?.toString() || undefined;
-			const contactPhone = data.get('contactPhone')?.toString() || undefined;
-
-			if (!title) {
-				return fail(400, { message: 'ল্যান্ডিং পেজের শিরোনাম লিখুন' });
-			}
-
-			if (!slug) {
-				slug = title
-					.toLowerCase()
-					.replace(/[^a-z0-9]/g, '-')
-					.replace(/-+/g, '-')
-					.replace(/^-|-$/g, '');
-				if (!slug) slug = `offer-${Date.now()}`;
-			}
-
-			const template = data.get('template')?.toString() || 'style_1_animated';
-			const status = (data.get('status')?.toString() || 'Published') as 'Published' | 'Draft';
-
-			await LandingPageService.createLandingPage(db, {
-				title,
-				slug,
-				productId,
-				tag,
-				template,
-				status,
-				headline,
-				subheadline,
-				offerBadge,
-				countdownMinutes,
-				customPrice,
-				customOriginalPrice,
-				bulletPoints: bulletPoints.length > 0 ? bulletPoints : undefined,
-				packages: packages,
-				trustBox1Title,
-				trustBox1Desc,
-				trustBox2Title,
-				trustBox2Desc,
-				contactPhone,
-				galleryImages
-			});
-
-			return { success: true, message: 'নতুন ল্যান্ডিং পেজ সফলভাবে তৈরি হয়েছে!' };
+			await LandingPageService.createLandingPage(db, parsed.data);
+			return { success: true, message: 'নতুন ল্যান্ডিং পেজ সফলভাবে তৈরি হয়েছে!' };
 		} catch (e: any) {
 			console.error('Error creating landing page:', e);
-			return fail(500, { message: e.message || 'ল্যান্ডিং পেজ তৈরিতে ব্যর্থ হয়েছে' });
+			// Unique slug collision
+			if (e?.message?.includes?.('UNIQUE') || e?.message?.includes?.('unique')) {
+				return fail(400, { message: 'এই স্ল্যাগ (/lp/…) ইতোমধ্যে ব্যবহৃত হয়েছে। অন্য একটি দিন।' });
+			}
+			return fail(500, { message: 'ল্যান্ডিং পেজ তৈরিতে ব্যর্থ হয়েছে' });
 		}
 	}
 };
-

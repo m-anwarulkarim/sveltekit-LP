@@ -435,7 +435,7 @@
 					{/if}
 
 					<a
-						href="#faq"
+						href="/faq"
 						class="flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-[#5845eb] transition-colors group"
 					>
 						<HelpCircle class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#5845eb] transition-colors" />
@@ -506,8 +506,8 @@
 				</a>
 
 				<a
-					href="#faq"
-					onclick={() => scrollToSection('faq')}
+					href="/faq"
+					onclick={() => (isMobileDrawerOpen = false)}
 					class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-[#5845eb] transition-colors"
 				>
 					<HelpCircle class="w-4 h-4 text-slate-400" />

@@ -30,7 +30,7 @@
 	import OrderSourceBadge from '../../_components/orders/OrderSourceBadge.svelte';
 	import BulkCourierProgressModal from '../../_components/orders/BulkCourierProgressModal.svelte';
 
-	let { data, form }: { data: any; form: any } = $props();
+	let { data }: { data: any } = $props();
 
 	let orderSearchQuery = $state('');
 	// Default active tab is 'confirmed' (First tab as requested)
@@ -40,16 +40,6 @@
 	let bookingTargets = $state<{ id: string; label: string }[]>([]);
 	let selectedBulkStatus = $state('processing');
 
-	// Display form action message via Sonner toast if returned
-	$effect(() => {
-		if (form?.message) {
-			if (form.success) {
-				toast.success(form.message);
-			} else {
-				toast.error(form.message);
-			}
-		}
-	});
 
 
 
@@ -264,7 +254,12 @@
 					<!-- Bulk Status Update -->
 					<form action="?/bulkUpdateStatus" method="POST" use:enhance={() => {
 					return async ({ result, update }) => {
-						if (result.type === 'success') selectedOrderIds = [];
+						if (result.type === 'success') {
+							toast.success((result.data as any)?.message || 'বাল্ক স্ট্যাটাস আপডেট সফল হয়েছে!');
+							selectedOrderIds = [];
+						} else if (result.type === 'failure') {
+							toast.error((result.data as any)?.message || 'স্ট্যাটাস আপডেট ব্যর্থ হয়েছে!');
+						}
 						await update();
 					};
 				}} class="flex items-center gap-1.5">
@@ -542,7 +537,16 @@
 												</button>
 											</div>
 										{:else}
-											<form action="?/bookCourier" method="POST" use:enhance class="inline-block">
+											<form action="?/bookCourier" method="POST" use:enhance={() => {
+												return async ({ result, update }) => {
+													if (result.type === 'success') {
+														toast.success((result.data as any)?.message || 'কুরিয়ার বুকিং সম্পন্ন!');
+													} else if (result.type === 'failure') {
+														toast.error((result.data as any)?.message || 'কুরিয়ার বুকিং ব্যর্থ!');
+													}
+													await update();
+												};
+											}} class="inline-block">
 												<input type="hidden" name="orderId" value={order.id} />
 												<input type="hidden" name="provider" value="Steadfast" />
 												<Button

@@ -45,6 +45,12 @@ export interface EnvVariables {
 
 	/** Break-glass Owner password. Remove it once the Owner has set a real password. */
 	ADMIN_BOOTSTRAP_PASSWORD?: string;
+
+	/** Google OAuth Client ID (from Google Cloud Console) */
+	GOOGLE_CLIENT_ID?: string;
+
+	/** Google OAuth Client Secret (from Google Cloud Console) */
+	GOOGLE_CLIENT_SECRET?: string;
 }
 
 export type Env = EnvVariables;

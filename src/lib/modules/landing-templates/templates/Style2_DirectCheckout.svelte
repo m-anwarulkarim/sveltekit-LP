@@ -92,7 +92,7 @@
 	// Dynamic Headline & Subheadline
 	let headline = $derived(config?.headline || landingPage?.title || product?.name || 'বিশেষ অফার');
 	let subheadline = $derived(config?.subheadline || product?.description || '');
-	let contactPhone = $derived(config?.contactPhone || '01712345678');
+	let contactPhone = $derived(config?.contactPhone || '');
 
 	// Dynamic 4 Bullet Points
 	let displayBullets = $derived.by(() => {

@@ -12,9 +12,7 @@
 
 	let { banners = [] }: { banners?: Banner[] } = $props();
 
-	let activeBanners = $derived(
-		banners.filter((b) => b.status === 'Publish' || !b.status).slice(0, 3)
-	);
+	let activeBanners = $derived(banners.slice(0, 3));
 </script>
 
 {#if activeBanners.length > 0}

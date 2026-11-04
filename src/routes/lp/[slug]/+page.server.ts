@@ -2,11 +2,18 @@ import type { PageServerLoad, Actions } from './$types';
 import { error, fail } from '@sveltejs/kit';
 import { getDb } from '#lib/server/db/index';
 import { LandingPageService } from '#lib/server/services/landing-page.service';
+import { AdminAuthService, ADMIN_SESSION_COOKIE } from '#lib/server/services/admin-auth.service';
+import { getAuthSecret } from '#lib/server/secrets';
 import { OrderService, OrderValidationError } from '#lib/server/services/order.service';
 import { PixelService } from '#lib/server/services/pixel.service';
 import { resolveLandingOffer } from '#lib/utils/order-pricing';
 
-export const load: PageServerLoad = async ({ params, platform }) => {
+/** Simple bot-detection by User-Agent — keeps view counts honest. */
+function looksLikeBot(ua: string): boolean {
+	return /bot|crawl|spider|slurp|facebookexternalhit|bingpreview|googlebot/i.test(ua);
+}
+
+export const load: PageServerLoad = async ({ params, platform, request, cookies }) => {
 	const db = getDb(platform);
 	const landingPage = await LandingPageService.getLandingPageBySlug(db, params.slug);
 
@@ -14,13 +21,38 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 		throw error(404, 'ল্যান্ডিং পেজটি খুঁজে পাওয়া যায়নি');
 	}
 
+	// Draft/Archived pages: only admins may preview; visitors get 404.
+	const isPublished = landingPage.status === 'Published';
+	let isAdmin = false;
+	if (!isPublished) {
+		const secret = getAuthSecret();
+		const sessionCookie = cookies.get(ADMIN_SESSION_COOKIE);
+		if (secret && sessionCookie) {
+			const admin = await AdminAuthService.resolveSession(db, sessionCookie, secret);
+			isAdmin = !!admin;
+		}
+		if (!isAdmin) {
+			throw error(404, 'ল্যান্ডিং পেজটি খুঁজে পাওয়া যায়নি');
+		}
+	}
+
+	// Increment views only for published pages, non-admin visitors, non-bots.
+	const ua = request.headers.get('user-agent') || '';
+	if (isPublished && !isAdmin && !looksLikeBot(ua)) {
+		// Fire and forget — don't block page render.
+		platform?.ctx?.waitUntil?.(LandingPageService.incrementViews(db, landingPage.id));
+	}
+
 	// Visitors must not receive the cost price.
 	if (landingPage.product) {
 		const { costPrice: _costPrice, ...publicProduct } = landingPage.product;
-		return { landingPage: { ...landingPage, product: publicProduct } };
+		return {
+			landingPage: { ...landingPage, product: publicProduct },
+			isAdmin
+		};
 	}
 
-	return { landingPage };
+	return { landingPage, isAdmin };
 };
 
 export const actions: Actions = {
@@ -32,6 +64,11 @@ export const actions: Actions = {
 			const landingPage = await LandingPageService.getLandingPageBySlug(db, params.slug);
 			if (!landingPage) {
 				return fail(404, { message: 'ল্যান্ডিং পেজটি খুঁজে পাওয়া যায়নি' });
+			}
+
+			// Only Published pages can accept orders.
+			if (landingPage.status !== 'Published') {
+				return fail(400, { message: 'এই পেজটি এখন অর্ডার গ্রহণ করছে না।' });
 			}
 
 			const customerName = formData.get('customerName')?.toString()?.trim() || '';
@@ -100,6 +137,9 @@ export const actions: Actions = {
 					}
 				}
 			);
+
+			// Track conversion atomically (fire and forget).
+			platform?.ctx?.waitUntil?.(LandingPageService.incrementConversions(db, landingPage.id));
 
 			PixelService.dispatchOrderPurchase(db, result, {
 				request,

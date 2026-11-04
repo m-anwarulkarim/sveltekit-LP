@@ -17,16 +17,12 @@
 	}
 
 	const partnerBrands: Brand[] = [
-		{ name: 'Bay', category: 'Footwear', color: '#dc2626' },
-		{ name: 'FABRILIFE', category: 'Fashion', color: '#0f172a' },
-		{ name: 'GAZI', category: 'Home Appliance', color: '#0284c7' },
-		{ name: 'minister', category: 'Electronics', color: '#16a34a' },
-		{ name: 'oraimo', category: 'Smart Tech', color: '#65a30d' },
-		{ name: 'Dettol', category: 'Hygiene', color: '#059669' },
-		{ name: 'Regal', category: 'Furniture', color: '#b91c1c' },
-		{ name: 'BEST BUY', category: 'Retail', color: '#e11d48' },
-		{ name: 'tp-link', category: 'Networking', color: '#0891b2' },
-		{ name: 'Unilever', category: 'Consumer Care', color: '#1d4ed8' }
+		{ name: 'AB Seed', category: 'High-Yield Seeds', color: '#16a34a' },
+		{ name: 'লালবাগ সিড', category: 'Vegetable Seeds', color: '#15803d' },
+		{ name: 'ইস্পাহানি এগ্রি', category: 'Bio-tech & Seeds', color: '#047857' },
+		{ name: 'মেটাল সিড', category: 'Hybrid Seeds', color: '#059669' },
+		{ name: 'Syngenta', category: 'Crop Protection', color: '#0d9488' },
+		{ name: 'ACI এগ্রো', category: 'Modern Agriculture', color: '#166534' }
 	];
 
 	interface Slide {
@@ -47,58 +43,38 @@
 	const defaultSlides: Slide[] = [
 		{
 			id: 'slide-1',
-			type: 'brand-campaign',
-			title: 'BIG BRAND DAYS',
-			subtitle: 'With Crazy Deals',
-			discountOffer: 'Up to 54% Off',
-			savingsBadge: 'FREE DELIVERY',
-			linkUrl: '/products',
-			bgGradient: 'from-[#0284c7] via-[#006ee6] to-[#38bdf8]',
+			type: 'db-banner',
+			title: 'উন্নত জাতের সবজি ও ফল বীজ',
+			subtitle: 'শতভাগ অঙ্কুরোদগম ক্ষমতাসম্পন্ন দেশি ও হাইব্রিড বীজ সংগ্রহ',
+			image: '/images/hero/vegetable-seeds-hero.webp',
+			linkUrl: '/catalog/all-product',
+			bgGradient: 'from-emerald-950 via-emerald-900 to-green-950',
 			textColor: 'text-white'
 		},
 		{
 			id: 'slide-2',
-			type: 'product-deal',
-			badge: 'New Arrivals',
-			discountOffer: 'Max Discount Tk 20 | Min Purchase Tk 199',
-			savingsBadge: 'Up to 15% Pre-payment Savings',
-			title: 'AURA Next-Gen Hardware',
-			subtitle: 'Spatial Acoustic & Lifestyle Gear',
-			image: '/images/sound-deck.jpg',
-			linkUrl: '/products',
-			bgGradient: 'from-[#0f172a] via-[#1e293b] to-[#2563eb]',
+			type: 'db-banner',
+			title: 'ছাদবাগান ও কিচেন গার্ডেনিং স্পেশাল',
+			subtitle: 'শহুরে ছাদবাগান ও বারান্দার জন্য উপযুক্ত জাত ও পরামর্শ',
+			image: '/images/hero/rooftop-gardening-hero.webp',
+			linkUrl: '/catalog/all-product?tag=rooftop-garden',
+			bgGradient: 'from-teal-950 via-emerald-900 to-stone-900',
 			textColor: 'text-white'
 		},
 		{
 			id: 'slide-3',
-			type: 'product-deal',
-			badge: 'Mega Offer',
-			discountOffer: 'Flat 40% Off on Planar Magnetic Drivers',
-			savingsBadge: 'Official 2-Year Replacement Warranty',
-			title: 'Studio Spatial Acoustics',
-			subtitle: 'Audiophile Transducers & DACs',
-			image: '/images/headphones.jpg',
-			linkUrl: '/products',
-			bgGradient: 'from-[#1e1b4b] via-[#312e81] to-[#4f46e5]',
-			textColor: 'text-white'
-		},
-		{
-			id: 'slide-4',
-			type: 'product-deal',
-			badge: 'Special Combo',
-			discountOffer: 'Free Delivery Across Bangladesh on ৳৯৯৯+',
-			savingsBadge: 'Cash on Delivery Available',
-			title: 'AURA Wave Spatial Pro',
-			subtitle: 'Zero-Latency Wireless Earbuds',
-			image: '/images/earbuds.jpg',
-			linkUrl: '/combos',
-			bgGradient: 'from-[#064e3b] via-[#047857] to-[#059669]',
+			type: 'db-banner',
+			title: 'আধুনিক কৃষি সরঞ্জাম ও সুরক্ষা',
+			subtitle: 'বাগান পরিচর্যা ও ফসল সুরক্ষায় সেরা কৃষি যন্ত্রপাতি',
+			image: '/images/hero/garden-tools-hero.webp',
+			linkUrl: '/catalog/all-product?category=krishi-tools',
+			bgGradient: 'from-stone-900 via-emerald-950 to-teal-950',
 			textColor: 'text-white'
 		}
 	];
 
 	// Derived slides: database-driven when carousels exist, fallback to default promo slides
-	const PHOTO_SLIDE_BACKGROUNDS = ['bg-slate-900', 'bg-teal-900', 'bg-stone-800', 'bg-amber-900'];
+	const PHOTO_SLIDE_BACKGROUNDS = ['bg-emerald-950', 'bg-teal-950', 'bg-stone-900'];
 
 	// A designed banner already contains its own text. A photo needs a text panel beside it.
 	function isPhotoImage(image?: string): boolean {

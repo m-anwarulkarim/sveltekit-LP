@@ -181,7 +181,7 @@
 		landingPage?.config?.trustBox2Desc ||
 			'আমরা সর্বোচ্চ কোয়ালিটি এবং সন্তুষ্টি নিশ্চিত করি। কোনো সমস্যা প্রমাণিত হলে সম্পূর্ণ পরিবর্তন অথবা মানিব্যাক গ্যারান্টি।'
 	);
-	let contactPhone = $state(landingPage?.config?.contactPhone || '01712345678');
+	let contactPhone = $state(landingPage?.config?.contactPhone || '');
 
 	// Template Preview Modal State
 	let isPreviewModalOpen = $state(false);
@@ -235,7 +235,7 @@
 				trustBox1Desc: trustBox1Desc || 'কোনো অগ্রিম টাকা দিতে হবে না। অর্ডার প্লেস করার পর আমাদের প্রতিনিধি ফোনে কথা বলে কনফার্ম করবেন এবং পণ্য হাতে পেয়ে দেখে টাকা পরিশোধ করবেন।',
 				trustBox2Title: trustBox2Title || '🤝 আমাদের প্রতিশ্রুতি',
 				trustBox2Desc: trustBox2Desc || 'আমরা সর্বোচ্চ কোয়ালিটি এবং সন্তুষ্টি নিশ্চিত করি। কোনো সমস্যা প্রমাণিত হলে সম্পূর্ণ পরিবর্তন অথবা মানিব্যাক গ্যারান্টি।',
-				contactPhone: contactPhone || '01712345678'
+				contactPhone: contactPhone || undefined
 			}
 		};
 	});
@@ -445,17 +445,29 @@
 			if (!slug || !isEditMode) {
 				slug = slugify(prod.slug || prod.name) || `offer-${Date.now()}`;
 			}
-			customPrice = String(prod.price || '');
-			customOriginalPrice = String(prod.originalPrice || Math.round((prod.price || 100) * 1.5));
-
-			// Auto-populate images
-			const prodImages = extractProductImages(prod);
-			if (prodImages.length > 0) {
-				galleryImages = [...prodImages];
+			// Only overwrite prices if user hasn't set custom values
+			if (!customPrice || !isEditMode) {
+				customPrice = String(prod.price || '');
+			}
+			if (!customOriginalPrice || !isEditMode) {
+				customOriginalPrice = String(prod.originalPrice || Math.round((prod.price || 100) * 1.5));
 			}
 
-			// Auto-calculate Style 2 Packages based on the selected product's real price
-			autoCalculatePackages(Number(prod.price) || 200);
+			// Auto-populate images (merge in edit mode, replace in create mode)
+			const prodImages = extractProductImages(prod);
+			if (prodImages.length > 0) {
+				if (isEditMode) {
+					const combined = Array.from(new Set([...galleryImages, ...prodImages]));
+					galleryImages = combined;
+				} else {
+					galleryImages = [...prodImages];
+				}
+			}
+
+			// Only auto-calculate packages if none exist yet
+			if (!isEditMode || style2Packages.length === 0) {
+				autoCalculatePackages(Number(prod.price) || 200);
+			}
 
 			toast.info(`'${prod.name}' পণ্যের তথ্য ও ছবি অটো-ফিল করা হয়েছে!`);
 		}
@@ -740,7 +752,7 @@
 							</button>
 						</div>
 						<p class="text-[11px] text-slate-400 mt-1 font-mono">
-							লাইভ লিংক: <span class="text-indigo-600 font-semibold">https://haqplus.com/lp/{slug || 'your-slug'}</span>
+							লাইভ লিংক: <span class="text-indigo-600 font-semibold">{typeof window !== 'undefined' ? window.location.origin : ''}/lp/{slug || 'your-slug'}</span>
 						</p>
 					</div>
 				</CardContent>
@@ -1513,9 +1525,9 @@
 							<span class="text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full">
 								{tag || 'স্পেশাল অফার'}
 							</span>
-							{#if template === 'style_2_direct'}
+							{#if (template === 'style_2_direct' || template === 'style_3_lighthouse') && style2Packages.length > 0}
 								<span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-									৩টি প্যাকেজ সক্রিয়
+									{style2Packages.length}টি প্যাকেজ সক্রিয়
 								</span>
 							{:else}
 								<span class="text-[10px] font-bold text-amber-600 flex items-center gap-1">
@@ -1529,20 +1541,14 @@
 							{headline || title || 'আপনার আকর্ষনীয় প্রোডাক্টের হেডলাইন'}
 						</h4>
 
-						{#if template === 'style_2_direct'}
+						{#if (template === 'style_2_direct' || template === 'style_3_lighthouse') && style2Packages.length > 0}
 							<div class="space-y-1.5 pt-1 border-t border-slate-100 text-[11px]">
-								<div class="flex justify-between items-center text-slate-600">
-									<span>{style2Packages[0]?.title || '১ প্যাকেট'}</span>
-									<span class="font-bold text-slate-800">৳{style2Packages[0]?.price}</span>
-								</div>
-								<div class="flex justify-between items-center text-emerald-700 font-bold bg-emerald-50/70 p-1 rounded-lg">
-									<span>{style2Packages[1]?.title || '২ প্যাকেট'} (ফ্রি শিপিং)</span>
-									<span>৳{style2Packages[1]?.price}</span>
-								</div>
-								<div class="flex justify-between items-center text-indigo-700 font-bold bg-indigo-50/70 p-1 rounded-lg">
-									<span>{style2Packages[2]?.title || '৩ প্যাকেট'} (ফ্রি শিপিং)</span>
-									<span>৳{style2Packages[2]?.price}</span>
-								</div>
+								{#each style2Packages as pkg, idx}
+									<div class="flex justify-between items-center {idx === 0 ? 'text-slate-600' : idx === 1 ? 'text-emerald-700 font-bold bg-emerald-50/70 p-1 rounded-lg' : 'text-indigo-700 font-bold bg-indigo-50/70 p-1 rounded-lg'}">
+										<span>{pkg.title}{pkg.freeDelivery ? ' (ফ্রি শিপিং)' : ''}</span>
+										<span class={idx === 0 ? 'font-bold text-slate-800' : ''}>৳{pkg.price?.toLocaleString('en-BD') ?? '—'}</span>
+									</div>
+								{/each}
 							</div>
 						{:else}
 							<div class="flex items-baseline gap-2 pt-1 border-t border-slate-100">

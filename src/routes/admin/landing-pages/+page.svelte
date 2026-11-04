@@ -13,8 +13,6 @@
 		Copy,
 		ExternalLink,
 		QrCode,
-		CheckCircle2,
-		Sparkles,
 		Plus,
 		Trash2,
 		Eye,
@@ -22,7 +20,11 @@
 		Clock,
 		Edit,
 		CheckCircle,
-		FileEdit
+		FileEdit,
+		X,
+		CopyPlus,
+		ShoppingCart,
+		Archive
 	} from 'lucide-svelte';
 
 	interface Props {
@@ -49,7 +51,8 @@
 			style2: pages.filter((p: any) => p.template === 'style_2_direct').length,
 			style3: pages.filter((p: any) => p.template === 'style_3_lighthouse').length,
 			published: pages.filter((p: any) => p.status === 'Published').length,
-			draft: pages.filter((p: any) => p.status !== 'Published').length
+			draft: pages.filter((p: any) => p.status === 'Draft').length,
+			archived: pages.filter((p: any) => p.status === 'Archived').length
 		};
 	});
 
@@ -106,6 +109,43 @@
 		}
 		toast.success('ল্যান্ডিং পেজ সফলভাবে মুছে ফেলা হয়েছে');
 		await invalidateAll();
+	}
+
+	async function handleDuplicate(lp: any) {
+		const confirmed = await confirmModal({
+			title: 'পেজ ডুপ্লিকেট করুন',
+			message: `"${lp.title}" পেজটির একটি কপি (ড্রাফট হিসেবে) তৈরি হবে।`,
+			confirmText: 'হ্যাঁ, কপি করুন',
+			variant: 'primary',
+			icon: 'help'
+		});
+
+		if (!confirmed) return;
+
+		const fd = new FormData();
+		fd.append('id', lp.id);
+		const res = await submitAction('?/duplicate', fd, 'ডুপ্লিকেট করতে সমস্যা হয়েছে');
+
+		if (!res.ok) {
+			toast.error(res.message);
+			return;
+		}
+		toast.success('পেজ সফলভাবে ডুপ্লিকেট করা হয়েছে!');
+		await invalidateAll();
+	}
+
+	/** Display price from config → product → nothing (no fake fallback). */
+	function displayPrice(lp: any): string {
+		const price = lp.config?.customPrice || lp.product?.price;
+		return price ? `৳${Number(price).toLocaleString('en-BD')}` : '—';
+	}
+
+	/** Conversion rate from actual DB counters. */
+	function conversionRate(lp: any): string {
+		const views = lp.views || 0;
+		const conversions = lp.conversions || 0;
+		if (views === 0) return '—';
+		return `${((conversions / views) * 100).toFixed(1)}%`;
 	}
 </script>
 
@@ -164,8 +204,18 @@
 				type="text"
 				placeholder="নাম, স্লাগ বা SKU দিয়ে খুঁজুন..."
 				bind:value={searchQuery}
-				class="w-full bg-white border border-slate-200/90 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 shadow-2xs transition-all"
+				class="w-full bg-white border border-slate-200/90 rounded-2xl pl-10 pr-9 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 shadow-2xs transition-all"
 			/>
+			{#if searchQuery}
+				<button
+					type="button"
+					onclick={() => (searchQuery = '')}
+					class="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
+					title="সার্চ মুছুন"
+				>
+					<X class="w-3.5 h-3.5" />
+				</button>
+			{/if}
 		</div>
 
 		<!-- Actual stats from DB -->
@@ -180,6 +230,12 @@
 				<span class="px-2.5 py-1 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
 					<FileEdit class="w-3 h-3" />
 					{templateCounts.draft} ড্রাফট
+				</span>
+			{/if}
+			{#if templateCounts.archived > 0}
+				<span class="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-600 border border-slate-200 flex items-center gap-1">
+					<Archive class="w-3 h-3" />
+					{templateCounts.archived} আর্কাইভড
 				</span>
 			{/if}
 			{#if templateCounts.style1 > 0}
@@ -223,21 +279,26 @@
 
 					<!-- Top Content Section -->
 					<div class="space-y-4">
-						<!-- Tag & Status/SKU Header Row -->
+						<!-- Tag & Status Header Row -->
 						<div class="flex items-center justify-between gap-2">
 							<span class="px-3 py-1 rounded-full text-[11px] font-bold border bg-rose-50 text-rose-700 border-rose-200 flex items-center gap-1">
 								<Flame class="w-3 h-3 text-rose-500" />
 								<span>{lp.tag || 'স্পেশাল পেজ'}</span>
 							</span>
 
-							<!-- Published/Draft badge -->
 							{#if lp.status === 'Published'}
 								<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
 									<CheckCircle class="w-3 h-3" />
 									লাইভ
 								</span>
+							{:else if lp.status === 'Archived'}
+								<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200 flex items-center gap-1">
+									<Archive class="w-3 h-3" />
+									আর্কাইভড
+								</span>
 							{:else}
-								<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+								<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1">
+									<FileEdit class="w-3 h-3" />
 									ড্রাফট
 								</span>
 							{/if}
@@ -271,7 +332,7 @@
 									{lp.product?.name || lp.config?.headline || lp.title}
 								</div>
 								<div class="text-xs font-black text-emerald-600 mt-0.5">
-									৳{(lp.config?.customPrice || lp.product?.price || 1200).toLocaleString('en-BD')}
+									{displayPrice(lp)}
 								</div>
 							</div>
 						</div>
@@ -279,21 +340,30 @@
 						<!-- Stats & Live URL -->
 						<div class="space-y-2">
 							<div class="flex items-center justify-between text-xs text-slate-500 bg-slate-50/60 p-2.5 rounded-xl border border-slate-100">
-								<span class="flex items-center gap-1">
-									<Eye class="w-3.5 h-3.5 text-slate-400" />
-									<span>ভিউ: <strong>{lp.views || 0}</strong></span>
-								</span>
+								<div class="flex items-center gap-3">
+									<span class="flex items-center gap-1">
+										<Eye class="w-3.5 h-3.5 text-slate-400" />
+										<span>ভিউ: <strong>{lp.views || 0}</strong></span>
+									</span>
+									<span class="flex items-center gap-1">
+										<ShoppingCart class="w-3.5 h-3.5 text-emerald-500" />
+										<span>অর্ডার: <strong>{lp.conversions || 0}</strong></span>
+									</span>
+									<span class="text-[10px] font-bold text-indigo-600">
+										{conversionRate(lp)}
+									</span>
+								</div>
 								{#if lp.template === 'style_3_lighthouse'}
 									<span class="px-2 py-0.5 rounded-md bg-rose-100/90 text-[#e8007c] font-bold text-[10px] border border-rose-200">
-										Style 3: Lighthouse
+										Style 3
 									</span>
 								{:else if lp.template === 'style_2_direct'}
 									<span class="px-2 py-0.5 rounded-md bg-emerald-100/90 text-emerald-800 font-bold text-[10px] border border-emerald-200">
-										Style 2: Direct
+										Style 2
 									</span>
 								{:else}
 									<span class="px-2 py-0.5 rounded-md bg-indigo-100/90 text-indigo-800 font-bold text-[10px] border border-indigo-200">
-										Style 1: Modern
+										Style 1
 									</span>
 								{/if}
 							</div>
@@ -309,14 +379,14 @@
 					</div>
 
 					<!-- Bottom Action Buttons -->
-					<div class="grid grid-cols-5 gap-1.5 pt-3 border-t border-slate-100">
+					<div class="grid grid-cols-3 sm:grid-cols-6 gap-1.5 pt-3 border-t border-slate-100">
 						<a
 							href={`/admin/landing-pages/${lp.id}/edit`}
 							class="py-2 px-1 rounded-xl border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100 text-xs font-bold text-[#5845eb] flex items-center justify-center gap-1 shadow-2xs transition-all"
 							title="সম্পাদনা করুন"
 						>
 							<Edit class="w-3.5 h-3.5" />
-							<span>এডিট</span>
+							<span class="hidden sm:inline">এডিট</span>
 						</a>
 
 						<a
@@ -326,7 +396,7 @@
 							title="লাইভ প্রিভিউ দেখুন"
 						>
 							<ExternalLink class="w-3.5 h-3.5 text-emerald-600" />
-							<span>ভিজিট</span>
+							<span class="hidden sm:inline">ভিজিট</span>
 						</a>
 
 						<button
@@ -336,7 +406,7 @@
 							title="লিঙ্ক কপি করুন"
 						>
 							<Copy class="w-3.5 h-3.5 text-slate-500" />
-							<span>কপি</span>
+							<span class="hidden sm:inline">কপি</span>
 						</button>
 
 						<button
@@ -346,7 +416,17 @@
 							title="QR কোড দেখুন"
 						>
 							<QrCode class="w-3.5 h-3.5 text-slate-500" />
-							<span>QR</span>
+							<span class="hidden sm:inline">QR</span>
+						</button>
+
+						<button
+							type="button"
+							onclick={() => handleDuplicate(lp)}
+							class="py-2 px-1 rounded-xl border border-sky-200 bg-sky-50/50 hover:bg-sky-100 text-xs font-bold text-sky-700 flex items-center justify-center gap-1 shadow-2xs cursor-pointer transition-all"
+							title="ডুপ্লিকেট (কপি) করুন"
+						>
+							<CopyPlus class="w-3.5 h-3.5" />
+							<span class="hidden sm:inline">কপি</span>
 						</button>
 
 						<button

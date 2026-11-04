@@ -440,6 +440,14 @@ export const productsData: Product[] = [
 ];
 
 // 100% Dynamic Helper functions for real storefront sections
+
+function fillSection(matched: Product[], all: Product[], min: number): Product[] {
+	if (matched.length >= min) return matched;
+	const ids = new Set(matched.map((p) => p.id));
+	const filler = all.filter((p) => !ids.has(p.id));
+	return [...matched, ...filler].slice(0, min);
+}
+
 export function getBestSaleProducts(all: Product[] = []): Product[] {
 	if (!all || all.length === 0) return [];
 	const matched = all.filter(
@@ -449,7 +457,7 @@ export function getBestSaleProducts(all: Product[] = []): Product[] {
 			p.badge === 'Best Sale' ||
 			(p.discountPercent && p.discountPercent >= 15)
 	);
-	return matched.length >= 4 ? matched : all.slice(0, 8);
+	return fillSection(matched, all, 4);
 }
 
 export function getNewArrivals(all: Product[] = []): Product[] {
@@ -457,10 +465,10 @@ export function getNewArrivals(all: Product[] = []): Product[] {
 	const matched = all.filter(
 		(p) =>
 			p.badge === 'New Arrival' ||
-			p.badge === 'Published' ||
-			p.badge === 'New'
+			p.badge === 'New' ||
+			p.badge === 'Just In'
 	);
-	return matched.length >= 4 ? matched : all.slice(0, 8);
+	return fillSection(matched, all, 4);
 }
 
 export function getPopularProducts(all: Product[] = []): Product[] {
@@ -473,5 +481,5 @@ export function getPopularProducts(all: Product[] = []): Product[] {
 			(p.reviewsCount && p.reviewsCount > 50) ||
 			(p.rating && p.rating >= 4.5)
 	);
-	return matched.length >= 4 ? matched : all.slice(0, 8);
+	return fillSection(matched, all, 4);
 }

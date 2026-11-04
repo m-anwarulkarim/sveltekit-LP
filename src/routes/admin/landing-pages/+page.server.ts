@@ -43,5 +43,22 @@ export const actions: Actions = {
 		} catch (e: any) {
 			return fail(500, { message: e.message || 'মুছে ফেলতে ব্যর্থ হয়েছে' });
 		}
+	},
+
+	duplicate: async ({ request, platform }) => {
+		try {
+			const db = getDb(platform);
+			const data = await request.formData();
+			const id = data.get('id')?.toString();
+
+			if (!id) {
+				return fail(400, { message: 'আইডি প্রয়োজন' });
+			}
+
+			const result = await LandingPageService.duplicateLandingPage(db, id);
+			return { success: true, message: 'পেজ ডুপ্লিকেট করা হয়েছে!', id: result.id, slug: result.slug };
+		} catch (e: any) {
+			return fail(500, { message: e.message || 'ডুপ্লিকেট করতে ব্যর্থ হয়েছে' });
+		}
 	}
 };

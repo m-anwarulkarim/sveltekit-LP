@@ -1,11 +1,14 @@
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from '../db/schema';
+import { slugify } from '#lib/utils/slug';
 
 export interface Style2Package {
 	id?: string;
 	title: string;
 	subtitle?: string;
+	freeGift?: string;
+	qty?: number;
 	price: number;
 	originalPrice?: number;
 	deliveryFee?: number;
@@ -60,9 +63,51 @@ export interface CreateLandingInput {
 	galleryImages?: string[];
 }
 
+// ─── Shared helpers ───────────────────────────────────────────────
+
+/** Parse the JSON config stored in metaDescription, or build a minimal fallback. */
+function parseConfig(landing: { title: string; metaDescription: string | null; tag: string | null }): LandingPageContent {
+	try {
+		if (landing.metaDescription?.startsWith('{')) {
+			return JSON.parse(landing.metaDescription);
+		}
+	} catch { /* fall through */ }
+	return {
+		headline: landing.title,
+		subheadline: landing.metaDescription || '',
+		offerBadge: landing.tag || 'স্পেশাল অফার'
+	};
+}
+
+/** Extract product gallery images from the joined product row. */
+function extractProductImages(product: any): string[] {
+	if (!product) return [];
+	let images: string[] = [];
+	if (product.galleryImages) {
+		try {
+			const gallery = JSON.parse(product.galleryImages);
+			if (Array.isArray(gallery)) images = gallery;
+		} catch { /* ignore */ }
+	}
+	if (images.length === 0 && product.image) {
+		images = [product.image];
+	}
+	return images;
+}
+
+/** Shape a raw DB row into the public landing page object. */
+function shapeRow(landing: any, product: any) {
+	return {
+		...landing,
+		product: product ? { ...product, parsedImages: extractProductImages(product) } : null,
+		config: parseConfig(landing),
+		url: `/lp/${landing.slug}`
+	};
+}
+
 export class LandingPageService {
 	/**
-	 * Lists all landing pages with their associated product details
+	 * Lists all landing pages with their associated product details.
 	 */
 	static async listLandingPages(db: DrizzleD1Database<typeof schema>) {
 		let rows: any[] = [];
@@ -80,48 +125,12 @@ export class LandingPageService {
 			console.error('Error fetching landing pages from DB:', e);
 		}
 
-		// If no landing pages exist, return empty array (do not force auto-seed)
-		if (rows.length === 0) {
-			return [];
-		}
-
-		return rows.map(({ landing, product }) => {
-			let config: LandingPageContent = {};
-			try {
-				if (landing.metaDescription?.startsWith('{')) {
-					config = JSON.parse(landing.metaDescription);
-				} else {
-					config = {
-						headline: landing.title,
-						subheadline: landing.metaDescription || '',
-						offerBadge: landing.tag || 'স্পেশাল অফার'
-					};
-				}
-			} catch {
-				config = { headline: landing.title, subheadline: landing.metaDescription || '' };
-			}
-
-			// Format products images
-			let productImages: string[] = [];
-			if (product?.images) {
-				try {
-					productImages = typeof product.images === 'string' ? JSON.parse(product.images) : product.images;
-				} catch {
-					productImages = ['/images/placeholder.svg'];
-				}
-			}
-
-			return {
-				...landing,
-				product: product ? { ...product, parsedImages: productImages } : null,
-				config,
-				url: `/lp/${landing.slug}`
-			};
-		});
+		if (rows.length === 0) return [];
+		return rows.map(({ landing, product }) => shapeRow(landing, product));
 	}
 
 	/**
-	 * Retrieves a landing page by slug and increments views
+	 * Retrieves a landing page by slug (does NOT increment views — call `incrementViews` separately).
 	 */
 	static async getLandingPageBySlug(db: DrizzleD1Database<typeof schema>, slug: string) {
 		const row = await db
@@ -135,68 +144,58 @@ export class LandingPageService {
 			.get();
 
 		if (!row) return null;
-
-		const { landing, product } = row;
-
-		// Increment view count in background
-		try {
-			await db
-				.update(schema.landingPages)
-				.set({ views: (landing.views || 0) + 1 })
-				.where(eq(schema.landingPages.id, landing.id));
-		} catch (e) {
-			console.error('Failed to update landing page views:', e);
-		}
-
-		let config: LandingPageContent = {};
-		try {
-			if (landing.metaDescription?.startsWith('{')) {
-				config = JSON.parse(landing.metaDescription);
-			} else {
-				config = {
-					headline: landing.title,
-					subheadline: landing.metaDescription || '',
-					offerBadge: landing.tag || 'স্পেশাল অফার'
-				};
-			}
-		} catch {
-			config = { headline: landing.title, subheadline: landing.metaDescription || '' };
-		}
-
-		let productImages: string[] = [];
-		if (product?.galleryImages) {
-			try {
-				const gallery = JSON.parse(product.galleryImages);
-				if (Array.isArray(gallery)) productImages = gallery;
-			} catch {
-				// Malformed gallery JSON: fall through to the primary image below.
-			}
-		}
-		if (productImages.length === 0 && product?.image) {
-			productImages = [product.image];
-		}
-
-		return {
-			...landing,
-			product: product ? { ...product, parsedImages: productImages } : null,
-			config,
-			url: `/lp/${landing.slug}`
-		};
+		return shapeRow(row.landing, row.product);
 	}
 
 	/**
-	 * Creates a new custom landing page
+	 * Atomically increment the view counter. Uses SQL `views + 1` to avoid
+	 * race conditions, and sets updatedAt to its own column value so the
+	 * Drizzle $onUpdate trigger does not bump the timestamp on a mere view.
+	 */
+	static async incrementViews(db: DrizzleD1Database<typeof schema>, id: string) {
+		try {
+			await db
+				.update(schema.landingPages)
+				.set({
+					views: sql`${schema.landingPages.views} + 1`,
+					updatedAt: sql`${schema.landingPages.updatedAt}`
+				} as any)
+				.where(eq(schema.landingPages.id, id));
+		} catch (e) {
+			console.error('Failed to update landing page views:', e);
+		}
+	}
+
+	/**
+	 * Atomically increment the conversion counter.
+	 */
+	static async incrementConversions(db: DrizzleD1Database<typeof schema>, id: string) {
+		try {
+			await db
+				.update(schema.landingPages)
+				.set({
+					conversions: sql`${schema.landingPages.conversions} + 1`,
+					updatedAt: sql`${schema.landingPages.updatedAt}`
+				} as any)
+				.where(eq(schema.landingPages.id, id));
+		} catch (e) {
+			console.error('Failed to update landing page conversions:', e);
+		}
+	}
+
+	/**
+	 * Creates a new custom landing page.
 	 */
 	static async createLandingPage(db: DrizzleD1Database<typeof schema>, input: CreateLandingInput) {
 		const configData: LandingPageContent = {
 			headline: input.headline || input.title,
 			subheadline: input.subheadline || '',
-			offerBadge: input.offerBadge || input.tag || 'সীমিত সময়ের অফার',
+			offerBadge: input.offerBadge || input.tag || 'সীমিত সময়ের অফার',
 			countdownMinutes: input.countdownMinutes || 45,
 			bulletPoints: input.bulletPoints || [
-				'১০০% প্রিমিয়াম কোয়ালিটি গ্যারান্টি',
+				'১০০% প্রিমিয়াম কোয়ালিটি গ্যারান্টি',
 				'সরাসরি ক্যাশ অন ডেলিভারি সুবিধা',
-				'পণ্য হাতে পেয়ে চেক করে মূল্য পরিশোধ',
+				'পণ্য হাতে পেয়ে চেক করে মূল্য পরিশোধ',
 				'সারাদেশে দ্রুততম হোম ডেলিভারি'
 			],
 			packages: input.packages || undefined,
@@ -207,7 +206,7 @@ export class LandingPageService {
 			contactPhone: input.contactPhone,
 			features: input.features || [
 				{ title: 'দ্রুত ডেলিভারি', desc: '২৪ থেকে ৪৮ ঘণ্টার মধ্যে ডেলিভারি' },
-				{ title: 'মানসম্মত পণ্য', desc: 'অরিজিনাল এবং প্রিমিয়াম উপাদান' },
+				{ title: 'মানসম্মত পণ্য', desc: 'অরিজিনাল এবং প্রিমিয়াম উপাদান' },
 				{ title: 'সহজ রিটার্ন', desc: 'কোনো সমস্যা হলে তাৎক্ষণিক সাপোর্ট' }
 			],
 			customPrice: input.customPrice,
@@ -215,11 +214,8 @@ export class LandingPageService {
 			galleryImages: input.galleryImages || []
 		};
 
-		const cleanSlug = input.slug
-			.toLowerCase()
-			.trim()
-			.replace(/[^a-z0-9-]/g, '-')
-			.replace(/-+/g, '-');
+		// Use the shared Unicode-safe slugify; fall back to a timestamp slug
+		const cleanSlug = slugify(input.slug) || slugify(input.title) || `offer-${Date.now()}`;
 
 		const id = crypto.randomUUID();
 
@@ -229,7 +225,7 @@ export class LandingPageService {
 			slug: cleanSlug,
 			productId: input.productId || null,
 			sku: input.sku || `LP-${Math.floor(1000 + Math.random() * 9000)}`,
-			tag: input.tag || 'জনপ্রিয় পেজ',
+			tag: input.tag || 'জনপ্রিয় পেজ',
 			category: input.category || 'General',
 			status: input.status || 'Published',
 			template: input.template || 'style_1_animated',
@@ -245,7 +241,7 @@ export class LandingPageService {
 	}
 
 	/**
-	 * Retrieves a landing page by ID
+	 * Retrieves a landing page by ID.
 	 */
 	static async getLandingPageById(db: DrizzleD1Database<typeof schema>, id: string) {
 		const row = await db
@@ -259,46 +255,12 @@ export class LandingPageService {
 			.get();
 
 		if (!row) return null;
-
-		const { landing, product } = row;
-		let config: LandingPageContent = {};
-		try {
-			if (landing.metaDescription?.startsWith('{')) {
-				config = JSON.parse(landing.metaDescription);
-			} else {
-				config = {
-					headline: landing.title,
-					subheadline: landing.metaDescription || '',
-					offerBadge: landing.tag || 'স্পেশাল অফার'
-				};
-			}
-		} catch {
-			config = { headline: landing.title, subheadline: landing.metaDescription || '' };
-		}
-
-		let productImages: string[] = [];
-		if (product?.galleryImages) {
-			try {
-				const gallery = JSON.parse(product.galleryImages);
-				if (Array.isArray(gallery)) productImages = gallery;
-			} catch {
-				// Malformed gallery JSON: fall through to the primary image below.
-			}
-		}
-		if (productImages.length === 0 && product?.image) {
-			productImages = [product.image];
-		}
-
-		return {
-			...landing,
-			product: product ? { ...product, parsedImages: productImages } : null,
-			config,
-			url: `/lp/${landing.slug}`
-		};
+		return shapeRow(row.landing, row.product);
 	}
 
 	/**
-	 * Updates an existing landing page
+	 * Updates an existing landing page. Replaces the config wholesale with the
+	 * supplied fields — the caller sends the full state, not a diff.
 	 */
 	static async updateLandingPage(
 		db: DrizzleD1Database<typeof schema>,
@@ -306,32 +268,29 @@ export class LandingPageService {
 		input: Partial<CreateLandingInput>
 	) {
 		const existing = await this.getLandingPageById(db, id);
-		if (!existing) throw new Error('ল্যান্ডিং পেজ পাওয়া যায়নি');
+		if (!existing) throw new Error('ল্যান্ডিং পেজ পাওয়া যায়নি');
 
-		const mergedConfig: LandingPageContent = {
-			...existing.config,
-			headline: input.headline !== undefined ? input.headline : existing.config.headline,
-			subheadline: input.subheadline !== undefined ? input.subheadline : existing.config.subheadline,
-			offerBadge: input.offerBadge !== undefined ? input.offerBadge : existing.config.offerBadge,
-			countdownMinutes: input.countdownMinutes !== undefined ? input.countdownMinutes : existing.config.countdownMinutes,
-			bulletPoints: input.bulletPoints !== undefined ? input.bulletPoints : existing.config.bulletPoints,
-			packages: input.packages !== undefined ? input.packages : existing.config.packages,
-			trustBox1Title: input.trustBox1Title !== undefined ? input.trustBox1Title : existing.config.trustBox1Title,
-			trustBox1Desc: input.trustBox1Desc !== undefined ? input.trustBox1Desc : existing.config.trustBox1Desc,
-			trustBox2Title: input.trustBox2Title !== undefined ? input.trustBox2Title : existing.config.trustBox2Title,
-			trustBox2Desc: input.trustBox2Desc !== undefined ? input.trustBox2Desc : existing.config.trustBox2Desc,
-			contactPhone: input.contactPhone !== undefined ? input.contactPhone : existing.config.contactPhone,
-			customPrice: input.customPrice !== undefined ? input.customPrice : existing.config.customPrice,
-			customOriginalPrice: input.customOriginalPrice !== undefined ? input.customOriginalPrice : existing.config.customOriginalPrice,
-			galleryImages: input.galleryImages !== undefined ? input.galleryImages : (existing.config.galleryImages || [])
+		// Build a fresh config from the submitted input, falling back to
+		// existing values only for fields the caller truly omitted.
+		const newConfig: LandingPageContent = {
+			headline: input.headline ?? existing.config.headline,
+			subheadline: input.subheadline ?? existing.config.subheadline,
+			offerBadge: input.offerBadge ?? existing.config.offerBadge,
+			countdownMinutes: input.countdownMinutes ?? existing.config.countdownMinutes,
+			bulletPoints: input.bulletPoints ?? existing.config.bulletPoints,
+			packages: input.packages ?? existing.config.packages,
+			trustBox1Title: input.trustBox1Title ?? existing.config.trustBox1Title,
+			trustBox1Desc: input.trustBox1Desc ?? existing.config.trustBox1Desc,
+			trustBox2Title: input.trustBox2Title ?? existing.config.trustBox2Title,
+			trustBox2Desc: input.trustBox2Desc ?? existing.config.trustBox2Desc,
+			contactPhone: input.contactPhone ?? existing.config.contactPhone,
+			customPrice: input.customPrice ?? existing.config.customPrice,
+			customOriginalPrice: input.customOriginalPrice ?? existing.config.customOriginalPrice,
+			galleryImages: input.galleryImages ?? existing.config.galleryImages ?? []
 		};
 
 		const cleanSlug = input.slug
-			? input.slug
-					.toLowerCase()
-					.trim()
-					.replace(/[^a-z0-9-]/g, '-')
-					.replace(/-+/g, '-')
+			? slugify(input.slug) || existing.slug
 			: existing.slug;
 
 		await db
@@ -345,7 +304,7 @@ export class LandingPageService {
 				status: input.status || existing.status,
 				livePath: `/lp/${cleanSlug}`,
 				metaTitle: input.title || existing.title,
-				metaDescription: JSON.stringify(mergedConfig)
+				metaDescription: JSON.stringify(newConfig)
 			})
 			.where(eq(schema.landingPages.id, id));
 
@@ -353,7 +312,7 @@ export class LandingPageService {
 	}
 
 	/**
-	 * Deletes a landing page by ID
+	 * Deletes a landing page by ID.
 	 */
 	static async deleteLandingPage(db: DrizzleD1Database<typeof schema>, id: string) {
 		await db.delete(schema.landingPages).where(eq(schema.landingPages.id, id));
@@ -361,91 +320,34 @@ export class LandingPageService {
 	}
 
 	/**
-	 * Seeds 3 rich high-conversion demo pages with realistic products
+	 * Duplicates an existing landing page with a new slug.
 	 */
-	private static async seedDemoPages(db: DrizzleD1Database<typeof schema>) {
-		// Try to find first existing products in database
-		let existingProducts: any[] = [];
-		try {
-			existingProducts = await db.select().from(schema.products).limit(3).all();
-		} catch {}
+	static async duplicateLandingPage(db: DrizzleD1Database<typeof schema>, sourceId: string) {
+		const source = await this.getLandingPageById(db, sourceId);
+		if (!source) throw new Error('ল্যান্ডিং পেজ পাওয়া যায়নি');
 
-		const demoPages = [
-			{
-				title: 'AURA Pro Studio Wireless Headphone - বিশেষ মেগা অফার',
-				slug: 'wireless-headphone-special',
-				sku: 'AUDIO-8801',
-				productId: existingProducts[0]?.id || null,
-				tag: 'মেগা অফার ⚡',
-				category: 'Electronics',
-				status: 'Published' as const,
-				template: 'style_1_animated',
-				headline: 'হাই-ফাই স্টুডিও সাউন্ড ও অ্যাক্টিভ নয়েজ ক্যান্সেলেশন',
-				subheadline: '৪০ ঘণ্টার দীর্ঘ ব্যাটারি ব্যাকআপ এবং আল্ট্রা-কমফোর্ট কুশন সহ আজই অর্ডার করুন বিশেষ ছাড়ে!',
-				offerBadge: '🔥 ৫০% মেগা ডিসকাউন্ট অফার',
-				countdownMinutes: 30,
-				customPrice: 1850,
-				customOriginalPrice: 3500,
-				bulletPoints: [
-					'স্মার্ট অ্যাক্টিভ নয়েজ ক্যান্সেলেশন (ANC) প্রযুক্তি',
-					'৪০ ঘণ্টা পর্যন্ত একটানা মিউজিক ও কলিং টাইম',
-					'টাইপ-সি সুপার ফাস্ট চার্জিং সুবিধা',
-					'সারাদেশে দ্রুত হোম ডেলিভারি ও ক্যাশ অন ডেলিভারি'
-				]
-			},
-			{
-				title: 'স্মার্ট হেলথ ট্র্যাকার ওয়াচ Series 9 - প্রিমিয়াম এডিশন',
-				slug: 'smart-watch-series9',
-				sku: 'WATCH-9902',
-				productId: existingProducts[1]?.id || null,
-				tag: 'বেস্ট সেলার 👑',
-				category: 'Smart Gadget',
-				status: 'Published' as const,
-				template: 'style_1_animated',
-				headline: 'আপনার ফিটনেস ও স্টাইলের পারফেক্ট সঙ্গী',
-				subheadline: 'হার্ট রেট, ব্লুটুথ কলিং, স্লিপ ট্র্যাকার ও ওয়াটারপ্রুফ ডিজাইন নিয়ে এলো নতুন সিরিজ ৯!',
-				offerBadge: '⚡ সীমিত সময়ের স্টক অফার',
-				countdownMinutes: 45,
-				customPrice: 1450,
-				customOriginalPrice: 2800,
-				bulletPoints: [
-					'ফুল এইচডি ওলেড কার্ভড টাচস্ক্রিন ডিসপ্লে',
-					'ব্লুটুথ সরাসরি এইচডি কলিং ও নোটিফিকেশন',
-					'ওয়াটারপ্রুফ আইপি৬৮ স্ট্যান্ডার্ড সার্টিফিকেশন',
-					'৭ দিনের দীর্ঘস্থায়ী ব্যাটারি লাইফ'
-				]
-			},
-			{
-				title: 'প্রিমিয়াম পুদিনা ও ঔষধি সিড কালেকশন প্যাক',
-				slug: 'hybrid-herbal-seed-pack',
-				sku: 'AGRO-1534',
-				productId: existingProducts[2]?.id || null,
-				tag: 'প্রাকৃতিক অর্গানিক 🌱',
-				category: 'Gardening',
-				status: 'Published' as const,
-				template: 'style_1_animated',
-				headline: 'ঘরেই সহজে চাষ করুন ফ্রেশ পুদিনা ও ঔষধি গাছ',
-				subheadline: '৯৮% অঙ্কুরোদগম নিশ্চিত হাইব্রিড জাতের পুদিনা ও গ্রিন মিন্ট সিড কম্বো প্যাক।',
-				offerBadge: '🎁 কিনলে সাথে ১টি সার প্যাক ফ্রি',
-				countdownMinutes: 60,
-				customPrice: 450,
-				customOriginalPrice: 750,
-				bulletPoints: [
-					'১০০% অর্গানিক ও ৯৮% অঙ্কুরোদগম ক্ষমতা সম্পন্ন',
-					'ছাদবাগান ও বারান্দার টবের জন্য অত্যন্ত উপযুক্ত',
-					'সহজে পরিচর্যার জন্য বিনামূল্যে গাইড বুক',
-					'পণ্য হাতে পেয়ে চেক করে ডেলিভারি ম্যানকে টাকা দিন'
-				]
-			}
-		];
-
-		for (const page of demoPages) {
-			try {
-				await this.createLandingPage(db, page);
-			} catch (e) {
-				console.error('Failed to insert demo page:', e);
-			}
-		}
+		const newSlug = `${source.slug}-copy-${Date.now().toString(36)}`;
+		return this.createLandingPage(db, {
+			title: `${source.title} (কপি)`,
+			slug: newSlug,
+			productId: source.productId,
+			tag: source.tag || undefined,
+			template: source.template || undefined,
+			status: 'Draft',
+			headline: source.config.headline,
+			subheadline: source.config.subheadline,
+			offerBadge: source.config.offerBadge,
+			countdownMinutes: source.config.countdownMinutes,
+			bulletPoints: source.config.bulletPoints,
+			packages: source.config.packages,
+			trustBox1Title: source.config.trustBox1Title,
+			trustBox1Desc: source.config.trustBox1Desc,
+			trustBox2Title: source.config.trustBox2Title,
+			trustBox2Desc: source.config.trustBox2Desc,
+			contactPhone: source.config.contactPhone,
+			customPrice: source.config.customPrice,
+			customOriginalPrice: source.config.customOriginalPrice,
+			galleryImages: source.config.galleryImages
+		});
 	}
 }
-

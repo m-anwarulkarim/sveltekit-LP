@@ -45,9 +45,8 @@ export const load: PageServerLoad = async (event) => {
 				rating: ratingNum,
 				reviewsCount: p.reviewsCount || 0,
 				discountPercent: discountPercent,
-				deliveryTime: '12-24 HOURS',
 				image: p.image || '/images/placeholder.svg',
-				badge: p.badge || 'Published',
+				badge: p.badge || '',
 				badgeColor: 'bg-blue-600 text-white',
 				features: [],
 				description: plainText(p.description) || p.name,
@@ -78,7 +77,6 @@ export const load: PageServerLoad = async (event) => {
 	}
 
 	return {
-		user: event.locals.user ?? null,
 		dbProducts,
 		dbCarousels,
 		dbCategories,

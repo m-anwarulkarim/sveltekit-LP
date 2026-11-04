@@ -13,7 +13,6 @@
 	import {
 		PackageProModal
 	} from './_components/modals';
-	import { Toaster, GlobalConfirmDialog } from '#lib/components/ui';
 
 	let { data, children }: { data: any; children: Snippet } = $props();
 
@@ -139,10 +138,6 @@
 	<!-- 4. Top Navbar Interactive Modals -->
 	<PackageProModal bind:open={isPackageModalOpen} />
 	<AdminSearchModal />
-
-	<!-- Global Toast Notifications & Modern Confirmation Dialog -->
-	<Toaster />
-	<GlobalConfirmDialog />
 </div>
 
 <style>

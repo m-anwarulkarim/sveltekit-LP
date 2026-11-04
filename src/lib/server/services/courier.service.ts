@@ -533,6 +533,16 @@ export class CourierService {
 			return { success: false, error: 'অর্ডারটি ডাটাবেজে পাওয়া যায়নি।' };
 		}
 
+		if (order.trackingCode && order.courierProvider) {
+			return {
+				success: true,
+				trackingCode: order.trackingCode,
+				consignmentId: order.consignmentId || undefined,
+				courierName: order.courierProvider,
+				message: 'Already booked'
+			};
+		}
+
 		const { methods, defaultProvider } = await this.getCourierSettings(db);
 		const targetProviderId = preferredProvider || defaultProvider || 'steadfast';
 		const courierConfig =

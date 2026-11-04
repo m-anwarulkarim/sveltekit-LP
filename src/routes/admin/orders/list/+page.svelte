@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 	import { Button, Card, Badge, Input, confirmSubmit } from '#lib/components/ui';
 	import { toast } from 'svelte-sonner';
 	import {
@@ -27,6 +28,7 @@
 	import OrderStatusDropdown from '../../_components/orders/OrderStatusDropdown.svelte';
 	import ScrollableStatusTabs from '../../_components/orders/ScrollableStatusTabs.svelte';
 	import OrderSourceBadge from '../../_components/orders/OrderSourceBadge.svelte';
+	import BulkCourierProgressModal from '../../_components/orders/BulkCourierProgressModal.svelte';
 
 	let { data, form }: { data: any; form: any } = $props();
 
@@ -34,7 +36,8 @@
 	// Default active tab is 'confirmed' (First tab as requested)
 	let orderListStatusFilter = $state('confirmed');
 	let selectedOrderIds = $state<string[]>([]);
-	let isBooking = $state(false);
+	let isBookingModalOpen = $state(false);
+	let bookingTargets = $state<{ id: string; label: string }[]>([]);
 	let selectedBulkStatus = $state('processing');
 
 	// Display form action message via Sonner toast if returned
@@ -49,6 +52,23 @@
 	});
 
 
+
+	function startBulkBooking() {
+		const picked = new Set(selectedOrderIds);
+		bookingTargets = (data.orders || [])
+			.filter((o: any) => picked.has(o.id))
+			.map((o: any) => ({
+				id: o.id,
+				label: `#${o.orderNumber || String(o.id).slice(0, 8)} · ${o.customerName || 'Customer'}`
+			}));
+		if (bookingTargets.length === 0) return;
+		isBookingModalOpen = true;
+	}
+
+	async function handleBulkBookingFinished(successIds: string[]) {
+		selectedOrderIds = selectedOrderIds.filter((id) => !successIds.includes(id));
+		await invalidateAll();
+	}
 
 	// 1. Tab sequence: confirmed -> processing -> ... -> all (last)
 	const ORDER_LIST_STATUS_TABS = [
@@ -231,26 +251,15 @@
 
 				<div class="flex flex-wrap items-center gap-2">
 					<!-- Bulk Courier Book -->
-					<form action="?/bulkBookCourier" method="POST" use:enhance={() => {
-					isBooking = true;
-					return async ({ result, update }) => {
-						isBooking = false;
-						if (result.type === 'success') selectedOrderIds = [];
-						await update();
-					};
-				}} class="inline">
-						<input type="hidden" name="orderIds" value={JSON.stringify(selectedOrderIds)} />
-						<input type="hidden" name="provider" value="Steadfast" />
-						<Button
-							type="submit"
-							size="sm"
-							class="gap-1.5 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20 text-xs font-bold"
-							disabled={isBooking}
-						>
-							<Truck class="w-3.5 h-3.5" />
-							<span>Steadfast কুরিয়ার বুক ({selectedOrderIds.length})</span>
-						</Button>
-					</form>
+					<Button
+						type="button"
+						size="sm"
+						class="gap-1.5 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20 text-xs font-bold"
+						onclick={startBulkBooking}
+					>
+						<Truck class="w-3.5 h-3.5" />
+						<span>Steadfast কুরিয়ার বুক ({selectedOrderIds.length})</span>
+					</Button>
 
 					<!-- Bulk Status Update -->
 					<form action="?/bulkUpdateStatus" method="POST" use:enhance={() => {
@@ -699,3 +708,10 @@
 	</div>
 
 </div>
+
+<BulkCourierProgressModal
+	bind:open={isBookingModalOpen}
+	orders={bookingTargets}
+	provider="Steadfast"
+	onfinish={handleBulkBookingFinished}
+/>

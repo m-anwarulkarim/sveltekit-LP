@@ -11,6 +11,7 @@ import * as schema from '#lib/server/db/schema';
 import { inArray, eq } from 'drizzle-orm';
 import { StockService } from '#lib/server/services/stock.service';
 import { fail } from '@sveltejs/kit';
+import { hasMenuAccess } from '#lib/constants/admin-permissions';
 
 export const load: PageServerLoad = async ({ platform }) => {
 	return {
@@ -24,7 +25,10 @@ export const actions: Actions = {
 	deleteOrder: async ({ request, platform }) => handleDeleteOrder(request, platform),
 
 	// Single order courier booking
-	bookCourier: async ({ request, platform }) => {
+	bookCourier: async ({ request, platform, locals }) => {
+		if (!hasMenuAccess(locals.admin?.permissions, 'orders')) {
+			return fail(403, { message: 'অর্ডার ম্যানেজ করার অনুমতি আপনার নেই।' });
+		}
 		const data = await request.formData();
 		const orderId = data.get('orderId')?.toString();
 		const provider = (data.get('provider')?.toString() || 'Steadfast') as 'Steadfast' | 'Pathao' | 'REDX';
@@ -39,6 +43,7 @@ export const actions: Actions = {
 			if (res.success) {
 				return {
 					success: true,
+					trackingCode: res.trackingCode,
 					message: `অর্ডারটি সফলভাবে ${provider} কুরিয়ারে বুকিং সম্পন্ন হয়েছে! ট্র্যাকিং কোড: ${res.trackingCode}`
 				};
 			} else {
@@ -47,44 +52,6 @@ export const actions: Actions = {
 		} catch (e: any) {
 			console.error('Courier booking failed:', e);
 			return fail(500, { message: e?.message || 'কুরিয়ার বুকিংয়ে সার্ভার সমস্যা হয়েছে' });
-		}
-	},
-
-	// Bulk courier booking
-	bulkBookCourier: async ({ request, platform }) => {
-		const data = await request.formData();
-		const orderIdsRaw = data.get('orderIds')?.toString() || '[]';
-		const provider = (data.get('provider')?.toString() || 'Steadfast') as 'Steadfast' | 'Pathao' | 'REDX';
-
-		let ids: string[] = [];
-		try {
-			ids = JSON.parse(orderIdsRaw);
-		} catch {
-			ids = orderIdsRaw.split(',').map((s) => s.trim()).filter(Boolean);
-		}
-
-		if (ids.length === 0) {
-			return fail(400, { message: 'কোনো অর্ডার নির্বাচন করা হয়নি।' });
-		}
-
-		try {
-			const db = getDb(platform);
-			let successCount = 0;
-
-			for (const orderId of ids) {
-				const res = await CourierService.bookConsignment(db, orderId, provider.toLowerCase() as any);
-				if (res.success) {
-					successCount++;
-				}
-			}
-
-			return {
-				success: true,
-				message: `${successCount} টি অর্ডার সফলভাবে ${provider} কুরিয়ারে বুকিং সম্পন্ন হয়েছে!`
-			};
-		} catch (e: any) {
-			console.error('Bulk courier booking error:', e);
-			return fail(500, { message: e?.message || 'বাল্ক বুকিংয়ে সমস্যা হয়েছে।' });
 		}
 	},
 

@@ -6,6 +6,7 @@ import {
 	handleDeleteOrder
 } from '#lib/server/orders';
 import { CourierService } from '#lib/server/services/courier.service';
+import { ALL_COURIER_PROVIDERS } from '#lib/utils/courier';
 import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
 import { inArray, eq } from 'drizzle-orm';
@@ -14,8 +15,21 @@ import { fail } from '@sveltejs/kit';
 import { hasMenuAccess } from '#lib/constants/admin-permissions';
 
 export const load: PageServerLoad = async ({ platform }) => {
+	const db = getDb(platform);
+	const [orders, courierSettings] = await Promise.all([
+		OrderService.listAdminOrders(db, 'active'),
+		CourierService.getCourierSettings(db)
+	]);
+	const defaultMethod = courierSettings.methods.find((m) => m.id === courierSettings.defaultProvider);
+	const meta = ALL_COURIER_PROVIDERS.find((p) => p.id === courierSettings.defaultProvider);
+
 	return {
-		orders: await OrderService.listAdminOrders(getDb(platform), 'active')
+		orders,
+		defaultCourier: {
+			id: courierSettings.defaultProvider,
+			name: meta?.name || courierSettings.defaultProvider,
+			isReady: Boolean(defaultMethod?.isEnabled)
+		}
 	};
 };
 
@@ -31,7 +45,8 @@ export const actions: Actions = {
 		}
 		const data = await request.formData();
 		const orderId = data.get('orderId')?.toString();
-		const provider = (data.get('provider')?.toString() || 'Steadfast') as 'Steadfast' | 'Pathao' | 'REDX';
+		// Empty provider means "use the default courier from Settings > Courier".
+		const provider = data.get('provider')?.toString() || '';
 
 		if (!orderId) {
 			return fail(400, { message: 'Order ID is required' });
@@ -39,12 +54,12 @@ export const actions: Actions = {
 
 		try {
 			const db = getDb(platform);
-			const res = await CourierService.bookConsignment(db, orderId, provider.toLowerCase() as any);
+			const res = await CourierService.bookConsignment(db, orderId, provider as any);
 			if (res.success) {
 				return {
 					success: true,
 					trackingCode: res.trackingCode,
-					message: `অর্ডারটি সফলভাবে ${provider} কুরিয়ারে বুকিং সম্পন্ন হয়েছে! ট্র্যাকিং কোড: ${res.trackingCode}`
+					message: `অর্ডারটি সফলভাবে ${res.courierName || provider}কুরিয়ারে বুকিং সম্পন্ন হয়েছে! ট্র্যাকিং কোড: ${res.trackingCode}`
 				};
 			} else {
 				return fail(400, { message: res.error || 'কুরিয়ার বুকিং ব্যর্থ হয়েছে' });

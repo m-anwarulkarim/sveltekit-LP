@@ -1,6 +1,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import { getDb } from '#lib/server/db/index';
 import { CustomerService } from '#lib/server/services/customer.service';
+import { ReviewService } from '#lib/server/services/review.service';
 import { fail } from '@sveltejs/kit';
 
 export interface CustomerItem {
@@ -21,6 +22,7 @@ export interface CustomerItem {
 	isBanned: boolean;
 	banReason: string | null;
 	internalNotes: string;
+	reviewCount: number;
 	createdAt: Date | string | number | null;
 	updatedAt: Date | string | number | null;
 }
@@ -42,6 +44,20 @@ export const load: PageServerLoad = async ({ parent, platform, url }) => {
 
 		if (dbCustomers) {
 			customers = dbCustomers as any;
+		}
+
+		// Fetch review counts for all customers
+		const phones = customers.map((c) => c.phone).filter(Boolean);
+		if (phones.length > 0) {
+			try {
+				const reviewCounts = await ReviewService.getReviewCountsByPhones(db, phones);
+				customers = customers.map((c) => ({
+					...c,
+					reviewCount: reviewCounts.get(c.phone) || 0
+				}));
+			} catch (revErr) {
+				console.error('Failed to fetch review counts:', revErr);
+			}
 		}
 
 		const dbNewsletters = await CustomerService.listNewsletter(db);

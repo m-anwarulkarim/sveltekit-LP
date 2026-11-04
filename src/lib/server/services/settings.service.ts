@@ -154,9 +154,8 @@ export const DEFAULT_ORDER_SETTINGS: OrderSettingsConfig = {
 	insideDhakaCustomText: 'Inside Dhaka 70TK',
 	outsideDhakaCustomText: 'Outside Dhaka 120TK',
 
-	successTitle: 'THANK YOU\nYOUR ORDER IS PLACED',
-	successMessageBody:
-		'THANK YOU\nYOUR ORDER IS PLACED\nWe received your order and will begin processing it soon. Your order information appears below:\nYour order Number: {{orderId}}',
+	successTitle: '',
+	successMessageBody: '',
 
 	enableCustomStatusWorkflow: false,
 

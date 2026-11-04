@@ -390,9 +390,14 @@
 							<h4 class="font-bold text-sm leading-tight truncate {isSelected ? 'text-[#5845eb]' : 'text-slate-800'}">
 								{courier.name}
 							</h4>
+							{#if courier.isEnabled && Object.values(courier.credentials || {}).some((v) => String(v || '').trim())}
+								<span class="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">সক্রিয়</span>
+							{:else}
+								<span class="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">সেটআপ বাকি</span>
+							{/if}
 						</div>
 						<div class="flex items-center gap-1 text-[11px] {isSelected ? 'text-[#5845eb]/80' : 'text-slate-500'} pt-0.5">
-							<span>courier.showSettingForm</span>
+							<span>সেটিংস দেখুন</span>
 							<ChevronDown class="w-3 h-3 {isSelected ? 'text-[#5845eb]' : 'text-slate-400'}" />
 						</div>
 					</div>
@@ -430,7 +435,7 @@
 				: 'border-slate-300 hover:border-[#5845eb] bg-white hover:bg-indigo-50/20 text-slate-600 hover:text-[#5845eb]'}"
 		>
 			<Plus class="w-5 h-5 text-slate-500 group-hover:text-[#5845eb]" />
-			<span class="text-xs font-bold tracking-tight">courier.addNewCourierMethod</span>
+			<span class="text-xs font-bold tracking-tight">নতুন কুরিয়ার যোগ করুন</span>
 		</button>
 	</div>
 
@@ -440,7 +445,7 @@
 		<!-- Provider Selector Dropdown -->
 		<div class="relative">
 			<label for="provider-select" class="block text-xs font-bold text-slate-600 mb-1.5 flex items-center gap-1">
-				<span>courier.selectProvider</span>
+				<span>কুরিয়ার সার্ভিস নির্বাচন করুন</span>
 				<span class="text-rose-500">*</span>
 			</label>
 			<div class="relative">
@@ -485,7 +490,7 @@
 			<!-- 1. Steadfast Courier Fields -->
 			{#if selectedProviderId === 'steadfast'}
 				<div class="space-y-1.5">
-					<label class="block text-xs font-bold text-slate-600">courier.apiKey</label>
+					<label class="block text-xs font-bold text-slate-600">API Key</label>
 					<Input
 						type="text"
 						placeholder="যেমন: /ffdcpexos6kxyn43qy5cvudjplztv99"
@@ -495,7 +500,7 @@
 				</div>
 
 				<div class="space-y-1.5">
-					<label class="block text-xs font-bold text-slate-600">courier.secretKey</label>
+					<label class="block text-xs font-bold text-slate-600">Secret Key</label>
 					<div class="relative">
 						<Input
 							type={showSecret ? 'text' : 'password'}
@@ -522,7 +527,7 @@
 			{:else if selectedProviderId === 'pathao'}
 				<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 					<div class="space-y-1.5">
-						<label class="block text-xs font-bold text-slate-600">courier.apiKey (Client ID)</label>
+						<label class="block text-xs font-bold text-slate-600">API Key (Client ID)</label>
 						<Input
 							type="text"
 							placeholder="যেমন: 5xe7LIra7r"
@@ -532,7 +537,7 @@
 					</div>
 
 					<div class="space-y-1.5">
-						<label class="block text-xs font-bold text-slate-600">courier.secretKey (Client Secret)</label>
+						<label class="block text-xs font-bold text-slate-600">Secret Key (Client Secret)</label>
 						<div class="relative">
 							<Input
 								type={showSecret ? 'text' : 'password'}
@@ -553,7 +558,7 @@
 
 				<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 					<div class="space-y-1.5">
-						<label class="block text-xs font-bold text-slate-600">courier.username (Email)</label>
+						<label class="block text-xs font-bold text-slate-600">Username (Email)</label>
 						<Input
 							type="text"
 							placeholder="merchant@example.com"
@@ -563,7 +568,7 @@
 					</div>
 
 					<div class="space-y-1.5">
-						<label class="block text-xs font-bold text-slate-600">courier.password</label>
+						<label class="block text-xs font-bold text-slate-600">Password</label>
 						<div class="relative">
 							<Input
 								type={showPassword ? 'text' : 'password'}
@@ -583,7 +588,7 @@
 				</div>
 
 				<div class="space-y-1.5">
-					<label class="block text-xs font-bold text-slate-600">courier.storeId</label>
+					<label class="block text-xs font-bold text-slate-600">Store ID</label>
 					<Input
 						type="text"
 						placeholder="339467"
@@ -596,7 +601,7 @@
 			{:else if selectedProviderId === 'paperfly'}
 				<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 					<div class="space-y-1.5">
-						<label class="block text-xs font-bold text-slate-600">courier.username</label>
+						<label class="block text-xs font-bold text-slate-600">Username</label>
 						<Input
 							type="text"
 							placeholder="paperfly_user"
@@ -606,7 +611,7 @@
 					</div>
 
 					<div class="space-y-1.5">
-						<label class="block text-xs font-bold text-slate-600">courier.password</label>
+						<label class="block text-xs font-bold text-slate-600">Password</label>
 						<div class="relative">
 							<Input
 								type={showPassword ? 'text' : 'password'}
@@ -627,7 +632,7 @@
 
 				<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 					<div class="space-y-1.5">
-						<label class="block text-xs font-bold text-slate-600">courier.paperflyKey</label>
+						<label class="block text-xs font-bold text-slate-600">Paperfly Key</label>
 						<Input
 							type="text"
 							placeholder="paperfly_key_token"
@@ -637,7 +642,7 @@
 					</div>
 
 					<div class="space-y-1.5">
-						<label class="block text-xs font-bold text-slate-600">courier.storeName</label>
+						<label class="block text-xs font-bold text-slate-600">Store Name</label>
 						<Input
 							type="text"
 							placeholder="My Shop Store"
@@ -651,7 +656,7 @@
 			{:else if selectedProviderId === 'carrybee'}
 				<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 					<div class="space-y-1.5">
-						<label class="block text-xs font-bold text-slate-600">courier.apiKey (Client ID)</label>
+						<label class="block text-xs font-bold text-slate-600">API Key (Client ID)</label>
 						<Input
 							type="text"
 							placeholder="CarryBee Client ID"
@@ -661,7 +666,7 @@
 					</div>
 
 					<div class="space-y-1.5">
-						<label class="block text-xs font-bold text-slate-600">courier.secretKey</label>
+						<label class="block text-xs font-bold text-slate-600">Secret Key</label>
 						<div class="relative">
 							<Input
 								type={showSecret ? 'text' : 'password'}
@@ -692,7 +697,7 @@
 					</div>
 
 					<div class="space-y-1.5">
-						<label class="block text-xs font-bold text-slate-600">courier.storeId</label>
+						<label class="block text-xs font-bold text-slate-600">Store ID</label>
 						<Input
 							type="text"
 							placeholder="Store Hub ID"
@@ -736,7 +741,7 @@
 
 			<!-- Special Instruction (Common for all Providers) -->
 			<div class="space-y-1.5 pt-1">
-				<label class="block text-xs font-bold text-slate-600">courier.specialInstruction</label>
+				<label class="block text-xs font-bold text-slate-600">বিশেষ নির্দেশনা (ঐচ্ছিক)</label>
 				<Input
 					type="text"
 					placeholder="রাইডার নোট: ইনট্যাক্ট পলি খোলা যাবে না। কুরিয়ার পলি খুলে চেক করতে পারবেন।"
@@ -779,7 +784,7 @@
 				class="w-full sm:w-auto px-7 py-3 rounded-2xl bg-[#5845eb] hover:bg-[#4734d4] text-white text-xs font-bold inline-flex items-center gap-2 shadow-sm shadow-indigo-500/20 active:scale-95"
 			>
 				<Check class="w-4 h-4 stroke-[3]" />
-				<span>courier.saveChanges</span>
+				<span>সেটিংস সেভ করুন</span>
 			</Button>
 		</div>
 

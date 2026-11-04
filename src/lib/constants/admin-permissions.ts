@@ -81,6 +81,15 @@ export const ADMIN_MENU_LIST: AdminMenuItem[] = [
 		desc: 'কাস্টমার তথ্য, কেনাকাটার হিস্ট্রি ও কাস্টমার এনগেজমেন্ট',
 		icon: 'Users'
 	},
+
+	{
+		id: 'reviews',
+		name: 'রিভিউ ম্যানেজমেন্ট',
+		englishName: 'Reviews',
+		path: '/admin/reviews',
+		desc: 'কাস্টমার রিভিউ মডারেশন, রিপ্লাই, ফিচার্ড ও রেটিং ম্যানেজমেন্ট',
+		icon: 'MessageSquare'
+	},
 	{
 		id: 'reports',
 		name: 'রিপোর্টস',
@@ -253,6 +262,7 @@ export function getMenuIdFromPath(pathname: string): string | null {
 	if (pathname.startsWith('/admin/daily-target')) return 'daily-target';
 	if (pathname.startsWith('/admin/coupon')) return 'coupons';
 	if (pathname.startsWith('/admin/customers')) return 'customers';
+	if (pathname.startsWith('/admin/reviews')) return 'reviews';
 	if (pathname.startsWith('/admin/reports')) return 'reports';
 	if (pathname.startsWith('/admin/settings')) return 'settings';
 	if (pathname.startsWith('/admin/ip-block')) return 'ip-block';

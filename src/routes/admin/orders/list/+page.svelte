@@ -548,7 +548,7 @@
 												};
 											}} class="inline-block">
 												<input type="hidden" name="orderId" value={order.id} />
-												<input type="hidden" name="provider" value="Steadfast" />
+												<input type="hidden" name="provider" value={data.defaultCourier?.id ?? ''} />
 												<Button
 													type="submit"
 													size="sm"
@@ -716,6 +716,7 @@
 <BulkCourierProgressModal
 	bind:open={isBookingModalOpen}
 	orders={bookingTargets}
-	provider="Steadfast"
+	provider={data.defaultCourier?.id ?? ''}
+	providerName={data.defaultCourier?.name ?? 'কুরিয়ার'}
 	onfinish={handleBulkBookingFinished}
 />

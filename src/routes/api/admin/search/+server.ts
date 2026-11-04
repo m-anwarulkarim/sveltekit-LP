@@ -4,6 +4,7 @@ import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
 import { like, or, and, eq, ne } from 'drizzle-orm';
 import { ADMIN_MENU_LIST, getMenuIdFromPath, hasMenuAccess } from '#lib/constants/admin-permissions';
+import { ReviewService } from '#lib/server/services/review.service';
 
 const ADMIN_NAV_LINKS = [
 	{ title: 'Dashboard Overview', path: '/admin', group: 'Navigation', icon: 'dashboard', keywords: 'home overview analytics বিক্রয়' },
@@ -168,6 +169,22 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 				.all();
 		} catch (custErr) {
 			console.error('Search API: Error searching customers:', custErr);
+		}
+
+		// 5. Enrich customers with review counts
+		if (matchedCustomers.length > 0) {
+			try {
+				const phones = matchedCustomers.map((c: any) => c.phone).filter(Boolean);
+				if (phones.length > 0) {
+					const reviewCounts = await ReviewService.getReviewCountsByPhones(db, phones);
+					matchedCustomers = matchedCustomers.map((c: any) => ({
+						...c,
+						reviewCount: reviewCounts.get(c.phone) || 0
+					}));
+				}
+			} catch (revErr) {
+				console.error('Search API: Error fetching review counts:', revErr);
+			}
 		}
 
 		return json({

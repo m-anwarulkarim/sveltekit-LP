@@ -456,6 +456,20 @@
 										<span class="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded-lg border border-purple-200 font-semibold">
 											{cust.totalOrders || 0} টি অর্ডার
 										</span>
+										{#if cust.reviewCount > 0}
+											<button
+												type="button"
+												onclick={(e: MouseEvent) => { e.stopPropagation(); navigateTo(`/admin/reviews?q=${encodeURIComponent(cust.phone)}`); }}
+												class="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-lg border border-amber-200 font-semibold hover:bg-amber-100 transition-colors cursor-pointer"
+												title="রিভিউ দেখুন"
+											>
+												{cust.reviewCount} টি রিভিউ
+											</button>
+										{:else}
+											<span class="text-xs bg-slate-50 text-slate-400 px-2 py-0.5 rounded-lg border border-slate-200 font-medium">
+												রিভিউ নেই
+											</span>
+										{/if}
 										<ArrowRight class="w-4 h-4 text-slate-300 group-hover:text-purple-600 group-hover:translate-x-0.5 transition-all" />
 									</div>
 								</button>

@@ -24,7 +24,8 @@
 		RefreshCw,
 		Download,
 		Truck,
-		Package
+		Package,
+		Star
 	} from 'lucide-svelte';
 	import type { PageData, ActionData } from './$types';
 	import { toast } from 'svelte-sonner';
@@ -592,6 +593,25 @@
 											{cust.successRate}% সাফল্য
 										</span>
 									</div>
+									<!-- Review Count -->
+									<div class="mt-1.5">
+										{#if cust.reviewCount > 0}
+											<a
+												href="/admin/reviews?q={encodeURIComponent(cust.phone)}"
+												class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
+												title="এই গ্রাহকের রিভিউ দেখুন"
+											>
+												<Star class="w-2.5 h-2.5" />
+												<span>{cust.reviewCount} টি রিভিউ</span>
+												<ExternalLink class="w-2.5 h-2.5 text-amber-500" />
+											</a>
+										{:else}
+											<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-50 text-slate-400 border border-slate-200">
+												<Star class="w-2.5 h-2.5" />
+												<span>রিভিউ নেই</span>
+											</span>
+										{/if}
+									</div>
 								</div>
 							</td>
 
@@ -1010,9 +1030,20 @@
 						</div>
 						<div>
 							<h3 class="text-base font-bold text-slate-900">{ordersModalCustomer.name} - অর্ডার হিস্টোরি</h3>
-							<p class="text-xs text-slate-500 font-mono mt-0.5">
+							<div class="flex items-center gap-2 mt-0.5">
+								<p class="text-xs text-slate-500 font-mono">
 								{ordersModalCustomer.phone} • মোট ব্যয়: {formatTaka(ordersModalCustomer.totalSpent)}
 							</p>
+								{#if ordersModalCustomer.reviewCount > 0}
+									<a
+										href="/admin/reviews?q={encodeURIComponent(ordersModalCustomer.phone)}"
+										class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
+									>
+										<Star class="w-2.5 h-2.5" />
+										<span>{ordersModalCustomer.reviewCount} টি রিভিউ</span>
+									</a>
+								{/if}
+							</div>
 						</div>
 					</div>
 					<button

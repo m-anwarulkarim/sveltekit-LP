@@ -52,23 +52,29 @@
 			const trackKey = `fb_tracked_purchase_${effectiveOrderId}`;
 			if (!sessionStorage.getItem(trackKey)) {
 				sessionStorage.setItem(trackKey, 'true');
-				let items = order?.items || [];
-				if ((!items || items.length === 0) && data.dbOrder?.items) {
-					try {
-						items = typeof data.dbOrder.items === 'string' ? JSON.parse(data.dbOrder.items) : data.dbOrder.items;
-					} catch {
-						items = [];
-					}
+				// Same item source and ID rule as the server-side CAPI Purchase, so the deduplicated pair agrees.
+				let items: any[] = [];
+				try {
+					const raw = data.dbOrder.items;
+					items = (typeof raw === 'string' ? JSON.parse(raw) : raw) || [];
+				} catch {
+					items = [];
 				}
-				const contentIds = items.map((i: any) => String(i.sku || i.id || i.productId));
+				if (items.length === 0) items = order?.items || [];
+				const contents = items.map((i: any) => ({
+					id: String(i.id || i.productId),
+					quantity: Number(i.quantity) || 1,
+					item_price: Number(i.price) || 0
+				}));
 				trackMetaEvent(
 					'Purchase',
 					{
 						content_type: 'product',
-						content_ids: contentIds,
+						content_ids: contents.map((c) => c.id),
+						contents,
 						value: Number(data.dbOrder?.total || order?.total || 0),
 						currency: 'BDT',
-						num_items: items.reduce((n: number, i: any) => n + (Number(i.quantity) || 1), 0)
+						num_items: contents.reduce((n, c) => n + c.quantity, 0)
 					},
 					effectiveOrderId
 				);

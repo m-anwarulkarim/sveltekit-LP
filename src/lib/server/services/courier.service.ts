@@ -1,7 +1,7 @@
 import { eq, and } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from '../db/schema';
-import { getCourierTrackingUrl, type CourierProviderId } from '#lib/utils/courier';
+import { getCourierTrackingUrl, ALL_COURIER_PROVIDERS, type CourierProviderId } from '#lib/utils/courier';
 
 export type { CourierProviderId };
 
@@ -544,20 +544,31 @@ export class CourierService {
 		}
 
 		const { methods, defaultProvider } = await this.getCourierSettings(db);
-		const targetProviderId = preferredProvider || defaultProvider || 'steadfast';
-		const courierConfig =
-			methods.find((m) => m.id === targetProviderId && m.isEnabled) ||
-			methods.find((m) => m.isEnabled);
+		const requested = (preferredProvider || '').toLowerCase() as CourierProviderId;
+		const targetProviderId = ALL_COURIER_PROVIDERS.some((p) => p.id === requested) ? requested : defaultProvider;
+		const providerName = ALL_COURIER_PROVIDERS.find((p) => p.id === targetProviderId)?.name || targetProviderId;
 
+		// No silent fallback to another courier: its credentials would be sent to the wrong API.
+		const courierConfig = methods.find((m) => m.id === targetProviderId);
 		if (!courierConfig || !courierConfig.isEnabled) {
-			return { success: false, error: 'কোনো সচল কুরিয়ার কনফিগারেশন পাওয়া যায়নি। ড্যাশবোর্ড থেকে কুরিয়ার সক্রিয় করুন।' };
+			return {
+				success: false,
+				error: `${providerName} চালু বা সেটআপ করা নেই। Settings > Courier থেকে API তথ্য দিয়ে সেভ করুন।`
+			};
+		}
+
+		const recipientPhone = (order.customerPhone || '').trim();
+		const recipientAddress = (order.shippingAddress || '').trim();
+		if (!recipientPhone || !recipientAddress) {
+			return {
+				success: false,
+				error: 'অর্ডারে কাস্টমারের মোবাইল নম্বর বা ঠিকানা নেই। অর্ডার এডিট করে তথ্য যোগ করুন, তারপর বুক করুন।'
+			};
 		}
 
 		const creds = courierConfig.credentials || {};
 		const invoiceNo = order.orderNumber || order.id.slice(0, 8);
 		const codAmount = Number(order.dueAmount ?? order.total) || 0;
-		const recipientPhone = order.customerPhone || order.customerEmail || '01700000000';
-		const recipientAddress = order.shippingAddress || 'ঢাকা, বাংলাদেশ';
 		const note = courierConfig.specialInstruction || `Order: #${invoiceNo}`;
 
 		// ==========================================

@@ -51,6 +51,7 @@
 		backupPixelId: data?.settings?.backupPixelId || '',
 		capiToken: data?.settings?.capiToken || '',
 		testEventCode: data?.settings?.testEventCode || '',
+		testModeEnabledAt: data?.settings?.testModeEnabledAt ?? null,
 		defaultCurrency: data?.settings?.defaultCurrency || 'BDT',
 		catalogMatchKey: data?.settings?.catalogMatchKey || 'id',
 		contentType: data?.settings?.contentType || 'product',
@@ -81,6 +82,7 @@
 				backupPixelId: data.settings.backupPixelId || '',
 				capiToken: data.settings.capiToken || '',
 				testEventCode: data.settings.testEventCode || '',
+				testModeEnabledAt: data.settings.testModeEnabledAt ?? null,
 				defaultCurrency: data.settings.defaultCurrency || 'BDT',
 				catalogMatchKey: data.settings.catalogMatchKey || 'id',
 				contentType: data.settings.contentType || 'product',
@@ -110,6 +112,29 @@
 	let isTestingCapi = $state(false);
 	let showToken = $state(false);
 	let capiFeedback = $state<{ success: boolean; message: string; details?: any } | null>(null);
+
+	// Mirrors isTestModeActive() in pixel.service (server module, can't be imported here)
+	const TEST_MODE_TTL_MS = 24 * 60 * 60 * 1000;
+	let testModeRemainingMs = $derived.by(() => {
+		if (!settings.testEventCode?.trim() || !settings.testModeEnabledAt) return 0;
+		const startedAt = Date.parse(settings.testModeEnabledAt);
+		if (!Number.isFinite(startedAt)) return 0;
+		return Math.max(0, startedAt + TEST_MODE_TTL_MS - Date.now());
+	});
+	let testModeActive = $derived(testModeRemainingMs > 0);
+	let testModeSaved = $derived(
+		(data?.settings?.testModeEnabledAt ?? null) === (settings.testModeEnabledAt ?? null)
+	);
+
+	function setTestMode(on: boolean) {
+		settings.testModeEnabledAt = on ? new Date().toISOString() : null;
+	}
+
+	function formatRemaining(ms: number) {
+		const hours = Math.floor(ms / 3_600_000);
+		const minutes = Math.floor((ms % 3_600_000) / 60_000);
+		return hours > 0 ? `${hours} ঘণ্টা ${minutes} মিনিট` : `${minutes} মিনিট`;
+	}
 
 	// GTM Status
 	let gtmConfigured = $derived(Boolean(data?.gtmStatus?.isGtmConfigured));
@@ -569,6 +594,29 @@
 							class="font-mono text-xs h-11 rounded-xl bg-slate-50/70 focus:bg-white"
 						/>
 						<span class="text-[11px] text-slate-400">Events Manager &gt; Test Events ট্যাবের কোডটি দিন</span>
+						<div class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
+							<div class="min-w-0">
+								<p class="text-xs font-bold text-slate-700">টেস্ট মোড</p>
+								<p class="text-[11px] text-slate-400">অন করলে ২৪ ঘণ্টা পর নিজে থেকেই বন্ধ হবে</p>
+							</div>
+							<Switch
+								checked={testModeActive}
+								onchange={setTestMode}
+								label="টেস্ট মোড"
+								disabled={!settings.testEventCode?.trim()}
+							/>
+						</div>
+						{#if testModeActive}
+							<p class="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+								টেস্ট মোড চালু: সার্ভার ইভেন্ট Test Events ট্যাবে দেখাবে। {formatRemaining(testModeRemainingMs)} পর নিজে থেকে বন্ধ হবে।
+								{#if !testModeSaved}<span class="block text-amber-800">সেভ করলে কার্যকর হবে।</span>{/if}
+							</p>
+						{:else if settings.testEventCode?.trim()}
+							<p class="text-[11px] text-slate-500">
+								টেস্ট মোড বন্ধ: কোড সেভ আছে, কিন্তু লাইভ ইভেন্টে পাঠানো হচ্ছে না।
+								{#if !testModeSaved}<span class="block font-semibold text-slate-700">সেভ করলে কার্যকর হবে।</span>{/if}
+							</p>
+						{/if}
 					</div>
 
 					<div>

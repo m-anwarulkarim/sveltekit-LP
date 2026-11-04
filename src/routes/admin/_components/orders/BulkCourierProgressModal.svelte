@@ -2,7 +2,7 @@
 	import { untrack } from 'svelte';
 	import { deserialize } from '$app/forms';
 	import { Button, Dialog } from '#lib/components/ui';
-	import { CheckCircle2, XCircle, Loader2, Clock, Truck, RotateCcw } from 'lucide-svelte';
+	import { CheckCircle2, XCircle, Loader2, Clock, RotateCcw, AlertTriangle, Settings } from 'lucide-svelte';
 
 	type RowStatus = 'pending' | 'running' | 'success' | 'failed' | 'skipped';
 	type Row = { id: string; label: string; status: RowStatus; detail: string };
@@ -10,23 +10,52 @@
 	interface Props {
 		open: boolean;
 		orders: { id: string; label: string }[];
+		/** Courier id sent to the server; empty means the default courier. */
 		provider: string;
+		providerName: string;
 		onfinish?: (successIds: string[]) => void;
 	}
 
-	let { open = $bindable(false), orders, provider, onfinish }: Props = $props();
+	let { open = $bindable(false), orders, provider, providerName, onfinish }: Props = $props();
 
 	let rows = $state<Row[]>([]);
 	let isRunning = $state(false);
 	let cancelRequested = $state(false);
 
 	let total = $derived(rows.length);
-	let doneCount = $derived(rows.filter((r) => r.status === 'success' || r.status === 'failed').length);
 	let successCount = $derived(rows.filter((r) => r.status === 'success').length);
 	let failedCount = $derived(rows.filter((r) => r.status === 'failed').length);
 	let skippedCount = $derived(rows.filter((r) => r.status === 'skipped').length);
-	let percent = $derived(total > 0 ? Math.round(((doneCount + skippedCount) / total) * 100) : 0);
+	let processedCount = $derived(successCount + failedCount + skippedCount);
+	let percent = $derived(total > 0 ? Math.round((processedCount / total) * 100) : 0);
 	let finished = $derived(!isRunning && total > 0 && !rows.some((r) => r.status === 'pending' || r.status === 'running'));
+
+	// 'success' = all booked, 'partial' = some booked, 'failed' = none booked
+	let outcome = $derived.by(() => {
+		if (!finished) return 'running';
+		if (successCount === total) return 'success';
+		if (successCount > 0) return 'partial';
+		return 'failed';
+	});
+
+	let title = $derived(
+		outcome === 'running'
+			? `${providerName} এ বুকিং চলছে`
+			: outcome === 'success'
+				? `${providerName} এ বুকিং সফল হয়েছে`
+				: outcome === 'partial'
+					? 'কিছু অর্ডার বুক হয়নি'
+					: 'কুরিয়ার বুকিং ব্যর্থ হয়েছে'
+	);
+
+	let barClass = $derived(
+		outcome === 'failed' ? 'bg-rose-500' : outcome === 'partial' ? 'bg-amber-500' : 'bg-emerald-500'
+	);
+
+	// Missing courier setup fails every row the same way; point straight to the fix.
+	let needsCourierSetup = $derived(
+		finished && rows.some((r) => r.status === 'failed' && r.detail.includes('Settings > Courier'))
+	);
 
 	let startedFor = '';
 	$effect(() => {
@@ -104,27 +133,46 @@
 	});
 </script>
 
-<Dialog bind:open onclose={handleClose} title="{provider} কুরিয়ারে বুকিং চলছে" class="max-w-lg">
+<Dialog bind:open onclose={handleClose} {title} class="max-w-lg">
 	<div class="space-y-4">
 		<div class="space-y-1.5">
 			<div class="flex items-center justify-between text-xs font-bold text-slate-600">
-				<span>{doneCount}/{total} সম্পন্ন</span>
+				<span>{processedCount}/{total} প্রসেস হয়েছে</span>
 				<span>{percent}%</span>
 			</div>
 			<div class="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden">
-				<div
-					class="h-full rounded-full bg-emerald-500 transition-all duration-300"
-					style="width: {percent}%"
-				></div>
+				<div class="h-full rounded-full transition-all duration-300 {barClass}" style="width: {percent}%"></div>
 			</div>
-			<p class="text-[11px] text-slate-400">
-				{#if isRunning}
-					অর্ডারগুলো একটা একটা করে পাঠানো হচ্ছে — অনুগ্রহ করে অপেক্ষা করুন।
-				{:else if finished}
-					{successCount} টি সফল{failedCount > 0 ? `, ${failedCount} টি ব্যর্থ` : ''}{skippedCount > 0 ? `, ${skippedCount} টি বাদ` : ''}।
-				{/if}
-			</p>
+			{#if isRunning}
+				<p class="text-[11px] text-slate-400">অর্ডারগুলো একটা একটা করে পাঠানো হচ্ছে — অনুগ্রহ করে অপেক্ষা করুন।</p>
+			{:else if finished}
+				<p
+					class="text-xs font-bold {outcome === 'success'
+						? 'text-emerald-700'
+						: outcome === 'partial'
+							? 'text-amber-700'
+							: 'text-rose-700'}"
+				>
+					{successCount} টি বুক হয়েছে{failedCount > 0 ? `, ${failedCount} টি ব্যর্থ` : ''}{skippedCount > 0 ? `, ${skippedCount} টি বাদ` : ''}।
+				</p>
+			{/if}
 		</div>
+
+		{#if needsCourierSetup}
+			<div class="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
+				<AlertTriangle class="w-4 h-4 mt-0.5 shrink-0 text-amber-600" />
+				<div class="space-y-1.5">
+					<p class="font-bold">{providerName} এর API সেটআপ করা নেই, তাই কোনো অর্ডার কুরিয়ারে যায়নি।</p>
+					<a
+						href="/admin/settings/courier"
+						class="inline-flex items-center gap-1 font-bold text-amber-800 underline underline-offset-2 hover:text-amber-950"
+					>
+						<Settings class="w-3.5 h-3.5" />
+						কুরিয়ার সেটিংসে যান
+					</a>
+				</div>
+			</div>
+		{/if}
 
 		<ul class="max-h-72 overflow-y-auto space-y-1.5 pr-1">
 			{#each rows as row (row.id)}
@@ -152,9 +200,7 @@
 					<div class="min-w-0 flex-1">
 						<div class="font-bold text-slate-800 truncate">{row.label}</div>
 						{#if row.detail}
-							<div
-								class="text-[11px] break-words {row.status === 'failed' ? 'text-rose-700' : 'text-slate-500'}"
-							>
+							<div class="text-[11px] break-words {row.status === 'failed' ? 'text-rose-700' : 'text-slate-500'}">
 								{row.detail}
 							</div>
 						{/if}
@@ -181,14 +227,20 @@
 						<span>ব্যর্থগুলো আবার চেষ্টা করুন ({failedCount + skippedCount})</span>
 					</Button>
 				{/if}
-				<Button
-					size="sm"
-					class="gap-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700"
-					onclick={() => (open = false)}
-				>
-					<Truck class="w-3.5 h-3.5" />
-					<span>সম্পন্ন</span>
-				</Button>
+				{#if outcome === 'success'}
+					<Button
+						size="sm"
+						class="gap-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700"
+						onclick={() => (open = false)}
+					>
+						<CheckCircle2 class="w-3.5 h-3.5" />
+						<span>ঠিক আছে</span>
+					</Button>
+				{:else}
+					<Button size="sm" variant="outline" class="text-xs font-bold" onclick={() => (open = false)}>
+						বন্ধ করুন
+					</Button>
+				{/if}
 			{/if}
 		</div>
 	</div>

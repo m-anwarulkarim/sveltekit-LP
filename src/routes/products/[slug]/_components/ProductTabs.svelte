@@ -31,6 +31,9 @@
 		title?: string;
 		comment: string;
 		verified?: boolean;
+		isFeatured?: boolean;
+		adminReply?: string | null;
+		adminReplyAt?: string | null;
 		date: string;
 	}
 
@@ -208,7 +211,7 @@
 								return async ({ result, update }) => {
 									isSubmitting = false;
 									if (result.type === 'success') {
-										toast.success('আপনার রিভিউ সফলভাবে প্রকাশ করা হয়েছে!');
+										toast.success('আপনার রিভিউ সফলভাবে গৃহীত হয়েছে! অনুমোদনের পর প্রকাশিত হবে।');
 										isWritingReview = false;
 										await update();
 									} else {
@@ -300,6 +303,11 @@
 															<CheckCircle2 class="w-2.5 h-2.5" /> ভেরিফাইড
 														</span>
 													{/if}
+													{#if rev.isFeatured}
+														<span class="inline-flex items-center gap-0.5 text-[9px] bg-purple-50 text-purple-600 px-1.5 py-0.2 rounded-full font-bold">
+															<Star class="w-2.5 h-2.5 fill-purple-400" /> ফিচার্ড
+														</span>
+													{/if}
 												</div>
 												<span class="text-[10px] text-slate-400">{rev.city || 'ক্রেতা'} • {rev.date}</span>
 											</div>
@@ -316,6 +324,17 @@
 									<p class="text-xs text-slate-600 leading-relaxed">
 										"{rev.comment}"
 									</p>
+									{#if rev.adminReply}
+										<div class="mt-2.5 pl-3 border-l-2 border-indigo-200 bg-indigo-50/50 rounded-r-lg p-2.5">
+											<div class="flex items-center gap-1.5 mb-1">
+												<span class="text-[10px] font-bold text-indigo-600">স্টোর রিপ্লাই</span>
+												{#if rev.adminReplyAt}
+													<span class="text-[9px] text-slate-400">• {rev.adminReplyAt}</span>
+												{/if}
+											</div>
+											<p class="text-xs text-slate-600">{rev.adminReply}</p>
+										</div>
+									{/if}
 								</div>
 							{/each}
 						{:else}

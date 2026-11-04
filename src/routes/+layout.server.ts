@@ -30,7 +30,8 @@ export const load: LayoutServerLoad = async (event) => {
 		defaultCurrency: DEFAULT_PIXEL_SETTINGS.defaultCurrency,
 		catalogMatchKey: DEFAULT_PIXEL_SETTINGS.catalogMatchKey,
 		events: DEFAULT_PIXEL_SETTINGS.events,
-		advancedMatching: DEFAULT_PIXEL_SETTINGS.advancedMatching.enabled
+		advancedMatching: DEFAULT_PIXEL_SETTINGS.advancedMatching.enabled,
+		capiEnabled: false
 	};
 	let gtmConfig: Awaited<ReturnType<typeof GtmService.getPublicConfig>> = {
 		isEnabled: DEFAULT_GTM_SETTINGS.isEnabled,

@@ -12,6 +12,7 @@ export interface MetaPixelSettings {
 	backupPixelId?: string;
 	capiToken: string;
 	testEventCode?: string;
+	testModeEnabledAt?: string | null;
 	defaultCurrency: string;
 	catalogMatchKey: CatalogMatchKey;
 	contentType: ContentType;
@@ -41,6 +42,7 @@ export const DEFAULT_PIXEL_SETTINGS: MetaPixelSettings = {
 	backupPixelId: '',
 	capiToken: '',
 	testEventCode: '',
+	testModeEnabledAt: null,
 	defaultCurrency: 'BDT',
 	catalogMatchKey: 'id',
 	contentType: 'product',
@@ -63,6 +65,17 @@ export const DEFAULT_PIXEL_SETTINGS: MetaPixelSettings = {
 };
 
 const GRAPH_API_VERSION = 'v23.0';
+
+export const TEST_MODE_TTL_MS = 24 * 60 * 60 * 1000;
+
+export function isTestModeActive(
+	s: Pick<MetaPixelSettings, 'testEventCode' | 'testModeEnabledAt'>,
+	now = Date.now()
+): boolean {
+	if (!s.testEventCode?.trim() || !s.testModeEnabledAt) return false;
+	const startedAt = Date.parse(s.testModeEnabledAt);
+	return Number.isFinite(startedAt) && now - startedAt < TEST_MODE_TTL_MS;
+}
 
 export class PixelService {
 	/**
@@ -291,6 +304,90 @@ export class PixelService {
 		}
 	}
 
+	private static isEventEnabled(settings: MetaPixelSettings, eventName: string): boolean {
+		const map: Record<string, keyof MetaPixelSettings['events']> = {
+			PageView: 'pageView',
+			ViewContent: 'viewContent',
+			AddToCart: 'addToCart',
+			InitiateCheckout: 'initiateCheckout',
+			Purchase: 'purchase'
+		};
+		const key = map[eventName];
+		return key ? settings.events[key] !== false : false;
+	}
+
+	private static async postEvents(settings: MetaPixelSettings, events: Record<string, any>[]) {
+		const payload: Record<string, any> = { data: events };
+		if (isTestModeActive(settings)) {
+			payload.test_event_code = settings.testEventCode!.trim();
+		}
+		const endpoint = `https://graph.facebook.com/${GRAPH_API_VERSION}/${settings.pixelId.trim()}/events?access_token=${encodeURIComponent(settings.capiToken.trim())}`;
+		const response = await fetch(endpoint, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(payload)
+		});
+		const resData = (await response.json()) as any;
+		if (response.ok && (resData?.events_received || resData?.fbtrace_id)) {
+			return { success: true, message: `CAPI event pushed (Trace: ${resData.fbtrace_id})` };
+		}
+		console.warn('Meta CAPI warning:', resData?.error?.message || response.statusText);
+		return { success: false, message: resData?.error?.message as string | undefined };
+	}
+
+	/**
+	 * Server-side mirror of a browser event (ViewContent, AddToCart, InitiateCheckout).
+	 * Uses the browser's event_id so Meta deduplicates the pair into one event.
+	 */
+	static async sendCAPIEvent(
+		db: DrizzleD1Database<typeof schema>,
+		event: {
+			eventName: string;
+			eventId: string;
+			customData: Record<string, any>;
+			eventSourceUrl: string;
+			ipAddress?: string;
+			userAgent?: string;
+			fbp?: string;
+			fbc?: string;
+		}
+	): Promise<{ success: boolean; message?: string; skipped?: boolean }> {
+		try {
+			const settings = await this.getSettings(db);
+			if (settings.trackingMode === 'disabled' || !this.isEventEnabled(settings, event.eventName)) {
+				return { success: true, skipped: true };
+			}
+			if (!settings.pixelId || !settings.capiToken) {
+				return { success: false, skipped: true, message: 'Pixel ID or CAPI token missing' };
+			}
+
+			return await this.postEvents(settings, [
+				{
+					event_name: event.eventName,
+					event_time: Math.floor(Date.now() / 1000),
+					action_source: 'website',
+					event_source_url: event.eventSourceUrl,
+					event_id: event.eventId,
+					user_data: {
+						client_ip_address: event.ipAddress,
+						client_user_agent: event.userAgent,
+						...(event.fbp ? { fbp: event.fbp } : {}),
+						...(event.fbc ? { fbc: event.fbc } : {}),
+						country: [await this.hashValue('bd')]
+					},
+					custom_data: {
+						currency: settings.defaultCurrency || 'BDT',
+						content_type: settings.contentType || 'product',
+						...event.customData
+					}
+				}
+			]);
+		} catch (err: any) {
+			console.error(`Meta CAPI ${event.eventName} exception:`, err);
+			return { success: false, message: err?.message };
+		}
+	}
+
 	/**
 	 * Dispatches an asynchronous server-side Meta Conversions API (CAPI) Purchase event
 	 */
@@ -370,7 +467,7 @@ export class PixelService {
 							client_user_agent: orderData.userAgent,
 							...(orderData.fbp ? { fbp: orderData.fbp } : {}),
 							...(orderData.fbc ? { fbc: orderData.fbc } : {}),
-							...(hashedPhone ? { ph: [hashedPhone] } : {}),
+							...(hashedPhone ? { ph: [hashedPhone], external_id: [hashedPhone] } : {}),
 							...(hashedEmail ? { em: [hashedEmail] } : {}),
 							...(hashedFn ? { fn: [hashedFn] } : {}),
 							...(hashedLn ? { ln: [hashedLn] } : {}),
@@ -389,24 +486,7 @@ export class PixelService {
 				]
 			};
 
-			if (settings.testEventCode && settings.testEventCode.trim()) {
-				payload.test_event_code = settings.testEventCode.trim();
-			}
-
-			const endpoint = `https://graph.facebook.com/${GRAPH_API_VERSION}/${settings.pixelId.trim()}/events?access_token=${encodeURIComponent(settings.capiToken.trim())}`;
-			const response = await fetch(endpoint, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(payload)
-			});
-
-			const resData = (await response.json()) as any;
-			if (response.ok && (resData?.events_received || resData?.fbtrace_id)) {
-				return { success: true, message: `CAPI Purchase pushed successfully (Trace: ${resData.fbtrace_id})` };
-			} else {
-				console.warn('Meta CAPI Purchase warning:', resData?.error?.message || response.statusText);
-				return { success: false, message: resData?.error?.message };
-			}
+			return await this.postEvents(settings, payload.data);
 		} catch (err: any) {
 			console.error('Meta CAPI Purchase exception:', err);
 			return { success: false, message: err?.message };
@@ -475,6 +555,7 @@ export class PixelService {
 		catalogMatchKey: CatalogMatchKey;
 		events: MetaPixelSettings['events'];
 		advancedMatching: boolean;
+		capiEnabled: boolean;
 	}> {
 		const s = await this.getSettings(db);
 		return {
@@ -484,7 +565,8 @@ export class PixelService {
 			defaultCurrency: s.defaultCurrency,
 			catalogMatchKey: s.catalogMatchKey,
 			events: s.events,
-			advancedMatching: s.advancedMatching.enabled
+			advancedMatching: s.advancedMatching.enabled,
+			capiEnabled: Boolean(s.pixelId?.trim() && s.capiToken?.trim())
 		};
 	}
 }

@@ -1,6 +1,7 @@
 /**
- * Bulletproof Client-side Meta Pixel Tracking Helper
- * Handles fbevents.js initialization, SPA afterNavigate PageViews, and event deduplication
+ * Client-side Meta Pixel + Conversions API helper.
+ * Browser events go to fbq; ViewContent/AddToCart/InitiateCheckout are also mirrored to the server
+ * with the same event_id so Meta deduplicates them. Purchase is sent server-side by the order action.
  */
 
 export interface ClientPixelConfig {
@@ -8,6 +9,7 @@ export interface ClientPixelConfig {
 	pixelId?: string;
 	backupPixelId?: string;
 	defaultCurrency?: string;
+	capiEnabled?: boolean;
 	events?: {
 		pageView: boolean;
 		viewContent: boolean;
@@ -16,6 +18,8 @@ export interface ClientPixelConfig {
 		purchase: boolean;
 	};
 }
+
+const SERVER_MIRRORED_EVENTS = new Set(['ViewContent', 'AddToCart', 'InitiateCheckout']);
 
 let isPixelInitialized = false;
 let activeConfig: ClientPixelConfig | null = null;
@@ -37,6 +41,34 @@ declare global {
 	}
 }
 
+function newEventId(): string {
+	if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+	return `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+function readCookie(name: string): string | undefined {
+	const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+	return match ? decodeURIComponent(match[1]) : undefined;
+}
+
+function writeCookie(name: string, value: string) {
+	const secure = location.protocol === 'https:' ? '; Secure' : '';
+	document.cookie = `${name}=${encodeURIComponent(value)}; Max-Age=${90 * 24 * 3600}; Path=/; SameSite=Lax${secure}`;
+}
+
+/** Without fbevents.js (capi_only) nobody sets _fbp/_fbc, so the server would have no browser IDs to send. */
+function ensureFbCookies() {
+	try {
+		if (!readCookie('_fbp')) {
+			writeCookie('_fbp', `fb.1.${Date.now()}.${Math.floor(Math.random() * 1e10)}`);
+		}
+		const fbclid = new URLSearchParams(location.search).get('fbclid');
+		if (fbclid && !readCookie('_fbc')?.endsWith(`.${fbclid}`)) {
+			writeCookie('_fbc', `fb.1.${Date.now()}.${fbclid}`);
+		}
+	} catch {}
+}
+
 /**
  * Initializes Meta Pixel snippet in the browser with guardrails against double loading
  */
@@ -44,50 +76,47 @@ export function initMetaPixel(config?: ClientPixelConfig | null): void {
 	if (typeof window === 'undefined' || !config) return;
 	activeConfig = config;
 	configResolved = true;
-	if (config.trackingMode !== 'native_direct' || !config.pixelId) {
+
+	if (config.trackingMode === 'disabled' || (config.trackingMode === 'native_direct' && !config.pixelId)) {
 		pendingEvents = [];
 		return;
 	}
-	if (isPixelInitialized) return;
 
-	// Official Meta Pixel Bootstrap snippet
-	/* eslint-disable */
-	(function (f: any, b: any, e: any, v: any, n?: any, t?: any, s?: any) {
-		if (f.fbq) return;
-		n = f.fbq = function () {
-			n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
-		};
-		if (!f._fbq) f._fbq = n;
-		n.push = n;
-		n.loaded = !0;
-		n.version = '2.0';
-		n.queue = [];
-		t = b.createElement(e);
-		t.async = !0;
-		t.src = v;
-		s = b.getElementsByTagName(e)[0];
-		s.parentNode.insertBefore(t, s);
-	})(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
-	/* eslint-enable */
+	if (config.trackingMode === 'capi_only') {
+		ensureFbCookies();
+	} else if (!isPixelInitialized && config.pixelId) {
+		/* eslint-disable */
+		(function (f: any, b: any, e: any, v: any, n?: any, t?: any, s?: any) {
+			if (f.fbq) return;
+			n = f.fbq = function () {
+				n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+			};
+			if (!f._fbq) f._fbq = n;
+			n.push = n;
+			n.loaded = !0;
+			n.version = '2.0';
+			n.queue = [];
+			t = b.createElement(e);
+			t.async = !0;
+			t.src = v;
+			s = b.getElementsByTagName(e)[0];
+			s.parentNode.insertBefore(t, s);
+		})(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+		/* eslint-enable */
 
-	const primaryId = config.pixelId.trim();
-	if (window.fbq) {
-		window.fbq('init', primaryId);
-
+		window.fbq('init', config.pixelId.trim());
 		if (config.backupPixelId && config.backupPixelId.trim()) {
 			window.fbq('init', config.backupPixelId.trim());
 		}
-
 		if (config.events?.pageView !== false) {
 			window.fbq('track', 'PageView');
 		}
-
 		isPixelInitialized = true;
 	}
 
 	const queued = pendingEvents;
 	pendingEvents = [];
-	for (const e of queued) sendEvent(e.name, e.params, e.id);
+	for (const e of queued) dispatchEvent(e.name, e.params, e.id);
 }
 
 /**
@@ -114,31 +143,51 @@ export function trackMetaEvent(
 ): void {
 	if (typeof window === 'undefined') return;
 
-	if (typeof window.fbq !== 'function') {
-		// Pixel not loaded yet: keep the event until initMetaPixel runs (it drops them if tracking is off).
-		if (!configResolved && pendingEvents.length < MAX_PENDING) {
+	if (!configResolved) {
+		if (pendingEvents.length < MAX_PENDING) {
 			pendingEvents.push({ name: eventName, params, id: eventId });
 		}
 		return;
 	}
-	sendEvent(eventName, params, eventId);
+	dispatchEvent(eventName, params, eventId);
 }
 
-function sendEvent(eventName: string, params: Record<string, any>, eventId?: string): void {
-	if (typeof window.fbq !== 'function') return;
+function isEventEnabled(eventName: string): boolean {
+	const events = activeConfig?.events;
+	if (!events) return true;
+	if (eventName === 'PageView') return events.pageView !== false;
+	if (eventName === 'ViewContent') return events.viewContent !== false;
+	if (eventName === 'AddToCart') return events.addToCart !== false;
+	if (eventName === 'InitiateCheckout') return events.initiateCheckout !== false;
+	if (eventName === 'Purchase') return events.purchase !== false;
+	return true;
+}
 
-	// Check if this specific event has been disabled in Dashboard Settings
-	if (activeConfig?.events) {
-		if (eventName === 'PageView' && activeConfig.events.pageView === false) return;
-		if (eventName === 'ViewContent' && activeConfig.events.viewContent === false) return;
-		if (eventName === 'AddToCart' && activeConfig.events.addToCart === false) return;
-		if (eventName === 'InitiateCheckout' && activeConfig.events.initiateCheckout === false) return;
-		if (eventName === 'Purchase' && activeConfig.events.purchase === false) return;
+function dispatchEvent(eventName: string, params: Record<string, any>, eventId?: string): void {
+	const cfg = activeConfig;
+	if (!cfg || cfg.trackingMode === 'disabled' || !isEventEnabled(eventName)) return;
+
+	const mirror = cfg.capiEnabled && SERVER_MIRRORED_EVENTS.has(eventName);
+	const id = eventId || (mirror ? newEventId() : undefined);
+
+	if (cfg.trackingMode === 'native_direct' && typeof window.fbq === 'function') {
+		if (id) window.fbq('track', eventName, params, { eventID: id });
+		else window.fbq('track', eventName, params);
 	}
 
-	if (eventId) {
-		window.fbq('track', eventName, params, { eventID: eventId });
-	} else {
-		window.fbq('track', eventName, params);
+	if (mirror && id) {
+		try {
+			fetch('/api/meta/event', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				keepalive: true,
+				body: JSON.stringify({
+					event_name: eventName,
+					event_id: id,
+					event_source_url: location.href,
+					custom_data: params
+				})
+			}).catch(() => {});
+		} catch {}
 	}
 }

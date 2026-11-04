@@ -31,7 +31,7 @@
 	let { data, form }: { data: any; form?: any } = $props();
 
 	$effect(() => {
-		if (form?.message) {
+		if (form?.message && !form.confirmedOrder) {
 			if (form.success) toast.success(form.message);
 			else toast.error(form.message);
 		}
@@ -40,6 +40,7 @@
 	let orderSearchQuery = $state('');
 	let selectedSourceFilter = $state('all');
 	let webStatusFilter = $state('pending');
+	let confirmingIds = $state<Record<string, boolean>>({});
 
 	const WEB_ORDER_STATUS_TABS = [
 		{ id: 'pending', label: 'পেন্ডিং', icon: Clock },
@@ -356,13 +357,18 @@
 												action="?/quickConfirmOrder"
 												method="POST"
 												use:enhance={() => {
+													confirmingIds[order.id] = true;
 													return async ({ result, update }) => {
+														await update();
+														confirmingIds[order.id] = false;
 														if (result.type === 'success') {
-															toast.success((result.data as any)?.message || 'অর্ডারটি সফলভাবে কনফার্ম করা হয়েছে!');
+															toast.success(`অর্ডার #${order.orderNumber || order.id.slice(0, 8)} কনফার্ম হয়েছে!`, {
+																description: 'অর্ডারটি এখন "কনফার্মড" ট্যাবে আছে।',
+																action: { label: 'কনফার্মড দেখুন', onClick: () => (webStatusFilter = 'confirmed') }
+															});
 														} else if (result.type === 'failure') {
 															toast.error((result.data as any)?.message || 'কনফার্মেশন ব্যর্থ হয়েছে!');
 														}
-														await update();
 													};
 												}}
 												class="inline"
@@ -371,11 +377,16 @@
 												<Button
 													type="submit"
 													size="sm"
-													class="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20 text-xs font-bold gap-1"
+													disabled={confirmingIds[order.id]}
+													class="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20 text-xs font-bold gap-1 disabled:opacity-60 disabled:cursor-not-allowed"
 													title="অর্ডার কনফার্ম করুন"
 												>
-													<CheckCircle2 class="w-3.5 h-3.5" />
-													<span>কনফার্ম</span>
+													{#if confirmingIds[order.id]}
+														<span class="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin inline-block"></span>
+													{:else}
+														<CheckCircle2 class="w-3.5 h-3.5" />
+													{/if}
+													<span>{confirmingIds[order.id] ? 'হচ্ছে...' : 'কনফার্ম'}</span>
 												</Button>
 											</form>
 										{/if}

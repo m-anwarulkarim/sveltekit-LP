@@ -1,10 +1,11 @@
 import type { RequestHandler } from './$types';
 import { createAuth, resolveAuthOptions } from '#lib/server/auth';
 import { getAuthSecret } from '#lib/server/secrets';
+import { env as cfEnv } from 'cloudflare:workers';
 
 const handler: RequestHandler = async (event) => {
 	const secret = getAuthSecret();
-	const d1 = (event.platform as any)?.env?.DB;
+	const d1 = (event.platform as any)?.env?.DB || (cfEnv as any)?.DB;
 	if (!secret || !d1) {
 		return new Response(JSON.stringify({ error: 'Auth service unavailable' }), {
 			status: 503,

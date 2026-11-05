@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/state';
 	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
 	import { Button } from '#lib/components/ui/button';
 	import { Input } from '#lib/components/ui/input';
 	import { Card, CardHeader, CardDescription, CardContent, CardFooter } from '#lib/components/ui/card';
-	import { Mail, Lock, LogIn, UserPlus, Eye, EyeOff, ShieldCheck, AlertCircle, ArrowLeft } from 'lucide-svelte';
+	import { Mail, Lock, LogIn, UserPlus, Eye, EyeOff, ShieldCheck, AlertCircle, ArrowLeft, CheckCircle2 } from 'lucide-svelte';
 	import { authClient } from '#lib/auth-client';
 	import { triggerGoogleOneTap } from '#lib/auth-one-tap';
 	import type { ActionData, PageData } from './$types';
@@ -14,6 +15,8 @@
 	let showPassword = $state(false);
 	let isSubmitting = $state(false);
 	let isGoogleLoading = $state(false);
+
+	let resetSuccess = $derived(page.url.searchParams.get('reset') === 'success');
 
 	let googleEnabled = $derived(Boolean(data.socialLogin?.enableGoogleLogin));
 	let oneTapEnabled = $derived(
@@ -72,6 +75,13 @@
 				</CardHeader>
 
 				<CardContent class="px-6 sm:px-8 pt-2 pb-6 space-y-4">
+					{#if resetSuccess}
+						<div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs flex items-center gap-2.5 animate-in fade-in duration-200">
+							<CheckCircle2 class="w-4 h-4 shrink-0 text-emerald-600" />
+							<span>আপনার পাসওয়ার্ড সফলভাবে পরিবর্তিত হয়েছে! নতুন পাসওয়ার্ড দিয়ে লগইন করুন।</span>
+						</div>
+					{/if}
+
 					{#if form?.message}
 						<div class="p-3.5 rounded-2xl bg-rose-50 border border-rose-200/80 text-rose-700 text-xs flex items-center gap-2.5 animate-in fade-in duration-200">
 							<AlertCircle class="w-4 h-4 shrink-0 text-rose-600" />
@@ -109,6 +119,12 @@
 								<label for="login-password" class="block text-xs font-bold text-slate-700">
 									পাসওয়ার্ড <span class="text-rose-500">*</span>
 								</label>
+								<a
+									href="/auth/forgot-password"
+									class="text-[11px] font-semibold text-[#5845eb] hover:underline"
+								>
+									পাসওয়ার্ড ভুলে গেছেন?
+								</a>
 							</div>
 							<div class="relative">
 								<Lock class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />

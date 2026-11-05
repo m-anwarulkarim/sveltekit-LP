@@ -497,6 +497,50 @@ await test('customer can register, log in, and resolve a session', async () => {
 	assert.equal(none, null);
 });
 
+await test('customer can request password reset and set a new password', async () => {
+	const jar = new Map<string, string>();
+	(globalThis as any).__TEST_EVENT__ = {
+		cookies: {
+			set: (name: string, value: string) => jar.set(name, value),
+			get: (name: string) => jar.get(name),
+			delete: (name: string) => jar.delete(name)
+		},
+		url: new URL('https://shop.test/auth/forgot-password'),
+		request: new Request('https://shop.test/auth/forgot-password')
+	};
+	let capturedToken = '';
+	const auth: any = createAuth(d1, SECRET, 'https://shop.test');
+	assert.ok(auth);
+
+	// Intercept sendResetPassword or inspect token
+	// Better-Auth stores: identifier = `reset-password:${token}`
+	// 1. Request reset
+	await auth.api.requestPasswordReset({
+		body: { email: 'c1@t.local', redirectTo: 'https://shop.test/auth/reset-password' }
+	});
+
+	// 2. Query token from verification table
+	const allVer = await db.select().from(schema.verification).all();
+	const verRow = allVer[0];
+	assert.ok(verRow, 'verification row created for reset-password');
+	// In Better-Auth, identifier is `reset-password:${token}`
+	const token = verRow.identifier.replace('reset-password:', '');
+
+	// 3. Reset password with valid token
+	await auth.api.resetPassword({
+		body: { newPassword: 'customer-new-pass-2', token }
+	});
+
+	// 4. Old password should fail
+	await assert.rejects(auth.api.signInEmail({ body: { email: 'c1@t.local', password: 'customer-pass-1' } }));
+
+	// 5. New password should succeed
+	jar.clear();
+	await auth.api.signInEmail({ body: { email: 'c1@t.local', password: 'customer-new-pass-2' } });
+	const cookieName = [...jar.keys()].find((k) => k.includes('session_token'));
+	assert.ok(cookieName, 'session cookie set with new password');
+});
+
 // ---------- API and menu permissions ----------
 const staffAdmin = { id: '2', role: 'Manager', permissions: ['orders'] };
 await test('restricted staff is refused by APIs outside their menus', async () => {

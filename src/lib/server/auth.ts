@@ -45,8 +45,9 @@ export const createAuth = (
 		trustedOrigins: [baseURL],
 		emailAndPassword: {
 			enabled: true,
-			sendResetPassword: async ({ user, url }) => {
-				const tmpl = passwordResetTemplate({ userName: user.name, resetUrl: url });
+			sendResetPassword: async ({ user, url, token }: any) => {
+				const resetUrl = token ? `${baseURL}/auth/reset-password?token=${token}` : url;
+				const tmpl = passwordResetTemplate({ userName: user.name, resetUrl });
 				await EmailService.sendTemplate(db, { email: user.email, name: user.name }, tmpl);
 			}
 		},

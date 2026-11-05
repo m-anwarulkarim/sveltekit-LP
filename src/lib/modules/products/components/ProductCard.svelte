@@ -4,6 +4,7 @@
 	import { Button } from '#lib/components/ui';
 	import { Star, Zap, Check } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
 
 	interface Props {
 		product: Product;
@@ -11,6 +12,12 @@
 	}
 
 	let { product, onQuickView }: Props = $props();
+
+	// Stock out status detection
+	const isOutOfStock = $derived(
+		!product.isPreOrder &&
+			(product.inStock === false || (product.totalStock !== undefined && product.totalStock <= 0))
+	);
 
 	// Calculate discount percentage if not explicitly provided
 	const discountPercent = $derived.by(() => {
@@ -25,13 +32,20 @@
 
 	function handleAddToCart(e: MouseEvent) {
 		e.stopPropagation();
+		if (isOutOfStock) {
+			toast.warning(`"${product.name}" পণ্যটি বর্তমানে স্টক আউট!`);
+			return;
+		}
 		cart.addItem({
 			id: product.id,
 			name: product.name,
 			price: product.price,
 			originalPrice: product.originalPrice,
 			image: product.image,
-			category: product.categoryLabel
+			category: product.categoryLabel,
+			inStock: product.inStock,
+			totalStock: product.totalStock,
+			isPreOrder: product.isPreOrder
 		});
 		isAdded = true;
 		setTimeout(() => {
@@ -41,14 +55,24 @@
 
 	function handleBuyNow(e: MouseEvent) {
 		e.stopPropagation();
-		cart.addItem({
-			id: product.id,
-			name: product.name,
-			price: product.price,
-			originalPrice: product.originalPrice,
-			image: product.image,
-			category: product.categoryLabel
-		}, false);
+		if (isOutOfStock) {
+			toast.warning(`"${product.name}" পণ্যটি বর্তমানে স্টক আউট!`);
+			return;
+		}
+		cart.addItem(
+			{
+				id: product.id,
+				name: product.name,
+				price: product.price,
+				originalPrice: product.originalPrice,
+				image: product.image,
+				category: product.categoryLabel,
+				inStock: product.inStock,
+				totalStock: product.totalStock,
+				isPreOrder: product.isPreOrder
+			},
+			false
+		);
 		cart.closeCart();
 		goto('/checkout');
 	}
@@ -75,9 +99,16 @@
 			<img
 				src={product.image}
 				alt={product.name}
-				class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+				class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 {isOutOfStock ? 'grayscale opacity-75' : ''}"
 				loading="lazy"
 			/>
+			{#if isOutOfStock}
+				<div class="absolute inset-0 bg-slate-900/40 backdrop-blur-[1px] flex items-center justify-center p-2">
+					<span class="bg-rose-600 text-white text-[10px] sm:text-xs font-black px-2.5 py-0.5 rounded-full shadow-md uppercase tracking-wider">
+						স্টক শেষ
+					</span>
+				</div>
+			{/if}
 		</a>
 
 		<!-- Delivery Time Pill Badge (e.g. 12-24 HOURS with lightning/rocket icon) -->
@@ -132,34 +163,48 @@
 		</div>
 
 		<!-- Action Buttons: Buy Now & ADD -->
-		<div class="grid grid-cols-2 gap-1 sm:gap-1.5 w-full">
-			<!-- Buy Now (Instant Checkout) -->
-			<Button
-				type="button"
-				variant="default"
-				size="sm"
-				onclick={handleBuyNow}
-				class="h-7 sm:h-7.5 px-1 sm:px-2 rounded-lg bg-linear-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-bold text-[9px] sm:text-xs shadow-2xs transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer"
-			>
-				<Zap class="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-current shrink-0" />
-				<span class="truncate">Buy Now</span>
-			</Button>
+		{#if isOutOfStock}
+			<div class="w-full">
+				<Button
+					type="button"
+					variant="secondary"
+					size="sm"
+					disabled
+					class="h-7 sm:h-7.5 w-full rounded-lg bg-slate-100 text-slate-400 font-bold text-[10px] sm:text-xs cursor-not-allowed border border-slate-200"
+				>
+					স্টক আউট (Stock Out)
+				</Button>
+			</div>
+		{:else}
+			<div class="grid grid-cols-2 gap-1 sm:gap-1.5 w-full">
+				<!-- Buy Now (Instant Checkout) -->
+				<Button
+					type="button"
+					variant="default"
+					size="sm"
+					onclick={handleBuyNow}
+					class="h-7 sm:h-7.5 px-1 sm:px-2 rounded-lg bg-linear-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-bold text-[9px] sm:text-xs shadow-2xs transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer"
+				>
+					<Zap class="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-current shrink-0" />
+					<span class="truncate">Buy Now</span>
+				</Button>
 
-			<!-- ADD Button (Cart drawer) -->
-			<Button
-				type="button"
-				variant="outline"
-				size="sm"
-				onclick={handleAddToCart}
-				class="h-7 sm:h-7.5 px-1 sm:px-2 rounded-lg border-emerald-300 bg-emerald-50/50 hover:bg-emerald-600 text-emerald-800 hover:text-white text-[9px] sm:text-xs font-bold tracking-wider uppercase transition-all duration-200 active:scale-95 flex items-center justify-center gap-1 shadow-2xs cursor-pointer"
-			>
-				{#if isAdded}
-					<Check class="w-3 h-3 text-emerald-600 stroke-[3]" />
-					<span class="text-emerald-700">ADDED</span>
-				{:else}
-					<span>ADD</span>
-				{/if}
-			</Button>
-		</div>
+				<!-- ADD Button (Cart drawer) -->
+				<Button
+					type="button"
+					variant="outline"
+					size="sm"
+					onclick={handleAddToCart}
+					class="h-7 sm:h-7.5 px-1 sm:px-2 rounded-lg border-emerald-300 bg-emerald-50/50 hover:bg-emerald-600 text-emerald-800 hover:text-white text-[9px] sm:text-xs font-bold tracking-wider uppercase transition-all duration-200 active:scale-95 flex items-center justify-center gap-1 shadow-2xs cursor-pointer"
+				>
+					{#if isAdded}
+						<Check class="w-3 h-3 text-emerald-600 stroke-[3]" />
+						<span class="text-emerald-700">ADDED</span>
+					{:else}
+						<span>ADD</span>
+					{/if}
+				</Button>
+			</div>
+		{/if}
 	</div>
 </div>

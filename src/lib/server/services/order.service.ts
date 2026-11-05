@@ -266,6 +266,21 @@ export class OrderService {
 
 		const offer = context?.landingOffer;
 		if (offer) {
+			if (offer.productId) {
+				const product = await db
+					.select()
+					.from(schema.products)
+					.where(eq(schema.products.id, offer.productId))
+					.get();
+				if (product) {
+					if (!product.inStock && !product.isPreOrder) {
+						throw new OrderValidationError(`"${product.name}" পণ্যটি বর্তমানে স্টক আউট।`);
+					}
+					if (product.totalStock > 0 && offer.quantity > product.totalStock && !product.isPreOrder) {
+						throw new OrderValidationError(`"${product.name}" পণ্যের মাত্র ${product.totalStock}টি স্টকে আছে।`);
+					}
+				}
+			}
 			items = [
 				{
 					id: offer.productId || 'lp-prod',

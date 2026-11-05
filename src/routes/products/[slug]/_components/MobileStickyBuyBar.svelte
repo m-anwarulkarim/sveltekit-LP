@@ -1,8 +1,9 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import type { Product } from '#lib/modules/products/types.ts';
 	import { cart } from '#lib/modules/cart/cart.svelte';
 	import { Button } from '#lib/components/ui';
 	import { Zap, ShoppingBag } from 'lucide-svelte';
+	import { toast } from 'svelte-sonner';
 
 	interface Props {
 		product: Product;
@@ -11,26 +12,45 @@
 
 	let { product, onBuyNow }: Props = $props();
 
+	const isOutOfStock = $derived(
+		!product.isPreOrder &&
+			(product.inStock === false || (product.totalStock !== undefined && product.totalStock <= 0 && product.inStock !== true))
+	);
+
 	function handleAddToCart() {
+		if (isOutOfStock) {
+			toast.warning(`"${product.name}" পণ্যটি বর্তমানে স্টক আউট!`);
+			return;
+		}
 		cart.addItem({
 			id: product.id,
 			name: product.name,
 			price: product.price,
 			originalPrice: product.originalPrice,
 			image: product.image,
-			category: product.categoryLabel
+			category: product.categoryLabel,
+			inStock: product.inStock,
+			totalStock: product.totalStock,
+			isPreOrder: product.isPreOrder
 		});
 		cart.openCart();
 	}
 
 	function handleBuyNow() {
+		if (isOutOfStock) {
+			toast.warning(`"${product.name}" পণ্যটি বর্তমানে স্টক আউট!`);
+			return;
+		}
 		cart.addItem({
 			id: product.id,
 			name: product.name,
 			price: product.price,
 			originalPrice: product.originalPrice,
 			image: product.image,
-			category: product.categoryLabel
+			category: product.categoryLabel,
+			inStock: product.inStock,
+			totalStock: product.totalStock,
+			isPreOrder: product.isPreOrder
 		}, false);
 		cart.closeCart();
 		onBuyNow();
@@ -54,29 +74,40 @@
 
 		<!-- Right: Action Buttons with shadcn Button -->
 		<div class="flex items-center gap-2 shrink-0">
-			<!-- Add to Cart Icon Button -->
-			<Button
-				type="button"
-				variant="outline"
-				size="icon"
-				onclick={handleAddToCart}
-				class="w-10 h-10 rounded-xl bg-slate-100 border-slate-200 text-slate-700"
-				title="কার্টে যোগ করুন"
-				aria-label="Add to cart"
-			>
-				<ShoppingBag class="w-5 h-5 text-teal-700" />
-			</Button>
+			{#if isOutOfStock}
+				<Button
+					type="button"
+					variant="secondary"
+					disabled
+					class="h-auto px-4 py-2.5 rounded-xl bg-slate-100 text-slate-400 font-bold text-xs uppercase tracking-wider border border-slate-200 cursor-not-allowed"
+				>
+					স্টক আউট
+				</Button>
+			{:else}
+				<!-- Add to Cart Icon Button -->
+				<Button
+					type="button"
+					variant="outline"
+					size="icon"
+					onclick={handleAddToCart}
+					class="w-10 h-10 rounded-xl bg-slate-100 border-slate-200 text-slate-700"
+					title="কার্টে যোগ করুন"
+					aria-label="Add to cart"
+				>
+					<ShoppingBag class="w-5 h-5 text-teal-700" />
+				</Button>
 
-			<!-- Buy Now Primary Button -->
-			<Button
-				type="button"
-				variant="default"
-				onclick={handleBuyNow}
-				class="h-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md shadow-orange-500/20 active:scale-95 border-0"
-			>
-				<Zap class="w-3.5 h-3.5 fill-slate-950 stroke-none" />
-				<span>অর্ডার করুন</span>
-			</Button>
+				<!-- Buy Now Primary Button -->
+				<Button
+					type="button"
+					variant="default"
+					onclick={handleBuyNow}
+					class="h-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md shadow-orange-500/20 active:scale-95 border-0"
+				>
+					<Zap class="w-3.5 h-3.5 fill-slate-950 stroke-none" />
+					<span>অর্ডার করুন</span>
+				</Button>
+			{/if}
 		</div>
 
 	</div>

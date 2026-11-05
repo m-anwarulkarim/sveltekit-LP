@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import { cart } from '../cart.svelte';
 	import {
 		Button,
@@ -27,6 +27,15 @@
 
 	let { onCheckout }: Props = $props();
 	let couponInput = $state('');
+
+	const hasOutOfStockItems = $derived(
+		cart.items.some(
+			(item) =>
+				item.isPreOrder !== true &&
+				(item.inStock === false ||
+					(item.totalStock !== undefined && item.totalStock <= 0 && item.inStock !== true))
+		)
+	);
 
 	function handleApplyCoupon() {
 		if (!couponInput.trim()) return;
@@ -144,9 +153,16 @@
 
 						<!-- Details -->
 						<div class="flex-1 min-w-0">
-							<Badge variant="secondary" class="text-[10px] font-bold text-[#2563eb] uppercase tracking-wider py-0 px-1.5 mb-0.5 truncate">
-								{item.category}
-							</Badge>
+							<div class="flex items-center gap-1.5 flex-wrap mb-0.5">
+								<Badge variant="secondary" class="text-[10px] font-bold text-[#2563eb] uppercase tracking-wider py-0 px-1.5 truncate">
+									{item.category}
+								</Badge>
+								{#if item.isPreOrder !== true && (item.inStock === false || (item.totalStock !== undefined && item.totalStock <= 0 && item.inStock !== true))}
+									<span class="text-[9.5px] font-black text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+										স্টক শেষ
+									</span>
+								{/if}
+							</div>
 							<h4 class="text-xs sm:text-[13px] font-bold text-slate-900 truncate" title={item.name}>
 								{item.name}
 							</h4>
@@ -269,15 +285,30 @@
 				</div>
 
 				<!-- Primary Checkout Button linking to /checkout with shadcn Button -->
-				<Button
-					variant="blue"
-					href="/checkout"
-					onclick={() => cart.closeCart()}
-					class="w-full h-auto py-3.5 rounded-2xl text-white text-sm font-black flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-98"
-				>
-					<span>অর্ডার সম্পন্ন করুন</span>
-					<ArrowRight class="w-4 h-4 stroke-[2.5]" />
-				</Button>
+				{#if hasOutOfStockItems}
+					<div class="space-y-2">
+						<div class="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-center">
+							⚠️ কার্টে স্টক আউট পণ্য রয়েছে। অর্ডার করতে পণ্যটি কার্ট থেকে মুছে ফেলুন।
+						</div>
+						<Button
+							variant="secondary"
+							disabled
+							class="w-full h-auto py-3.5 rounded-2xl text-slate-400 bg-slate-100 text-sm font-black flex items-center justify-center gap-2 border border-slate-200 cursor-not-allowed"
+						>
+							<span>স্টক শেষ পণ্য মুছে ফেলুন</span>
+						</Button>
+					</div>
+				{:else}
+					<Button
+						variant="blue"
+						href="/checkout"
+						onclick={() => cart.closeCart()}
+						class="w-full h-auto py-3.5 rounded-2xl text-white text-sm font-black flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-98"
+					>
+						<span>অর্ডার সম্পন্ন করুন</span>
+						<ArrowRight class="w-4 h-4 stroke-[2.5]" />
+					</Button>
+				{/if}
 
 				<!-- Trust Guarantee Footnote -->
 				<div class="flex items-center justify-center gap-3 text-[11px] text-slate-400 pt-1 font-medium">

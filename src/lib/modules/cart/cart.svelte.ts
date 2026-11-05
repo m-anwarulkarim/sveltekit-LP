@@ -12,6 +12,9 @@ export interface CartItem {
 	category: string;
 	variantId?: string | null;
 	variantName?: string | null;
+	inStock?: boolean;
+	totalStock?: number;
+	isPreOrder?: boolean;
 }
 
 export interface OrderDetails {
@@ -288,6 +291,20 @@ class CartStore {
 	}
 
 	addItem(product: Omit<CartItem, 'quantity'>, openDrawer: boolean = true) {
+		const isOutOfStock =
+			product.isPreOrder !== true &&
+			(product.inStock === false ||
+				(product.totalStock !== undefined && product.totalStock <= 0 && product.inStock !== true));
+
+		if (isOutOfStock) {
+			if (typeof window !== 'undefined') {
+				import('svelte-sonner').then(({ toast }) => {
+					toast.warning(`"${product.name}" পণ্যটি বর্তমানে স্টক আউট! কার্টে যোগ করা সম্ভব নয়।`);
+				});
+			}
+			return false;
+		}
+
 		const existing = this.items.find(
 			(item) => item.id === product.id && (item.variantId || null) === (product.variantId || null)
 		);

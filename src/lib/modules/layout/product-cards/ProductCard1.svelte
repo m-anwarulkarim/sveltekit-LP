@@ -3,6 +3,7 @@
 	import { cart } from '#lib/modules/cart/cart.svelte';
 	import { Star, ShoppingBag, Eye, Check } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
 
 	interface Props {
 		product: Product;
@@ -10,6 +11,11 @@
 	}
 
 	let { product, onQuickView }: Props = $props();
+
+	const isOutOfStock = $derived(
+		!product.isPreOrder &&
+			(product.inStock === false || (product.totalStock !== undefined && product.totalStock <= 0))
+	);
 
 	const discountPercent = $derived.by(() => {
 		if (product.discountPercent) return product.discountPercent;
@@ -23,13 +29,20 @@
 
 	function handleAddToCart(e: MouseEvent) {
 		e.stopPropagation();
+		if (isOutOfStock) {
+			toast.warning(`"${product.name}" পণ্যটি বর্তমানে স্টক আউট!`);
+			return;
+		}
 		cart.addItem({
 			id: product.id,
 			name: product.name,
 			price: product.price,
 			originalPrice: product.originalPrice,
 			image: product.image,
-			category: product.categoryLabel
+			category: product.categoryLabel,
+			inStock: product.inStock,
+			totalStock: product.totalStock,
+			isPreOrder: product.isPreOrder
 		});
 		isAdded = true;
 		setTimeout(() => {
@@ -56,8 +69,15 @@
 			src={product.image}
 			alt={product.name}
 			loading="lazy"
-			class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+			class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 {isOutOfStock ? 'grayscale opacity-75' : ''}"
 		/>
+		{#if isOutOfStock}
+			<div class="absolute inset-0 bg-slate-900/40 backdrop-blur-[1px] flex items-center justify-center p-2">
+				<span class="bg-rose-600 text-white text-[10px] sm:text-xs font-black px-2.5 py-0.5 rounded-full shadow-md uppercase tracking-wider">
+					স্টক শেষ
+				</span>
+			</div>
+		{/if}
 		{#if discountPercent > 0}
 			<span class="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-600 text-white text-[9px] sm:text-[10px] font-black uppercase shadow-xs">
 				-{discountPercent}%
@@ -101,22 +121,28 @@
 			{/if}
 		</div>
 
-		<button
-			type="button"
-			onclick={handleAddToCart}
-			class="h-7 w-7 sm:h-8 sm:w-auto sm:px-3 rounded-lg sm:rounded-xl {isAdded
-				? 'bg-emerald-600 text-white'
-				: 'bg-slate-900 hover:bg-emerald-600 text-white'} text-xs font-bold flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer shrink-0 shadow-2xs active:scale-90"
-			title="কার্টে যোগ করুন"
-			aria-label="কার্টে যোগ করুন"
-		>
-			{#if isAdded}
-				<Check class="w-3.5 h-3.5 stroke-[3]" />
-			{:else}
-				<ShoppingBag class="w-3.5 h-3.5" />
-			{/if}
-			<span class="hidden sm:inline">{isAdded ? 'যোগ হয়েছে' : 'কার্টে যোগ'}</span>
-		</button>
+		{#if isOutOfStock}
+			<span class="px-2 py-1 rounded-lg bg-slate-100 text-slate-400 text-[10px] sm:text-xs font-bold border border-slate-200">
+				স্টক শেষ
+			</span>
+		{:else}
+			<button
+				type="button"
+				onclick={handleAddToCart}
+				class="h-7 w-7 sm:h-8 sm:w-auto sm:px-3 rounded-lg sm:rounded-xl {isAdded
+					? 'bg-emerald-600 text-white'
+					: 'bg-slate-900 hover:bg-emerald-600 text-white'} text-xs font-bold flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer shrink-0 shadow-2xs active:scale-90"
+				title="কার্টে যোগ করুন"
+				aria-label="কার্টে যোগ করুন"
+			>
+				{#if isAdded}
+					<Check class="w-3.5 h-3.5 stroke-[3]" />
+				{:else}
+					<ShoppingBag class="w-3.5 h-3.5" />
+				{/if}
+				<span class="hidden sm:inline">{isAdded ? 'যোগ হয়েছে' : 'কার্টে যোগ'}</span>
+			</button>
+		{/if}
 	</div>
 </div>
 

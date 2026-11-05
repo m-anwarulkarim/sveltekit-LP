@@ -19,4 +19,6 @@ export interface Product {
 	features?: string[];
 	description?: string;
 	inStock?: boolean;
+	totalStock?: number;
+	isPreOrder?: boolean;
 }

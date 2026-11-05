@@ -45,7 +45,9 @@ export const load: PageServerLoad = async (event) => {
 				badgeColor: 'bg-blue-600 text-white',
 				features: [],
 				description: p.description || p.name,
-				inStock: Boolean(p.inStock)
+				inStock: Boolean(p.inStock),
+				totalStock: p.totalStock !== undefined && p.totalStock !== null ? Number(p.totalStock) : 0,
+				isPreOrder: Boolean(p.isPreOrder)
 			};
 		});
 	} catch (e) {

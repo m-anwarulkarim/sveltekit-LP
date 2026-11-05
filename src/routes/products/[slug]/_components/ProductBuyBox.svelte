@@ -3,6 +3,7 @@
 	import type { Product } from '#lib/modules/products/types.ts';
 	import { cart } from '#lib/modules/cart/cart.svelte';
 	import { Button, Badge, Separator } from '#lib/components/ui';
+	import { toast } from 'svelte-sonner';
 	import {
 		Star,
 		Plus,
@@ -25,6 +26,12 @@
 	}
 
 	let { product, onBuyNow, productSettings, storeConfig }: Props = $props();
+
+	// Stock out status detection
+	const isOutOfStock = $derived(
+		!product.isPreOrder &&
+			(product.inStock === false || (product.totalStock !== undefined && product.totalStock <= 0 && product.inStock !== true))
+	);
 
 	// Quantity state
 	let quantity = $state(1);
@@ -64,6 +71,10 @@
 	}
 
 	function handleAddToCart() {
+		if (isOutOfStock) {
+			toast.warning(`"${product.name}" পণ্যটি বর্তমানে স্টক আউট!`);
+			return;
+		}
 		for (let i = 0; i < quantity; i++) {
 			cart.addItem({
 				id: selectedVariant.id === 'standard' ? product.id : `${product.id}-${selectedVariant.id}`,
@@ -71,7 +82,10 @@
 				price: activePrice,
 				originalPrice: activeOriginalPrice,
 				image: product.image,
-				category: product.categoryLabel
+				category: product.categoryLabel,
+				inStock: product.inStock,
+				totalStock: product.totalStock,
+				isPreOrder: product.isPreOrder
 			});
 		}
 		isAdded = true;
@@ -82,13 +96,20 @@
 	}
 
 	function handleOrderNow() {
+		if (isOutOfStock) {
+			toast.warning(`"${product.name}" পণ্যটি বর্তমানে স্টক আউট!`);
+			return;
+		}
 		cart.addItem({
 			id: selectedVariant.id === 'standard' ? product.id : `${product.id}-${selectedVariant.id}`,
 			name: selectedVariant.id === 'standard' ? product.name : `${product.name} [${selectedVariant.name}]`,
 			price: activePrice,
 			originalPrice: activeOriginalPrice,
 			image: product.image,
-			category: product.categoryLabel
+			category: product.categoryLabel,
+			inStock: product.inStock,
+			totalStock: product.totalStock,
+			isPreOrder: product.isPreOrder
 		}, false);
 		cart.closeCart();
 		onBuyNow();
@@ -111,10 +132,22 @@
 		</div>
 
 		<!-- Stock availability status -->
-		<Badge variant="outline" class="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border-emerald-200 px-2.5 py-1 rounded-full">
-			<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-			<span>ইন স্টক (মজুদ আছে)</span>
-		</Badge>
+		{#if isOutOfStock}
+			<Badge variant="outline" class="flex items-center gap-1.5 text-xs font-semibold text-rose-700 bg-rose-50 border-rose-200 px-2.5 py-1 rounded-full">
+				<span class="w-2 h-2 rounded-full bg-rose-500"></span>
+				<span>স্টক শেষ (Stock Out)</span>
+			</Badge>
+		{:else if product.isPreOrder}
+			<Badge variant="outline" class="flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border-amber-200 px-2.5 py-1 rounded-full">
+				<span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+				<span>প্রি-অর্ডার (Pre-Order)</span>
+			</Badge>
+		{:else}
+			<Badge variant="outline" class="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border-emerald-200 px-2.5 py-1 rounded-full">
+				<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+				<span>ইন স্টক (মজুদ আছে)</span>
+			</Badge>
+		{/if}
 	</div>
 
 	<!-- Product Title & Tagline -->
@@ -213,7 +246,7 @@
 				size="icon"
 				onclick={decrement}
 				class="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 disabled:opacity-40"
-				disabled={quantity <= 1}
+				disabled={quantity <= 1 || isOutOfStock}
 				aria-label="Decrease quantity"
 			>
 				<Minus class="w-3.5 h-3.5" />
@@ -226,7 +259,8 @@
 				variant="ghost"
 				size="icon"
 				onclick={increment}
-				class="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700"
+				class="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 disabled:opacity-40"
+				disabled={isOutOfStock}
 				aria-label="Increase quantity"
 			>
 				<Plus class="w-3.5 h-3.5" />
@@ -235,36 +269,49 @@
 	</div>
 
 	<!-- Dual Action Buttons: Buy Now & Add to Cart using shadcn Button -->
-	<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-		
-		<!-- 1. Primary CTA: Order Now / Buy Now (Instant Checkout) -->
-		<Button
-			type="button"
-			variant="default"
-			onclick={handleOrderNow}
-			class="w-full h-auto py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-black text-sm sm:text-base shadow-md shadow-orange-500/20 flex items-center justify-center gap-2 border-0 active:scale-98 tracking-wide uppercase cursor-pointer"
-		>
-			<Zap class="w-4 h-4 fill-slate-950 stroke-none" />
-			<span>অর্ডার করুন</span>
-		</Button>
+	{#if isOutOfStock}
+		<div class="pt-2">
+			<Button
+				type="button"
+				variant="secondary"
+				disabled
+				class="w-full h-auto py-3.5 px-4 rounded-xl bg-slate-100 text-slate-400 font-black text-sm sm:text-base border border-slate-200 cursor-not-allowed uppercase tracking-wider"
+			>
+				স্টক শেষ (Currently Out of Stock)
+			</Button>
+		</div>
+	{:else}
+		<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+			
+			<!-- 1. Primary CTA: Order Now / Buy Now (Instant Checkout) -->
+			<Button
+				type="button"
+				variant="default"
+				onclick={handleOrderNow}
+				class="w-full h-auto py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-black text-sm sm:text-base shadow-md shadow-orange-500/20 flex items-center justify-center gap-2 border-0 active:scale-98 tracking-wide uppercase cursor-pointer"
+			>
+				<Zap class="w-4 h-4 fill-slate-950 stroke-none" />
+				<span>অর্ডার করুন</span>
+			</Button>
 
-		<!-- 2. Secondary CTA: Add to Cart (Drawer Slide-in) -->
-		<Button
-			type="button"
-			variant="default"
-			onclick={handleAddToCart}
-			class="w-full h-auto py-3.5 px-4 rounded-xl bg-[#0d9488] hover:bg-[#0f766e] text-white font-black text-sm sm:text-base shadow-md shadow-teal-700/20 flex items-center justify-center gap-2 border-0 active:scale-98 tracking-wide uppercase cursor-pointer"
-		>
-			{#if isAdded}
-				<CheckCircle2 class="w-4 h-4 text-emerald-200" />
-				<span>কার্টে যুক্ত হয়েছে!</span>
-			{:else}
-				<ShoppingBag class="w-4 h-4" />
-				<span>কার্টে যোগ করুন</span>
-			{/if}
-		</Button>
+			<!-- 2. Secondary CTA: Add to Cart (Drawer Slide-in) -->
+			<Button
+				type="button"
+				variant="default"
+				onclick={handleAddToCart}
+				class="w-full h-auto py-3.5 px-4 rounded-xl bg-[#0d9488] hover:bg-[#0f766e] text-white font-black text-sm sm:text-base shadow-md shadow-teal-700/20 flex items-center justify-center gap-2 border-0 active:scale-98 tracking-wide uppercase cursor-pointer"
+			>
+				{#if isAdded}
+					<CheckCircle2 class="w-4 h-4 text-emerald-200" />
+					<span>কার্টে যুক্ত হয়েছে!</span>
+				{:else}
+					<ShoppingBag class="w-4 h-4" />
+					<span>কার্টে যোগ করুন</span>
+				{/if}
+			</Button>
 
-	</div>
+		</div>
+	{/if}
 
 	<!-- Call & WhatsApp Order Buttons (Controlled by Product Settings) -->
 	{#if productSettings?.callOrderBtn || productSettings?.whatsappOrderBtn}

@@ -3,6 +3,7 @@
 	import { cart } from '#lib/modules/cart/cart.svelte';
 	import { Heart, ShoppingBag, Eye, Star } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
 
 	interface Props {
 		product: Product;
@@ -10,6 +11,11 @@
 	}
 
 	let { product, onQuickView }: Props = $props();
+
+	const isOutOfStock = $derived(
+		!product.isPreOrder &&
+			(product.inStock === false || (product.totalStock !== undefined && product.totalStock <= 0))
+	);
 
 	const discountPercent = $derived.by(() => {
 		if (product.discountPercent) return product.discountPercent;
@@ -21,13 +27,20 @@
 
 	function handleAddToCart(e: MouseEvent) {
 		e.stopPropagation();
+		if (isOutOfStock) {
+			toast.warning(`"${product.name}" পণ্যটি বর্তমানে স্টক আউট!`);
+			return;
+		}
 		cart.addItem({
 			id: product.id,
 			name: product.name,
 			price: product.price,
 			originalPrice: product.originalPrice,
 			image: product.image,
-			category: product.categoryLabel
+			category: product.categoryLabel,
+			inStock: product.inStock,
+			totalStock: product.totalStock,
+			isPreOrder: product.isPreOrder
 		});
 	}
 </script>
@@ -50,8 +63,16 @@
 			src={product.image}
 			alt={product.name}
 			loading="lazy"
-			class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-108"
+			class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-108 {isOutOfStock ? 'grayscale opacity-75' : ''}"
 		/>
+
+		{#if isOutOfStock}
+			<div class="absolute inset-0 bg-slate-900/40 backdrop-blur-[1px] flex items-center justify-center p-2">
+				<span class="bg-rose-600 text-white text-[10px] sm:text-xs font-black px-2.5 py-0.5 rounded-full shadow-md uppercase tracking-wider">
+					স্টক শেষ
+				</span>
+			</div>
+		{/if}
 
 		{#if discountPercent > 0}
 			<span class="absolute top-1.5 left-1.5 sm:top-2.5 sm:left-2.5 px-2 py-0.5 rounded-full bg-slate-900/90 text-white text-[9px] sm:text-[10px] font-bold tracking-wider backdrop-blur-xs shadow-xs">
@@ -74,15 +95,21 @@
 					<Eye class="w-3.5 h-3.5" />
 				</button>
 			{/if}
-			<button
-				type="button"
-				onclick={handleAddToCart}
-				title="কার্টে যোগ করুন"
-				class="px-3 h-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold shadow-md flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
-			>
-				<ShoppingBag class="w-3.5 h-3.5" />
-				<span>Add</span>
-			</button>
+			{#if isOutOfStock}
+				<span class="px-3 h-8 rounded-full bg-slate-900/80 text-white text-[10px] font-bold shadow-md flex items-center">
+					স্টক শেষ
+				</span>
+			{:else}
+				<button
+					type="button"
+					onclick={handleAddToCart}
+					title="কার্টে যোগ করুন"
+					class="px-3 h-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold shadow-md flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+				>
+					<ShoppingBag class="w-3.5 h-3.5" />
+					<span>Add</span>
+				</button>
+			{/if}
 		</div>
 	</div>
 

@@ -18,6 +18,4 @@ ALTER TABLE `reviews` ADD COLUMN `images` text;
 --> statement-breakpoint
 ALTER TABLE `reviews` ADD COLUMN `helpful_count` integer NOT NULL DEFAULT 0;
 --> statement-breakpoint
-ALTER TABLE `reviews` ADD COLUMN `updated_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL;
---> statement-breakpoint
 CREATE INDEX IF NOT EXISTS `reviews_status_idx` ON `reviews` (`status`);

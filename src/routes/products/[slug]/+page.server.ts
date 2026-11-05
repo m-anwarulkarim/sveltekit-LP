@@ -69,7 +69,9 @@ export const load: PageServerLoad = async (event) => {
 				badgeColor: 'bg-blue-600 text-white',
 				features: specs.length > 0 ? specs.map((s) => s.value) : (rawProduct.description ? [plainText(rawProduct.description)] : []),
 				description: sanitizeRichText(rawProduct.description) || rawProduct.name,
-				inStock: Boolean(rawProduct.inStock)
+				inStock: Boolean(rawProduct.inStock),
+				totalStock: rawProduct.totalStock !== undefined && rawProduct.totalStock !== null ? Number(rawProduct.totalStock) : 0,
+				isPreOrder: Boolean(rawProduct.isPreOrder)
 			};
 
 			// Query related products from same category or published products
@@ -102,7 +104,9 @@ export const load: PageServerLoad = async (event) => {
 					badgeColor: 'bg-blue-600 text-white',
 					features: [],
 					description: plainText(p.description) || p.name,
-					inStock: Boolean(p.inStock)
+					inStock: Boolean(p.inStock),
+					totalStock: p.totalStock !== undefined && p.totalStock !== null ? Number(p.totalStock) : 0,
+					isPreOrder: Boolean(p.isPreOrder)
 				};
 			});
 		}

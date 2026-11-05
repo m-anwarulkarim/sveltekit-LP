@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import { submitAction } from '#lib/client/submit-action';
 	import { computeDeliveryCharge, computeOfferDiscount } from '#lib/utils/order-pricing';
 	import { onMount } from 'svelte';
@@ -115,6 +115,15 @@
 
 	const grandTotal = $derived(
 		Math.max(0, cart.subtotal - cart.discountAmount - offerDiscount + deliveryFee)
+	);
+
+	const hasOutOfStockItems = $derived(
+		cart.items.some(
+			(item) =>
+				item.isPreOrder !== true &&
+				(item.inStock === false ||
+					(item.totalStock !== undefined && item.totalStock <= 0 && item.inStock !== true))
+		)
 	);
 
 	// Fire Meta Pixel & GTM GA4 Standard InitiateCheckout / begin_checkout Events
@@ -236,6 +245,18 @@
 
 		if (cart.items.length === 0) {
 			errorMessage = 'আপনার শপিং ব্যাগ খালি! অনুগ্রহ করে পণ্য যোগ করুন।';
+			return;
+		}
+
+		const outOfStockItem = cart.items.find(
+			(item) =>
+				item.isPreOrder !== true &&
+				(item.inStock === false ||
+					(item.totalStock !== undefined && item.totalStock <= 0 && item.inStock !== true))
+		);
+		if (outOfStockItem) {
+			errorMessage = `"${outOfStockItem.name}" পণ্যটি বর্তমানে স্টক আউট! অর্ডার নিশ্চিত করতে অনুগ্রহ করে এটি কার্ট থেকে মুছে ফেলুন।`;
+			toast.error(`"${outOfStockItem.name}" স্টক আউট!`);
 			return;
 		}
 
@@ -850,9 +871,16 @@
 											class="w-12 h-12 rounded-lg object-contain bg-white border border-slate-100 p-0.5 shrink-0"
 										/>
 										<div class="flex-1 min-w-0">
-											<h4 class="text-xs font-bold text-slate-900 truncate" title={item.name}>
-												{item.name}
-											</h4>
+											<div class="flex items-center gap-1.5 flex-wrap">
+												<h4 class="text-xs font-bold text-slate-900 truncate" title={item.name}>
+													{item.name}
+												</h4>
+												{#if item.isPreOrder !== true && (item.inStock === false || (item.totalStock !== undefined && item.totalStock <= 0 && item.inStock !== true))}
+													<span class="text-[9px] font-black text-rose-600 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200">
+														স্টক শেষ
+													</span>
+												{/if}
+											</div>
 											<div class="text-[11px] text-slate-500 mt-0.5 font-mono">
 												{item.quantity} × {formatTaka(item.price)}
 											</div>
@@ -981,20 +1009,36 @@
 							</div>
 
 							<!-- Desktop Place Order Button -->
-							<Button
-								type="submit"
-								variant="blue"
-								disabled={isSubmitting}
-								class="w-full h-auto py-3.5 rounded-2xl bg-[#2563eb] hover:bg-blue-700 text-white text-sm font-black flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-98 cursor-pointer"
-							>
-								{#if isSubmitting}
-									<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-									<span>অর্ডার নিশ্চিত করা হচ্ছে...</span>
-								{:else}
-									<span class="text-white font-bold">অর্ডার নিশ্চিত করুন ({formatTaka(grandTotal)})</span>
-									<ArrowRight class="w-4 h-4 text-white stroke-[2.5]" />
-								{/if}
-							</Button>
+							{#if hasOutOfStockItems}
+								<div class="space-y-2">
+									<div class="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-center">
+										⚠️ কার্টে স্টক শেষ পণ্য রয়েছে। অর্ডার নিশ্চিত করতে পণ্যটি মুছে ফেলুন।
+									</div>
+									<Button
+										type="button"
+										variant="secondary"
+										disabled
+										class="w-full h-auto py-3.5 rounded-2xl bg-slate-100 text-slate-400 text-sm font-black flex items-center justify-center gap-2 border border-slate-200 cursor-not-allowed"
+									>
+										<span>স্টক শেষ পণ্য মুছে ফেলুন</span>
+									</Button>
+								</div>
+							{:else}
+								<Button
+									type="submit"
+									variant="blue"
+									disabled={isSubmitting}
+									class="w-full h-auto py-3.5 rounded-2xl bg-[#2563eb] hover:bg-blue-700 text-white text-sm font-black flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-98 cursor-pointer"
+								>
+									{#if isSubmitting}
+										<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+										<span>অর্ডার নিশ্চিত করা হচ্ছে...</span>
+									{:else}
+										<span class="text-white font-bold">অর্ডার নিশ্চিত করুন ({formatTaka(grandTotal)})</span>
+										<ArrowRight class="w-4 h-4 text-white stroke-[2.5]" />
+									{/if}
+								</Button>
+							{/if}
 
 							<Separator />
 

@@ -246,6 +246,15 @@ await test('landing order ignores a forged price', async () => {
 	assert.equal(res.success, true, JSON.stringify(res));
 	assert.equal(res.total, 1000);
 });
+await test('landing order rejects out of stock product', async () => {
+	sqlite.prepare('update products set in_stock = 0 where id = ?').run('p2');
+	const fd = new FormData();
+	Object.entries({ customerName: 'Karim Ali', customerPhone: '01722222222', shippingAddress: 'House 9, Road 9', packageIndex: '1', price: '1000', quantity: '1' }).forEach(([k, v]) => fd.append(k, v));
+	const res: any = await (lpActions as any).placeOrder({ request: new Request('https://shop.test/lp/lp-test', { method: 'POST', body: fd }), platform, params: { slug: 'lp-test' }, getClientAddress: () => '1.1.1.1', locals: {}, cookies: { get: () => undefined }, url: new URL('https://shop.test/lp/lp-test') });
+	assert.equal(res.status, 400);
+	assert.match(res.data.message, /স্টক আউট/);
+	sqlite.prepare('update products set in_stock = 1 where id = ?').run('p2');
+});
 
 // ---------- checkout page ----------
 await test('checkout page never sends gateway secrets', async () => {

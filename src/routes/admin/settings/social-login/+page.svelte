@@ -19,7 +19,7 @@
 	import { toast } from 'svelte-sonner';
 	import type { SocialLoginConfig } from '#lib/server/services/settings.service';
 
-	let { data, form }: { data: { settings: SocialLoginConfig }; form?: any } = $props();
+	let { data, form }: { data: { settings: SocialLoginConfig; origin: string }; form?: any } = $props();
 
 	let isSaving = $state(false);
 	let showSecret = $state(false);
@@ -38,7 +38,10 @@
 		}
 	});
 
-	const callbackUri = 'https://lp.haqplus.com/api/auth/callback/google';
+	// Live callback URL built from the admin's current origin, so staging / custom domains work
+	// without being told to edit a hardcoded URL.
+	const callbackUri = `${data.origin}/api/auth/callback/google`;
+	const originForOrigins = data.origin;
 	const localCallbackUri = 'http://localhost:5173/api/auth/callback/google';
 
 	function copyToClipboard(text: string, label: string) {
@@ -62,15 +65,20 @@
 		</a>
 
 		<div class="flex items-center gap-2">
-			{#if enableGoogleLogin && googleClientId.trim()}
+			{#if data.settings.enableGoogleLogin && data.settings.googleClientId?.trim() && data.settings.googleClientSecret?.trim()}
 				<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
 					<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-					<span>Google Login Active</span>
+					<span>লাইভে সক্রিয়</span>
+				</span>
+			{:else if enableGoogleLogin && googleClientId.trim() && googleClientSecret.trim()}
+				<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+					<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+					<span>সেভ করলে সক্রিয় হবে</span>
 				</span>
 			{:else}
 				<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
 					<span class="w-2 h-2 rounded-full bg-slate-400"></span>
-					<span>Inactive</span>
+					<span>নিষ্ক্রিয়</span>
 				</span>
 			{/if}
 		</div>
@@ -280,7 +288,7 @@
 			</div>
 
 			<div class="pt-1 flex items-center justify-between text-xs text-slate-500">
-				<span>Authorized JavaScript Origins: <strong class="font-mono text-slate-700">https://lp.haqplus.com</strong></span>
+				<span>Authorized JavaScript Origins: <strong class="font-mono text-slate-700">{originForOrigins}</strong></span>
 				<a
 					href="https://console.cloud.google.com/apis/credentials"
 					target="_blank"

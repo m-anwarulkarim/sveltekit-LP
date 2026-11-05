@@ -19,7 +19,8 @@
 		MessageCircle,
 		Tag,
 		DollarSign,
-		Wrench
+		Wrench,
+		Mail
 	} from 'lucide-svelte';
 
 	let searchQuery = $state('');
@@ -85,6 +86,16 @@
 			accentColor: 'text-[#10b981]',
 			iconType: 'payment',
 			desc: 'বিকাশ, নগদ, রকেট ও অনলাইন পেমেন্ট গেটওয়ে'
+		},
+		{
+			id: 'email',
+			title: 'Email Settings',
+			cardBg: 'bg-[#f0f9ff]',
+			iconBg: 'bg-[#0ea5e9]',
+			ringBorder: 'border-[#0ea5e9]/40',
+			accentColor: 'text-[#0ea5e9]',
+			iconType: 'mail',
+			desc: 'Resend দিয়ে ভেরিফিকেশন, পাসওয়ার্ড রিসেট ও অর্ডার ইমেইল'
 		},
 		{
 			id: 'social-login',
@@ -350,6 +361,8 @@
 								<PhoneCall class="w-4.5 h-4.5" />
 							{:else if card.iconType === 'sync'}
 								<RefreshCw class="w-4.5 h-4.5" />
+							{:else if card.iconType === 'mail'}
+								<Mail class="w-4.5 h-4.5" />
 							{:else}
 								<Settings class="w-4.5 h-4.5" />
 							{/if}

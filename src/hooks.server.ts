@@ -5,8 +5,8 @@ import { DEV as dev } from 'esm-env';
 import { env as cfEnv } from 'cloudflare:workers';
 import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
-import { createAuth } from '#lib/server/auth';
-import { getAuthSecret, getGoogleClientId, getGoogleClientSecret } from '#lib/server/secrets';
+import { createAuth, resolveAuthOptions } from '#lib/server/auth';
+import { getAuthSecret } from '#lib/server/secrets';
 import { cached, clearCache } from '#lib/server/cache';
 import { getRateLimitTier, isRateLimitAllowed } from '#lib/server/rate-limit';
 import { SecurityService } from '#lib/server/services/security.service';
@@ -159,7 +159,8 @@ async function attachCustomerSession(event: RequestEvent) {
 
 	try {
 		const baseURL = event.url.origin;
-		const auth = createAuth(d1, secret, baseURL, getGoogleClientId() || undefined, getGoogleClientSecret() || undefined);
+		const authOptions = await resolveAuthOptions(d1);
+		const auth = createAuth(d1, secret, baseURL, authOptions);
 		event.locals.auth = auth;
 		if (auth && hasSessionCookie) {
 			const session = await auth.api.getSession({ headers: event.request.headers });

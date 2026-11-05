@@ -18,8 +18,16 @@ import {
 	DEFAULT_WEBSITE_INFO,
 	type WebsiteInfoConfig,
 	DEFAULT_GOOGLE_CONSOLE_CONFIG,
-	type GoogleConsoleConfig
+	type GoogleConsoleConfig,
+	DEFAULT_SOCIAL_LOGIN_CONFIG
 } from '#lib/server/services/settings.service';
+
+/** Public shape — never contains googleClientSecret. */
+export interface PublicSocialLogin {
+	enableGoogleLogin: boolean;
+	enableOneTap: boolean;
+	googleClientId: string;
+}
 
 export const load: LayoutServerLoad = async (event) => {
 	let themeConfig = DEFAULT_THEME_CONFIG;
@@ -31,7 +39,8 @@ export const load: LayoutServerLoad = async (event) => {
 		catalogMatchKey: DEFAULT_PIXEL_SETTINGS.catalogMatchKey,
 		events: DEFAULT_PIXEL_SETTINGS.events,
 		advancedMatching: DEFAULT_PIXEL_SETTINGS.advancedMatching.enabled,
-		capiEnabled: false
+		capiEnabled: false,
+		testEventCode: undefined
 	};
 	let gtmConfig: Awaited<ReturnType<typeof GtmService.getPublicConfig>> = {
 		isEnabled: DEFAULT_GTM_SETTINGS.isEnabled,
@@ -52,10 +61,15 @@ export const load: LayoutServerLoad = async (event) => {
 	let websiteInfo: WebsiteInfoConfig = DEFAULT_WEBSITE_INFO;
 	let activePopup: any = null;
 	let googleConsole: GoogleConsoleConfig = DEFAULT_GOOGLE_CONSOLE_CONFIG;
+	let socialLogin: PublicSocialLogin = {
+		enableGoogleLogin: false,
+		enableOneTap: false,
+		googleClientId: ''
+	};
 
 	try {
 		const db = getDb(event.platform);
-		const [tc, pc, gtm, cats, sCfg, pCfg, wInfo, popup, gConsole] = await cached('root-layout', 30_000, () => Promise.all([
+		const [tc, pc, gtm, cats, sCfg, pCfg, wInfo, popup, gConsole, sLogin] = await cached('root-layout', 30_000, () => Promise.all([
 			ThemeCustomizationService.getThemeConfig(db).catch(() => DEFAULT_THEME_CONFIG),
 			PixelService.getPublicConfig(db).catch(() => pixelConfig),
 			GtmService.getPublicConfig(db).catch(() => gtmConfig),
@@ -64,7 +78,8 @@ export const load: LayoutServerLoad = async (event) => {
 			SettingsService.getProductSettings(db).catch(() => DEFAULT_PRODUCT_SETTINGS),
 			SettingsService.getWebsiteInfo(db).catch(() => DEFAULT_WEBSITE_INFO),
 			CustomizationService.getActivePopupForStorefront(db).catch(() => null),
-			SettingsService.getGoogleConsoleConfig(db).catch(() => DEFAULT_GOOGLE_CONSOLE_CONFIG)
+			SettingsService.getGoogleConsoleConfig(db).catch(() => DEFAULT_GOOGLE_CONSOLE_CONFIG),
+			SettingsService.getSocialLoginConfig(db).catch(() => DEFAULT_SOCIAL_LOGIN_CONFIG)
 		]));
 		if (tc) themeConfig = tc;
 		if (pc) pixelConfig = pc;
@@ -75,6 +90,17 @@ export const load: LayoutServerLoad = async (event) => {
 		if (wInfo) websiteInfo = wInfo;
 		if (popup) activePopup = popup;
 		if (gConsole) googleConsole = gConsole;
+		if (sLogin) {
+			// Never expose googleClientSecret to the client.
+			socialLogin = {
+				enableGoogleLogin:
+					Boolean(sLogin.enableGoogleLogin) &&
+					Boolean(sLogin.googleClientId) &&
+					Boolean(sLogin.googleClientSecret),
+				enableOneTap: Boolean(sLogin.enableOneTap),
+				googleClientId: sLogin.googleClientId || ''
+			};
+		}
 	} catch (err) {
 		console.error('Failed to load database in root layout:', err);
 	}
@@ -91,6 +117,7 @@ export const load: LayoutServerLoad = async (event) => {
 		websiteInfo,
 		activePopup,
 		googleConsole,
+		socialLogin,
 		websiteJsonLd: SeoService.getWebSiteJsonLd(),
 		organizationJsonLd: SeoService.getOrganizationJsonLd()
 	};

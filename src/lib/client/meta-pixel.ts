@@ -10,6 +10,12 @@ export interface ClientPixelConfig {
 	backupPixelId?: string;
 	defaultCurrency?: string;
 	capiEnabled?: boolean;
+	/**
+	 * Present only when the admin's Test Mode toggle is active. When set, it is attached to every
+	 * browser fbq call so Meta routes those events to the Test Events tab (same destination as the
+	 * CAPI mirror), letting the "Deduplicated" badge appear for the Browser+Server pair.
+	 */
+	testEventCode?: string;
 	events?: {
 		pageView: boolean;
 		viewContent: boolean;
@@ -109,7 +115,11 @@ export function initMetaPixel(config?: ClientPixelConfig | null): void {
 			window.fbq('init', config.backupPixelId.trim());
 		}
 		if (config.events?.pageView !== false) {
-			window.fbq('track', 'PageView');
+			if (config.testEventCode) {
+				window.fbq('track', 'PageView', {}, { test_event_code: config.testEventCode });
+			} else {
+				window.fbq('track', 'PageView');
+			}
 		}
 		isPixelInitialized = true;
 	}
@@ -128,7 +138,11 @@ export function trackPageView(config?: ClientPixelConfig | null): void {
 	if (!cfg || cfg.trackingMode !== 'native_direct' || !cfg.pixelId) return;
 
 	if (typeof window.fbq === 'function' && cfg.events?.pageView !== false) {
-		window.fbq('track', 'PageView');
+		if (cfg.testEventCode) {
+			window.fbq('track', 'PageView', {}, { test_event_code: cfg.testEventCode });
+		} else {
+			window.fbq('track', 'PageView');
+		}
 	}
 }
 
@@ -171,8 +185,14 @@ function dispatchEvent(eventName: string, params: Record<string, any>, eventId?:
 	const id = eventId || (mirror ? newEventId() : undefined);
 
 	if (cfg.trackingMode === 'native_direct' && typeof window.fbq === 'function') {
-		if (id) window.fbq('track', eventName, params, { eventID: id });
-		else window.fbq('track', eventName, params);
+		const options: Record<string, any> = {};
+		if (id) options.eventID = id;
+		if (cfg.testEventCode) options.test_event_code = cfg.testEventCode;
+		if (Object.keys(options).length > 0) {
+			window.fbq('track', eventName, params, options);
+		} else {
+			window.fbq('track', eventName, params);
+		}
 	}
 
 	if (mirror && id) {

@@ -1,7 +1,6 @@
 import type { RequestHandler } from './$types';
-import { getDb } from '#lib/server/db/index';
-import { createAuth } from '#lib/server/auth';
-import { getAuthSecret, getGoogleClientId, getGoogleClientSecret } from '#lib/server/secrets';
+import { createAuth, resolveAuthOptions } from '#lib/server/auth';
+import { getAuthSecret } from '#lib/server/secrets';
 
 const handler: RequestHandler = async (event) => {
 	const secret = getAuthSecret();
@@ -13,13 +12,8 @@ const handler: RequestHandler = async (event) => {
 		});
 	}
 
-	const auth = createAuth(
-		d1,
-		secret,
-		event.url.origin,
-		getGoogleClientId() || undefined,
-		getGoogleClientSecret() || undefined
-	);
+	const authOptions = await resolveAuthOptions(d1);
+	const auth = createAuth(d1, secret, event.url.origin, authOptions);
 	if (!auth) {
 		return new Response(JSON.stringify({ error: 'Auth initialization failed' }), {
 			status: 503,

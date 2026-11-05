@@ -556,8 +556,12 @@ export class PixelService {
 		events: MetaPixelSettings['events'];
 		advancedMatching: boolean;
 		capiEnabled: boolean;
+		testEventCode?: string;
 	}> {
 		const s = await this.getSettings(db);
+		// Only expose test code when the admin's Test Mode toggle is actually active.
+		// Otherwise a stale code in settings could keep tagging live browser events as test.
+		const activeTestCode = isTestModeActive(s) ? s.testEventCode?.trim() : undefined;
 		return {
 			trackingMode: s.trackingMode,
 			pixelId: s.pixelId,
@@ -566,7 +570,8 @@ export class PixelService {
 			catalogMatchKey: s.catalogMatchKey,
 			events: s.events,
 			advancedMatching: s.advancedMatching.enabled,
-			capiEnabled: Boolean(s.pixelId?.trim() && s.capiToken?.trim())
+			capiEnabled: Boolean(s.pixelId?.trim() && s.capiToken?.trim()),
+			testEventCode: activeTestCode || undefined
 		};
 	}
 }

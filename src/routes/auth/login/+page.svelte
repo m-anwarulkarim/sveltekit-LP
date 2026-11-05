@@ -1,17 +1,24 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
 	import { Button } from '#lib/components/ui/button';
 	import { Input } from '#lib/components/ui/input';
 	import { Card, CardHeader, CardDescription, CardContent, CardFooter } from '#lib/components/ui/card';
 	import { Mail, Lock, LogIn, UserPlus, Eye, EyeOff, ShieldCheck, AlertCircle, ArrowLeft } from 'lucide-svelte';
 	import { authClient } from '#lib/auth-client';
-	import type { ActionData } from './$types';
+	import { triggerGoogleOneTap } from '#lib/auth-one-tap';
+	import type { ActionData, PageData } from './$types';
 
-	let { form }: { form: ActionData } = $props();
+	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	let showPassword = $state(false);
 	let isSubmitting = $state(false);
 	let isGoogleLoading = $state(false);
+
+	let googleEnabled = $derived(Boolean(data.socialLogin?.enableGoogleLogin));
+	let oneTapEnabled = $derived(
+		Boolean(data.socialLogin?.enableOneTap && data.socialLogin?.googleClientId && googleEnabled)
+	);
 
 	async function signInWithGoogle() {
 		isGoogleLoading = true;
@@ -21,6 +28,16 @@
 			isGoogleLoading = false;
 		}
 	}
+
+	onMount(() => {
+		if (oneTapEnabled) {
+			triggerGoogleOneTap({
+				clientId: data.socialLogin!.googleClientId,
+				callbackURL: '/account',
+				context: 'signin'
+			});
+		}
+	});
 </script>
 
 <svelte:head>
@@ -134,22 +151,23 @@
 						</Button>
 					</form>
 
-					<!-- Divider -->
-					<div class="relative my-2">
-						<div class="absolute inset-0 flex items-center">
-							<span class="w-full border-t border-slate-200"></span>
+					{#if googleEnabled}
+						<!-- Divider -->
+						<div class="relative my-2">
+							<div class="absolute inset-0 flex items-center">
+								<span class="w-full border-t border-slate-200"></span>
+							</div>
+							<div class="relative flex justify-center text-[10px] uppercase tracking-wider">
+								<span class="bg-white px-3 text-slate-400 font-bold">অথবা</span>
+							</div>
 						</div>
-						<div class="relative flex justify-center text-[10px] uppercase tracking-wider">
-							<span class="bg-white px-3 text-slate-400 font-bold">অথবা</span>
-						</div>
-					</div>
 
-					<!-- Google Sign In -->
-					<Button
-						type="button"
-						variant="outline"
-						disabled={isGoogleLoading}
-						onclick={signInWithGoogle}
+						<!-- Google Sign In -->
+						<Button
+							type="button"
+							variant="outline"
+							disabled={isGoogleLoading}
+							onclick={signInWithGoogle}
 						class="w-full h-11 rounded-xl border-slate-200 hover:bg-slate-50 text-xs font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer"
 					>
 						{#if isGoogleLoading}
@@ -165,6 +183,7 @@
 							<span>Google দিয়ে লগইন করুন</span>
 						{/if}
 					</Button>
+					{/if}
 				</CardContent>
 
 				<CardFooter class="flex flex-col gap-4 bg-slate-50/70 border-t border-slate-100 px-6 sm:px-8 py-5">

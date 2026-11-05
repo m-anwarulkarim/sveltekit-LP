@@ -3,14 +3,14 @@ import { getDb } from '#lib/server/db/index';
 import { SettingsService, DEFAULT_SOCIAL_LOGIN_CONFIG } from '#lib/server/services/settings.service';
 import { fail } from '@sveltejs/kit';
 
-export const load: PageServerLoad = async ({ platform }) => {
+export const load: PageServerLoad = async ({ platform, url }) => {
 	try {
 		const db = getDb(platform);
 		const settings = await SettingsService.getSocialLoginConfig(db);
-		return { settings };
+		return { settings, origin: url.origin };
 	} catch (error) {
 		console.error('Failed to load social login settings from D1:', error);
-		return { settings: { ...DEFAULT_SOCIAL_LOGIN_CONFIG } };
+		return { settings: { ...DEFAULT_SOCIAL_LOGIN_CONFIG }, origin: url.origin };
 	}
 };
 

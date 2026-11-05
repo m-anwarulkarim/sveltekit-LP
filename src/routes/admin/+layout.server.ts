@@ -1,6 +1,6 @@
 import type { LayoutServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
-import { count, sql } from 'drizzle-orm';
+import { count, eq, sql } from 'drizzle-orm';
 import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
 import { normalizeOrderStatus } from './_data';
@@ -155,6 +155,7 @@ export const load: LayoutServerLoad = async ({ platform, url, locals }) => {
 	let productCount = 0;
 	let inStockProducts = 0;
 	let reviewCount = 0;
+	let pendingReviewsCount = 0;
 	let subscriberCount = 0;
 	let summary: Awaited<ReturnType<typeof loadOrderSummary>> | null = null;
 
@@ -165,6 +166,7 @@ export const load: LayoutServerLoad = async ({ platform, url, locals }) => {
 			products,
 			stocked,
 			reviews,
+			pendingReviews,
 			subscribers,
 			landingPages,
 			media,
@@ -181,6 +183,12 @@ export const load: LayoutServerLoad = async ({ platform, url, locals }) => {
 				.where(sql`${schema.products.inStock} = 1`)
 				.all(),
 			countRows(db, schema.reviews),
+			db
+				.select({ value: count() })
+				.from(schema.reviews)
+				.where(eq(schema.reviews.status, 'pending'))
+				.all()
+				.catch(() => [{ value: 0 }]),
 			countRows(db, schema.newsletter),
 			countRows(db, schema.landingPages).catch(() => 0),
 			countRows(db, schema.mediaAssets).catch(() => 0),
@@ -195,6 +203,7 @@ export const load: LayoutServerLoad = async ({ platform, url, locals }) => {
 		productCount = products;
 		inStockProducts = Number(stocked[0]?.value) || 0;
 		reviewCount = reviews;
+		pendingReviewsCount = Number(pendingReviews[0]?.value) || 0;
 		subscriberCount = subscribers;
 		landingPagesCount = landingPages;
 		galleryCount = media;
@@ -219,6 +228,7 @@ export const load: LayoutServerLoad = async ({ platform, url, locals }) => {
 		customersCount,
 		landingPagesCount,
 		galleryCount,
+		pendingReviewsCount,
 		sidebarCounts: {
 			web: summary?.sidebar.web ?? 0,
 			incomplete: summary?.sidebar.incomplete ?? 0,

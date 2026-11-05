@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="800" height="800">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc" />
+      <stop offset="50%" stop-color="#f1f5f9" />
+      <stop offset="100%" stop-color="#e2e8f0" />
+    </linearGradient>
+
+    <!-- Emerald Leaf Gradient -->
+    <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22c55e" />
+      <stop offset="50%" stop-color="#16a34a" />
+      <stop offset="100%" stop-color="#15803d" />
+    </linearGradient>
+
+    <!-- Gold Accent Gradient -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+
+    <!-- Badge Background -->
+    <linearGradient id="badgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f8fafc" />
+    </linearGradient>
+
+    <!-- Glow & Shadow Filters -->
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#0f172a" flood-opacity="0.06" />
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#0f172a" flood-opacity="0.04" />
+    </filter>
+
+    <filter id="iconGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#16a34a" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Background Base -->
+  <rect width="800" height="800" fill="url(#bgGrad)" />
+
+  <!-- Subtle Decorative Grid Pattern -->
+  <g opacity="0.4">
+    <circle cx="100" cy="100" r="140" fill="none" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4" />
+    <circle cx="700" cy="700" r="160" fill="none" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4" />
+    <circle cx="720" cy="80" r="80" fill="none" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="3 3" />
+    <circle cx="80" cy="720" r="100" fill="none" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="3 3" />
+  </g>
+
+  <!-- Inner Framed Card -->
+  <rect x="50" y="50" width="700" height="700" rx="36" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#cardShadow)" />
+  <rect x="66" y="66" width="668" height="668" rx="24" fill="none" stroke="#f1f5f9" stroke-width="2" />
+
+  <!-- Center Brand Presentation Group -->
+  <g transform="translate(400, 400)">
+    
+    <!-- Outer Decorative Glow Ring -->
+    <circle cx="0" cy="-60" r="105" fill="none" stroke="#dcfce7" stroke-width="16" opacity="0.7" />
+    <circle cx="0" cy="-60" r="92" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="2" filter="url(#iconGlow)" />
+
+    <!-- Sprout / Seedling Icon Mark -->
+    <g transform="translate(0, -60) scale(1.6) translate(-24, -24)">
+      <!-- Main Stem -->
+      <path d="M24 40 V 22" stroke="url(#leafGrad)" stroke-width="3.5" stroke-linecap="round" />
+      
+      <!-- Right Sprout Leaf -->
+      <path d="M24 26 C 26 14, 38 12, 40 20 C 40 28, 30 31, 24 30" fill="url(#leafGrad)" />
+      
+      <!-- Left Sprout Leaf -->
+      <path d="M24 30 C 22 20, 10 18, 8 26 C 8 33, 18 35, 24 34" fill="url(#leafGrad)" opacity="0.9" />
+
+      <!-- Golden Seed Base -->
+      <ellipse cx="24" cy="40" rx="4" ry="2.5" fill="url(#goldGrad)" />
+    </g>
+
+    <!-- Brand Name Heading -->
+    <text x="0" y="90" text-anchor="middle" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="52" fill="#0f172a" letter-spacing="-1">
+      Seed <tspan fill="#16a34a">BD</tspan>
+    </text>
+
+    <!-- English Sub-Brand Tagline -->
+    <text x="0" y="126" text-anchor="middle" font-family="'Outfit', -apple-system, BlinkMacSystemFont, sans-serif" font-weight="700" font-size="14" fill="#64748b" letter-spacing="4">
+      PREMIUM SEEDS &amp; ESSENTIALS
+    </text>
+
+    <!-- Horizontal Divider with Leaf Accent -->
+    <g transform="translate(0, 155)">
+      <line x1="-120" y1="0" x2="-25" y2="0" stroke="#e2e8f0" stroke-width="1.5" />
+      <circle cx="0" cy="0" r="4.5" fill="#16a34a" />
+      <line x1="25" y1="0" x2="120" y2="0" stroke="#e2e8f0" stroke-width="1.5" />
+    </g>
+
+    <!-- Bengali Quality Assurance Pill -->
+    <g transform="translate(0, 195)">
+      <rect x="-140" y="-18" width="280" height="36" rx="18" fill="#f0fdf4" stroke="#86efac" stroke-width="1.2" />
+      <text x="0" y="6" text-anchor="middle" font-family="'Anek Bangla', 'Segoe UI', sans-serif" font-weight="700" font-size="15" fill="#15803d">
+        ১০০% খাঁটি ও বিশ্বস্ত বীজ
+      </text>
+    </g>
+
+    <!-- Official Haq Plus Endorsement -->
+    <text x="0" y="270" text-anchor="middle" font-family="'Outfit', sans-serif" font-weight="600" font-size="12" fill="#94a3b8" letter-spacing="1">
+      A PRODUCT OF HAQ PLUS
+    </text>
+
+  </g>
+</svg>

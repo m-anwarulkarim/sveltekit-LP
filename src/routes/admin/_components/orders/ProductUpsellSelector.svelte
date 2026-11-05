@@ -6,7 +6,8 @@
 		Check,
 		ShoppingBag,
 		Layers,
-		CheckCircle2
+		CheckCircle2,
+		AlertTriangle
 	} from 'lucide-svelte';
 	import type { OrderItem } from './OrderedItemsTable.svelte';
 
@@ -16,6 +17,8 @@
 		price: number;
 		image?: string;
 		stock?: number;
+		totalStock?: number;
+		inStock?: boolean;
 		category?: string;
 	}
 
@@ -33,6 +36,7 @@
 
 	let searchQuery = $state('');
 	let selectedCategory = $state('all');
+	let pendingStockOutProduct = $state<Product | null>(null);
 
 	// Extract unique categories
 	let categories = $derived.by(() => {
@@ -61,9 +65,36 @@
 		const found = orderedItems.find((it) => it.id === productId);
 		return found ? found.quantity : 0;
 	}
+
+	function handleProductClick(prod: Product) {
+		const stockCount =
+			prod.totalStock !== undefined && prod.totalStock !== null
+				? Number(prod.totalStock)
+				: prod.stock !== undefined && prod.stock !== null
+					? Number(prod.stock)
+					: 0;
+		const isStockOut = prod.inStock === false || stockCount <= 0;
+
+		if (isStockOut) {
+			pendingStockOutProduct = prod;
+		} else {
+			onAddProduct(prod);
+		}
+	}
+
+	function confirmAddStockOutProduct() {
+		if (pendingStockOutProduct) {
+			onAddProduct(pendingStockOutProduct);
+			pendingStockOutProduct = null;
+		}
+	}
+
+	function cancelStockOutModal() {
+		pendingStockOutProduct = null;
+	}
 </script>
 
-<Card class="p-4 bg-white/90 shadow-xs border-slate-200/90 flex flex-col">
+<Card class="p-4 bg-white/90 shadow-xs border-slate-200/90 flex flex-col relative">
 	<!-- Header -->
 	<div class="flex items-center justify-between pb-3 border-b border-slate-100">
 		<div class="flex items-center gap-2">
@@ -114,7 +145,8 @@
 		{:else}
 			{#each filteredCatalog as prod}
 				{@const inOrderQty = getItemQuantityInOrder(prod.id)}
-				{@const isStockOut = prod.stock !== undefined && prod.stock <= 0}
+				{@const stockCount = prod.totalStock !== undefined && prod.totalStock !== null ? Number(prod.totalStock) : (prod.stock !== undefined && prod.stock !== null ? Number(prod.stock) : 0)}
+				{@const isStockOut = prod.inStock === false || stockCount <= 0}
 				<div class="py-2.5 flex items-center justify-between gap-2.5 hover:bg-slate-50/70 px-1 rounded-xl transition-colors">
 					
 					<!-- Product Info -->
@@ -142,8 +174,8 @@
 								<span class="text-xs font-mono font-bold text-[#5845eb]">
 									৳{prod.price.toLocaleString('en-US')}
 								</span>
-								<span class="text-[10px] font-semibold {isStockOut ? 'text-rose-600 bg-rose-50' : 'text-emerald-700 bg-emerald-50'} px-1.5 py-0.2 rounded">
-									{isStockOut ? 'স্টক শেষ' : `${prod.stock ?? 100} in stock`}
+								<span class="text-[10px] font-bold {isStockOut ? 'text-rose-600 bg-rose-50 border border-rose-200' : 'text-emerald-700 bg-emerald-50 border border-emerald-200'} px-1.5 py-0.5 rounded">
+									{isStockOut ? 'স্টক শেষ' : `স্টক: ${stockCount} টি`}
 								</span>
 							</div>
 						</div>
@@ -154,7 +186,7 @@
 						{#if inOrderQty > 0}
 							<button
 								type="button"
-								onclick={() => onAddProduct(prod)}
+								onclick={() => handleProductClick(prod)}
 								class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs font-bold transition-colors cursor-pointer"
 								title="আরেকটি যোগ করুন"
 							>
@@ -164,7 +196,7 @@
 						{:else}
 							<button
 								type="button"
-								onclick={() => onAddProduct(prod)}
+								onclick={() => handleProductClick(prod)}
 								class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 hover:bg-[#5845eb] text-slate-700 hover:text-white transition-colors cursor-pointer shadow-2xs"
 								title="অর্ডারে যোগ করুন"
 							>
@@ -177,5 +209,44 @@
 			{/each}
 		{/if}
 	</div>
-</Card>
 
+	<!-- Stock-Out Warning Confirmation Modal Popup -->
+	{#if pendingStockOutProduct}
+		<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-150">
+			<div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
+				
+				<div class="flex items-start gap-3">
+					<div class="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
+						<AlertTriangle class="w-5 h-5 stroke-[2.2]" />
+					</div>
+					<div class="space-y-1 min-w-0">
+						<h3 class="text-sm font-black text-slate-900 leading-tight">
+							পণ্যটির স্টক শেষ!
+						</h3>
+						<p class="text-xs text-slate-600 leading-relaxed">
+							<span class="font-bold text-slate-900">"{pendingStockOutProduct.name}"</span>-এর বর্তমান স্টক ০ (স্টক শেষ)। তবুও কি আপনি এটি অর্ডারে যুক্ত করতে চান?
+						</p>
+					</div>
+				</div>
+
+				<div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+					<button
+						type="button"
+						onclick={cancelStockOutModal}
+						class="px-3.5 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+					>
+						বাতিল
+					</button>
+					<button
+						type="button"
+						onclick={confirmAddStockOutProduct}
+						class="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs active:scale-95"
+					>
+						হ্যাঁ, যুক্ত করুন
+					</button>
+				</div>
+
+			</div>
+		</div>
+	{/if}
+</Card>

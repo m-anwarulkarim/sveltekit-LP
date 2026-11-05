@@ -539,16 +539,47 @@ export class OrderService {
 			.all();
 	}
 
-	static async listCustomerOrderHistory(db: Db, customerEmail: string, excludeOrderId: string) {
+	static async listCustomerOrderHistory(
+		db: Db,
+		identifier: { email?: string | null; phone?: string | null } | string,
+		excludeOrderId?: string
+	) {
+		let email: string | null = null;
+		let phone: string | null = null;
+
+		if (typeof identifier === 'string') {
+			email = identifier;
+		} else if (identifier) {
+			email = identifier.email || null;
+			phone = identifier.phone || null;
+		}
+
+		const matchConditions: any[] = [];
+		if (phone && phone.trim()) {
+			matchConditions.push(eq(schema.orders.customerPhone, phone.trim()));
+		}
+		if (email && email.trim()) {
+			matchConditions.push(eq(schema.orders.customerEmail, email.trim()));
+		}
+
+		if (matchConditions.length === 0) {
+			return [];
+		}
+
+		const whereClause = excludeOrderId
+			? and(or(...matchConditions), ne(schema.orders.id, excludeOrderId))
+			: or(...matchConditions);
+
 		return await db
 			.select({
 				id: schema.orders.id,
+				orderNumber: schema.orders.orderNumber,
 				status: schema.orders.status,
 				total: schema.orders.total,
 				createdAt: schema.orders.createdAt
 			})
 			.from(schema.orders)
-			.where(and(eq(schema.orders.customerEmail, customerEmail), ne(schema.orders.id, excludeOrderId)))
+			.where(whereClause)
 			.orderBy(desc(schema.orders.createdAt))
 			.limit(50)
 			.all();

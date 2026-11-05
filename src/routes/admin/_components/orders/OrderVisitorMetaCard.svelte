@@ -79,6 +79,17 @@
 			<span class="font-semibold text-slate-800 text-right truncate max-w-[210px] text-[11px]" title={meta.device}>{meta.device || 'ওয়েব ব্রাউজার'}</span>
 		</div>
 
+		<!-- First Visit -->
+		{#if meta.firstVisit}
+			<div class="flex items-center justify-between text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100">
+				<span class="flex items-center gap-1.5 font-bold text-slate-500">
+					<Clock class="w-3.5 h-3.5" />
+					<span>প্রথম ভিজিট:</span>
+				</span>
+				<span class="font-semibold text-slate-900 text-[11px]">{meta.firstVisit}</span>
+			</div>
+		{/if}
+
 		<!-- Visits & Session Stats -->
 		<div class="grid grid-cols-2 gap-2 text-center pt-0.5">
 			<div class="bg-slate-50 p-1.5 rounded-lg border border-slate-100">
@@ -86,8 +97,8 @@
 				<span class="font-mono font-bold text-slate-900">{meta.totalVisits || 1} বার</span>
 			</div>
 			<div class="bg-slate-50 p-1.5 rounded-lg border border-slate-100">
-				<span class="text-[10px] text-slate-400 font-bold block">সক্রিয় সময়</span>
-				<span class="font-mono font-bold text-slate-900">{meta.activeTime || '১ মিনিট'}</span>
+				<span class="text-[10px] text-slate-400 font-bold block">কাস্টমার স্ট্যাটাস</span>
+				<span class="font-mono font-bold text-slate-900">{meta.activeTime || 'নতুন গ্রাহক'}</span>
 			</div>
 		</div>
 	</div>

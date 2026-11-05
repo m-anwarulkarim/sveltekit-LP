@@ -1,13 +1,35 @@
 import type { Actions, PageServerLoad } from './$types';
 import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, or, and, ne, asc, desc } from 'drizzle-orm';
 import { error, fail } from '@sveltejs/kit';
 import { ProductService } from '#lib/server/services/product.service';
 import { OrderService } from '#lib/server/services/order.service';
 import { FraudService } from '#lib/server/services/fraud.service';
 import { CourierService } from '#lib/server/services/courier.service';
 import { StockService } from '#lib/server/services/stock.service';
+
+function parseUserDevice(ua?: string | null): string {
+	if (!ua) return 'ওয়েব ব্রাউজার';
+	const u = ua.toLowerCase();
+	let deviceType = 'ডেস্কটপ পিসি';
+	let browserName = 'ব্রাউজার';
+
+	if (u.includes('android')) deviceType = 'Android মোবাইল';
+	else if (u.includes('iphone')) deviceType = 'iPhone';
+	else if (u.includes('ipad')) deviceType = 'iPad';
+	else if (u.includes('windows')) deviceType = 'Windows পিসি';
+	else if (u.includes('macintosh') || u.includes('mac os')) deviceType = 'Mac';
+	else if (u.includes('linux')) deviceType = 'Linux পিসি';
+
+	if (u.includes('chrome') && !u.includes('edg') && !u.includes('opr')) browserName = 'Chrome';
+	else if (u.includes('safari') && !u.includes('chrome')) browserName = 'Safari';
+	else if (u.includes('firefox')) browserName = 'Firefox';
+	else if (u.includes('edg')) browserName = 'Edge';
+	else if (u.includes('opera') || u.includes('opr')) browserName = 'Opera';
+
+	return `${deviceType} (${browserName})`;
+}
 
 export const load: PageServerLoad = async ({ params, platform }) => {
 	const orderId = params.id;
@@ -27,12 +49,64 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 		console.error('Error fetching order from D1:', e);
 	}
 
+	// 2. Direct fallback query
+	if (!foundOrder) {
+		try {
+			const db = getDb(platform);
+			const rows = await db
+				.select()
+				.from(schema.orders)
+				.where(eq(schema.orders.id, orderId))
+				.limit(1)
+				.all();
+			if (rows.length > 0) {
+				foundOrder = rows[0];
+			}
+		} catch (e) {
+			console.error('Direct fallback query error in D1:', e);
+		}
+	}
+
 	// 3. Throw 404 if order does not exist in real database (no demo data)
 	if (!foundOrder) {
 		throw error(404, 'অর্ডারটি ডাটাবেজে পাওয়া যায়নি।');
 	}
 
-	// Parse items
+	// Fetch real database products from D1 for upsell catalog & live inventory cross-reference
+	let realProducts: any[] = [];
+	try {
+		const db = getDb(platform);
+		const rawProds = await ProductService.listProducts(db, { status: 'published' });
+		realProducts = (rawProds || []).map((p: any) => {
+			const totalStockNum =
+				p.totalStock !== null && p.totalStock !== undefined
+					? Number(p.totalStock)
+					: p.stock !== null && p.stock !== undefined
+						? Number(p.stock)
+						: 0;
+
+			return {
+				id: p.id,
+				name: p.name,
+				slug: p.slug,
+				price: Number(p.price) || 0,
+				originalPrice: Number(p.originalPrice) || Number(p.price) || 0,
+				totalStock: totalStockNum,
+				stock: totalStockNum,
+				inStock: Boolean(p.inStock !== false && totalStockNum > 0),
+				image: p.image || '/images/placeholder.svg',
+				category: p.category || 'General',
+				categoryLabel: p.category || 'General',
+				sku: p.sku || ''
+			};
+		});
+	} catch (e) {
+		console.error('Failed to load products from D1 in admin/orders/[id]:', e);
+	}
+
+	const productsMap = new Map<string, any>(realProducts.map((p) => [p.id, p]));
+
+	// Parse items with live product stock status
 	let parsedItems: any[] = [];
 	try {
 		parsedItems = Array.isArray(foundOrder.items)
@@ -42,27 +116,37 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 		parsedItems = [];
 	}
 
-	parsedItems = parsedItems.map((it: any) => ({
-		id: it.id || 'prod-' + Math.random().toString(36).slice(2, 7),
-		name: it.name || 'পণ্য আইটেম',
-		price: Number(it.price) || 0,
-		quantity: Number(it.quantity) || 1,
-		image: it.image || '',
-		variant: it.variant || ''
-	}));
+	parsedItems = parsedItems.map((it: any) => {
+		const matchedProd = productsMap.get(it.id);
+		const currentStock = matchedProd ? matchedProd.totalStock : undefined;
+		const isStockOut = matchedProd ? !matchedProd.inStock : false;
 
-	// Find past orders for this customer (by phone / customerEmail)
+		return {
+			id: it.id || 'prod-' + Math.random().toString(36).slice(2, 7),
+			name: it.name || 'পণ্য আইটেম',
+			price: Number(it.price) || 0,
+			quantity: Number(it.quantity) || 1,
+			image: it.image || (matchedProd?.image ?? ''),
+			variant: it.variant || '',
+			currentStock: currentStock,
+			isStockOut: isStockOut
+		};
+	});
+
+	// Find past orders for this customer (matching either phone or customerEmail)
 	const pastOrderRows = await OrderService.listCustomerOrderHistory(
 		getDb(platform),
-		foundOrder.customerEmail,
+		{ email: foundOrder.customerEmail, phone: foundOrder.customerPhone },
 		foundOrder.id
 	).catch(() => []);
+
 	const pastOrders = pastOrderRows.map((o) => ({
-			id: o.id,
-			status: o.status,
-			total: o.total,
-			date: o.createdAt ? new Date(o.createdAt).toLocaleDateString('bn-BD') : 'আজ'
-		}));
+		id: o.id,
+		orderNumber: (o as any).orderNumber || o.id.slice(0, 8),
+		status: o.status,
+		total: o.total,
+		date: o.createdAt ? new Date(o.createdAt).toLocaleDateString('bn-BD') : 'আজ'
+	}));
 
 	// Fraud & Courier Telemetry from FraudService (Dynamically checking Steadfast / Pathao / Local)
 	let courierStats: any = {
@@ -100,15 +184,6 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 		console.error('Courier stats / settings query error in D1:', e);
 	}
 
-	// Fetch real database products from D1 for upsell catalog
-	let realProducts: any[] = [];
-	try {
-		const db = getDb(platform);
-		realProducts = await ProductService.listProducts(db, { status: 'published' });
-	} catch (e) {
-		console.error('Failed to load products from D1 in admin/orders/[id]:', e);
-	}
-
 	const initialNotes = orderNotesFromDb.map((n) => {
 		const d = n.createdAt ? new Date(n.createdAt) : null;
 		return {
@@ -119,15 +194,55 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 		};
 	});
 
+	// Calculate real customer touchpoints & visit history
+	let totalVisitsCount = pastOrders.length + 1;
+	let firstVisitDate = foundOrder.createdAt ? new Date(foundOrder.createdAt).toLocaleDateString('bn-BD') : 'আজ';
+
+	try {
+		const db = getDb(platform);
+		const conditions: any[] = [];
+		if (foundOrder.customerPhone && foundOrder.customerPhone.trim()) {
+			conditions.push(eq(schema.orders.customerPhone, foundOrder.customerPhone.trim()));
+		}
+		if (foundOrder.customerEmail && foundOrder.customerEmail.trim()) {
+			conditions.push(eq(schema.orders.customerEmail, foundOrder.customerEmail.trim()));
+		}
+		if (foundOrder.ipAddress && foundOrder.ipAddress !== '127.0.0.1' && foundOrder.ipAddress !== '::1') {
+			conditions.push(eq(schema.orders.ipAddress, foundOrder.ipAddress));
+		}
+
+		if (conditions.length > 0) {
+			const visitorInteractions = await db
+				.select({
+					id: schema.orders.id,
+					createdAt: schema.orders.createdAt
+				})
+				.from(schema.orders)
+				.where(or(...conditions))
+				.orderBy(asc(schema.orders.createdAt))
+				.all();
+
+			if (visitorInteractions.length > 0) {
+				totalVisitsCount = visitorInteractions.length;
+				const earliest = visitorInteractions[0]?.createdAt;
+				if (earliest) {
+					firstVisitDate = new Date(earliest).toLocaleDateString('bn-BD');
+				}
+			}
+		}
+	} catch (e) {
+		console.warn('Failed to calculate visitor telemetry:', e);
+	}
+
 	const visitorMeta = {
 		source: foundOrder.source || 'Storefront Checkout',
 		fingerprint: foundOrder.deviceFingerprint || 'অনুপলব্ধ',
 		ip: foundOrder.ipAddress || 'রেকর্ড করা হয়নি',
-		device: foundOrder.deviceFingerprint || (foundOrder.userAgent ? (foundOrder.userAgent.includes('Mobile') ? 'মোবাইল ব্রাউজার' : 'ডেস্কটপ ব্রাউজার') : 'ওয়েব ব্রাউজার'),
-		totalVisits: pastOrders.length + 1,
+		device: parseUserDevice(foundOrder.userAgent),
+		totalVisits: totalVisitsCount,
 		activeTime: pastOrders.length === 0 ? 'নতুন গ্রাহক' : `${pastOrders.length + 1}ম অর্ডার`,
 		avgLoad: 'N/A',
-		firstVisit: foundOrder.createdAt ? new Date(foundOrder.createdAt).toLocaleDateString('bn-BD') : 'আজ'
+		firstVisit: firstVisitDate
 	};
 
 	return {

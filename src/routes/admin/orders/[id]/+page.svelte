@@ -117,6 +117,14 @@
 	}
 
 	function handleAddProduct(product: any) {
+		const stockCount =
+			product.totalStock !== undefined && product.totalStock !== null
+				? Number(product.totalStock)
+				: product.stock !== undefined && product.stock !== null
+					? Number(product.stock)
+					: 0;
+		const isStockOut = product.inStock === false || stockCount <= 0;
+
 		const existingIndex = items.findIndex((it: any) => it.id === product.id);
 		if (existingIndex > -1) {
 			items[existingIndex].quantity += 1;
@@ -130,10 +138,16 @@
 					price: product.price,
 					quantity: 1,
 					image: product.image,
-					variant: product.category !== '-' ? product.category : ''
+					variant: product.category !== '-' ? product.category : '',
+					currentStock: stockCount,
+					isStockOut: isStockOut
 				}
 			];
-			toast.success(`"${product.name}" অর্ডারে যুক্ত হয়েছে!`);
+			if (isStockOut) {
+				toast.warning(`"${product.name}" (স্টক শেষ) অর্ডারে যুক্ত হয়েছে!`);
+			} else {
+				toast.success(`"${product.name}" অর্ডারে যুক্ত হয়েছে!`);
+			}
 		}
 	}
 

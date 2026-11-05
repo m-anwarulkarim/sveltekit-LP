@@ -21,6 +21,8 @@
 		quantity: number;
 		image?: string;
 		variant?: string;
+		currentStock?: number;
+		isStockOut?: boolean;
 	}
 
 	interface Props {
@@ -127,12 +129,23 @@
 								<h3 class="text-xs font-bold text-slate-900 truncate leading-snug" title={item.name}>
 									{item.name}
 								</h3>
-								{#if item.variant}
-									<span class="inline-flex items-center gap-0.5 text-[9px] text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded font-medium mt-0.5">
-										<Tag class="w-2.5 h-2.5" />
-										<span>{item.variant}</span>
-									</span>
-								{/if}
+								<div class="flex items-center gap-1.5 flex-wrap mt-0.5">
+									{#if item.isStockOut}
+										<span class="inline-flex items-center gap-0.5 text-[9px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.2 rounded">
+											স্টক শেষ ({item.currentStock ?? 0})
+										</span>
+									{:else if item.currentStock !== undefined}
+										<span class="inline-flex items-center gap-0.5 text-[9px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded">
+											স্টক: {item.currentStock} টি
+										</span>
+									{/if}
+									{#if item.variant}
+										<span class="inline-flex items-center gap-0.5 text-[9px] text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded font-medium">
+											<Tag class="w-2.5 h-2.5" />
+											<span>{item.variant}</span>
+										</span>
+									{/if}
+								</div>
 							</div>
 						</div>
 

@@ -41,7 +41,7 @@ export const actions: Actions = {
 
 		const secret = getAuthSecret();
 		if (!secret) {
-			return fail(503, { message: 'অ্যাডমিন লগইন এখনো কনফিগার করা হয়নি।' });
+			return fail(400, { message: 'অ্যাডমিন লগইন এখনো কনফিগার করা হয়নি।' });
 		}
 
 		let admin;
@@ -55,7 +55,7 @@ export const actions: Actions = {
 			}
 		} catch (err) {
 			console.error('Admin login failed:', err);
-			return fail(500, { message: 'লগইন করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।' });
+			return fail(400, { message: 'লগইন করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।' });
 		}
 
 		if (!admin) {

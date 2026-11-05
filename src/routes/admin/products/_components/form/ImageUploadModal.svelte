@@ -10,7 +10,8 @@
 		X,
 		FileImage,
 		Sparkles,
-		AlertCircle
+		AlertCircle,
+		Trash2
 	} from 'lucide-svelte';
 
 	interface Props {
@@ -159,6 +160,24 @@
 			selectedGalleryUrls = selectedGalleryUrls.filter((u) => u !== url);
 		} else {
 			selectedGalleryUrls = [...selectedGalleryUrls, url];
+		}
+	}
+
+	async function deleteGalleryItem(item: any) {
+		if (!item) return;
+		const itemUrl = item.url || item;
+		const itemId = item.id;
+		if (confirm('আপনি কি এই ছবিটি গ্যালারি ও ক্লাউড স্টোরেজ থেকে মুছে ফেলতে চান?')) {
+			try {
+				await fetch(`/api/admin/media?id=${encodeURIComponent(itemId || '')}&url=${encodeURIComponent(itemUrl || '')}`, {
+					method: 'DELETE'
+				});
+				galleryItems = galleryItems.filter((i) => i.id !== itemId && i.url !== itemUrl);
+				selectedGalleryUrls = selectedGalleryUrls.filter((u) => u !== itemUrl);
+				toast.success('গ্যালারি থেকে ছবিটি মুছে ফেলা হয়েছে');
+			} catch (e) {
+				toast.error('ছবি মুছতে ব্যর্থ হয়েছে');
+			}
 		}
 	}
 
@@ -371,10 +390,11 @@
 											<button
 												type="button"
 												onclick={() => removeUploadedFile(idx)}
-												class="absolute top-1 right-1 p-1 rounded-full bg-rose-600 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-sm"
+												class="absolute top-1.5 right-1.5 z-10 w-6 h-6 rounded-full bg-white text-rose-600 hover:bg-rose-600 hover:text-white border border-rose-200 shadow-sm flex items-center justify-center cursor-pointer transition-all hover:scale-105 active:scale-95"
+												title="ছবিটি বাদ দিন"
 												aria-label="Remove"
 											>
-												<X class="w-3 h-3" />
+												<X class="w-3.5 h-3.5 stroke-[2.5]" />
 											</button>
 										</div>
 									{/each}
@@ -475,6 +495,21 @@
 										<div class="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-[#5845eb] text-white flex items-center justify-center shadow-xs">
 											<Check class="w-3.5 h-3.5 stroke-[3]" />
 										</div>
+									{/if}
+
+									<!-- Delete button for custom uploaded gallery items -->
+									{#if imgItem.id && !String(imgItem.id).startsWith('preset-')}
+										<button
+											type="button"
+											onclick={(e) => {
+												e.stopPropagation();
+												deleteGalleryItem(imgItem);
+											}}
+											class="absolute top-1.5 left-1.5 z-10 w-5 h-5 rounded-full bg-white/95 hover:bg-rose-600 text-rose-600 hover:text-white border border-rose-200 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all cursor-pointer shadow-xs"
+											title="গ্যালারি থেকে মুছুন"
+										>
+											<Trash2 class="w-3 h-3" />
+										</button>
 									{/if}
 
 									<div class="absolute inset-x-0 bottom-0 bg-slate-900/60 backdrop-blur-xs text-white text-[9px] px-1 py-0.5 truncate font-medium">

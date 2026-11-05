@@ -8,9 +8,13 @@
 		CheckCircle2,
 		Eye,
 		Sparkles,
-		Link2
+		Link2,
+		X,
+		Loader2,
+		AlertTriangle
 	} from 'lucide-svelte';
 	import { Button, Badge } from '#lib/components/ui';
+	import { toast } from 'svelte-sonner';
 	import ImageUploadModal from './ImageUploadModal.svelte';
 
 	interface Props {
@@ -27,6 +31,11 @@
 
 	let isPickerModalOpen = $state(false);
 	let previewLightboxUrl = $state<string | null>(null);
+
+	// Deletion modal state
+	let deleteTarget = $state<{ index: number; url: string } | null>(null);
+	let deleteFromServer = $state(true);
+	let isDeleting = $state(false);
 
 	function handleAddImages(newUrls: string[]) {
 		if (newUrls.length === 0) return;
@@ -46,20 +55,65 @@
 		}
 	}
 
-	function removeImage(index: number) {
-		const removed = images[index];
-		images = images.filter((_, i) => i !== index);
-		if (image === removed) {
-			image = images[0] || '';
+	function promptDeleteImage(index: number, url: string) {
+		deleteTarget = { index, url };
+		deleteFromServer = true;
+	}
+
+	function closeDeleteDialog() {
+		if (isDeleting) return;
+		deleteTarget = null;
+	}
+
+	async function confirmDelete() {
+		if (!deleteTarget) return;
+		const { index, url } = deleteTarget;
+		isDeleting = true;
+
+		try {
+			if (deleteFromServer && url) {
+				const res = await fetch(`/api/admin/media?url=${encodeURIComponent(url)}`, {
+					method: 'DELETE'
+				});
+				const data = await res.json().catch(() => ({}));
+				if (!res.ok) {
+					console.warn('Delete API returned warning:', data);
+				}
+			}
+
+			// Remove from images array
+			images = images.filter((_, i) => i !== index);
+
+			// If removed image was main, set first remaining image as main
+			if (image === url) {
+				image = images[0] || '';
+			}
+
+			if (deleteFromServer) {
+				toast.success('ছবিটি স্থায়ীভাবে মুছে ফেলা হয়েছে');
+			} else {
+				toast.info('পণ্য থেকে ছবিটি সরানো হয়েছে');
+			}
+		} catch (err) {
+			console.error('Failed to delete media:', err);
+			images = images.filter((_, i) => i !== index);
+			if (image === url) {
+				image = images[0] || '';
+			}
+			toast.info('পণ্য থেকে ছবিটি সরানো হয়েছে');
+		} finally {
+			isDeleting = false;
+			deleteTarget = null;
 		}
 	}
 
 	function setPrimaryImage(url: string) {
 		image = url;
+		toast.success('মূল ছবি (Main Image) হিসেবে সেট করা হয়েছে');
 	}
 </script>
 
-<div class="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 md:p-6 space-y-4">
+<div class="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 md:p-6 space-y-4 font-['Plus_Jakarta_Sans',sans-serif]">
 	<!-- Card Header -->
 	<div class="flex items-center justify-between border-b border-slate-100 pb-3">
 		<div class="flex items-center gap-2">
@@ -90,66 +144,72 @@
 			<div
 				class="relative group aspect-square rounded-2xl overflow-hidden border-2 transition-all bg-slate-50 flex items-center justify-center shadow-xs {isMain ? 'border-[#5845eb] ring-2 ring-[#5845eb]/20' : 'border-slate-200 hover:border-slate-300'}"
 			>
-				<img
-					src={img}
-					alt="Product media asset"
-					class="w-full h-full object-contain p-2 bg-white transition-transform duration-300 group-hover:scale-105"
-				/>
+				<!-- Thumbnail Image (Click to enlarge) -->
+				<button
+					type="button"
+					onclick={() => (previewLightboxUrl = img)}
+					class="w-full h-full p-2 bg-white flex items-center justify-center cursor-pointer focus:outline-none"
+					title="বড় করে দেখতে ক্লিক করুন"
+				>
+					<img
+						src={img}
+						alt="Product media asset"
+						class="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
+					/>
+				</button>
 
-				<!-- Gradient Overlay on hover -->
-				<div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
-					
-					<!-- Top Actions: Preview & Delete -->
-					<div class="flex items-center justify-between">
-						{#if isMain}
-							<span class="px-2 py-0.5 rounded-md bg-[#5845eb] text-white text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1">
-								<Star class="w-2.5 h-2.5 fill-white" />
-								Main
-							</span>
-						{:else}
-							<button
-								type="button"
-								onclick={() => setPrimaryImage(img)}
-								class="px-2 py-1 rounded-md bg-white/90 hover:bg-white text-slate-900 text-[10px] font-bold transition-all cursor-pointer shadow-sm flex items-center gap-1"
-							>
-								<Star class="w-2.5 h-2.5 text-amber-500" />
-								Set Main
-							</button>
-						{/if}
+				<!-- 1. ALWAYS-VISIBLE PROMINENT DELETE BUTTON (Top-Right) -->
+				<button
+					type="button"
+					onclick={(e) => {
+						e.stopPropagation();
+						promptDeleteImage(idx, img);
+					}}
+					class="absolute top-2 right-2 z-30 w-7 h-7 rounded-full bg-rose-600 hover:bg-rose-700 active:scale-90 text-white shadow-md hover:shadow-lg flex items-center justify-center transition-all cursor-pointer"
+					title="ছবিটি মুছুন (Delete Image)"
+					aria-label="ছবি মুছুন"
+				>
+					<Trash2 class="w-3.5 h-3.5 stroke-[2.5]" />
+				</button>
 
-						<div class="flex items-center gap-1">
-							<button
-								type="button"
-								onclick={() => (previewLightboxUrl = img)}
-								class="p-1.5 rounded-lg bg-black/60 hover:bg-black text-white transition-colors cursor-pointer"
-								title="বড় করে দেখুন"
-							>
-								<Eye class="w-3.5 h-3.5" />
-							</button>
-							<button
-								type="button"
-								onclick={() => removeImage(idx)}
-								class="p-1.5 rounded-lg bg-rose-600/90 hover:bg-rose-600 text-white transition-colors cursor-pointer"
-								title="ছবি মুছুন"
-							>
-								<Trash2 class="w-3.5 h-3.5" />
-							</button>
-						</div>
-					</div>
-
-					<!-- Bottom Note -->
-					<div class="text-[10px] text-slate-200 truncate font-mono">
-						{img.split('/').pop() || 'photo'}
-					</div>
-				</div>
-
-				<!-- Always visible Main badge on card corner -->
+				<!-- 2. MAIN BADGE / SET MAIN BUTTON (Top-Left) -->
 				{#if isMain}
-					<div class="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-[#5845eb] text-white text-[10px] font-bold shadow-sm flex items-center gap-1 group-hover:hidden">
+					<div class="absolute top-2 left-2 z-20 px-2 py-0.5 rounded-md bg-[#5845eb] text-white text-[10px] font-bold shadow-md flex items-center gap-1">
 						<Star class="w-2.5 h-2.5 fill-white" />
-						Main
+						<span>মূল</span>
 					</div>
+				{:else}
+					<button
+						type="button"
+						onclick={(e) => {
+							e.stopPropagation();
+							setPrimaryImage(img);
+						}}
+						class="absolute top-2 left-2 z-20 w-7 h-7 rounded-full bg-white/95 text-slate-400 hover:text-amber-500 hover:bg-white border border-slate-200 shadow-md flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95"
+						title="মূল ছবি হিসেবে নির্ধারণ করুন (Set Main)"
+						aria-label="মূল ছবি করুন"
+					>
+						<Star class="w-3.5 h-3.5" />
+					</button>
 				{/if}
+
+				<!-- 3. HOVER OVERLAY WITH PREVIEW & FILENAME -->
+				<div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/80 via-slate-950/40 to-transparent p-1.5 pt-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-between pointer-events-none">
+					<span class="text-[9px] text-white/90 truncate font-mono max-w-[75%] px-0.5">
+						{img.split('/').pop()?.split('?')[0] || 'photo'}
+					</span>
+					<button
+						type="button"
+						onclick={(e) => {
+							e.stopPropagation();
+							previewLightboxUrl = img;
+						}}
+						class="pointer-events-auto p-1 rounded-md bg-white/20 hover:bg-white/40 text-white transition-colors cursor-pointer"
+						title="বড় করে দেখুন"
+					>
+						<Eye class="w-3 h-3" />
+					</button>
+				</div>
 			</div>
 		{/each}
 
@@ -197,15 +257,96 @@
 		tabindex="0"
 	>
 		<div class="relative max-w-3xl max-h-[90vh]">
-			<img src={previewLightboxUrl} alt="Enlarged preview" class="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl" />
+			<img src={previewLightboxUrl} alt="Enlarged preview" class="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl bg-white/5" />
 			<button
 				type="button"
 				onclick={() => (previewLightboxUrl = null)}
 				class="absolute -top-3 -right-3 w-9 h-9 rounded-full bg-white text-slate-900 flex items-center justify-center shadow-lg hover:bg-slate-100 cursor-pointer"
 				aria-label="Close"
 			>
-				<Trash2 class="w-4 h-4 rotate-45" />
+				<X class="w-4 h-4" />
 			</button>
+		</div>
+	</div>
+{/if}
+
+<!-- Confirmation Dialog for Image Deletion -->
+{#if deleteTarget}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150 font-['Plus_Jakarta_Sans',sans-serif]"
+		onclick={closeDeleteDialog}
+		onkeydown={(e) => e.key === 'Escape' && closeDeleteDialog()}
+		role="dialog"
+		aria-modal="true"
+		tabindex="0"
+	>
+		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+		<div
+			class="bg-white rounded-3xl max-w-sm w-full p-5 sm:p-6 space-y-4 shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150"
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
+			role="document"
+		>
+			<div class="flex items-center gap-3">
+				<div class="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
+					<Trash2 class="w-5 h-5 stroke-[2.2]" />
+				</div>
+				<div>
+					<h3 class="text-sm font-bold text-slate-900">ছবিটি মুছে ফেলতে চান?</h3>
+					<p class="text-xs text-slate-500 mt-0.5">এই পণ্যটি থেকে ছবিটি তাৎক্ষণিকভাবে অপসারিত হবে।</p>
+				</div>
+			</div>
+
+			<!-- Image Preview Thumbnail -->
+			<div class="w-full h-32 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden p-2">
+				<img src={deleteTarget.url} alt="Delete preview" class="max-h-full max-w-full object-contain" />
+			</div>
+
+			<!-- Optional checkbox to purge from cloud storage -->
+			<label class="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200 cursor-pointer hover:bg-slate-100/70 transition-colors">
+				<input
+					type="checkbox"
+					bind:checked={deleteFromServer}
+					class="mt-0.5 w-4 h-4 rounded text-rose-600 focus:ring-rose-500 cursor-pointer accent-rose-600"
+				/>
+				<div class="text-xs">
+					<span class="font-bold text-slate-800">সার্ভার ও গ্যালারি থেকেও স্থায়ীভাবে মুছুন</span>
+					<p class="text-[11px] text-slate-500 mt-0.5 leading-snug">
+						ক্লাউড স্টোরেজ (Cloudflare R2) এবং মিডিয়া ডাটাবেস থেকেও ফাইলটি চিরতরে মুছে যাবে।
+					</p>
+				</div>
+			</label>
+
+			<!-- Action buttons -->
+			<div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+				<Button
+					type="button"
+					variant="ghost"
+					size="sm"
+					onclick={closeDeleteDialog}
+					disabled={isDeleting}
+					class="text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+				>
+					বাতিল
+				</Button>
+				<Button
+					type="button"
+					variant="destructive"
+					size="sm"
+					onclick={confirmDelete}
+					disabled={isDeleting}
+					class="gap-1.5 text-xs font-bold rounded-xl bg-rose-600 hover:bg-rose-700 text-white shadow-xs cursor-pointer"
+				>
+					{#if isDeleting}
+						<Loader2 class="w-3.5 h-3.5 animate-spin" />
+						<span>মুছে ফেলা হচ্ছে...</span>
+					{:else}
+						<Trash2 class="w-3.5 h-3.5" />
+						<span>হ্যাঁ, মুছে ফেলুন</span>
+					{/if}
+				</Button>
+			</div>
 		</div>
 	</div>
 {/if}

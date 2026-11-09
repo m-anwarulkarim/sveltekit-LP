@@ -46,7 +46,7 @@
 	{#if !page.url.pathname.startsWith('/admin')}
 		<link rel="canonical" href="{page.url.origin}{page.url.pathname}" />
 		<meta property="og:url" content="{page.url.origin}{page.url.pathname}" />
-		<meta property="og:site_name" content={data?.websiteInfo?.websiteName || 'AURA Store'} />
+		<meta property="og:site_name" content={data?.websiteInfo?.websiteName || 'seedbd'} />
 	{/if}
 	{#if data?.websiteInfo?.faviconUrl}
 		<link rel="icon" href={data.websiteInfo.faviconUrl} />

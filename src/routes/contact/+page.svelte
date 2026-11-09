@@ -20,7 +20,7 @@
 </script>
 
 <svelte:head>
-	<title>যোগাযোগ করুন (Contact Us) | AURA</title>
+	<title>যোগাযোগ করুন (Contact Us) | seedbd</title>
 </svelte:head>
 
 <StoreLayout user={data.user}>
@@ -83,7 +83,7 @@
 						</div>
 						<div class="space-y-1">
 							<span class="text-xs font-semibold text-slate-500">প্রধান কার্যালয়</span>
-							<h3 class="text-sm font-bold text-slate-900">AURA Head Office</h3>
+							<h3 class="text-sm font-bold text-slate-900">seedbd Head Office</h3>
 							<p class="text-xs text-slate-600 leading-relaxed">
 								হাউজ-২৩, রোড-১২, ধানমন্ডি, ঢাকা-১২০৯, বাংলাদেশ
 							</p>

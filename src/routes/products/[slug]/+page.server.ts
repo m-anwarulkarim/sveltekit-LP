@@ -128,7 +128,7 @@ export const load: PageServerLoad = async (event) => {
 		description:
 			plainText(product.description, 300) ||
 			product.tagline ||
-			`${product.name} - কিনুন আসল কোয়ালিটির পণ্য সবচেয়ে কম মূল্যে AURA স্টোরে।`,
+			`${product.name} - কিনুন আসল কোয়ালিটির পণ্য সবচেয়ে কম মূল্যে seedbd স্টোরে।`,
 		slug: product.slug,
 		price: product.price,
 		regularPrice: product.originalPrice,

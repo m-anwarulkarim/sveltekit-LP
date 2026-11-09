@@ -17,7 +17,7 @@ const categoriesList = [
 	{ id: 'cat-science-kit', slug: 'science-kit', name: 'Science Kit', icon: 'Atom' }
 ];
 
-const brandNames = Array.from(new Set(productsData.map((p) => p.brand).filter(Boolean)));
+const brandNames = Array.from(new Set(productsData.map((p) => p.brand).filter((b): b is string => Boolean(b))));
 const brandsList = brandNames.map((name, i) => ({
 	id: `brand-${i + 1}`,
 	name,

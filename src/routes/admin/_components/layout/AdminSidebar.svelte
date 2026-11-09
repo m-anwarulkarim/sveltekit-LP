@@ -140,7 +140,7 @@
 					
 					<div class="flex flex-col">
 						<div class="flex items-center gap-1.5">
-							<span class="font-['Outfit'] font-black text-lg text-slate-900 tracking-wide">AURA</span>
+							<span class="font-['Outfit'] font-black text-lg text-slate-900 tracking-wide">seedbd</span>
 							<span class="px-1.5 py-0.2 rounded text-[8px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-700 border border-indigo-200">
 								PRO
 							</span>

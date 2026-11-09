@@ -87,7 +87,7 @@
 </script>
 
 <svelte:head>
-	<title>AURA Enterprise Control Deck | অ্যাডমিন ড্যাশবোর্ড</title>
+	<title>seedbd Control Deck | অ্যাডমিন ড্যাশবোর্ড</title>
 	<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
 	<link rel="apple-touch-icon" href="/apple-touch-icon.png" />

@@ -35,7 +35,7 @@ export function welcomeEmailTemplate(data: WelcomeEmailData): { subject: string;
   `;
 
 	return {
-		subject: `স্বাগতম ${data.storeName || 'AURA Store'}-এ!`,
+		subject: `স্বাগতম ${data.storeName || 'seedbd'}-এ!`,
 		html: emailLayout(content, { storeName: data.storeName }),
 		text: `স্বাগতম ${name}! আপনার অ্যাকাউন্ট সফলভাবে তৈরি হয়েছে। কেনাকাটা করুন: ${storeUrl}`
 	};

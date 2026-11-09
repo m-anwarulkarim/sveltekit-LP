@@ -8,7 +8,7 @@
 </script>
 
 <svelte:head>
-	<title>রিটার্ন ও এক্সচেঞ্জ নীতি (Return & Exchange) | AURA</title>
+	<title>রিটার্ন ও এক্সচেঞ্জ নীতি (Return & Exchange) | seedbd</title>
 </svelte:head>
 
 <StoreLayout user={data.user}>

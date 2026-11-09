@@ -245,7 +245,7 @@
 
 	<!-- 1. Responsive Landing Page Navbar & Announcement Bar -->
 	<LandingNavbar
-		title={landingPage?.title?.split('-')[0]?.trim() || product?.name || headline || 'Aura Store'}
+		title={landingPage?.title?.split('-')[0]?.trim() || product?.name || headline || 'seedbd'}
 		badgeText="শতভাগ খাঁটি ও অরিজিনাল পণ্য"
 		announcementText={config?.offerBadge ? `${config.offerBadge} • ফ্রি ডেলিভারি ও ক্যাশ অন ডেলিভারি সুবিধা!` : `${headline} স্পেশাল অফার চলছে!`}
 		contactPhone={config?.contactPhone}

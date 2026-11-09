@@ -112,7 +112,7 @@
 </script>
 
 <svelte:head>
-	<title>অর্ডার সফল হয়েছে (Order Confirmed) | AURA Store</title>
+	<title>অর্ডার সফল হয়েছে (Order Confirmed) | seedbd</title>
 </svelte:head>
 
 <StoreLayout user={data.user}>

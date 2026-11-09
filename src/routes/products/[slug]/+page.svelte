@@ -35,7 +35,7 @@
 				item: {
 					item_id: matchId,
 					item_name: product.name,
-					item_brand: product.brand || 'AURA',
+					item_brand: product.brand || 'seedbd',
 					item_category: product.category || 'General',
 					price: price,
 					quantity: 1
@@ -47,12 +47,12 @@
 </script>
 
 <svelte:head>
-	<title>{product.name} | AURA Store</title>
+	<title>{product.name} | seedbd</title>
 	<meta
 		name="description"
-		content={plainText(product.description, 160) || `${product.name} - কিনুন সেরা মূল্যে AURA স্টোর থেকে।`}
+		content={plainText(product.description, 160) || `${product.name} - কিনুন সেরা মূল্যে seedbd স্টোর থেকে।`}
 	/>
-	<meta property="og:title" content="{product.name} | AURA Store" />
+	<meta property="og:title" content="{product.name} | seedbd" />
 	<meta property="og:description" content={product.tagline || product.name} />
 	<meta property="og:image" content={product.image} />
 	{#if data?.productJsonLd}

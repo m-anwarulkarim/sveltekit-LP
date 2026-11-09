@@ -38,7 +38,7 @@
 </script>
 
 <svelte:head>
-	<title>অর্ডার ট্র্যাক করুন (Track Order) | AURA</title>
+	<title>অর্ডার ট্র্যাক করুন (Track Order) | seedbd</title>
 </svelte:head>
 
 <StoreLayout user={data.user}>

@@ -146,7 +146,7 @@ export function trackGtmViewItem(data: {
 				{
 					item_id: String(data.item.item_id),
 					item_name: data.item.item_name,
-					item_brand: data.item.item_brand || 'AURA',
+					item_brand: data.item.item_brand || 'seedbd',
 					item_category: data.item.item_category || 'General',
 					price: value,
 					quantity: data.item.quantity || 1
@@ -183,7 +183,7 @@ export function trackGtmAddToCart(data: {
 				{
 					item_id: String(data.item.item_id),
 					item_name: data.item.item_name,
-					item_brand: data.item.item_brand || 'AURA',
+					item_brand: data.item.item_brand || 'seedbd',
 					item_category: data.item.item_category || 'General',
 					item_variant: data.item.item_variant,
 					price,
@@ -221,7 +221,7 @@ export function trackGtmRemoveFromCart(data: {
 				{
 					item_id: String(data.item.item_id),
 					item_name: data.item.item_name,
-					item_brand: data.item.item_brand || 'AURA',
+					item_brand: data.item.item_brand || 'seedbd',
 					item_category: data.item.item_category || 'General',
 					price,
 					quantity: qty
@@ -255,7 +255,7 @@ export function trackGtmViewCart(data: {
 			items: data.items.map((i, idx) => ({
 				item_id: String(i.item_id),
 				item_name: i.item_name,
-				item_brand: i.item_brand || 'AURA',
+				item_brand: i.item_brand || 'seedbd',
 				item_category: i.item_category || 'General',
 				price: Number(i.price) || 0,
 				quantity: Number(i.quantity) || 1,
@@ -291,7 +291,7 @@ export function trackGtmBeginCheckout(data: {
 			items: data.items.map((i, idx) => ({
 				item_id: String(i.item_id),
 				item_name: i.item_name,
-				item_brand: i.item_brand || 'AURA',
+				item_brand: i.item_brand || 'seedbd',
 				item_category: i.item_category || 'General',
 				price: Number(i.price) || 0,
 				quantity: Number(i.quantity) || 1,
@@ -333,7 +333,7 @@ export function trackGtmPurchase(data: {
 			items: data.items.map((i, idx) => ({
 				item_id: String(i.item_id),
 				item_name: i.item_name,
-				item_brand: i.item_brand || 'AURA',
+				item_brand: i.item_brand || 'seedbd',
 				item_category: i.item_category || 'General',
 				price: Number(i.price) || 0,
 				quantity: Number(i.quantity) || 1,

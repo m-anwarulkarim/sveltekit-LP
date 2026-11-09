@@ -8,7 +8,7 @@
 </script>
 
 <svelte:head>
-	<title>ডেলিভারি তথ্য (Shipping Information) | AURA</title>
+	<title>ডেলিভারি তথ্য (Shipping Information) | seedbd</title>
 </svelte:head>
 
 <StoreLayout user={data.user}>

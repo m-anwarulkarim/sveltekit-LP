@@ -8,7 +8,7 @@
 </script>
 
 <svelte:head>
-	<title>গোপনীয়তা নীতি (Privacy Policy) | AURA</title>
+	<title>গোপনীয়তা নীতি (Privacy Policy) | seedbd</title>
 </svelte:head>
 
 <StoreLayout user={data.user}>

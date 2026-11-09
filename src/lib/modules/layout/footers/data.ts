@@ -23,19 +23,19 @@ export interface FooterStoreData {
 }
 
 export const DEFAULT_FOOTER_DATA: FooterStoreData = {
-	brandName: 'AURA',
-	brandTagline: 'Premium Lifestyle & Creator Essentials Store',
+	brandName: 'seedbd',
+	brandTagline: 'Best Quality Lifestyle Products in Bangladesh',
 	aboutText:
-		'AURA is a next-generation lifestyle, skincare and creator essentials e-commerce platform in Bangladesh, delivering authentic products safely and swiftly to your door.',
+		'seedbd is a next-generation lifestyle, skincare and creator essentials e-commerce platform in Bangladesh, delivering authentic products safely and swiftly to your door.',
 	phoneHotline: '0156007230',
 	workingHours: '9:00 AM – 11:00 PM (Everyday)',
-	supportEmail: 'support@aura.com.bd',
+	supportEmail: 'support@seedbd.com',
 	officeAddress: 'House-23, Road-12, Dhanmondi, Dhaka-1209, Bangladesh',
 	facebookUrl: 'https://facebook.com',
 	twitterUrl: 'https://x.com',
 	youtubeUrl: 'https://youtube.com',
 	instagramUrl: 'https://instagram.com',
-	copyrightText: '© 2026 AURA Inc. All rights reserved.',
+	copyrightText: '© 2026 seedbd. All rights reserved.',
 	designerCredit: 'Borbila',
 	customerServiceLinks: [
 		{ label: 'Contact Us', href: '/contact' },

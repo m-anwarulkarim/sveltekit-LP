@@ -13,7 +13,7 @@ export interface HeaderStoreData {
 }
 
 export const DEFAULT_HEADER_DATA: HeaderStoreData = {
-	brandName: 'AURA',
+	brandName: 'seedbd',
 	announcementText: '৳৬০০+ অর্ডার করলেই ডেলিভারি সম্পূর্ণ ফ্রি!',
 	freeShippingThreshold: 600,
 	phoneHotline: '0156007230',

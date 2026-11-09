@@ -76,7 +76,7 @@ export class SmsService {
 		total: number,
 		config?: SmsGatewayConfig
 	) {
-		const text = `AURA: আপনার অর্ডার #${orderNumber} (মোট ৳${total}) সফলভাবে গৃহীত হয়েছে। খুব শীঘ্রই আমাদের প্রতিনিধি আপনাকে কল করবেন। ধন্যবাদ!`;
+		const text = `seedbd: আপনার অর্ডার #${orderNumber} (মোট ৳${total}) সফলভাবে গৃহীত হয়েছে। খুব শীঘ্রই আমাদের প্রতিনিধি আপনাকে কল করবেন। ধন্যবাদ!`;
 		return this.sendSms(phone, text, config);
 	}
 
@@ -90,7 +90,7 @@ export class SmsService {
 		courierName = 'Steadfast',
 		config?: SmsGatewayConfig
 	) {
-		const text = `AURA: আপনার #${orderNumber} অর্ডারটি ${courierName} কুরিয়ারে বুকিং হয়েছে। ট্র্যাকিং কোড: ${trackingCode}। দ্রুতই ডেলিভারি পাবেন।`;
+		const text = `seedbd: আপনার #${orderNumber} অর্ডারটি ${courierName} কুরিয়ারে বুকিং হয়েছে। ট্র্যাকিং কোড: ${trackingCode}। দ্রুতই ডেলিভারি পাবেন।`;
 		return this.sendSms(phone, text, config);
 	}
 }

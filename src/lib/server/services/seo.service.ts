@@ -23,7 +23,7 @@ export interface BreadcrumbItem {
 }
 
 export class SeoService {
-	static readonly SITE_NAME = 'AURA Acoustics & Gadgets';
+	static readonly SITE_NAME = 'seedbd';
 	static readonly SITE_URL = 'https://lp.haqplus.com';
 	static readonly DEFAULT_IMAGE = 'https://lp.haqplus.com/apple-touch-icon.png';
 
@@ -40,7 +40,7 @@ export class SeoService {
 			sku: product.sku || product.slug,
 			brand: {
 				'@type': 'Brand',
-				name: product.brandName || 'AURA'
+				name: product.brandName || 'seedbd'
 			},
 			offers: {
 				'@type': 'Offer',

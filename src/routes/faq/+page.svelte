@@ -35,7 +35,7 @@
 </script>
 
 <svelte:head>
-	<title>সাধারণ জিজ্ঞাসা (FAQs) | AURA</title>
+	<title>সাধারণ জিজ্ঞাসা (FAQs) | seedbd</title>
 </svelte:head>
 
 <StoreLayout user={data.user}>

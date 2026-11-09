@@ -38,7 +38,7 @@
 </script>
 
 <svelte:head>
-	<title>{status} - {is404 ? 'পেজটি খুঁজে পাওয়া যায়নি | Page Not Found' : 'সিস্টেম এরর | System Error'} | AURA</title>
+	<title>{status} - {is404 ? 'পেজটি খুঁজে পাওয়া যায়নি | Page Not Found' : 'সিস্টেম এরর | System Error'} | seedbd</title>
 </svelte:head>
 
 {#if isAdminPath}

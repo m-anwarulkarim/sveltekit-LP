@@ -27,7 +27,7 @@
 	const newArrivalItems = $derived(getNewArrivals(allProducts).slice(0, SECTION_SIZE));
 	const popularItems = $derived(getPopularProducts(allProducts).slice(0, SECTION_SIZE));
 
-	const siteName = $derived(data.websiteInfo?.websiteName || 'AURA Store');
+	const siteName = $derived(data.websiteInfo?.websiteName || 'seedbd');
 	const pageTitle = $derived(`${siteName} | Premium Lifestyle & Essentials Store`);
 	const pageDescription = $derived(
 		`${siteName} - Next-generation lifestyle, skincare and creator essentials store in Bangladesh.`

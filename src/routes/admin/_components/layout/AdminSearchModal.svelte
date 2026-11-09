@@ -529,7 +529,7 @@
 				</div>
 
 				<div class="text-slate-400 flex items-center gap-1">
-					<span>AURA Search Engine</span>
+					<span>seedbd Search Engine</span>
 				</div>
 			</div>
 		</div>

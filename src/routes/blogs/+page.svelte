@@ -35,7 +35,7 @@
 </script>
 
 <svelte:head>
-	<title>লাইফস্টাইল ও শপিং ব্লগ (Blogs) | AURA</title>
+	<title>লাইফস্টাইল ও শপিং ব্লগ (Blogs) | seedbd</title>
 </svelte:head>
 
 <StoreLayout user={data.user}>

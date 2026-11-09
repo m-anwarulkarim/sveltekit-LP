@@ -159,7 +159,7 @@
 				{:else if isAdminControlActive}
 					<span>Vendor Admins</span>
 				{:else}
-					<span>AURA Control</span>
+					<span>seedbd Control</span>
 				{/if}
 			</h1>
 

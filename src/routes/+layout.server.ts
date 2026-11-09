@@ -55,7 +55,7 @@ export const load: LayoutServerLoad = async (event) => {
 		outsideDhakaCharge: 120,
 		freeShippingThreshold: 600,
 		hotlinePhone: '0156007230',
-		storeName: 'AURA Store'
+		storeName: 'seedbd'
 	};
 	let productSettings: ProductSettingsConfig = DEFAULT_PRODUCT_SETTINGS;
 	let websiteInfo: WebsiteInfoConfig = DEFAULT_WEBSITE_INFO;

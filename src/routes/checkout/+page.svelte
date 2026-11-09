@@ -349,7 +349,7 @@
 </script>
 
 <svelte:head>
-	<title>চেকআউট ও অর্ডার কনফার্মেশন | AURA Store</title>
+	<title>চেকআউট ও অর্ডার কনফার্মেশন | seedbd</title>
 	<meta name="description" content="নিরাপদ চেকআউট ও ১২-২৪ ঘণ্টায় সারা দেশে দ্রুততম এক্সপ্রেস হোম ডেলিভারি।" />
 </svelte:head>
 

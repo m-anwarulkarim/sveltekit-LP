@@ -118,6 +118,16 @@
 			desc: 'Meta Pixel এবং Conversions API (CAPI)'
 		},
 		{
+			id: 'facebook-domain-verification',
+			title: 'Facebook Domain Verification',
+			cardBg: 'bg-[#eef5fc]',
+			iconBg: 'bg-[#1877f2]',
+			ringBorder: 'border-[#1877f2]/40',
+			accentColor: 'text-[#1877f2]',
+			iconType: 'facebook',
+			desc: 'Meta Business Manager ডোমেইন ভেরিফিকেশন'
+		},
+		{
 			id: 'tiktok-pixel',
 			title: 'TikTok Pixel',
 			cardBg: 'bg-[#f4f7f6]',

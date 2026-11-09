@@ -70,7 +70,7 @@
 </script>
 
 <svelte:head>
-	<title>All Products | AURA Store</title>
+	<title>All Products | seedbd</title>
 </svelte:head>
 
 <StoreLayout user={data.user}>

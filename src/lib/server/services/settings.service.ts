@@ -48,11 +48,11 @@ export interface WebsiteInfoConfig {
 }
 
 export const DEFAULT_WEBSITE_INFO: WebsiteInfoConfig = {
-	websiteName: 'AURA Store',
+	websiteName: 'seedbd',
 	shortDescription: 'The Premier Online Shopping Destination in Bangladesh. Premium products delivered to your doorstep.',
 	whatsappNumber: '0156007230',
 	addresses: ['Nawabpur Kaptan Bazar Complex Dhaka, Bangladesh'],
-	emails: ['support@aura.com.bd'],
+	emails: ['support@seedbd.com'],
 	logoUrl: '/favicon.svg',
 	faviconUrl: '/favicon.svg'
 };
@@ -376,7 +376,7 @@ export class SettingsService {
 				enableFreeDelivery: enableFree,
 				freeShippingThreshold: threshold,
 				hotlinePhone: String(deliverySettings.hotline_phone || '0156007230'),
-				storeName: String(deliverySettings.store_name || 'AURA Store')
+				storeName: String(deliverySettings.store_name || 'seedbd')
 			};
 		} catch (e) {
 			return {
@@ -386,7 +386,7 @@ export class SettingsService {
 				enableFreeDelivery: false,
 				freeShippingThreshold: 2000,
 				hotlinePhone: '0156007230',
-				storeName: 'AURA Store'
+				storeName: 'seedbd'
 			};
 		}
 	}

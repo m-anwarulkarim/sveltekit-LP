@@ -53,7 +53,7 @@
 </script>
 
 <svelte:head>
-	<title>সকল ক্যাটাগরি | AURA Store</title>
+	<title>সকল ক্যাটাগরি | seedbd</title>
 </svelte:head>
 
 <StoreLayout user={data.user}>

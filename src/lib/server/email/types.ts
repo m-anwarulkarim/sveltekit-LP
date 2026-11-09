@@ -34,7 +34,7 @@ export interface EmailSettings {
 
 export const DEFAULT_EMAIL_SETTINGS: EmailSettings = {
 	provider: 'console',
-	fromName: 'AURA Store',
+	fromName: 'seedbd',
 	fromEmail: 'noreply@example.com',
 	resendApiKey: '',
 	enabled: false

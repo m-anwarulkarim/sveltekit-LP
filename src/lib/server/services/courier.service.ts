@@ -818,7 +818,7 @@ export class CourierService {
 					},
 					body: JSON.stringify({
 						merOrderRef: invoiceNo,
-						pickMerchantName: storeName || 'Aura Store',
+						pickMerchantName: storeName || 'seedbd',
 						custname: order.customerName,
 						custphone: recipientPhone,
 						custaddress: recipientAddress,

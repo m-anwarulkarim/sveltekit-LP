@@ -1,21 +1,21 @@
 export const siteConfig = {
-	name: 'AURA Acoustics',
-	tagline: 'Next-Gen Spatial Sound & Creator Audio Hardware',
+	name: 'seedbd',
+	tagline: 'Best Quality Lifestyle Products in Bangladesh',
 	description:
-		'Experience ultra-high-fidelity spatial acoustics, 50mm Planar Magnetic transducers, neural noise cancellation, and zero-latency wireless audio gear.',
-	url: 'https://aura-acoustics.pages.dev',
-	currency: 'USD',
-	currencySymbol: '$',
-	supportEmail: 'support@auraacoustics.com',
-	creatorClubDiscountCode: 'AURA20',
+		'The Premier Online Shopping Destination in Bangladesh. Premium products delivered to your doorstep.',
+	url: 'https://lp.haqplus.com',
+	currency: 'BDT',
+	currencySymbol: '৳',
+	supportEmail: 'support@seedbd.com',
+	creatorClubDiscountCode: 'SEED20',
 	discountPercent: 20,
 	socials: {
-		twitter: 'https://twitter.com/aura_acoustics',
-		youtube: 'https://youtube.com/@aura_acoustics',
-		discord: 'https://discord.gg/aura_audio'
+		twitter: 'https://twitter.com/seedbd',
+		youtube: 'https://youtube.com/@seedbd',
+		discord: 'https://discord.gg/seedbd'
 	},
 	meta: {
-		author: 'AURA Acoustics Inc.',
+		author: 'seedbd Inc.',
 		keywords: [
 			'Planar Magnetic Headphones',
 			'Spatial Audio',

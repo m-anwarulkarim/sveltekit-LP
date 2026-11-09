@@ -53,7 +53,7 @@
 </script>
 
 <svelte:head>
-	<title>কম্বো অফার ও প্যাকেজ (Combos Products) | AURA</title>
+	<title>কম্বো অফার ও প্যাকেজ (Combos Products) | seedbd</title>
 </svelte:head>
 
 <StoreLayout user={data.user}>

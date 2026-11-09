@@ -8,7 +8,7 @@
 </script>
 
 <svelte:head>
-	<title>About Us | AURA</title>
+	<title>About Us | seedbd</title>
 </svelte:head>
 
 <StoreLayout user={data.user}>
@@ -17,13 +17,13 @@
 		<!-- Hero Section -->
 		<div class="text-center space-y-3 max-w-3xl mx-auto">
 			<Badge variant="outline" class="bg-indigo-50 text-[#5845eb] border-indigo-200">
-				About AURA
+				About seedbd
 			</Badge>
 			<h1 class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
 				Next-Gen E-Commerce & Curated Lifestyle Platform
 			</h1>
 			<p class="text-sm sm:text-base text-slate-600 leading-relaxed">
-				AURA is a modern, technology-driven shopping destination dedicated to delivering authentic products, unmatched customer care, and seamless digital commerce experiences.
+				seedbd is a modern, technology-driven shopping destination dedicated to delivering authentic products, unmatched customer care, and seamless digital commerce experiences.
 			</p>
 		</div>
 

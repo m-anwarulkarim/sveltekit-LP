@@ -214,7 +214,7 @@ const handleRequest: Handle = async ({ event, resolve }) => {
 				return new Response(
 					JSON.stringify({
 						error: 'Access Denied',
-						message: 'Your IP address has been blocked by AURA Security Sentinel.',
+						message: 'Your IP address has been blocked by seedbd Security Sentinel.',
 						reason: block.reason || 'Restricted Activity'
 					}),
 					{

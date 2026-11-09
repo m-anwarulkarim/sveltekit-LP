@@ -242,7 +242,7 @@
 </script>
 
 <svelte:head>
-	<title>{data.category.name} | {data.category.nameBn} - AURA Store</title>
+	<title>{data.category.name} | {data.category.nameBn} - seedbd</title>
 	<meta name="description" content="{data.category.desc}. সেরা দামে অরিজিনাল কালেকশন ও ১২-২৪ ঘণ্টায় দ্রুততম ডেলিভারি।" />
 </svelte:head>
 

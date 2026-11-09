@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
 	import { Card, CardContent, Badge } from '#lib/components/ui';
 	import { FileText, ShieldCheck } from 'lucide-svelte';

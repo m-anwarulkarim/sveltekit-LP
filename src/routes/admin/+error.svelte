@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import { page } from '$app/state';
 	import { Button, Badge, Card, CardContent } from '#lib/components/ui';
 	import {

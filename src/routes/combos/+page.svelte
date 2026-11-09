@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
 	import { Button, Card, CardContent, Badge } from '#lib/components/ui';
 	import { cart } from '#lib/modules/cart/cart.svelte';

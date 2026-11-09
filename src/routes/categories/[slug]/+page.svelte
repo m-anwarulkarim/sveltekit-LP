@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import type { PageData } from './$types';
 	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
 	import ProductCard from '#lib/modules/products/components/ProductCard.svelte';

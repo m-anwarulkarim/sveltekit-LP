@@ -67,6 +67,10 @@
 		<!-- Google Search Console Verification -->
 		<meta name="google-site-verification" content={data.googleConsole.verificationToken} />
 	{/if}
+	{#if data?.pixelConfig?.domainVerificationToken}
+		<!-- Meta (Facebook) Domain Verification -->
+		<meta name="facebook-domain-verification" content={data.pixelConfig.domainVerificationToken} />
+	{/if}
 	{#if data?.pixelConfig?.trackingMode === 'native_direct' && data?.pixelConfig?.pixelId}
 		<!-- Meta Pixel Noscript Fallback -->
 		<noscript>

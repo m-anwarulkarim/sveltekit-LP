@@ -75,3 +75,4 @@ export const actions: Actions = {
 		return redirect(303, '/auth/login?reset=success');
 	}
 };
+

@@ -8,7 +8,8 @@
 		AdminSidebar,
 		AdminNavbar,
 		AdminMobileBottomNav,
-		AdminSearchModal
+		AdminSearchModal,
+		AdminLoadingBar
 	} from './_components/layout';
 	import {
 		PackageProModal
@@ -95,6 +96,8 @@
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
 	<link href="https://fonts.googleapis.com/css2?family=Anek+Bangla:wght@100..800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </svelte:head>
+
+<AdminLoadingBar />
 
 <!-- Fullscreen Warm Ivory Executive Frame with Pure White SaaS Sidebar -->
 <div class="admin-theme min-h-screen bg-[#faf7f2] text-slate-800 flex flex-col md:flex-row font-['Anek_Bangla',sans-serif] selection:bg-[#5845eb]/20 selection:text-[#5845eb] antialiased">

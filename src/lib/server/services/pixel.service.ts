@@ -412,16 +412,19 @@ export class PixelService {
 		}
 	): Promise<{ success: boolean; message?: string; skipped?: boolean }> {
 		try {
+			console.log(`[CAPI Purchase] START order=${orderData.orderNumber} total=${orderData.total}`);
 			const settings = await this.getSettings(db);
 
-			// Check if tracking is active
 			if (settings.trackingMode === 'disabled' || !settings.events.purchase) {
+				console.log(`[CAPI Purchase] SKIPPED — trackingMode=${settings.trackingMode}, events.purchase=${settings.events.purchase}`);
 				return { success: true, skipped: true, message: 'Purchase tracking disabled in settings' };
 			}
 
 			if (!settings.pixelId || !settings.capiToken) {
+				console.log(`[CAPI Purchase] SKIPPED — pixelId=${!!settings.pixelId}, capiToken=${!!settings.capiToken}`);
 				return { success: false, skipped: true, message: 'Pixel ID or CAPI token missing' };
 			}
+			console.log(`[CAPI Purchase] SENDING to pixel=${settings.pixelId}, items=${orderData.items?.length}`);
 
 			// 1. Customer matching parameters with normalization and SHA-256
 			const normalizedPhone = this.normalizePhone(orderData.customerPhone);
@@ -486,9 +489,11 @@ export class PixelService {
 				]
 			};
 
-			return await this.postEvents(settings, payload.data);
+			const result = await this.postEvents(settings, payload.data);
+			console.log(`[CAPI Purchase] RESULT order=${orderData.orderNumber}:`, JSON.stringify(result));
+			return result;
 		} catch (err: any) {
-			console.error('Meta CAPI Purchase exception:', err);
+			console.error(`[CAPI Purchase] EXCEPTION order=${orderData.orderNumber}:`, err);
 			return { success: false, message: err?.message };
 		}
 	}

@@ -21,13 +21,22 @@
 		product: any;
 		config: any;
 		landingPage?: any;
+		packages?: any[];
+		selectedPackageIndex?: number;
+		onPackageChange?: (idx: number) => void;
 	}
 
-	let { product, config, landingPage }: Props = $props();
+	let { product, config, landingPage, packages = [], selectedPackageIndex = 0, onPackageChange }: Props = $props();
 
 	// Effective pricing
-	let price = $derived(config?.customPrice || product?.price || 1200);
-	let originalPrice = $derived(config?.customOriginalPrice || product?.originalPrice || price * 1.5);
+	let basePrice = $derived(config?.customPrice || product?.price || 1200);
+	let baseOriginalPrice = $derived(config?.customOriginalPrice || product?.originalPrice || basePrice * 1.5);
+
+	let hasPackages = $derived(packages.length > 0);
+	let currentPackage = $derived(hasPackages ? (packages[selectedPackageIndex] || packages[0]) : null);
+
+	let price = $derived(currentPackage ? currentPackage.price : basePrice);
+	let originalPrice = $derived(currentPackage ? currentPackage.originalPrice : baseOriginalPrice);
 
 	// Form fields
 	let quantity = $state(1);
@@ -42,8 +51,13 @@
 	let showNote = $state(false);
 	let isSubmitting = $state(false);
 
-	let deliveryFee = $derived(district === 'dhaka' ? 60 : 120);
-	let subtotal = $derived(price * quantity);
+	let deliveryFee = $derived.by(() => {
+		if (currentPackage) {
+			return currentPackage.freeDelivery ? 0 : (currentPackage.deliveryFee ?? (district === 'dhaka' ? 60 : 120));
+		}
+		return district === 'dhaka' ? 60 : 120;
+	});
+	let subtotal = $derived(hasPackages ? price : price * quantity);
 	let grandTotal = $derived(subtotal + deliveryFee);
 	let isPreview = $derived(landingPage?.isPreview || false);
 
@@ -80,13 +94,16 @@
 			fd.append('customerName', name.trim());
 			fd.append('customerPhone', phone.trim());
 			fd.append('shippingAddress', address.trim());
-			fd.append('deliveryArea', district === 'dhaka' ? 'inside_dhaka' : 'outside_dhaka');
+			fd.append('deliveryArea', currentPackage?.freeDelivery ? 'inside_dhaka' : (district === 'dhaka' ? 'inside_dhaka' : 'outside_dhaka'));
 			fd.append('paymentMethod', 'cod');
-			fd.append('quantity', String(quantity));
+			fd.append('quantity', String(currentPackage?.qty || quantity));
 			fd.append('productId', product?.id || '');
+			const packageLabel = currentPackage ? currentPackage.title : '';
 			fd.append('productName', product?.name || config?.headline || 'Landing Page Product');
+			if (hasPackages) fd.append('packageIndex', String(selectedPackageIndex));
 
 			const notes: string[] = [];
+			if (packageLabel) notes.push(`প্যাকেজ: ${packageLabel} (মূল্য: ${formatTaka(price)})`);
 			if (orderNote.trim()) notes.push(orderNote.trim());
 			if (altPhone.trim()) notes.push(`বিকল্প নম্বর: ${altPhone.trim()}`);
 			fd.append('orderNote', notes.join(' | '));
@@ -143,35 +160,46 @@
 					<div class="min-w-0">
 						<h4 class="text-xs sm:text-sm font-bold text-slate-800 line-clamp-1">
 							{product?.name || config?.headline || 'অর্ডারকৃত পণ্য'}
+							{#if currentPackage}
+								<span class="text-emerald-700 text-[11px]">({currentPackage.title})</span>
+							{/if}
 						</h4>
 						<div class="flex items-center gap-2 mt-0.5">
 							<span class="text-sm font-black text-emerald-700">{formatTaka(price)}</span>
 							{#if originalPrice > price}
 								<span class="text-xs text-slate-400 line-through">{formatTaka(originalPrice)}</span>
 							{/if}
+							{#if currentPackage?.freeDelivery}
+								<span class="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200">ফ্রি ডেলিভারি</span>
+							{/if}
 						</div>
+						{#if currentPackage?.freeGift}
+							<span class="text-[10px] font-bold text-emerald-700 mt-0.5 block">🎁 {currentPackage.freeGift}</span>
+						{/if}
 					</div>
 				</div>
 
-				<!-- Quantity Control -->
-				<div class="flex items-center gap-2 bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-2xs">
-					<span class="text-xs font-bold text-slate-600 mr-1">পরিমাণ:</span>
-					<button
-						type="button"
-						onclick={() => quantity > 1 && quantity--}
-						class="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-700 cursor-pointer"
-					>
-						<Minus class="w-3.5 h-3.5" />
-					</button>
-					<span class="w-6 text-center font-bold text-sm text-slate-800">{quantity}</span>
-					<button
-						type="button"
-						onclick={() => quantity++}
-						class="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-700 cursor-pointer"
-					>
-						<Plus class="w-3.5 h-3.5" />
-					</button>
-				</div>
+				{#if !hasPackages}
+					<!-- Quantity Control (only when no packages) -->
+					<div class="flex items-center gap-2 bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-2xs">
+						<span class="text-xs font-bold text-slate-600 mr-1">পরিমাণ:</span>
+						<button
+							type="button"
+							onclick={() => quantity > 1 && quantity--}
+							class="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-700 cursor-pointer"
+						>
+							<Minus class="w-3.5 h-3.5" />
+						</button>
+						<span class="w-6 text-center font-bold text-sm text-slate-800">{quantity}</span>
+						<button
+							type="button"
+							onclick={() => quantity++}
+							class="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-700 cursor-pointer"
+						>
+							<Plus class="w-3.5 h-3.5" />
+						</button>
+					</div>
+				{/if}
 			</div>
 
 			<form onsubmit={handleSubmit} class="space-y-4">
@@ -337,12 +365,12 @@
 				<!-- Pricing Summary Box -->
 				<div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
 					<div class="flex justify-between items-center text-slate-600">
-						<span>পণ্য মূল্য ({quantity} টি)</span>
+						<span>{currentPackage ? currentPackage.title : `পণ্য মূল্য (${quantity} টি)`}</span>
 						<span class="font-bold text-slate-800 font-mono">{formatTaka(subtotal)}</span>
 					</div>
 					<div class="flex justify-between items-center text-slate-600">
 						<span>ডেলিভারি চার্জ</span>
-						<span class="font-bold text-slate-800 font-mono">{formatTaka(deliveryFee)}</span>
+						<span class="font-bold text-slate-800 font-mono">{deliveryFee === 0 ? 'ফ্রি ✓' : formatTaka(deliveryFee)}</span>
 					</div>
 					<div class="border-t border-slate-200 pt-2 flex justify-between items-center text-sm font-bold text-slate-900">
 						<span>সর্বমোট পরিশোধযোগ্য</span>

@@ -1012,7 +1012,7 @@
 				</CardContent>
 			</Card>
 
-			{#if template === 'style_2_direct' || template === 'style_3_lighthouse'}
+			{#if true}
 				<!-- CARD 3: ডাইনামিক প্যাকেজ অফার ও বান্ডেল প্রাইসিং (০, ১, ২ বা ৩টি প্যাকেজ) -->
 				<Card class="rounded-3xl border-emerald-500/80 shadow-xs overflow-hidden bg-white">
 					<CardHeader class="p-5 sm:p-6 pb-4 border-b border-emerald-100 bg-emerald-50/40">
@@ -1230,44 +1230,29 @@
 						</div>
 					</CardContent>
 				</Card>
-			{:else}
-				<!-- CARD 3: প্রাইসিং ও টাইমার (Style 1 Animated) -->
+			{/if}
+
+			{#if template === 'style_1_animated'}
+				<!-- CARD: আর্জেন্সি কাউন্টডাউন টাইমার (Style 1 Only) -->
 				<Card class="rounded-3xl border-slate-200/90 shadow-xs overflow-hidden bg-white">
 					<CardHeader class="p-5 sm:p-6 pb-4 border-b border-slate-100 bg-slate-50/50">
 						<div class="flex items-center gap-2.5">
-							<div class="w-8 h-8 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-								<Flame class="w-4.5 h-4.5" />
+							<div class="w-8 h-8 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+								<Clock class="w-4.5 h-4.5" />
 							</div>
 							<div>
 								<CardTitle class="text-sm sm:text-base font-bold text-slate-900">
-									অফার প্রাইসিং ও আর্জেন্সি টাইমার
+									আর্জেন্সি কাউন্টডাউন টাইমার
 								</CardTitle>
 								<p class="text-[11px] text-slate-500">
-									বিশেষ ডিসকাউন্ট এবং লাইভ কাউন্টডাউন টাইমার দিয়ে সেলস বাড়ান
+									লাইভ কাউন্টডাউন টাইমার দিয়ে আর্জেন্সি তৈরি করুন
 								</p>
 							</div>
 						</div>
 					</CardHeader>
 
 					<CardContent class="p-5 sm:p-6">
-						<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-							<!-- অফার প্রাইস -->
-							<div>
-								<label for="lp-customprice" class="block text-xs font-bold text-slate-700 mb-1.5">
-									অফার প্রাইস (৳) <span class="text-rose-500">*</span>
-								</label>
-								<div class="relative">
-									<span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">৳</span>
-									<Input
-										id="lp-customprice"
-										type="number"
-										bind:value={customPrice}
-										placeholder="যেমন: ১৪৫০"
-										class="rounded-2xl border-slate-200 text-xs sm:text-sm pl-8 py-2.5 font-bold text-emerald-600 bg-slate-50/50 focus:bg-white"
-									/>
-								</div>
-							</div>
-
+						<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 							<!-- রেগুলার প্রাইস -->
 							<div>
 								<label for="lp-regprice" class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
@@ -1526,7 +1511,7 @@
 							<span class="text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full">
 								{tag || 'স্পেশাল অফার'}
 							</span>
-							{#if (template === 'style_2_direct' || template === 'style_3_lighthouse') && style2Packages.length > 0}
+							{#if style2Packages.length > 0}
 								<span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
 									{style2Packages.length}টি প্যাকেজ সক্রিয়
 								</span>
@@ -1542,7 +1527,7 @@
 							{headline || title || 'আপনার আকর্ষনীয় প্রোডাক্টের হেডলাইন'}
 						</h4>
 
-						{#if (template === 'style_2_direct' || template === 'style_3_lighthouse') && style2Packages.length > 0}
+						{#if style2Packages.length > 0}
 							<div class="space-y-1.5 pt-1 border-t border-slate-100 text-[11px]">
 								{#each style2Packages as pkg, idx}
 									<div class="flex justify-between items-center {idx === 0 ? 'text-slate-600' : idx === 1 ? 'text-emerald-700 font-bold bg-emerald-50/70 p-1 rounded-lg' : 'text-indigo-700 font-bold bg-indigo-50/70 p-1 rounded-lg'}">

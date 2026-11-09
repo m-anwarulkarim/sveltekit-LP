@@ -85,8 +85,40 @@
 	}
 
 	// Pricing
-	let price = $derived(config?.customPrice || product?.price || 1450);
-	let originalPrice = $derived(config?.customOriginalPrice || product?.originalPrice || price * 1.6);
+	let basePrice = $derived(config?.customPrice || product?.price || 1450);
+	let baseOriginalPrice = $derived(config?.customOriginalPrice || product?.originalPrice || basePrice * 1.6);
+
+	// Package support (same pattern as Style 2)
+	let packages = $derived.by(() => {
+		const raw = config?.packages;
+		if (Array.isArray(raw) && raw.length > 0) {
+			return raw.map((p: any, i: number) => ({
+				id: p.id || `pack_${i + 1}`,
+				qty: p.qty || (i + 1),
+				title: p.title || `${i + 1}টি প্যাকেট`,
+				subtitle: p.subtitle || '',
+				freeGift: p.freeGift || '',
+				price: Number(p.price) || (basePrice * (i + 1)),
+				originalPrice: Number(p.originalPrice) || (baseOriginalPrice * (i + 1)),
+				deliveryFee: p.freeDelivery ? 0 : (Number(p.deliveryFee) || (i === 0 ? 60 : 0)),
+				freeDelivery: Boolean(p.freeDelivery || i > 0),
+				tag: p.tag || (i === 1 ? '🔥 সেরা অফার' : i === 2 ? '🚀 সর্বোচ্চ সাশ্রয়ী' : ''),
+				popular: i === 1 || p.popular
+			}));
+		}
+		return [];
+	});
+
+	let hasPackages = $derived(packages.length > 0);
+	let selectedPackageIndex = $state(0);
+	$effect(() => {
+		if (packages.length >= 2) selectedPackageIndex = 1;
+		else selectedPackageIndex = 0;
+	});
+	let currentPackage = $derived(hasPackages ? (packages[selectedPackageIndex] || packages[0]) : null);
+
+	let price = $derived(currentPackage ? currentPackage.price : basePrice);
+	let originalPrice = $derived(currentPackage ? currentPackage.originalPrice : baseOriginalPrice);
 	let savings = $derived(originalPrice > price ? originalPrice - price : 0);
 
 	function formatTaka(amount: number) {
@@ -253,24 +285,83 @@
 					<span class="text-xs font-bold text-slate-700">৪.৯ (১২০+ কাস্টমার রিভিউ)</span>
 				</div>
 
-				<!-- Price block -->
-				<div class="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200/80">
-					<div class="flex items-baseline gap-3">
-						<span class="text-3xl sm:text-4xl font-black text-emerald-800 font-mono">
-							{formatTaka(price)}
-						</span>
-						{#if originalPrice > price}
-							<span class="text-base sm:text-lg text-slate-400 line-through font-mono">
-								{formatTaka(originalPrice)}
-							</span>
-						{/if}
+				<!-- Price / Package Selection -->
+				{#if hasPackages}
+					<!-- Package Selection Cards -->
+					<div class="space-y-2.5">
+						<h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+							<Sparkles class="w-3.5 h-3.5 text-emerald-600" />
+							<span>আপনার প্যাকেজ বেছে নিন:</span>
+						</h3>
+						{#each packages as pkg, idx}
+							<button
+								type="button"
+								onclick={() => (selectedPackageIndex = idx)}
+								class="w-full text-left p-3.5 rounded-2xl border-2 transition-all cursor-pointer relative {selectedPackageIndex === idx
+									? 'border-emerald-600 bg-emerald-50/60 ring-1 ring-emerald-500/30 shadow-md'
+									: 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-xs'}"
+							>
+								{#if pkg.tag}
+									<span class="absolute -top-2.5 right-3 px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-rose-600 text-white shadow-sm">
+										{pkg.tag}
+									</span>
+								{/if}
+								<div class="flex items-center justify-between gap-2">
+									<div class="flex items-center gap-2.5">
+										<div class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 {selectedPackageIndex === idx ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300 bg-white'}">
+											{#if selectedPackageIndex === idx}
+												<CheckCircle2 class="w-3.5 h-3.5 text-white" />
+											{/if}
+										</div>
+										<div>
+											<span class="text-sm font-bold text-slate-900">{pkg.title}</span>
+											{#if pkg.subtitle}
+												<span class="text-[11px] text-slate-500 block">{pkg.subtitle}</span>
+											{/if}
+											{#if pkg.freeGift}
+												<span class="text-[10px] font-bold text-emerald-700 block mt-0.5">🎁 {pkg.freeGift}</span>
+											{/if}
+										</div>
+									</div>
+									<div class="text-right shrink-0">
+										<span class="text-base font-black text-emerald-800 font-mono">{formatTaka(pkg.price)}</span>
+										{#if pkg.originalPrice > pkg.price}
+											<span class="text-[11px] text-slate-400 line-through font-mono block">{formatTaka(pkg.originalPrice)}</span>
+										{/if}
+										{#if pkg.freeDelivery}
+											<span class="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200 inline-block mt-0.5">ফ্রি ডেলিভারি</span>
+										{/if}
+									</div>
+								</div>
+							</button>
+						{/each}
 					</div>
+
 					{#if savings > 0}
-						<div class="text-xs font-bold text-emerald-700 mt-1">
+						<div class="text-xs font-bold text-emerald-700 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200/80 text-center">
 							🎉 আপনি বাঁচাচ্ছেন মোট {formatTaka(savings)} টাকা!
 						</div>
 					{/if}
-				</div>
+				{:else}
+					<!-- Simple Price Block (no packages) -->
+					<div class="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200/80">
+						<div class="flex items-baseline gap-3">
+							<span class="text-3xl sm:text-4xl font-black text-emerald-800 font-mono">
+								{formatTaka(price)}
+							</span>
+							{#if originalPrice > price}
+								<span class="text-base sm:text-lg text-slate-400 line-through font-mono">
+									{formatTaka(originalPrice)}
+								</span>
+							{/if}
+						</div>
+						{#if savings > 0}
+							<div class="text-xs font-bold text-emerald-700 mt-1">
+								🎉 আপনি বাঁচাচ্ছেন মোট {formatTaka(savings)} টাকা!
+							</div>
+						{/if}
+					</div>
+				{/if}
 
 				<!-- Highlights Bullet Points -->
 				<div class="space-y-2.5 pt-1">
@@ -375,7 +466,7 @@
 				</p>
 			</div>
 
-			<LandingOrderForm {product} {config} {landingPage} />
+			<LandingOrderForm {product} {config} {landingPage} {packages} {selectedPackageIndex} onPackageChange={(idx) => (selectedPackageIndex = idx)} />
 		</section>
 
 		<!-- 6. Real Customer Testimonials -->

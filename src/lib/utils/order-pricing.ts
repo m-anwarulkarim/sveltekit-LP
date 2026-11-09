@@ -162,6 +162,19 @@ export function resolveLandingOffer(input: {
 	}
 
 	const unitPrice = Number(input.customPrice) || Number(input.productPrice) || 1200;
+	if (pkg) {
+		const position = index + 1;
+		const packageQty = Number(pkg.qty) || position;
+		const subtotal = Number(pkg.price) || unitPrice * position;
+		const deliveryCharge = pkg.freeDelivery ? 0 : Number(pkg.deliveryFee) || (isOutside ? 120 : 60);
+		return {
+			unitPrice: Math.round(subtotal / packageQty),
+			quantity: packageQty,
+			subtotal,
+			deliveryCharge,
+			packageTitle: pkg.title || `${position}টি প্যাকেট`
+		};
+	}
 	return {
 		unitPrice,
 		quantity,

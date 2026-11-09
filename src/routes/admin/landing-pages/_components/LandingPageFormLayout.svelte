@@ -944,11 +944,12 @@
 						</label>
 						<textarea
 							id="lp-subheadline"
-							rows="3"
+							rows="5"
 							bind:value={subheadline}
 							placeholder="পণ্যটির বিশেষত্ব ও কেন আজই অর্ডার করা উচিত তার ২-৩ লাইনের আকর্ষণীয় বিবরণ..."
-							class="w-full bg-slate-50/50 border border-slate-200 rounded-2xl p-3.5 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#5845eb] transition-all"
+							class="w-full bg-slate-50/50 border border-slate-200 rounded-2xl p-3.5 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#5845eb] transition-all font-mono"
 						></textarea>
+						<p class="text-[10px] text-slate-400 mt-1 pl-1">HTML সাপোর্ট করে — প্রোডাক্ট পেজের মতো bold, list, link, table ইত্যাদি ব্যবহার করা যাবে</p>
 					</div>
 
 					<!-- অফার ব্যানার ব্যাজ -->

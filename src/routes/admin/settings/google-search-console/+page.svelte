@@ -7,11 +7,13 @@
 	let { data }: { data: any } = $props();
 
 	let verificationToken = $state(data?.googleConsole?.verificationToken ?? '');
+	let facebookDomainToken = $state(data?.googleConsole?.facebookDomainToken ?? '');
 	let isSaving = $state(false);
 
 	$effect(() => {
 		if (data?.googleConsole) {
 			verificationToken = data.googleConsole.verificationToken ?? '';
+			facebookDomainToken = data.googleConsole.facebookDomainToken ?? '';
 		}
 	});
 </script>
@@ -129,6 +131,43 @@
 						<span>googleConsole.saveSettings</span>
 					{/if}
 				</Button>
+			</div>
+		</div>
+
+		<!-- CARD 1.5: Facebook Domain Verification -->
+		<div class="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-7 shadow-2xs space-y-5">
+			<div class="flex items-start gap-3.5">
+				<div class="w-9 h-9 rounded-full bg-[#1877f2] flex items-center justify-center text-white shrink-0 shadow-xs">
+					<svg class="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24">
+						<path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+					</svg>
+				</div>
+				<div>
+					<h3 class="text-xs sm:text-sm font-bold text-slate-900">
+						Facebook Domain Verification
+					</h3>
+					<p class="text-[11px] sm:text-xs text-slate-500 mt-0.5">
+						Meta Business Manager → Brand Safety → Domains থেকে verification token
+					</p>
+				</div>
+			</div>
+
+			<div class="space-y-1">
+				<div class="relative rounded-xl border border-slate-300 hover:border-slate-400 focus-within:border-[#1877f2] focus-within:ring-2 focus-within:ring-[#1877f2]/10 bg-white transition-all">
+					<span class="absolute -top-2.5 left-3 bg-white px-1.5 text-[11px] font-bold text-slate-500 select-none">
+						Domain Verification Token
+					</span>
+					<input
+						type="text"
+						name="facebookDomainToken"
+						bind:value={facebookDomainToken}
+						placeholder="plv96s2j2iycf9vg2f5jswtx72mm58"
+						class="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-900 bg-transparent rounded-xl focus:outline-none font-mono"
+					/>
+				</div>
+				<p class="text-[10px] text-slate-400 pl-1">
+					শুধু content="" এর ভেতরের value পেস্ট করুন, পুরো meta-tag নয়
+				</p>
 			</div>
 		</div>
 

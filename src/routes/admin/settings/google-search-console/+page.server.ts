@@ -27,10 +27,11 @@ export const actions: Actions = {
 	saveSettings: async ({ request, platform }) => {
 		const data = await request.formData();
 		const verificationToken = data.get('verificationToken')?.toString() || '';
+		const facebookDomainToken = data.get('facebookDomainToken')?.toString() || '';
 
 		try {
 			const db = getDb(platform);
-			const saved = await SettingsService.saveGoogleConsoleConfig(db, verificationToken);
+			const saved = await SettingsService.saveGoogleConsoleConfig(db, verificationToken, facebookDomainToken);
 
 			return {
 				success: true,

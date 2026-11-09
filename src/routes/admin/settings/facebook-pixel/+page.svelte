@@ -70,8 +70,7 @@
 			matchCity: data?.settings?.advancedMatching?.matchCity ?? true
 		},
 		enableCollaborativeAds: data?.settings?.enableCollaborativeAds ?? false,
-		partnerSegmentId: data?.settings?.partnerSegmentId || '',
-		domainVerificationToken: data?.settings?.domainVerificationToken || ''
+		partnerSegmentId: data?.settings?.partnerSegmentId || ''
 	});
 
 	// Synchronize when data updates
@@ -102,8 +101,7 @@
 					matchCity: data.settings.advancedMatching?.matchCity ?? true
 				},
 				enableCollaborativeAds: data.settings.enableCollaborativeAds ?? false,
-				partnerSegmentId: data.settings.partnerSegmentId || '',
-				domainVerificationToken: data.settings.domainVerificationToken || ''
+				partnerSegmentId: data.settings.partnerSegmentId || ''
 			};
 		}
 	});
@@ -515,28 +513,7 @@
 					</div>
 				</div>
 
-				<!-- 4. Facebook Domain Verification -->
-				<div class="p-4 rounded-2xl border border-slate-200/80 bg-slate-50/60 space-y-3">
-					<div>
-						<span class="text-xs font-bold text-slate-900 block">Facebook Domain Verification</span>
-						<p class="text-[11px] text-slate-500 mt-0.5">
-							Meta Business Manager → Brand Safety → Domains থেকে meta-tag-এর content value-টুকু এখানে paste করুন
-						</p>
-					</div>
-					<div class="space-y-1.5">
-						<Input
-							type="text"
-							placeholder="যেমন: plv96s2j2iycf9vg2f5jswtx72mm58"
-							bind:value={settings.domainVerificationToken}
-							class="font-mono text-xs h-10 rounded-xl bg-white"
-						/>
-						<p class="text-[11px] text-slate-400">
-							শুধু content="" এর ভেতরের value, পুরো meta-tag নয়
-						</p>
-					</div>
-				</div>
-
-				<!-- 5. Collaborative Ads Settings (Optional Brand Partnerships) -->
+				<!-- 4. Collaborative Ads Settings (Optional Brand Partnerships) -->
 				<div class="p-4 rounded-2xl border border-slate-200/80 bg-slate-50/60 space-y-3">
 					<div class="flex items-center justify-between">
 						<div>

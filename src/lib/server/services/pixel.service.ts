@@ -32,7 +32,6 @@ export interface MetaPixelSettings {
 	};
 	enableCollaborativeAds: boolean;
 	partnerSegmentId?: string;
-	domainVerificationToken?: string;
 	updatedAt?: string | number;
 }
 
@@ -62,8 +61,7 @@ export const DEFAULT_PIXEL_SETTINGS: MetaPixelSettings = {
 		matchCity: true
 	},
 	enableCollaborativeAds: false,
-	partnerSegmentId: '',
-	domainVerificationToken: ''
+	partnerSegmentId: ''
 };
 
 const GRAPH_API_VERSION = 'v23.0';
@@ -559,7 +557,6 @@ export class PixelService {
 		advancedMatching: boolean;
 		capiEnabled: boolean;
 		testEventCode?: string;
-		domainVerificationToken?: string;
 	}> {
 		const s = await this.getSettings(db);
 		// Only expose test code when the admin's Test Mode toggle is actually active.
@@ -574,8 +571,7 @@ export class PixelService {
 			events: s.events,
 			advancedMatching: s.advancedMatching.enabled,
 			capiEnabled: Boolean(s.pixelId?.trim() && s.capiToken?.trim()),
-			testEventCode: activeTestCode || undefined,
-			domainVerificationToken: s.domainVerificationToken?.trim() || undefined
+			testEventCode: activeTestCode || undefined
 		};
 	}
 }

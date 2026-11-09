@@ -29,10 +29,12 @@ export interface RewardPointConfig {
 
 export interface GoogleConsoleConfig {
 	verificationToken: string;
+	facebookDomainToken: string;
 }
 
 export const DEFAULT_GOOGLE_CONSOLE_CONFIG: GoogleConsoleConfig = {
-	verificationToken: ''
+	verificationToken: '',
+	facebookDomainToken: ''
 };
 
 export interface WebsiteInfoConfig {
@@ -1050,7 +1052,8 @@ export class SettingsService {
 		try {
 			const group = await this.getSettingsGroup(db, 'google_console');
 			return {
-				verificationToken: String(group.verification_token ?? group.token ?? '').trim()
+				verificationToken: String(group.verification_token ?? group.token ?? '').trim(),
+				facebookDomainToken: String(group.facebook_domain_token ?? '').trim()
 			};
 		} catch (e) {
 			console.error('Failed to get google console config from D1:', e);
@@ -1064,7 +1067,8 @@ export class SettingsService {
 	 */
 	static async saveGoogleConsoleConfig(
 		db: DrizzleD1Database<typeof schema>,
-		token: string
+		token: string,
+		facebookDomainToken?: string
 	): Promise<GoogleConsoleConfig> {
 		let cleanToken = String(token ?? '').trim();
 		// Extract verification token if pasted as full meta HTML tag
@@ -1077,6 +1081,15 @@ export class SettingsService {
 		}
 
 		await this.setSetting(db, 'google_console', 'verification_token', cleanToken);
+
+		if (facebookDomainToken !== undefined) {
+			let cleanFb = String(facebookDomainToken).trim();
+			const fbMatch = cleanFb.match(/content=["']([^"']+)["']/i);
+			if (fbMatch && fbMatch[1]) cleanFb = fbMatch[1].trim();
+			else cleanFb = cleanFb.replace(/^<meta[^>]*>/i, '').replace(/["']/g, '').trim();
+			await this.setSetting(db, 'google_console', 'facebook_domain_token', cleanFb);
+		}
+
 		return await this.getGoogleConsoleConfig(db);
 	}
 }

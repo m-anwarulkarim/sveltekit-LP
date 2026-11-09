@@ -76,7 +76,7 @@
 </script>
 
 <svelte:head>
-	<title>কুপন ব্যবস্থাপনা | AURA Admin Control Deck</title>
+	<title>কুপন ব্যবস্থাপনা | seedbd Admin Control Deck</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-7xl mx-auto pb-16 font-sans">

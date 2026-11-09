@@ -18,7 +18,7 @@
 </script>
 
 <svelte:head>
-	<title>TikTok Pixel | AURA Enterprise</title>
+	<title>TikTok Pixel | seedbd Enterprise</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-2xl mx-auto">

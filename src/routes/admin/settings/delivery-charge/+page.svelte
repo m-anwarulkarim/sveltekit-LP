@@ -29,7 +29,7 @@
 </script>
 
 <svelte:head>
-	<title>ডেলিভারি চার্জ সেটিংস | AURA Admin</title>
+	<title>ডেলিভারি চার্জ সেটিংস | seedbd Admin</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-4xl mx-auto font-['Anek_Bangla',sans-serif] p-4 sm:p-6 lg:p-8">

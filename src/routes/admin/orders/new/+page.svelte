@@ -162,7 +162,7 @@
 </script>
 
 <svelte:head>
-	<title>নতুন অর্ডার তৈরি (New Order) | AURA Pro</title>
+	<title>নতুন অর্ডার তৈরি (New Order) | seedbd Pro</title>
 </svelte:head>
 
 <div class="space-y-4 pb-12 print:p-0 print:space-y-2">
@@ -312,7 +312,7 @@
 <div class="hidden print:block p-8 bg-white text-black font-sans max-w-2xl mx-auto border border-black/20 rounded">
 	<div class="flex justify-between items-start border-b border-black pb-4">
 		<div>
-			<h1 class="text-2xl font-black tracking-tight">AURA PRO</h1>
+			<h1 class="text-2xl font-black tracking-tight">seedbd</h1>
 			<p class="text-xs text-gray-600">New Order Memo & Delivery Challan</p>
 		</div>
 		<div class="text-right">

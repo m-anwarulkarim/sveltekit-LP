@@ -147,7 +147,7 @@
 </script>
 
 <svelte:head>
-	<title>Website Information - Customization - AURA Admin</title>
+	<title>Website Information - Customization - seedbd Admin</title>
 </svelte:head>
 
 <div class="p-4 sm:p-6 lg:p-10 max-w-4xl mx-auto space-y-8 font-sans">
@@ -307,7 +307,7 @@
 					type="text"
 					bind:value={websiteName}
 					required
-					placeholder="যেমন: AURA E-Commerce"
+					placeholder="যেমন: seedbd E-Commerce"
 					class="rounded-xl h-11 text-sm font-semibold focus-visible:ring-[#5845eb]/15 focus-visible:border-[#5845eb]"
 				/>
 			</div>

@@ -128,7 +128,7 @@
 >
 	<!-- Fixed Top Header Section of Sidebar (Always Sticky, Never Scrolls) -->
 	<div class="shrink-0 bg-white z-20">
-		<!-- Header (AURA Store Brand + <> Toggle Button) -->
+		<!-- Header (seedbd Store Brand + <> Toggle Button) -->
 		<div class="h-16 md:h-20 flex items-center {collapsed ? 'justify-center flex-col gap-2.5 py-3' : 'justify-between px-5'} border-b border-slate-100">
 			{#if !collapsed}
 				<a href="/admin" class="flex items-center gap-3 group">

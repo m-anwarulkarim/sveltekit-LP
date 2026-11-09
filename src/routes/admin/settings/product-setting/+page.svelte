@@ -173,7 +173,7 @@
 </script>
 
 <svelte:head>
-	<title>Product Settings | AURA Admin</title>
+	<title>Product Settings | seedbd Admin</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-7xl mx-auto pb-24">

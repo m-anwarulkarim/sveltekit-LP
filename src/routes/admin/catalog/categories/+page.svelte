@@ -186,7 +186,7 @@
 </script>
 
 <svelte:head>
-	<title>Category | AURA Admin</title>
+	<title>Category | seedbd Admin</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-[1400px] mx-auto pb-12 font-['Plus_Jakarta_Sans',sans-serif]">

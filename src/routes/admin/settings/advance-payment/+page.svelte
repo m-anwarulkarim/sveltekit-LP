@@ -57,7 +57,7 @@
 </script>
 
 <svelte:head>
-	<title>Advance Payment সেটিংস | AURA Admin</title>
+	<title>Advance Payment সেটিংস | seedbd Admin</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-3xl mx-auto p-4 sm:p-6 lg:p-8">

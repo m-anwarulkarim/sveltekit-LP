@@ -139,7 +139,7 @@
 </script>
 
 <svelte:head>
-	<title>Invoice Settings | AURA Enterprise</title>
+	<title>Invoice Settings | seedbd Enterprise</title>
 </svelte:head>
 
 <div class="space-y-8 max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
@@ -203,7 +203,7 @@
 						<div class="space-y-2">
 							<div class="flex justify-between items-start border-b pb-1.5 border-slate-200">
 								<div>
-									<div class="font-bold text-[9px] text-slate-900">AURA STORE</div>
+									<div class="font-bold text-[9px] text-slate-900">seedbd</div>
 									<div class="text-[7px] text-slate-400">Order: #0043</div>
 								</div>
 								<div class="text-right text-[7px] text-slate-500">
@@ -283,7 +283,7 @@
 							</div>
 
 							<div class="text-[6.5px] text-center text-slate-400 border-t pt-1 border-slate-200">
-								Shop Name: AURA Store • Halal Delivery
+								Shop Name: seedbd Store • Halal Delivery
 							</div>
 
 						<!-- TEMPLATE 3: MINIMAL DESIGN -->
@@ -362,7 +362,7 @@
 						{:else if t.type === 'detailed_photo'}
 							<div class="space-y-1.5">
 								<div class="flex justify-between items-center border-b pb-1 border-slate-200">
-									<div class="font-bold text-[8px] text-slate-900">AURA STORE</div>
+									<div class="font-bold text-[8px] text-slate-900">seedbd</div>
 									<div class="font-mono text-[7px] text-slate-400">||| ||||| |||</div>
 								</div>
 
@@ -401,7 +401,7 @@
 							<div class="space-y-1.5">
 								<div class="flex justify-between items-start border-b pb-1 border-slate-200">
 									<div>
-										<div class="font-bold text-[8px] text-slate-900">Aura Organic</div>
+										<div class="font-bold text-[8px] text-slate-900">seedbd</div>
 										<div class="text-[6px] text-slate-500">Shipped From: Dhaka</div>
 									</div>
 									<div class="w-7 h-7 border rounded p-0.5 flex items-center justify-center">

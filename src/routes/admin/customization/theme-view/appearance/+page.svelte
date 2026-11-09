@@ -40,7 +40,7 @@
 </script>
 
 <svelte:head>
-	<title>Appearance & Colors - Theme View Customization - AURA Admin</title>
+	<title>Appearance & Colors - Theme View Customization - seedbd Admin</title>
 </svelte:head>
 
 <form

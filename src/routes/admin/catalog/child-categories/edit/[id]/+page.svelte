@@ -16,7 +16,7 @@
 </script>
 
 <svelte:head>
-	<title>চাইল্ড-ক্যাটাগরি সম্পাদনা | AURA Admin</title>
+	<title>চাইল্ড-ক্যাটাগরি সম্পাদনা | seedbd Admin</title>
 </svelte:head>
 
 <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 font-['Anek_Bangla',sans-serif]">

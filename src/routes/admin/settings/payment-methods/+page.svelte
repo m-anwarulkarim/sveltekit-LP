@@ -157,7 +157,7 @@
 </script>
 
 <svelte:head>
-	<title>Payment Gateways & bKash Setup | AURA Enterprise</title>
+	<title>Payment Gateways & bKash Setup | seedbd Enterprise</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-4xl mx-auto p-4 sm:p-6 pb-20">

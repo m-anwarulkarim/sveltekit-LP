@@ -6,7 +6,7 @@
 </script>
 
 <svelte:head>
-	<title>New Product | AURA Admin</title>
+	<title>New Product | seedbd Admin</title>
 </svelte:head>
 
 <div class="p-4 sm:p-6 lg:p-8">

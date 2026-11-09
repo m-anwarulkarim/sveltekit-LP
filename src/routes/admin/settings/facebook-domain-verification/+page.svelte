@@ -17,7 +17,7 @@
 </script>
 
 <svelte:head>
-	<title>Facebook Domain Verification - Settings - AURA Admin</title>
+	<title>Facebook Domain Verification - Settings - seedbd Admin</title>
 </svelte:head>
 
 <div class="p-4 sm:p-6 lg:p-8 space-y-7 max-w-5xl mx-auto font-['Anek_Bangla',sans-serif]">

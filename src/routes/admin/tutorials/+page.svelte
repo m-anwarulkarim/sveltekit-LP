@@ -129,7 +129,7 @@
 </script>
 
 <svelte:head>
-	<title>ভিডিও টিউটোরিয়াল ও গাইড | AURA Tutorials</title>
+	<title>ভিডিও টিউটোরিয়াল ও গাইড | seedbd Tutorials</title>
 </svelte:head>
 
 <div class="space-y-7 max-w-7xl mx-auto font-['Anek_Bangla',sans-serif]">

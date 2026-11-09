@@ -269,7 +269,7 @@
 </script>
 
 <svelte:head>
-	<title>Order #{data.order?.orderNumber || orderId.slice(0, 8)} - বিস্তারিত ও সম্পাদনা | AURA Pro</title>
+	<title>Order #{data.order?.orderNumber || orderId.slice(0, 8)} - বিস্তারিত ও সম্পাদনা | seedbd Pro</title>
 </svelte:head>
 
 <div class="space-y-4 pb-12 print:p-0 print:space-y-2">
@@ -313,7 +313,7 @@
 			<div class="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
 				{#if customerPhone}
 					<a
-						href="https://wa.me/{customerPhone.replace(/[^0-9]/g, '').startsWith('88') ? customerPhone.replace(/[^0-9]/g, '') : '88' + customerPhone.replace(/[^0-9]/g, '')}?text={encodeURIComponent(`আসসালামু আলাইকুম ${customerName || 'গ্রাহক'}, Aura Store থেকে যোগাযোগ করছি। আপনার শুরু করা অর্ডারটি কনফার্ম করতে চাইলে আমাদের জানান। ধন্যবাদ!`)}"
+						href="https://wa.me/{customerPhone.replace(/[^0-9]/g, '').startsWith('88') ? customerPhone.replace(/[^0-9]/g, '') : '88' + customerPhone.replace(/[^0-9]/g, '')}?text={encodeURIComponent(`আসসালামু আলাইকুম ${customerName || 'গ্রাহক'}, seedbd থেকে যোগাযোগ করছি। আপনার শুরু করা অর্ডারটি কনফার্ম করতে চাইলে আমাদের জানান। ধন্যবাদ!`)}"
 						target="_blank"
 						class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1.5 transition-colors shadow-2xs"
 					>
@@ -480,7 +480,7 @@
 	<!-- Invoice Header -->
 	<div class="flex justify-between items-start border-b border-black pb-4">
 		<div>
-			<h1 class="text-2xl font-black tracking-tight">AURA PRO</h1>
+			<h1 class="text-2xl font-black tracking-tight">seedbd</h1>
 			<p class="text-xs text-gray-600">e-Commerce Delivery Invoice & Delivery Challan</p>
 		</div>
 		<div class="text-right">

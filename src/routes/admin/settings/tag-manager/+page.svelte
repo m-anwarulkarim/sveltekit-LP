@@ -130,7 +130,7 @@
 </script>
 
 <svelte:head>
-	<title>Google Tag Manager & GA4 E-Commerce | AURA Admin</title>
+	<title>Google Tag Manager & GA4 E-Commerce | seedbd Admin</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-4xl mx-auto p-4 sm:p-6 pb-20">

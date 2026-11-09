@@ -62,7 +62,7 @@
 </script>
 
 <svelte:head>
-	<title>{isNew ? 'নতুন পপআপ তৈরি' : 'পপআপ আপডেট করুন'} - Customization - AURA Admin</title>
+	<title>{isNew ? 'নতুন পপআপ তৈরি' : 'পপআপ আপডেট করুন'} - Customization - seedbd Admin</title>
 </svelte:head>
 
 <div class="p-4 sm:p-6 lg:p-8 space-y-6 max-w-5xl mx-auto font-['Anek_Bangla',sans-serif]">

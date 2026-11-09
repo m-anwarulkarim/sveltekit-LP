@@ -10,7 +10,7 @@
 	let { open = $bindable(false) }: Props = $props();
 </script>
 
-<Dialog bind:open title="AURA প্রিমিয়াম প্যাকেজ বিবরণ">
+<Dialog bind:open title="seedbd প্রিমিয়াম প্যাকেজ বিবরণ">
 	<div class="space-y-4 py-2">
 		<div class="p-5 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-400 text-amber-950 shadow-md flex items-center justify-between">
 			<div class="flex items-center gap-3.5">

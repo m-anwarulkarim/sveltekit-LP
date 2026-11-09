@@ -218,7 +218,7 @@
 />
 
 <svelte:head>
-	<title>Banner - Customization - AURA Admin</title>
+	<title>Banner - Customization - seedbd Admin</title>
 </svelte:head>
 
 <div class="p-3 sm:p-6 lg:p-8 space-y-5 max-w-7xl mx-auto font-['Anek_Bangla',sans-serif]">

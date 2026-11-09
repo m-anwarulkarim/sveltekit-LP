@@ -94,7 +94,7 @@
 </script>
 
 <svelte:head>
-	<title>Theme Views - Modular Layout Sections - AURA Admin</title>
+	<title>Theme Views - Modular Layout Sections - seedbd Admin</title>
 </svelte:head>
 
 <form
@@ -661,7 +661,7 @@
 					<div class="w-6 h-6 rounded-lg bg-blue-600 text-white text-[10px] font-black flex items-center justify-center">
 						A
 					</div>
-					<span class="text-xs font-bold text-slate-800">AURA Store</span>
+					<span class="text-xs font-bold text-slate-800">seedbd Store</span>
 				</div>
 				<span class="text-[10px] font-bold text-slate-400">Mobile View</span>
 			</div>

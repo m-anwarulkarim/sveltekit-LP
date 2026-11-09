@@ -236,7 +236,7 @@
 </script>
 
 <svelte:head>
-	<title>Brands Management | AURA Admin</title>
+	<title>Brands Management | seedbd Admin</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-[1400px] mx-auto pb-16">

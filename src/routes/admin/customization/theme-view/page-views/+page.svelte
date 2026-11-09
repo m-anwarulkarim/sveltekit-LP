@@ -65,7 +65,7 @@
 </script>
 
 <svelte:head>
-	<title>Page Views - Checkout & Page Layouts - AURA Admin</title>
+	<title>Page Views - Checkout & Page Layouts - seedbd Admin</title>
 </svelte:head>
 
 <form

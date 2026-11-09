@@ -946,7 +946,7 @@
 											<Input
 												type="text"
 												bind:value={couponInput}
-												placeholder="কুপন কোড (AURA20)"
+												placeholder="কুপন কোড (SEED20)"
 												class="pl-9 rounded-xl bg-slate-50 border-slate-200/90 uppercase font-mono tracking-wider text-xs"
 											/>
 										</div>

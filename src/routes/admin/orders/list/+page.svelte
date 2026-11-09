@@ -188,7 +188,7 @@
 </script>
 
 <svelte:head>
-	<title>Order List | AURA Control Deck</title>
+	<title>Order List | seedbd Control Deck</title>
 </svelte:head>
 
 <div class="space-y-6">
@@ -643,7 +643,7 @@
 				<!-- Header -->
 				<div class="flex justify-between items-start border-b border-black pb-4 mb-4">
 					<div>
-						<h1 class="text-xl font-black">AURA Lifestyle</h1>
+						<h1 class="text-xl font-black">seedbd</h1>
 						<p class="text-xs text-gray-700">অনলাইন ই-কমার্স ও লাইফস্টাইল স্টোর</p>
 						<p class="text-xs text-gray-700">হটলাইন: 01700-000000</p>
 					</div>
@@ -705,7 +705,7 @@
 				</div>
 
 				<div class="mt-8 text-center text-[10px] text-gray-500 border-t border-gray-200 pt-2">
-					AURA-র সাথে থাকার জন্য ধন্যবাদ! যেকোনো প্রয়োজনে আমাদের সাথে যোগাযোগ করুন।
+					seedbd-র সাথে থাকার জন্য ধন্যবাদ! যেকোনো প্রয়োজনে আমাদের সাথে যোগাযোগ করুন।
 				</div>
 			</div>
 		{/each}

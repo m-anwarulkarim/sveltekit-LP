@@ -7,7 +7,7 @@ export const coupons = sqliteTable(
 	{
 		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 		name: text('name').notNull().default('Special Discount'),
-		code: text('code').notNull(), // e.g. "AURA20", "EID50"
+		code: text('code').notNull(), // e.g. "SEED20", "EID50"
 		bannerImage: text('banner_image'),
 		discountType: text('discount_type').notNull().default('percentage'), // 'percentage' | 'fixed'
 		discountValue: integer('discount_value').notNull(),

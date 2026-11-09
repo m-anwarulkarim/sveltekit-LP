@@ -305,7 +305,7 @@ export class CouponService {
 		const seeds: CreateCouponPayload[] = [
 			{
 				name: 'স্পেশাল লঞ্চ অফার ২০%',
-				code: 'AURA20',
+				code: 'SEED20',
 				discountType: 'percentage',
 				discountValue: 20,
 				minOrderAmount: 500,

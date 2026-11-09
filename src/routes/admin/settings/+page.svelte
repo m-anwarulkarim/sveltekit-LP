@@ -289,7 +289,7 @@
 </script>
 
 <svelte:head>
-	<title>Settings - AURA Enterprise</title>
+	<title>Settings - seedbd Enterprise</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">

@@ -12,7 +12,7 @@ export const load: PageServerLoad = async ({ parent, platform }) => {
 		enableFreeDelivery: false,
 		freeShippingThreshold: 2000,
 		hotlinePhone: '0156007230',
-		storeName: 'AURA Store'
+		storeName: 'seedbd Store'
 	};
 
 	try {

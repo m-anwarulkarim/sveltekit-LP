@@ -319,7 +319,7 @@
 />
 
 <svelte:head>
-	<title>Carousel - Customization - AURA Admin</title>
+	<title>Carousel - Customization - seedbd Admin</title>
 </svelte:head>
 
 <div class="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">

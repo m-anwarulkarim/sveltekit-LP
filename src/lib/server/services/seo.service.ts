@@ -117,7 +117,7 @@ export class SeoService {
 			logo: `${this.SITE_URL}/favicon.png`,
 			contactPoint: {
 				'@type': 'ContactPoint',
-				telephone: '+8801860229546',
+				telephone: '+8800156007230',
 				contactType: 'Customer Support',
 				areaServed: 'BD',
 				availableLanguage: ['Bengali', 'English']

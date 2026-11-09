@@ -353,11 +353,11 @@
 				</div>
 				<Button
 					variant="secondary"
-					href="tel:01860229546"
+					href="tel:0156007230"
 					class="h-auto px-5 py-2.5 rounded-xl bg-white text-slate-900 text-xs font-black flex items-center gap-2 hover:bg-slate-100 shrink-0 shadow-md border-0"
 				>
 					<PhoneCall class="w-4 h-4 text-[#2563eb]" />
-					<span class="font-mono">01860-229546</span>
+					<span class="font-mono">0156007230</span>
 				</Button>
 			</CardContent>
 		</Card>

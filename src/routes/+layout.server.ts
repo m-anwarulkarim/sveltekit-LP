@@ -55,7 +55,7 @@ export const load: LayoutServerLoad = async (event) => {
 		insideDhakaCharge: 60,
 		outsideDhakaCharge: 120,
 		freeShippingThreshold: 600,
-		hotlinePhone: '01860-229546',
+		hotlinePhone: '0156007230',
 		storeName: 'AURA Store'
 	};
 	let productSettings: ProductSettingsConfig = DEFAULT_PRODUCT_SETTINGS;

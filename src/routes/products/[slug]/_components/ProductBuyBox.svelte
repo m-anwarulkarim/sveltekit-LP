@@ -318,7 +318,7 @@
 		<div class="grid {productSettings?.callOrderBtn && productSettings?.whatsappOrderBtn ? 'grid-cols-2' : 'grid-cols-1'} gap-2.5 pt-1">
 			{#if productSettings?.callOrderBtn}
 				<a
-					href="tel:{storeConfig?.hotlinePhone || '01860229546'}"
+					href="tel:{storeConfig?.hotlinePhone || '0156007230'}"
 					class="py-2.5 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center gap-1.5 border border-blue-200 transition-colors shadow-2xs"
 				>
 					<Phone class="w-3.5 h-3.5" />
@@ -327,7 +327,7 @@
 			{/if}
 			{#if productSettings?.whatsappOrderBtn}
 				<a
-					href="https://wa.me/88{String(storeConfig?.hotlinePhone || '01860229546').replace(/\D/g, '').slice(-11)}?text={encodeURIComponent(`আসসালামু আলাইকুম, আমি ${product.name} অর্ডার করতে চাই।`)}"
+					href="https://wa.me/88{String(storeConfig?.hotlinePhone || '0156007230').replace(/\D/g, '').slice(-10)}?text={encodeURIComponent(`আসসালামু আলাইকুম, আমি ${product.name} অর্ডার করতে চাই।`)}"
 					target="_blank"
 					class="py-2.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5 border border-emerald-200 transition-colors shadow-2xs"
 				>

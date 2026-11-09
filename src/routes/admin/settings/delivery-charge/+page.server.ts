@@ -11,7 +11,7 @@ export const load: PageServerLoad = async ({ parent, platform }) => {
 		subAreaCharge: 100,
 		enableFreeDelivery: false,
 		freeShippingThreshold: 2000,
-		hotlinePhone: '01860-229546',
+		hotlinePhone: '0156007230',
 		storeName: 'AURA Store'
 	};
 

@@ -75,8 +75,8 @@
 							<Phone class="w-4 h-4" />
 						</div>
 						<div class="flex flex-col">
-							<a href="tel:{websiteInfo?.whatsappNumber || storeConfig?.hotlinePhone || '01860-229546'}" class="font-bold text-slate-900 hover:text-[#5845eb] transition-colors">
-								{websiteInfo?.whatsappNumber || storeConfig?.hotlinePhone || '01860-229546'}
+							<a href="tel:{websiteInfo?.whatsappNumber || storeConfig?.hotlinePhone || '0156007230'}" class="font-bold text-slate-900 hover:text-[#5845eb] transition-colors">
+								{websiteInfo?.whatsappNumber || storeConfig?.hotlinePhone || '0156007230'}
 							</a>
 							<span class="text-[11px] text-slate-500 flex items-center gap-1">
 								<Clock class="w-3 h-3 text-slate-400" />

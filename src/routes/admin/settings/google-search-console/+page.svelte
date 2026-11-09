@@ -29,7 +29,7 @@
 
 		<div class="flex items-center gap-2">
 			<a
-				href="https://wa.me/8801860229546"
+				href="https://wa.me/880156007230"
 				target="_blank"
 				rel="noopener noreferrer"
 				class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#5845eb] hover:bg-[#4936d6] text-white text-xs font-bold shadow-xs transition-colors"

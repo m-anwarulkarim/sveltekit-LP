@@ -165,7 +165,7 @@
 			</Button>
 
 			<a
-				href="https://wa.me/8801860229546"
+				href="https://wa.me/880156007230"
 				target="_blank"
 				rel="noopener noreferrer"
 				class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-2xs transition-colors"

@@ -454,7 +454,7 @@
 				<!-- Hotline -->
 				<div class="hidden lg:flex items-center gap-2 text-xs font-bold text-slate-500 shrink-0">
 					<PhoneCall class="w-3.5 h-3.5 text-[#5845eb]" />
-					<span>হটলাইন: <strong class="text-slate-900 font-mono">{storeConfig?.hotlinePhone || '01860-229546'}</strong></span>
+					<span>হটলাইন: <strong class="text-slate-900 font-mono">{storeConfig?.hotlinePhone || '0156007230'}</strong></span>
 				</div>
 			</div>
 		</div>
@@ -563,11 +563,11 @@
 		<!-- Drawer Footer -->
 		<div class="p-4 border-t border-slate-100 bg-slate-50/80 shrink-0">
 			<a
-				href="tel:{storeConfig?.hotlinePhone || '01860229546'}"
+				href="tel:{storeConfig?.hotlinePhone || '0156007230'}"
 				class="flex items-center gap-2 text-sm font-bold text-slate-700 hover:text-[#5845eb] transition-colors"
 			>
 				<PhoneCall class="w-4 h-4 text-[#5845eb] shrink-0" />
-				<span>হটলাইন: <strong class="font-mono">{storeConfig?.hotlinePhone || '01860-229546'}</strong></span>
+				<span>হটলাইন: <strong class="font-mono">{storeConfig?.hotlinePhone || '0156007230'}</strong></span>
 			</a>
 			<div class="text-[11px] text-slate-400 mt-1 ml-6">সকাল ৯টা – রাত ১০টা</div>
 		</div>

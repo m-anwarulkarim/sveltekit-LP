@@ -214,11 +214,11 @@
 			</div>
 			<div class="flex items-center gap-3">
 				<a
-					href="tel:01860229546"
+					href="tel:0156007230"
 					class="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 hover:text-[#5845eb] text-xs font-bold flex items-center gap-2 shadow-2xs transition-colors"
 				>
 					<PhoneCall class="w-3.5 h-3.5 text-[#5845eb]" />
-					<span>01860-229546</span>
+					<span>0156007230</span>
 				</a>
 			</div>
 		</div>

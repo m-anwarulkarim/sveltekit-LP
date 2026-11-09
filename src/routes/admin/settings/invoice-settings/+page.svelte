@@ -208,7 +208,7 @@
 								</div>
 								<div class="text-right text-[7px] text-slate-500">
 									<div>Date: 2026-01-14</div>
-									<div>01860-229546</div>
+									<div>0156007230</div>
 								</div>
 							</div>
 
@@ -293,7 +293,7 @@
 									<div class="text-[7px] space-y-0.5">
 										<div class="font-black text-[8px] text-emerald-700">AURA LOGISTICS</div>
 										<div class="text-slate-500">Shipped From: Mirpur, Dhaka</div>
-										<div class="text-slate-500">+8801860229546</div>
+										<div class="text-slate-500">0156007230</div>
 									</div>
 									<div class="w-9 h-9 border border-slate-300 rounded p-0.5 flex items-center justify-center">
 										<QrCode class="w-7 h-7 text-slate-900" />

@@ -48,7 +48,7 @@ export interface WebsiteInfoConfig {
 export const DEFAULT_WEBSITE_INFO: WebsiteInfoConfig = {
 	websiteName: 'AURA Store',
 	shortDescription: 'The Premier Online Shopping Destination in Bangladesh. Premium products delivered to your doorstep.',
-	whatsappNumber: '+8801860229546',
+	whatsappNumber: '0156007230',
 	addresses: ['Nawabpur Kaptan Bazar Complex Dhaka, Bangladesh'],
 	emails: ['support@aura.com.bd'],
 	logoUrl: '/favicon.svg',
@@ -373,7 +373,7 @@ export class SettingsService {
 				subAreaCharge: subArea,
 				enableFreeDelivery: enableFree,
 				freeShippingThreshold: threshold,
-				hotlinePhone: String(deliverySettings.hotline_phone || '01860-229546'),
+				hotlinePhone: String(deliverySettings.hotline_phone || '0156007230'),
 				storeName: String(deliverySettings.store_name || 'AURA Store')
 			};
 		} catch (e) {
@@ -383,7 +383,7 @@ export class SettingsService {
 				subAreaCharge: 100,
 				enableFreeDelivery: false,
 				freeShippingThreshold: 2000,
-				hotlinePhone: '01860-229546',
+				hotlinePhone: '0156007230',
 				storeName: 'AURA Store'
 			};
 		}

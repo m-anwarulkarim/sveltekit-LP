@@ -15,10 +15,14 @@
 
 	let { data, children }: LayoutProps = $props();
 
+	const isAdmin = $derived(page.url.pathname.startsWith('/admin'));
+
 	onMount(() => {
-		initMetaPixel(data?.pixelConfig);
-		initGtm(data?.gtmConfig);
-		captureAttribution();
+		if (!page.url.pathname.startsWith('/admin')) {
+			initMetaPixel(data?.pixelConfig);
+			initGtm(data?.gtmConfig);
+			captureAttribution();
+		}
 	});
 
 	$effect(() => {
@@ -30,12 +34,11 @@
 		}
 	});
 
-	afterNavigate(({ type }) => {
-		// Only track on subsequent client transitions; initial load is handled by initMetaPixel / initGtm
-		if (type !== 'enter') {
-			trackPageView(data?.pixelConfig);
-			trackGtmPageView();
-		}
+	afterNavigate(({ type, to }) => {
+		if (type === 'enter') return;
+		if (to?.url.pathname.startsWith('/admin')) return;
+		trackPageView(data?.pixelConfig);
+		trackGtmPageView();
 	});
 </script>
 
@@ -71,7 +74,7 @@
 		<!-- Meta (Facebook) Domain Verification -->
 		<meta name="facebook-domain-verification" content={data.googleConsole.facebookDomainToken} />
 	{/if}
-	{#if data?.pixelConfig?.trackingMode === 'native_direct' && data?.pixelConfig?.pixelId}
+	{#if !isAdmin && data?.pixelConfig?.trackingMode === 'native_direct' && data?.pixelConfig?.pixelId}
 		<!-- Meta Pixel Noscript Fallback -->
 		<noscript>
 			<img

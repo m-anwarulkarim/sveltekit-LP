@@ -1,10 +1,13 @@
 <script lang="ts">
 	import { navigating } from '$app/state';
+	import { adminLoading } from '#lib/stores/admin-loading.svelte';
 
 	let progress = $state(0);
 	let visible = $state(false);
 	let timerId: ReturnType<typeof setTimeout> | null = null;
 	let intervalId: ReturnType<typeof setInterval> | null = null;
+
+	let isLoading = $derived(!!navigating.to || adminLoading.active);
 
 	function startLoading() {
 		clearTimers();
@@ -37,7 +40,7 @@
 	}
 
 	$effect(() => {
-		if (navigating.to) {
+		if (isLoading) {
 			startLoading();
 		} else {
 			if (visible) finishLoading();

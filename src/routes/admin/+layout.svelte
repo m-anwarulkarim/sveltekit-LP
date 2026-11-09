@@ -4,6 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { playNotificationSound } from '#lib/utils/notificationSound';
+	import { installFetchInterceptor } from '#lib/stores/admin-loading.svelte';
 	import {
 		AdminSidebar,
 		AdminNavbar,
@@ -31,6 +32,7 @@
 	});
 
 	onMount(() => {
+		const removeFetchInterceptor = installFetchInterceptor();
 		let isFirstCheck = true;
 
 		async function checkLiveNotifications() {
@@ -83,7 +85,10 @@
 		// Check every 12 seconds
 		const pollInterval = setInterval(checkLiveNotifications, 12000);
 
-		return () => clearInterval(pollInterval);
+		return () => {
+			clearInterval(pollInterval);
+			removeFetchInterceptor();
+		};
 	});
 </script>
 

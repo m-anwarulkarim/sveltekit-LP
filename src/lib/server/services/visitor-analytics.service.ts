@@ -1,4 +1,4 @@
-import { eq, desc, sql, and, gte } from 'drizzle-orm';
+import { eq, desc, sql, and, gte, lte } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from '../db/schema';
 
@@ -43,6 +43,8 @@ export interface LiveTrafficSummary {
 		isAdmin: boolean;
 		createdAt: number;
 	}[];
+	rangeStart?: number;
+	rangeEnd?: number;
 }
 
 export class VisitorAnalyticsService {
@@ -212,8 +214,23 @@ export class VisitorAnalyticsService {
 	 */
 	static async getTrafficSummary(
 		db: DrizzleD1Database<typeof schema>,
-		timeRange: 'today' | '7days' | '30days' = 'today'
+		options:
+			| 'today'
+			| 'yesterday'
+			| '7days'
+			| '30days'
+			| 'thisMonth'
+			| 'custom'
+			| {
+					range?: 'today' | 'yesterday' | '7days' | '30days' | 'thisMonth' | 'custom';
+					from?: string | number | null;
+					to?: string | number | null;
+			  } = 'today'
 	): Promise<LiveTrafficSummary> {
+		const range = typeof options === 'string' ? options : options.range || 'today';
+		const customFrom = typeof options === 'object' ? options.from : null;
+		const customTo = typeof options === 'object' ? options.to : null;
+
 		const now = Date.now();
 		const fiveMinAgo = now - 5 * 60 * 1000;
 
@@ -222,8 +239,44 @@ export class VisitorAnalyticsService {
 		const startOfToday = Math.floor((now + DHAKA_UTC_OFFSET_MS) / DAY_MS) * DAY_MS - DHAKA_UTC_OFFSET_MS;
 
 		let rangeStart = startOfToday;
-		if (timeRange === '7days') rangeStart = now - 7 * DAY_MS;
-		if (timeRange === '30days') rangeStart = now - 30 * DAY_MS;
+		let rangeEnd: number | undefined = undefined;
+
+		if (range === 'yesterday') {
+			rangeStart = startOfToday - DAY_MS;
+			rangeEnd = startOfToday - 1;
+		} else if (range === '7days') {
+			rangeStart = now - 7 * DAY_MS;
+		} else if (range === '30days') {
+			rangeStart = now - 30 * DAY_MS;
+		} else if (range === 'thisMonth') {
+			const dhakaDate = new Date(now + DHAKA_UTC_OFFSET_MS);
+			const year = dhakaDate.getUTCFullYear();
+			const month = dhakaDate.getUTCMonth();
+			rangeStart = Date.UTC(year, month, 1, 0, 0, 0) - DHAKA_UTC_OFFSET_MS;
+		} else if (range === 'custom') {
+			if (customFrom) {
+				const parsedFrom = new Date(customFrom).getTime();
+				if (!isNaN(parsedFrom)) rangeStart = parsedFrom;
+			}
+			if (customTo) {
+				const parsedTo = new Date(customTo).getTime();
+				if (!isNaN(parsedTo)) rangeEnd = parsedTo;
+			}
+		}
+
+		// Where conditions for Sessions
+		const sessionConditions = [gte(schema.visitorSessions.createdAt, new Date(rangeStart))];
+		if (rangeEnd) {
+			sessionConditions.push(lte(schema.visitorSessions.createdAt, new Date(rangeEnd)));
+		}
+		const sessionWhere = sessionConditions.length > 1 ? and(...sessionConditions) : sessionConditions[0];
+
+		// Where conditions for Pageviews
+		const pvConditions = [gte(schema.visitorPageviews.createdAt, new Date(rangeStart))];
+		if (rangeEnd) {
+			pvConditions.push(lte(schema.visitorPageviews.createdAt, new Date(rangeEnd)));
+		}
+		const pvWhere = pvConditions.length > 1 ? and(...pvConditions) : pvConditions[0];
 
 		// 1. Live Active Visitors (last 5 min)
 		const liveRow = await db
@@ -241,7 +294,7 @@ export class VisitorAnalyticsService {
 				adminCount: sql<number>`sum(case when ${schema.visitorSessions.isAdmin} = 1 then 1 else 0 end)`
 			})
 			.from(schema.visitorSessions)
-			.where(gte(schema.visitorSessions.createdAt, new Date(rangeStart)))
+			.where(sessionWhere)
 			.get();
 
 		const todaySessions = Number(sessionStats?.total) || 0;
@@ -253,7 +306,7 @@ export class VisitorAnalyticsService {
 		const pvStats = await db
 			.select({ count: sql<number>`count(*)` })
 			.from(schema.visitorPageviews)
-			.where(gte(schema.visitorPageviews.createdAt, new Date(rangeStart)))
+			.where(pvWhere)
 			.get();
 		const todayPageviews = Number(pvStats?.count) || 0;
 
@@ -264,7 +317,7 @@ export class VisitorAnalyticsService {
 				count: sql<number>`count(*)`
 			})
 			.from(schema.visitorSessions)
-			.where(gte(schema.visitorSessions.createdAt, new Date(rangeStart)))
+			.where(sessionWhere)
 			.groupBy(schema.visitorSessions.trafficSource)
 			.orderBy(desc(sql`count(*)`))
 			.limit(6)
@@ -286,7 +339,7 @@ export class VisitorAnalyticsService {
 				count: sql<number>`count(*)`
 			})
 			.from(schema.visitorSessions)
-			.where(gte(schema.visitorSessions.createdAt, new Date(rangeStart)))
+			.where(sessionWhere)
 			.groupBy(schema.visitorSessions.deviceType)
 			.orderBy(desc(sql`count(*)`))
 			.all();
@@ -306,7 +359,7 @@ export class VisitorAnalyticsService {
 				views: sql<number>`count(*)`
 			})
 			.from(schema.visitorPageviews)
-			.where(gte(schema.visitorPageviews.createdAt, new Date(rangeStart)))
+			.where(pvWhere)
 			.groupBy(schema.visitorPageviews.path)
 			.orderBy(desc(sql`count(*)`))
 			.limit(8)
@@ -325,7 +378,7 @@ export class VisitorAnalyticsService {
 				count: sql<number>`count(*)`
 			})
 			.from(schema.visitorSessions)
-			.where(gte(schema.visitorSessions.createdAt, new Date(rangeStart)))
+			.where(sessionWhere)
 			.groupBy(schema.visitorSessions.city)
 			.orderBy(desc(sql`count(*)`))
 			.limit(6)
@@ -350,6 +403,7 @@ export class VisitorAnalyticsService {
 				createdAt: schema.visitorPageviews.createdAt
 			})
 			.from(schema.visitorPageviews)
+			.where(pvWhere)
 			.orderBy(desc(schema.visitorPageviews.createdAt))
 			.limit(30)
 			.all();
@@ -378,7 +432,9 @@ export class VisitorAnalyticsService {
 			topPages,
 			topCities,
 			adminVisitsCount,
-			recentVisitors
+			recentVisitors,
+			rangeStart,
+			rangeEnd
 		};
 	}
 }

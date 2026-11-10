@@ -33,6 +33,7 @@
 	} from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
+	import VisitorTimeFilter from './_components/VisitorTimeFilter.svelte';
 
 	let { data }: { data: any } = $props();
 
@@ -51,6 +52,8 @@
 	});
 
 	let activeRange = $derived(data.activeRange || 'today');
+	let activeFrom = $derived(data.activeFrom || null);
+	let activeTo = $derived(data.activeTo || null);
 	let blockingIp = $state<string | null>(null);
 	let streamFilter = $state<'all' | 'bd' | 'facebook' | 'admin'>('all');
 
@@ -96,8 +99,12 @@
 		return list;
 	});
 
-	function handleRangeChange(range: 'today' | '7days' | '30days') {
-		goto(`/admin/visitors?range=${range}`, { keepFocus: true, noScroll: true });
+	function handleRangeChange(range: string, from?: string, to?: string) {
+		let url = `/admin/visitors?range=${encodeURIComponent(range)}`;
+		if (range === 'custom' && from && to) {
+			url += `&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+		}
+		goto(url, { keepFocus: true, noScroll: true });
 	}
 
 	function formatTimeAgo(timestamp: number): string {
@@ -159,30 +166,12 @@
 
 		<!-- Action Controls -->
 		<div class="flex flex-wrap items-center gap-2">
-			<!-- Range Switcher -->
-			<div class="inline-flex items-center rounded-2xl bg-slate-100/90 p-1 border border-slate-200/80">
-				<button
-					type="button"
-					onclick={() => handleRangeChange('today')}
-					class="rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer {activeRange === 'today' ? 'bg-white text-[#5845eb] shadow-xs' : 'text-slate-600 hover:text-slate-900'}"
-				>
-					আজকে
-				</button>
-				<button
-					type="button"
-					onclick={() => handleRangeChange('7days')}
-					class="rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer {activeRange === '7days' ? 'bg-white text-[#5845eb] shadow-xs' : 'text-slate-600 hover:text-slate-900'}"
-				>
-					গত ৭ দিন
-				</button>
-				<button
-					type="button"
-					onclick={() => handleRangeChange('30days')}
-					class="rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer {activeRange === '30days' ? 'bg-white text-[#5845eb] shadow-xs' : 'text-slate-600 hover:text-slate-900'}"
-				>
-					গত ৩০ দিন
-				</button>
-			</div>
+			<VisitorTimeFilter
+				{activeRange}
+				{activeFrom}
+				{activeTo}
+				onSelectRange={handleRangeChange}
+			/>
 		</div>
 	</div>
 

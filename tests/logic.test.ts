@@ -755,6 +755,36 @@ await test('visitor: recordVisit creates and updates session', async () => {
 	assert.equal(pvCount.c, 2);
 });
 
+await test('visitor: getTrafficSummary filters by presets and custom date-time range', async () => {
+	// 1. Preset range today
+	const todaySummary = await VisitorAnalyticsService.getTrafficSummary(db, 'today');
+	assert.ok(typeof todaySummary.todaySessions === 'number');
+	assert.ok(typeof todaySummary.todayPageviews === 'number');
+
+	// 2. Preset range yesterday
+	const yesterdaySummary = await VisitorAnalyticsService.getTrafficSummary(db, 'yesterday');
+	assert.ok(typeof yesterdaySummary.todaySessions === 'number');
+
+	// 3. Preset range 7days, 30days, thisMonth
+	const weekSummary = await VisitorAnalyticsService.getTrafficSummary(db, '7days');
+	assert.ok(typeof weekSummary.todaySessions === 'number');
+
+	const monthSummary = await VisitorAnalyticsService.getTrafficSummary(db, 'thisMonth');
+	assert.ok(typeof monthSummary.todaySessions === 'number');
+
+	// 4. Custom range with from and to ISO strings
+	const now = new Date();
+	const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+	const customSummary = await VisitorAnalyticsService.getTrafficSummary(db, {
+		range: 'custom',
+		from: yesterday.toISOString(),
+		to: now.toISOString()
+	});
+	assert.ok(typeof customSummary.todaySessions === 'number');
+	assert.ok(customSummary.rangeStart! > 0);
+	assert.ok(customSummary.rangeEnd! > 0);
+});
+
 await test('seo: generates schema.org rich snippets with dynamic siteUrl for products and landing pages', () => {
 	const productLd = SeoService.getProductJsonLd({
 		name: 'লাল ঢ্যাঁড়শ বীজ',

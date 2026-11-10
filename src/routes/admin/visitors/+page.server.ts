@@ -6,17 +6,27 @@ import { VisitorAnalyticsService } from '#lib/server/services/visitor-analytics.
 
 export const load: PageServerLoad = async ({ parent, platform, url }) => {
 	const parentData = await parent();
-	const rangeParam = url.searchParams.get('range');
-	const range = rangeParam === '7days' || rangeParam === '30days' ? rangeParam : 'today';
+	const rangeParam = url.searchParams.get('range') || 'today';
+	const fromParam = url.searchParams.get('from');
+	const toParam = url.searchParams.get('to');
+
+	const validRanges = ['today', 'yesterday', '7days', '30days', 'thisMonth', 'custom'];
+	const range = validRanges.includes(rangeParam) ? rangeParam : 'today';
 
 	try {
 		const db = getDb(platform);
-		const summary = await VisitorAnalyticsService.getTrafficSummary(db, range);
+		const summary = await VisitorAnalyticsService.getTrafficSummary(db, {
+			range: range as any,
+			from: fromParam,
+			to: toParam
+		});
 
 		return {
 			...parentData,
 			trafficSummary: summary,
-			activeRange: range
+			activeRange: range,
+			activeFrom: fromParam || null,
+			activeTo: toParam || null
 		};
 	} catch (err) {
 		console.error('Failed to load visitor analytics data:', err);
@@ -35,7 +45,9 @@ export const load: PageServerLoad = async ({ parent, platform, url }) => {
 				adminVisitsCount: 0,
 				recentVisitors: []
 			},
-			activeRange: range
+			activeRange: range,
+			activeFrom: fromParam || null,
+			activeTo: toParam || null
 		};
 	}
 };

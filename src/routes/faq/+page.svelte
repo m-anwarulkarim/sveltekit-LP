@@ -5,6 +5,8 @@
 
 	let { data }: { data: PageData } = $props();
 
+	const siteName = $derived(data.websiteInfo?.websiteName || 'Store');
+
 	const faqs = [
 		{
 			id: 'faq-1',
@@ -35,7 +37,7 @@
 </script>
 
 <svelte:head>
-	<title>সাধারণ জিজ্ঞাসা (FAQs) | seedbd</title>
+	<title>সাধারণ জিজ্ঞাসা (FAQs) | {siteName}</title>
 </svelte:head>
 
 <StoreLayout user={data.user}>

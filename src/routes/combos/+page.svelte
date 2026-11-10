@@ -7,6 +7,8 @@
 
 	let { data }: { data: PageData } = $props();
 
+	const siteName = $derived(data.websiteInfo?.websiteName || 'Store');
+
 	const combos = [
 		{
 			id: 'combo-1',
@@ -53,7 +55,7 @@
 </script>
 
 <svelte:head>
-	<title>কম্বো অফার ও প্যাকেজ (Combos Products) | seedbd</title>
+	<title>কম্বো অফার ও প্যাকেজ (Combos Products) | {siteName}</title>
 </svelte:head>
 
 <StoreLayout user={data.user}>

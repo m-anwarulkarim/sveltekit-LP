@@ -55,7 +55,7 @@ export const load: LayoutServerLoad = async (event) => {
 		outsideDhakaCharge: 120,
 		freeShippingThreshold: 600,
 		hotlinePhone: '0156007230',
-		storeName: 'seedbd'
+		storeName: 'Store'
 	};
 	let productSettings: ProductSettingsConfig = DEFAULT_PRODUCT_SETTINGS;
 	let websiteInfo: WebsiteInfoConfig = DEFAULT_WEBSITE_INFO;
@@ -105,6 +105,14 @@ export const load: LayoutServerLoad = async (event) => {
 		console.error('Failed to load database in root layout:', err);
 	}
 
+	const siteConfig = {
+		siteName: websiteInfo.websiteName,
+		siteUrl: event.url.origin,
+		logoUrl: websiteInfo.logoUrl,
+		phone: storeConfig.hotlinePhone || websiteInfo.whatsappNumber,
+		email: websiteInfo.emails?.[0]
+	};
+
 	return {
 		user: event.locals.user ?? null,
 		session: event.locals.session ?? null,
@@ -118,7 +126,7 @@ export const load: LayoutServerLoad = async (event) => {
 		activePopup,
 		googleConsole,
 		socialLogin,
-		websiteJsonLd: SeoService.getWebSiteJsonLd(event.url.origin),
-		organizationJsonLd: SeoService.getOrganizationJsonLd(event.url.origin)
+		websiteJsonLd: SeoService.getWebSiteJsonLd(siteConfig),
+		organizationJsonLd: SeoService.getOrganizationJsonLd(siteConfig)
 	};
 };

@@ -31,6 +31,8 @@
 
 	let { data }: { data: PageData } = $props();
 
+	const siteName = $derived(data.websiteInfo?.websiteName || 'Store');
+
 	let order = $state<OrderDetails | null>(null);
 	let isCopied = $state(false);
 	let bKashTrxID = $state('');
@@ -112,7 +114,7 @@
 </script>
 
 <svelte:head>
-	<title>অর্ডার সফল হয়েছে (Order Confirmed) | seedbd</title>
+	<title>অর্ডার সফল হয়েছে (Order Confirmed) | {siteName}</title>
 </svelte:head>
 
 <StoreLayout user={data.user}>

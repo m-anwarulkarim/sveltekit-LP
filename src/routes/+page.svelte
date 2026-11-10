@@ -26,7 +26,7 @@
 	const newArrivalItems = $derived(getNewArrivals(allProducts).slice(0, SECTION_SIZE));
 	const popularItems = $derived(getPopularProducts(allProducts).slice(0, SECTION_SIZE));
 
-	const siteName = $derived(data.websiteInfo?.websiteName || 'seedbd');
+	const siteName = $derived(data.websiteInfo?.websiteName || 'Store');
 	const pageTitle = $derived(
 		`${siteName} | বাংলাদেশের সেরা বীজ ও কৃষি সরঞ্জামের অনলাইন শপ`
 	);

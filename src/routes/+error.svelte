@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
+
+	const siteName = $derived(page.data?.websiteInfo?.websiteName || 'Store');
 	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
 	import { Button, Badge, Card, CardContent } from '#lib/components/ui';
 	import {
@@ -38,7 +40,7 @@
 </script>
 
 <svelte:head>
-	<title>{status} - {is404 ? 'পেজটি খুঁজে পাওয়া যায়নি | Page Not Found' : 'সিস্টেম এরর | System Error'} | seedbd</title>
+	<title>{status} - {is404 ? 'পেজটি খুঁজে পাওয়া যায়নি | Page Not Found' : 'সিস্টেম এরর | System Error'} | {siteName}</title>
 </svelte:head>
 
 {#if isAdminPath}

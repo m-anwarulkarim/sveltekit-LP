@@ -49,7 +49,7 @@
 						<div class="flex flex-col">
 							<div class="flex items-center gap-1.5 leading-tight">
 								<span class="font-black text-xl text-slate-900 font-['Outfit'] tracking-tight">
-									{websiteInfo?.websiteName || 'seedbd'}
+									{websiteInfo?.websiteName || 'Store'}
 								</span>
 								<Badge variant="purple" class="px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-widest bg-indigo-50 text-[#5845eb] border border-indigo-200">
 									ORIGINAL
@@ -64,7 +64,7 @@
 
 				<!-- Description -->
 				<p class="text-xs sm:text-[13px] text-slate-600 leading-relaxed max-w-sm">
-					{websiteInfo?.shortDescription || 'seedbd is a next-generation e-commerce platform offering premium lifestyle, audio, home essentials, and innovative products delivered safely to your door.'}
+					{websiteInfo?.shortDescription || ''}
 				</p>
 
 				<!-- Contact Details -->
@@ -363,7 +363,7 @@
 	<div class="bg-gradient-to-r from-[#4936d6] via-[#5845eb] to-[#7c3aed] text-white py-3.5 px-4 sm:px-6 lg:px-8">
 		<div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs font-medium">
 			<div>
-				© 2026 seedbd. All rights reserved.
+				© 2026 {websiteInfo?.websiteName || 'Store'}. All rights reserved.
 			</div>
 			<div class="text-[11px] text-indigo-100 flex items-center gap-1">
 				<span>Design by</span>

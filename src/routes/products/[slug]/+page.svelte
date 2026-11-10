@@ -16,6 +16,7 @@
 
 	const product = $derived(data.product);
 	const relatedProducts = $derived(data.relatedProducts || []);
+	const siteName = $derived(data.websiteInfo?.websiteName || 'Store');
 
 	// Fire Standard Meta Pixel ViewContent & GA4 E-Commerce view_item events
 	$effect(() => {
@@ -35,7 +36,7 @@
 				item: {
 					item_id: matchId,
 					item_name: product.name,
-					item_brand: product.brand || 'seedbd',
+					item_brand: product.brand || siteName,
 					item_category: product.category || 'General',
 					price: price,
 					quantity: 1
@@ -47,12 +48,12 @@
 </script>
 
 <svelte:head>
-	<title>{product.name} | seedbd</title>
+	<title>{product.name} | {siteName}</title>
 	<meta
 		name="description"
-		content={plainText(product.description, 160) || `${product.name} - কিনুন সেরা মূল্যে seedbd স্টোর থেকে।`}
+		content={plainText(product.description, 160) || `${product.name} - কিনুন সেরা মূল্যে ${siteName} স্টোর থেকে।`}
 	/>
-	<meta property="og:title" content="{product.name} | seedbd" />
+	<meta property="og:title" content="{product.name} | {siteName}" />
 	<meta property="og:description" content={product.tagline || product.name} />
 	<meta property="og:image" content={product.image} />
 	{#if data?.productJsonLd}

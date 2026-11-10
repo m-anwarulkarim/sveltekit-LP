@@ -139,7 +139,7 @@
 							{/each}
 						</div>
 						<div class="text-xs text-slate-300 font-medium">Based on 3,420 Verified Creator Reviews</div>
-						<div class="text-[11px] text-emerald-400 font-semibold mt-0.5">99.4% Recommend seedbd Products</div>
+						<div class="text-[11px] text-emerald-400 font-semibold mt-0.5">99.4% Recommend Our Products</div>
 					</div>
 				</div>
 
@@ -241,7 +241,7 @@
 					</div>
 				{:else}
 					<h3 class="text-xl font-bold text-white font-heading mb-1">Write a Creator Review</h3>
-					<p class="text-xs text-slate-400 mb-6">Share your reviews with the seedbd community.</p>
+					<p class="text-xs text-slate-400 mb-6">Share your reviews with our community.</p>
 
 					<form onsubmit={submitReview} class="space-y-4">
 						<div class="grid grid-cols-2 gap-3">

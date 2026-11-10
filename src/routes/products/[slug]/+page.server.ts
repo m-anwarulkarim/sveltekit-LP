@@ -123,28 +123,31 @@ export const load: PageServerLoad = async (event) => {
 			? productReviews.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) / productReviews.length
 			: 0;
 
+	const parentData = await event.parent();
+	const siteName = parentData.websiteInfo?.websiteName || 'Store';
+	const siteConfig = { siteName, siteUrl: event.url.origin };
+
 	const productJsonLd = SeoService.getProductJsonLd({
 		name: product.name,
 		description:
 			plainText(product.description, 300) ||
 			product.tagline ||
-			`${product.name} - কিনুন আসল কোয়ালিটির পণ্য সবচেয়ে কম মূল্যে seedbd স্টোরে।`,
+			`${product.name} - কিনুন আসল কোয়ালিটির পণ্য সবচেয়ে কম মূল্যে ${siteName} স্টোরে।`,
 		slug: product.slug,
 		price: product.price,
 		regularPrice: product.originalPrice,
 		image: product.image,
 		sku: product.id,
-		// Google only accepts ratings from real customer reviews.
 		ratingValue: realRating,
 		reviewCount: productReviews.length,
 		inStock: product.inStock
-	}, event.url.origin);
+	}, siteConfig);
 
 	const breadcrumbsJsonLd = SeoService.getBreadcrumbsJsonLd([
 		{ name: 'হোম', url: '/' },
 		{ name: product.categoryLabel || 'ক্যাটালগ', url: `/categories/${product.category}` },
 		{ name: product.name, url: `/products/${product.slug}` }
-	], event.url.origin);
+	], siteConfig);
 
 	return {
 		product,

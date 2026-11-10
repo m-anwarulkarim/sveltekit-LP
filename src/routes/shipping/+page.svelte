@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { page } from '$app/state';
+	const siteName = $derived(page.data?.websiteInfo?.websiteName || 'Store');
 	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
 	import { Card, CardContent, Badge } from '#lib/components/ui';
 	import { Truck, Clock, ShieldCheck, MapPin } from 'lucide-svelte';
@@ -8,7 +10,7 @@
 </script>
 
 <svelte:head>
-	<title>ডেলিভারি তথ্য (Shipping Information) | seedbd</title>
+	<title>ডেলিভারি তথ্য (Shipping Information) | {siteName}</title>
 </svelte:head>
 
 <StoreLayout user={data.user}>

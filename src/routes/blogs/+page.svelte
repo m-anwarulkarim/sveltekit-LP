@@ -6,6 +6,8 @@
 
 	let { data }: { data: PageData } = $props();
 
+	const siteName = $derived(data.websiteInfo?.websiteName || 'Store');
+
 	const blogs = [
 		{
 			id: 1,
@@ -35,7 +37,7 @@
 </script>
 
 <svelte:head>
-	<title>লাইফস্টাইল ও শপিং ব্লগ (Blogs) | seedbd</title>
+	<title>লাইফস্টাইল ও শপিং ব্লগ (Blogs) | {siteName}</title>
 </svelte:head>
 
 <StoreLayout user={data.user}>

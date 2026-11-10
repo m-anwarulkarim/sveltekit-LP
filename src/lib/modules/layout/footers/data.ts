@@ -23,19 +23,18 @@ export interface FooterStoreData {
 }
 
 export const DEFAULT_FOOTER_DATA: FooterStoreData = {
-	brandName: 'seedbd',
-	brandTagline: 'Best Quality Lifestyle Products in Bangladesh',
-	aboutText:
-		'seedbd is a next-generation lifestyle, skincare and creator essentials e-commerce platform in Bangladesh, delivering authentic products safely and swiftly to your door.',
+	brandName: 'Store',
+	brandTagline: '',
+	aboutText: '',
 	phoneHotline: '0156007230',
 	workingHours: '9:00 AM – 11:00 PM (Everyday)',
-	supportEmail: 'support@seedbd.com',
+	supportEmail: '',
 	officeAddress: 'House-23, Road-12, Dhanmondi, Dhaka-1209, Bangladesh',
 	facebookUrl: 'https://facebook.com',
 	twitterUrl: 'https://x.com',
 	youtubeUrl: 'https://youtube.com',
 	instagramUrl: 'https://instagram.com',
-	copyrightText: '© 2026 seedbd. All rights reserved.',
+	copyrightText: `\u00A9 ${new Date().getFullYear()} Store. All rights reserved.`,
 	designerCredit: 'Borbila',
 	customerServiceLinks: [
 		{ label: 'Contact Us', href: '/contact' },

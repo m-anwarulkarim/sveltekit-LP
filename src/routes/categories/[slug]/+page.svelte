@@ -23,6 +23,8 @@
 
 	let { data }: { data: PageData } = $props();
 
+	const siteName = $derived(data.websiteInfo?.websiteName || 'Store');
+
 	// Filter states
 	let selectedSub = $state<string>('all');
 	let selectedBrands = $state<string[]>([]);
@@ -242,7 +244,7 @@
 </script>
 
 <svelte:head>
-	<title>{data.category.name} | {data.category.nameBn} - seedbd</title>
+	<title>{data.category.name} | {data.category.nameBn} - {siteName}</title>
 	<meta name="description" content="{data.category.desc}. সেরা দামে অরিজিনাল কালেকশন ও ১২-২৪ ঘণ্টায় দ্রুততম ডেলিভারি।" />
 </svelte:head>
 

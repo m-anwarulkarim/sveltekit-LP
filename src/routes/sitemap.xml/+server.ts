@@ -4,7 +4,7 @@ import * as schema from '#lib/server/db/schema';
 import { eq, or } from 'drizzle-orm';
 
 export const GET: RequestHandler = async ({ platform, url }) => {
-	const siteUrl = (url?.origin || 'https://seedbd.shop').replace(/\/$/, '');
+	const siteUrl = (url?.origin || url?.origin || 'https://example.com').replace(/\/$/, '');
 	const now = new Date().toISOString().split('T')[0];
 
 	interface SitemapUrl {

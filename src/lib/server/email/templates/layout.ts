@@ -4,7 +4,7 @@ interface LayoutOptions {
 }
 
 export function emailLayout(content: string, opts: LayoutOptions = {}): string {
-	const storeName = opts.storeName || 'seedbd';
+	const storeName = opts.storeName || 'Store';
 	const accent = opts.accentColor || '#5845eb';
 
 	return `<!DOCTYPE html>

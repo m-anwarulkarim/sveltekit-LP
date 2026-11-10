@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { page } from '$app/state';
+	const siteName = $derived(page.data?.websiteInfo?.websiteName || 'Store');
 	import { enhance } from '$app/forms';
 	import { StoreLayout } from '#lib';
 	import { Button, Input, Card, CardContent, Badge } from '#lib/components/ui';
@@ -38,7 +40,7 @@
 </script>
 
 <svelte:head>
-	<title>অর্ডার ট্র্যাক করুন (Track Order) | seedbd</title>
+	<title>অর্ডার ট্র্যাক করুন (Track Order) | {siteName}</title>
 </svelte:head>
 
 <StoreLayout user={data.user}>

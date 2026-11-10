@@ -49,6 +49,8 @@
 
 	let { data }: { data: PageData } = $props();
 
+	const siteName = $derived(data.websiteInfo?.websiteName || 'Store');
+
 	// Form fields
 	let name = $state('');
 	let phone = $state('');
@@ -349,7 +351,7 @@
 </script>
 
 <svelte:head>
-	<title>চেকআউট ও অর্ডার কনফার্মেশন | seedbd</title>
+	<title>চেকআউট ও অর্ডার কনফার্মেশন | {siteName}</title>
 	<meta name="description" content="নিরাপদ চেকআউট ও ১২-২৪ ঘণ্টায় সারা দেশে দ্রুততম এক্সপ্রেস হোম ডেলিভারি।" />
 </svelte:head>
 

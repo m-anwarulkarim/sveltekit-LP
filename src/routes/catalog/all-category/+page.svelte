@@ -6,6 +6,8 @@
 
 	let { data }: { data: PageData } = $props();
 
+	const siteName = $derived(data.websiteInfo?.websiteName || 'Store');
+
 	const defaultFallbackCategories = [
 		{ name: 'বই (Books)', slug: 'books', count: 120, icon: '📚', desc: 'সাহিত্য, উপন্যাস, ধর্মীয় ও সমকালীন বই', color: 'from-amber-50 to-orange-50' },
 		{ name: 'Electronics', slug: 'electronics', count: 48, icon: '🎧', desc: 'অডিও গিয়ার, হেডফোন, স্পিকার ও স্মার্ট গ্যাজেট', color: 'from-blue-50 to-cyan-50' },
@@ -53,7 +55,7 @@
 </script>
 
 <svelte:head>
-	<title>সকল ক্যাটাগরি | seedbd</title>
+	<title>সকল ক্যাটাগরি | {siteName}</title>
 </svelte:head>
 
 <StoreLayout user={data.user}>

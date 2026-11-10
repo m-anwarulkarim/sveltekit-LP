@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { page } from '$app/state';
+	const siteName = $derived(page.data?.websiteInfo?.websiteName || 'Store');
 	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
 	import { Card, CardContent, Badge } from '#lib/components/ui';
 	import { Sparkles, ShieldCheck, Award, HeartHandshake, Leaf, Users } from 'lucide-svelte';
@@ -8,7 +10,7 @@
 </script>
 
 <svelte:head>
-	<title>About Us | seedbd</title>
+	<title>About Us | {siteName}</title>
 </svelte:head>
 
 <StoreLayout user={data.user}>
@@ -17,13 +19,13 @@
 		<!-- Hero Section -->
 		<div class="text-center space-y-3 max-w-3xl mx-auto">
 			<Badge variant="outline" class="bg-indigo-50 text-[#5845eb] border-indigo-200">
-				About seedbd
+				About {siteName}
 			</Badge>
 			<h1 class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
 				Next-Gen E-Commerce & Curated Lifestyle Platform
 			</h1>
 			<p class="text-sm sm:text-base text-slate-600 leading-relaxed">
-				seedbd is a modern, technology-driven shopping destination dedicated to delivering authentic products, unmatched customer care, and seamless digital commerce experiences.
+				{siteName} is a modern, technology-driven shopping destination dedicated to delivering authentic products, unmatched customer care, and seamless digital commerce experiences.
 			</p>
 		</div>
 

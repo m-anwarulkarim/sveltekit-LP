@@ -989,7 +989,7 @@ export class CourierService {
 					},
 					body: JSON.stringify({
 						merOrderRef: invoiceNo,
-						pickMerchantName: storeName || 'seedbd',
+						pickMerchantName: storeName || 'Store',
 						custname: order.customerName,
 						custphone: recipientPhone,
 						custaddress: recipientAddress,

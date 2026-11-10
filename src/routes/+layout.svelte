@@ -3,7 +3,7 @@
 	import favicon from '#lib/assets/favicon.svg';
 	import type { LayoutProps } from './$types';
 	import { Toaster, GlobalConfirmDialog } from '#lib/components/ui';
-	import PromotionalPopup from '#lib/components/storefront/PromotionalPopup.svelte';
+	let PromotionalPopup: any = $state(null);
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { afterNavigate } from '$app/navigation';
@@ -19,9 +19,20 @@
 
 	onMount(() => {
 		if (!page.url.pathname.startsWith('/admin')) {
-			initMetaPixel(data?.pixelConfig);
-			initGtm(data?.gtmConfig);
 			captureAttribution();
+			const init = () => {
+				initMetaPixel(data?.pixelConfig);
+				initGtm(data?.gtmConfig);
+			};
+			if ('requestIdleCallback' in window) {
+				requestIdleCallback(init, { timeout: 3000 });
+			} else {
+				setTimeout(init, 2000);
+			}
+			setTimeout(async () => {
+				const mod = await import('#lib/components/storefront/PromotionalPopup.svelte');
+				PromotionalPopup = mod.default;
+			}, 3000);
 		}
 	});
 
@@ -49,7 +60,7 @@
 	{#if !page.url.pathname.startsWith('/admin')}
 		<link rel="canonical" href="{page.url.origin}{page.url.pathname}" />
 		<meta property="og:url" content="{page.url.origin}{page.url.pathname}" />
-		<meta property="og:site_name" content={data?.websiteInfo?.websiteName || 'seedbd'} />
+		<meta property="og:site_name" content={data?.websiteInfo?.websiteName || 'Store'} />
 	{/if}
 	{#if data?.websiteInfo?.faviconUrl}
 		<link rel="icon" href={data.websiteInfo.faviconUrl} />
@@ -90,8 +101,8 @@
 
 {@render children()}
 
-{#if data?.activePopup && !page.url.pathname.startsWith('/admin') && !page.url.pathname.startsWith('/lp/')}
-	<PromotionalPopup popup={data.activePopup} />
+{#if PromotionalPopup && data?.activePopup && !page.url.pathname.startsWith('/admin') && !page.url.pathname.startsWith('/lp/')}
+	<svelte:component this={PromotionalPopup} popup={data.activePopup} />
 {/if}
 
 <Toaster />

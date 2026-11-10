@@ -171,7 +171,7 @@ export class CatalogService {
 			'id,title,description,availability,condition,price,link,image_link,brand'
 		];
 
-		const storeName = settings.customStoreName || 'seedbd';
+		const storeName = settings.customStoreName || 'Store';
 		const currency = settings.currency || 'BDT';
 
 		for (const p of items) {
@@ -238,7 +238,7 @@ export class CatalogService {
 			.where(eq(schema.products.status, 'published'))
 			.orderBy(desc(schema.products.id));
 
-		const storeName = settings.customStoreName || 'seedbd';
+		const storeName = settings.customStoreName || 'Store';
 		const currency = settings.currency || 'BDT';
 
 		let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;

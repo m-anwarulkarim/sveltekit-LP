@@ -183,7 +183,7 @@ export async function handleCreateManualOrder(request: Request, platform: any) {
 		data.get('customerEmail')?.toString()?.trim() ||
 		'01700000000';
 	const shippingAddress = data.get('shippingAddress')?.toString()?.trim();
-	const productName = data.get('productName')?.toString()?.trim() || 'seedbd Product';
+	const productName = data.get('productName')?.toString()?.trim() || 'Product';
 	const total = parseInt(data.get('total')?.toString() || '0', 10);
 	const discountAmount = parseInt(data.get('discount')?.toString() || '0', 10);
 	const deliveryCharge = parseInt(data.get('deliveryFee')?.toString() || '60', 10);

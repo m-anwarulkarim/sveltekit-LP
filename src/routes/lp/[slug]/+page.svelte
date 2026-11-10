@@ -20,7 +20,7 @@
 		<meta property="og:description" content={seo.description} />
 		<meta property="og:url" content={seo.canonicalUrl} />
 		<meta property="og:image" content={seo.ogImage} />
-		<meta property="og:site_name" content="seedbd" />
+		<meta property="og:site_name" content={data?.websiteInfo?.websiteName || 'Store'} />
 
 		<!-- Twitter Card -->
 		<meta name="twitter:card" content="summary_large_image" />

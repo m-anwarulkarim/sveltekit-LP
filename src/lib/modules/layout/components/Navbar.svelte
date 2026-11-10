@@ -71,7 +71,7 @@
 
 	const storeConfig = $derived(page.data?.storeConfig);
 	const websiteInfo = $derived(page.data?.websiteInfo);
-	const storeName = $derived(websiteInfo?.websiteName || 'seedbd');
+	const storeName = $derived(websiteInfo?.websiteName || 'Store');
 
 	// URL-driven active tab (never stale on direct navigation or refresh)
 	const activeTab = $derived.by<'home' | 'categories' | 'account' | null>(() => {

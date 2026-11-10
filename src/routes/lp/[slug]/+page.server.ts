@@ -14,7 +14,7 @@ function looksLikeBot(ua: string): boolean {
 	return /bot|crawl|spider|slurp|facebookexternalhit|bingpreview|googlebot/i.test(ua);
 }
 
-export const load: PageServerLoad = async ({ params, platform, request, cookies, url }) => {
+export const load: PageServerLoad = async ({ params, platform, request, cookies, url, parent }) => {
 	const db = getDb(platform);
 	const landingPage = await LandingPageService.getLandingPageBySlug(db, params.slug);
 
@@ -37,6 +37,9 @@ export const load: PageServerLoad = async ({ params, platform, request, cookies,
 		}
 	}
 
+	const parentData = await parent();
+	const websiteInfo = parentData.websiteInfo;
+
 	// Increment views only for published pages, non-admin visitors, non-bots.
 	const ua = request.headers.get('user-agent') || '';
 	if (isPublished && !isAdmin && !looksLikeBot(ua)) {
@@ -52,7 +55,7 @@ export const load: PageServerLoad = async ({ params, platform, request, cookies,
 		landingPage.config?.subheadline ||
 		landingPage.config?.headline ||
 		(product?.description ? product.description.slice(0, 160) : '') ||
-		`${title} - কিনুন বিশেষ অফার মূল্যে seedbd থেকে।`;
+		`${title} - কিনুন বিশেষ অফার মূল্যে ${websiteInfo?.websiteName || 'Store'} থেকে।`;
 
 	const heroImage =
 		landingPage.config?.heroImage ||
@@ -74,13 +77,13 @@ export const load: PageServerLoad = async ({ params, platform, request, cookies,
 			regularPrice: effectiveRegularPrice,
 			image: ogImage,
 			inStock: product ? product.inStock : true,
-			brandName: 'seedbd'
+			brandName: websiteInfo?.websiteName || 'Store'
 		},
-		siteUrl
+		{ siteName: websiteInfo?.websiteName || 'Store', siteUrl }
 	);
 
 	const seoMeta = {
-		title: `${title} | seedbd`,
+		title: `${title} | ${websiteInfo?.websiteName || 'Store'}`,
 		description,
 		ogImage,
 		canonicalUrl,

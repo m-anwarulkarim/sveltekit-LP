@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { page } from '$app/state';
+	const siteName = $derived(page.data?.websiteInfo?.websiteName || 'Store');
 	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
 	import { Card, CardContent, Badge } from '#lib/components/ui';
 	import { RotateCcw, CheckCircle2, Clock } from 'lucide-svelte';
@@ -8,7 +10,7 @@
 </script>
 
 <svelte:head>
-	<title>রিটার্ন ও এক্সচেঞ্জ নীতি (Return & Exchange) | seedbd</title>
+	<title>রিটার্ন ও এক্সচেঞ্জ নীতি (Return & Exchange) | {siteName}</title>
 </svelte:head>
 
 <StoreLayout user={data.user}>

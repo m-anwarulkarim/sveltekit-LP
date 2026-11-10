@@ -48,11 +48,11 @@ export interface WebsiteInfoConfig {
 }
 
 export const DEFAULT_WEBSITE_INFO: WebsiteInfoConfig = {
-	websiteName: 'seedbd',
+	websiteName: 'Store',
 	shortDescription: 'The Premier Online Shopping Destination in Bangladesh. Premium products delivered to your doorstep.',
 	whatsappNumber: '0156007230',
 	addresses: ['Nawabpur Kaptan Bazar Complex Dhaka, Bangladesh'],
-	emails: ['support@seedbd.com'],
+	emails: [],
 	logoUrl: '/favicon.svg',
 	faviconUrl: '/favicon.svg'
 };
@@ -376,7 +376,7 @@ export class SettingsService {
 				enableFreeDelivery: enableFree,
 				freeShippingThreshold: threshold,
 				hotlinePhone: String(deliverySettings.hotline_phone || '0156007230'),
-				storeName: String(deliverySettings.store_name || 'seedbd')
+				storeName: String(deliverySettings.store_name || 'Store')
 			};
 		} catch (e) {
 			return {
@@ -386,7 +386,7 @@ export class SettingsService {
 				enableFreeDelivery: false,
 				freeShippingThreshold: 2000,
 				hotlinePhone: '0156007230',
-				storeName: 'seedbd'
+				storeName: 'Store'
 			};
 		}
 	}

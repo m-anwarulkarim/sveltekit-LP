@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Printer, X, ShoppingBag, CheckCircle2, MapPin, Phone, Calendar } from 'lucide-svelte';
 	import { Button } from '#lib/components/ui';
+	import { page } from '$app/state';
 
 	interface Props {
 		isOpen: boolean;
@@ -12,9 +13,12 @@
 	let {
 		isOpen = $bindable(false),
 		order,
-		storeName = 'Seed BD | Haq Plus',
+		storeName = 'Store',
 		onClose
 	}: Props = $props();
+
+	const hotlinePhone = $derived(page.data?.storeConfig?.hotlinePhone || page.data?.websiteInfo?.whatsappNumber || '');
+	const siteHost = $derived(page.url?.host || '');
 
 	function handlePrint() {
 		if (typeof window !== 'undefined') {
@@ -89,7 +93,7 @@
 							অনলাইন শপ ক্যাশ মেমো ও কাস্টমার রসিদ
 						</p>
 						<p class="text-[11px] text-slate-500 font-mono mt-1">
-							হটলাইন: 0156007230 | www.seedbd.shop
+							{hotlinePhone ? `হটলাইন: ${hotlinePhone}` : ''}{hotlinePhone && siteHost ? ' | ' : ''}{siteHost}
 						</p>
 					</div>
 					<div class="text-right text-xs space-y-1">

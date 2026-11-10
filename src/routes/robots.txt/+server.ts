@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ url }) => {
-	const siteUrl = (url?.origin || 'https://seedbd.shop').replace(/\/$/, '');
+	const siteUrl = (url?.origin || url?.origin || 'https://example.com').replace(/\/$/, '');
 
 	const robotsTxt = `User-agent: *
 Allow: /

@@ -10,6 +10,8 @@
 
 	let { data }: { data: PageData } = $props();
 
+	const siteName = $derived(data.websiteInfo?.websiteName || 'Store');
+
 	const FILTER_TABS = [
 		{ id: 'all', label: 'সকল পণ্য (All Products)' },
 		{ id: 'best-sale', label: '🔥 Best Sale (হট ডিল)' },
@@ -70,7 +72,7 @@
 </script>
 
 <svelte:head>
-	<title>All Products | seedbd</title>
+	<title>All Products | {siteName}</title>
 </svelte:head>
 
 <StoreLayout user={data.user}>

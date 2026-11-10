@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { page } from '$app/state';
+	const siteName = $derived(page.data?.websiteInfo?.websiteName || 'Store');
 	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
 	import { Card, CardContent, Badge } from '#lib/components/ui';
 	import { FileText, ShieldCheck } from 'lucide-svelte';
@@ -8,7 +10,7 @@
 </script>
 
 <svelte:head>
-	<title>শর্তাবলী (Terms & Conditions) | seedbd</title>
+	<title>শর্তাবলী (Terms & Conditions) | {siteName}</title>
 </svelte:head>
 
 <StoreLayout user={data.user}>
@@ -29,7 +31,7 @@
 				<section class="space-y-2">
 					<h3 class="text-base font-bold text-slate-900">১. সাধারণ নির্দেশিকা</h3>
 					<p>
-						seedbd ওয়েবসাইট ব্যবহার করে পণ্য অর্ডার করার মাধ্যমে আপনি আমাদের নীতি ও শর্তাবলীতে সম্মত হচ্ছেন। প্ল্যাটফর্মের সমস্ত কনটেন্ট, ছবি ও তথ্য আমাদের নিজস্ব স্বত্বাধিকারভুক্ত।
+						{siteName} ওয়েবসাইট ব্যবহার করে পণ্য অর্ডার করার মাধ্যমে আপনি আমাদের নীতি ও শর্তাবলীতে সম্মত হচ্ছেন। প্ল্যাটফর্মের সমস্ত কনটেন্ট, ছবি ও তথ্য আমাদের নিজস্ব স্বত্বাধিকারভুক্ত।
 					</p>
 				</section>
 

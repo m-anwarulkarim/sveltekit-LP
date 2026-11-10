@@ -157,7 +157,7 @@
 <div class="min-h-screen bg-[#fafaf9] text-slate-900 font-['Anek_Bangla',sans-serif] selection:bg-emerald-500/20 selection:text-emerald-900 pb-24 md:pb-16 antialiased">
 	<!-- 1. Responsive Landing Page Navbar & Announcement Bar -->
 	<LandingNavbar
-		title={landingPage?.title?.split('-')[0]?.trim() || product?.name || config?.headline || 'seedbd'}
+		title={landingPage?.title?.split('-')[0]?.trim() || product?.name || config?.headline || 'Store'}
 		badgeText="১০০% প্রিমিয়াম ও অরিজিনাল পণ্য"
 		announcementText="বিশেষ অফার চলছে • পণ্য হাতে পেয়ে চেক করে সম্পূর্ণ মূল্য পরিশোধ করুন"
 		contactPhone={config?.contactPhone}

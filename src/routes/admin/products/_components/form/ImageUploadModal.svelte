@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Button, Input, Badge } from '#lib/components/ui';
 	import { toast } from 'svelte-sonner';
+	import { uploadOptimizedImage } from '#lib/utils/image-optimizer';
 	import {
 		UploadCloud,
 		Link2,
@@ -191,23 +192,12 @@
 
 			for (const item of uploadedFiles) {
 				try {
-					const formData = new FormData();
-					formData.append('file', item.file);
-					formData.append('folder', 'products');
-
-					const res = await fetch('/api/admin/media/upload', {
-						method: 'POST',
-						body: formData
-					});
-					const data: any = await res.json().catch(() => ({}));
-					if (data.success && data.url) {
-						finalUrls.push(data.url);
-						continue;
-					}
-					failureMessage = data.message || 'ছবি আপলোড করা যায়নি';
+					const uploaded = await uploadOptimizedImage(item.file, 'products');
+					finalUrls.push(uploaded.url);
+					continue;
 				} catch (err) {
 					console.error('Failed to upload product image:', err);
-					failureMessage = 'নেটওয়ার্কে সমস্যা হয়েছে';
+					failureMessage = (err as any)?.message || 'ছবি আপলোড করা যায়নি';
 				}
 				// The picture is never stored as base64 text: it would bloat the product record.
 				failed.push(item);

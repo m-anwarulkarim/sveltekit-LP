@@ -165,6 +165,9 @@
 								<img
 									src={category.image}
 									alt={category.name}
+									width={160}
+									height={160}
+									decoding="async"
 									class="w-full h-full object-contain p-1 transform group-hover:scale-105 transition-transform"
 									loading="lazy"
 									onerror={(e) => {

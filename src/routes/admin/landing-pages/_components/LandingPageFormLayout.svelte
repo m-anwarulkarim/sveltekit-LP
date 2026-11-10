@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import { Button, Input, Card, CardHeader, CardTitle, CardContent, Badge, Separator } from '#lib/components/ui';
 	import { toast } from 'svelte-sonner';
+	import { uploadOptimizedImage } from '#lib/utils/image-optimizer';
 	import { submitAction } from '#lib/client/submit-action';
 	import { slugify } from '#lib/utils/slug';
 	import ThemeComponentPreviewModal from '../../customization/theme-view/_components/ThemeComponentPreviewModal.svelte';
@@ -389,17 +390,8 @@
 		for (let i = 0; i < files.length; i++) {
 			const file = files[i];
 			try {
-				const fd = new FormData();
-				fd.append('file', file);
-				fd.append('folder', 'landing-pages');
-				const res = await fetch('/api/admin/media/upload', { method: 'POST', body: fd });
-				const json = await res.json() as any;
-				if (res.ok && json?.item?.url) {
-					const url = json.item.url as string;
-					if (!galleryImages.includes(url)) newUrls.push(url);
-				} else {
-					failed.push(file.name);
-				}
+				const uploaded = await uploadOptimizedImage(file, 'landing-pages');
+				if (!galleryImages.includes(uploaded.url)) newUrls.push(uploaded.url);
 			} catch {
 				failed.push(file.name);
 			}

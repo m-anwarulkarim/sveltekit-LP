@@ -10,6 +10,7 @@
 	} from 'lucide-svelte';
 	import { enhance } from '$app/forms';
 	import { toast } from 'svelte-sonner';
+	import { uploadOptimizedImage } from '#lib/utils/image-optimizer';
 	import { Button, Input } from '#lib/components/ui';
 
 	let { data }: { data?: any } = $props();
@@ -34,14 +35,19 @@
 		fileInputRef?.click();
 	}
 
-	function handleFileSelected(e: Event) {
+	async function handleFileSelected(e: Event) {
 		const target = e.target as HTMLInputElement;
 		const file = target.files?.[0];
 		if (!file) return;
+		target.value = '';
 
-		const objectUrl = URL.createObjectURL(file);
-		currentImage = objectUrl;
-		toast.success('ইমেজ নির্বাচন করা হয়েছে');
+		try {
+			const uploaded = await uploadOptimizedImage(file, 'banners', { maxDimension: 1600 });
+			currentImage = uploaded.url;
+			toast.success('ইমেজ আপলোড হয়েছে');
+		} catch (err: any) {
+			toast.error(err?.message || 'ছবি আপলোড ব্যর্থ হয়েছে');
+		}
 	}
 
 	function removeImage() {

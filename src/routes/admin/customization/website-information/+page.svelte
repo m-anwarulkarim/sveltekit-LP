@@ -19,6 +19,7 @@
 	} from 'lucide-svelte';
 	import type { PageData, ActionData } from './$types';
 	import { toast } from 'svelte-sonner';
+	import { uploadOptimizedImage } from '#lib/utils/image-optimizer';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -77,19 +78,23 @@
 		}
 	});
 
-	function handleLogoChange(e: Event) {
+	// The logo must live in R2 as a cacheable file — a base64 logo gets
+	// inlined into every page's HTML and slows the whole storefront.
+	async function handleLogoChange(e: Event) {
 		const target = e.target as HTMLInputElement;
 		const file = target.files?.[0];
-		if (file) {
-			if (!file.type.startsWith('image/')) {
-				toast.error('অনুগ্রহ করে শুধুমাত্র ইমেজ ফাইল সিলেক্ট করুন');
-				return;
-			}
-			const reader = new FileReader();
-			reader.onload = (ev) => {
-				logoPreview = ev.target?.result as string;
-			};
-			reader.readAsDataURL(file);
+		if (!file) return;
+		if (!file.type.startsWith('image/')) {
+			toast.error('অনুগ্রহ করে শুধুমাত্র ইমেজ ফাইল সিলেক্ট করুন');
+			return;
+		}
+		try {
+			const uploaded = await uploadOptimizedImage(file, 'general', { maxDimension: 360, quality: 0.85 });
+			logoUrl = uploaded.url;
+			logoPreview = uploaded.url;
+			toast.success('লোগো আপলোড হয়েছে — এখন Save করুন');
+		} catch (err: any) {
+			toast.error(err?.message || 'লোগো আপলোড ব্যর্থ হয়েছে');
 		}
 	}
 
@@ -99,19 +104,21 @@
 		if (logoFileInput) logoFileInput.value = '';
 	}
 
-	function handleFaviconChange(e: Event) {
+	async function handleFaviconChange(e: Event) {
 		const target = e.target as HTMLInputElement;
 		const file = target.files?.[0];
-		if (file) {
-			if (!file.type.startsWith('image/') && !file.name.endsWith('.ico')) {
-				toast.error('অনুগ্রহ করে বৈধ ইমেজ বা .ico ফাইল সিলেক্ট করুন');
-				return;
-			}
-			const reader = new FileReader();
-			reader.onload = (ev) => {
-				faviconPreview = ev.target?.result as string;
-			};
-			reader.readAsDataURL(file);
+		if (!file) return;
+		if (!file.type.startsWith('image/')) {
+			toast.error('অনুগ্রহ করে বৈধ ইমেজ ফাইল সিলেক্ট করুন');
+			return;
+		}
+		try {
+			const uploaded = await uploadOptimizedImage(file, 'general', { maxDimension: 128, quality: 0.9 });
+			faviconUrl = uploaded.url;
+			faviconPreview = uploaded.url;
+			toast.success('ফ্যাভিকন আপলোড হয়েছে — এখন Save করুন');
+		} catch (err: any) {
+			toast.error(err?.message || 'ফ্যাভিকন আপলোড ব্যর্থ হয়েছে');
 		}
 	}
 

@@ -3,6 +3,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { Button, Input, Card } from '#lib/components/ui';
 	import { toast } from 'svelte-sonner';
+	import { uploadOptimizedImage } from '#lib/utils/image-optimizer';
 	import {
 		CheckCircle2,
 		Camera,
@@ -107,10 +108,6 @@
 		const target = e.target as HTMLInputElement;
 		const file = target.files?.[0];
 		if (!file) return;
-		if (file.size > 5 * 1024 * 1024) {
-			toast.error('ফাইলের সাইজ ৫ মেগাবাইটের কম হতে হবে!');
-			return;
-		}
 
 		// Optimistic instant preview for immediate visual feedback
 		const previewUrl = URL.createObjectURL(file);
@@ -119,17 +116,8 @@
 
 		isSubmittingAvatar = true;
 		try {
-			const formData = new FormData();
-			formData.append('file', file);
-			formData.append('folder', 'avatars');
-			const res = await fetch('/api/admin/media/upload', { method: 'POST', body: formData });
-			const uploadData: any = await res.json();
-			if (uploadData.success && uploadData.url) {
-				await saveAvatarUrl(uploadData.url);
-			} else {
-				avatarImage = data?.profile?.avatarUrl || null;
-				toast.error(uploadData.message || 'ছবি আপলোড করতে ব্যর্থ হয়েছে!');
-			}
+			const uploaded = await uploadOptimizedImage(file, 'avatars', { maxDimension: 512 });
+			await saveAvatarUrl(uploaded.url);
 		} catch (err) {
 			console.error('Avatar upload error:', err);
 			avatarImage = data?.profile?.avatarUrl || null;

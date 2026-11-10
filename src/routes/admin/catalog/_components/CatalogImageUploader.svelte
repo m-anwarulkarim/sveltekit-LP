@@ -12,6 +12,7 @@
 		X
 	} from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
+	import { uploadOptimizedImage } from '#lib/utils/image-optimizer';
 
 	interface Props {
 		image?: string;
@@ -77,8 +78,8 @@
 			return;
 		}
 
-		if (file.size > 5 * 1024 * 1024) {
-			toast.error('ফাইলের সাইজ ৫ MB এর কম হতে হবে');
+		if (file.size > 15 * 1024 * 1024) {
+			toast.error('ফাইলের সাইজ ১৫ MB এর কম হতে হবে');
 			return;
 		}
 
@@ -95,22 +96,9 @@
 
 		// 2. Upload directly to Cloudflare R2 via upload API
 		try {
-			const formData = new FormData();
-			formData.append('file', file);
-			formData.append('folder', folder);
-
-			const res = await fetch('/api/admin/media/upload', {
-				method: 'POST',
-				body: formData
-			});
-			const data: any = await res.json();
-
-			if (data.success && data.url) {
-				image = data.url;
-				toast.success('ছবি সফলভাবে আপলোড হয়েছে!');
-			} else {
-				throw new Error(data.message || 'ছবি আপলোড ব্যর্থ হয়েছে');
-			}
+			const uploaded = await uploadOptimizedImage(file, folder, { maxDimension: 800 });
+			image = uploaded.url;
+			toast.success('ছবি সফলভাবে আপলোড হয়েছে!');
 		} catch (err: any) {
 			console.error('R2 upload failed:', err);
 			toast.error(err?.message || 'ছবি আপলোড ব্যর্থ হয়েছে');

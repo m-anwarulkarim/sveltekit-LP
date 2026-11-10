@@ -3,6 +3,7 @@
 	import { cart } from '#lib/modules/cart/cart.svelte';
 	import { Button } from '#lib/components/ui';
 	import { Star, Zap, Check } from 'lucide-svelte';
+	import OptimizedImage from '#lib/components/storefront/OptimizedImage.svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 
@@ -96,11 +97,12 @@
 	<div>
 		<!-- Product Image (Aspect Square, crisp white background) -->
 		<a href="/products/{product.slug}" class="block relative w-full aspect-square rounded-lg sm:rounded-xl overflow-hidden bg-slate-50/80 mb-1.5 p-1 sm:p-1.5 cursor-pointer">
-			<img
+			<OptimizedImage
 				src={product.image}
 				alt={product.name}
+				width={400}
+				height={400}
 				class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 {isOutOfStock ? 'grayscale opacity-75' : ''}"
-				loading="lazy"
 			/>
 			{#if isOutOfStock}
 				<div class="absolute inset-0 bg-slate-900/40 backdrop-blur-[1px] flex items-center justify-center p-2">

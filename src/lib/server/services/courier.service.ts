@@ -303,7 +303,27 @@ export class CourierService {
 						signal: AbortSignal.timeout(8000)
 					});
 
-					const data = (await res.json()) as any;
+					const rawText = await res.text();
+					let data: any = null;
+					try {
+						data = JSON.parse(rawText);
+					} catch {
+						// Non-JSON response
+					}
+
+					if (!data) {
+						const cleanText = rawText.replace(/<[^>]*>/g, '').trim();
+						if (cleanText.toLowerCase().includes('account is')) {
+							return {
+								success: false,
+								message: `Paperfly এরর: "${cleanText}"`
+							};
+						}
+						return {
+							success: false,
+							message: `Paperfly সার্ভার থেকে অবৈধ রেসপন্স এসেছে: ${cleanText.slice(0, 150)}`
+						};
+					}
 					if (res.ok && data.status === 200) {
 						return {
 							success: true,
@@ -426,7 +446,27 @@ export class CourierService {
 						signal: AbortSignal.timeout(8000)
 					});
 
-					const data = (await res.json()) as any;
+					const rawText = await res.text();
+					let data: any = null;
+					try {
+						data = JSON.parse(rawText);
+					} catch {
+						// Non-JSON response
+					}
+
+					if (!data) {
+						const cleanText = rawText.replace(/<[^>]*>/g, '').trim();
+						if (cleanText.toLowerCase().includes('account is')) {
+							return {
+								success: false,
+								message: `CarryBee এরর: "${cleanText}"`
+							};
+						}
+						return {
+							success: false,
+							message: `CarryBee সার্ভার থেকে অবৈধ রেসপন্স এসেছে: ${cleanText.slice(0, 150)}`
+						};
+					}
 					if (res.ok && (data.pickup_stores || Array.isArray(data))) {
 						const storeCount = data.pickup_stores?.length ?? 1;
 						return {
@@ -483,7 +523,27 @@ export class CourierService {
 					});
 
 					if (res.ok) {
-						const data = (await res.json()) as any;
+						const rawText = await res.text();
+					let data: any = null;
+					try {
+						data = JSON.parse(rawText);
+					} catch {
+						// Non-JSON response
+					}
+
+					if (!data) {
+						const cleanText = rawText.replace(/<[^>]*>/g, '').trim();
+						if (cleanText.toLowerCase().includes('account is')) {
+							return {
+								success: false,
+								message: `Steadfast এরর: "${cleanText}" — আপনার মার্চেন্ট অ্যাকাউন্টটি এখনো সক্রিয় (Active) বা ভেরিফাই করা হয়নি।`
+							};
+						}
+						return {
+							success: false,
+							message: `Steadfast সার্ভার থেকে অবৈধ রেসপন্স এসেছে: ${cleanText.slice(0, 150)}`
+						};
+					}
 						return {
 							success: true,
 							message: `Paperfly WINGS এপিআই সফলভাবে সংযুক্ত! ব্যালেন্স: ৳${data.balance ?? 0}`
@@ -531,7 +591,27 @@ export class CourierService {
 					});
 
 					if (res.ok) {
-						const data = (await res.json()) as any;
+						const rawText = await res.text();
+					let data: any = null;
+					try {
+						data = JSON.parse(rawText);
+					} catch {
+						// Non-JSON response
+					}
+
+					if (!data) {
+						const cleanText = rawText.replace(/<[^>]*>/g, '').trim();
+						if (cleanText.toLowerCase().includes('account is')) {
+							return {
+								success: false,
+								message: `Steadfast এরর: "${cleanText}" — আপনার মার্চেন্ট অ্যাকাউন্টটি এখনো সক্রিয় (Active) বা ভেরিফাই করা হয়নি।`
+							};
+						}
+						return {
+							success: false,
+							message: `Steadfast সার্ভার থেকে অবৈধ রেসপন্স এসেছে: ${cleanText.slice(0, 150)}`
+						};
+					}
 						return {
 							success: true,
 							message: `CarryBee এপিআই সফলভাবে সংযুক্ত! মার্চেন্ট: ${data.name || 'সক্রিয়'}`
@@ -659,7 +739,28 @@ export class CourierService {
 					signal: AbortSignal.timeout(10000)
 				});
 
-				const data = (await res.json()) as any;
+				const rawText = await res.text();
+				let data: any = null;
+				try {
+					data = JSON.parse(rawText);
+				} catch {
+					// Non-JSON plain text response from Steadfast
+				}
+
+				if (!data) {
+					const cleanText = rawText.replace(/<[^>]*>/g, '').trim();
+					if (cleanText.toLowerCase().includes('account is')) {
+						return {
+							success: false,
+							error: `Steadfast অ্যাকাউন্ট এরর: "${cleanText}" — আপনার Steadfast মার্চেন্ট অ্যাকাউন্টটি এখনো সক্রিয় (Active) বা অনুমোদিত নয়। অনুগ্রহ করে Steadfast কাস্টমার কেয়ার/ম্যানেজারের সাথে কথা বলে অ্যাকাউন্টটি সক্রিয় (Activate) করে নিন।`
+						};
+					}
+					return {
+						success: false,
+						error: `Steadfast সার্ভার রেসপন্স: ${cleanText.slice(0, 180) || 'সার্ভার রেসপন্স ত্রুটি'}`
+					};
+				}
+
 				if (res.ok && data.status === 200 && data.consignment) {
 					const tracking = String(data.consignment.tracking_code);
 					const cid = String(data.consignment.consignment_id || data.consignment.id);
@@ -677,9 +778,24 @@ export class CourierService {
 					};
 				}
 
+				if (data.status === 401 || res.status === 401) {
+					return {
+						success: false,
+						error: `Steadfast অথেন্টিকেশন ব্যর্থ: API Key অথবা Secret Key ভুল দেওয়া হয়েছে (${data.message || 'Unauthorized Access'})`
+					};
+				}
+
+				let errorMsg = data.message || '';
+				if (data.errors && typeof data.errors === 'object') {
+					const errorList = Object.entries(data.errors)
+						.map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
+						.join(' | ');
+					errorMsg = errorMsg ? `${errorMsg} (${errorList})` : errorList;
+				}
+
 				return {
 					success: false,
-					error: `Steadfast বুকিং ব্যর্থ: ${data.message || (data.errors ? JSON.stringify(data.errors) : 'ক্রেডেনশিয়াল বা তথ্য সঠিক নয়')}`
+					error: `Steadfast বুকিং ব্যর্থ: ${errorMsg || 'তথ্য বা ক্রেডেনশিয়াল সঠিক নয়'}`
 				};
 			} catch (err: any) {
 				console.error('Steadfast live booking fetch error:', err.message);

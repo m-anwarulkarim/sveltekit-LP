@@ -23,7 +23,6 @@
 		ShieldAlert,
 		ShieldCheck,
 		AlertTriangle,
-		RotateCw,
 		CheckCircle2,
 		SlidersHorizontal,
 		HardDrive
@@ -38,7 +37,6 @@
 	let searchQuery = $state('');
 	let categoryFilter = $state<'all' | 'search' | 'headless' | 'ai' | 'blocked'>('all');
 	let toastMessage = $state<string | null>(null);
-	let isRefreshing = $state(false);
 
 	let localBlockedIps = $state<string[]>([]);
 	$effect(() => {
@@ -50,13 +48,6 @@
 		setTimeout(() => {
 			toastMessage = null;
 		}, 3000);
-	}
-
-	async function handleRefresh() {
-		isRefreshing = true;
-		await invalidateAll();
-		isRefreshing = false;
-		showToast('বট ট্রাফিক ডেটা রিফ্রেশ হয়েছে!');
 	}
 
 	async function clearOldLogs() {
@@ -424,18 +415,6 @@
 					<option value="all">All Time</option>
 				</select>
 			</div>
-
-			<!-- Refresh Button -->
-			<Button
-				variant="outline"
-				size="sm"
-				onclick={handleRefresh}
-				disabled={isRefreshing}
-				class="rounded-2xl border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold gap-1.5 shadow-2xs h-9 px-3.5"
-			>
-				<RotateCw class="w-3.5 h-3.5 {isRefreshing ? 'animate-spin text-[#5845eb]' : 'text-slate-400'}" />
-				<span>Refresh</span>
-			</Button>
 
 			<!-- Export CSV -->
 			<Button

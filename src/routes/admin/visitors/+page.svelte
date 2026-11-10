@@ -21,7 +21,6 @@
 		Monitor,
 		Tablet,
 		MapPin,
-		RotateCw,
 		ShieldAlert,
 		ShieldCheck,
 		ExternalLink,
@@ -32,7 +31,7 @@
 		ArrowUpRight,
 		SlidersHorizontal
 	} from 'lucide-svelte';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 
 	let { data }: { data: any } = $props();
@@ -52,7 +51,6 @@
 	});
 
 	let activeRange = $derived(data.activeRange || 'today');
-	let isRefreshing = $state(false);
 	let blockingIp = $state<string | null>(null);
 	let streamFilter = $state<'all' | 'bd' | 'facebook' | 'admin'>('all');
 
@@ -97,13 +95,6 @@
 		}
 		return list;
 	});
-
-	async function handleRefresh() {
-		isRefreshing = true;
-		await invalidateAll();
-		isRefreshing = false;
-		toast.success('ট্রাফিক ডেটা রিফ্রেশ করা হয়েছে!');
-	}
 
 	function handleRangeChange(range: 'today' | '7days' | '30days') {
 		goto(`/admin/visitors?range=${range}`, { keepFocus: true, noScroll: true });
@@ -192,18 +183,6 @@
 					গত ৩০ দিন
 				</button>
 			</div>
-
-			<!-- Refresh Button -->
-			<Button
-				variant="outline"
-				size="sm"
-				onclick={handleRefresh}
-				disabled={isRefreshing}
-				class="rounded-2xl border-slate-200 text-slate-700 hover:bg-slate-50 h-9 px-3 gap-1.5 font-bold"
-			>
-				<RotateCw class="w-3.5 h-3.5 {isRefreshing ? 'animate-spin text-[#5845eb]' : ''}" />
-				<span class="hidden sm:inline">রিফ্রেশ</span>
-			</Button>
 		</div>
 	</div>
 

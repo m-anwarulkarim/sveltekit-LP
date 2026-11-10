@@ -50,7 +50,7 @@
 </script>
 
 <svelte:head>
-	<title>কুপন সম্পাদনা করুন | {coupon?.name || 'seedbd Admin'}</title>
+	<title>কুপন সম্পাদনা করুন | {coupon?.name || 'Haq Plus Admin'}</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-4xl mx-auto pb-16 font-sans">

@@ -58,7 +58,7 @@
 	let whatsappUrl = $derived.by(() => {
 		const formattedPhone = cleanPhoneNumber(customerPhone);
 		const message = encodeURIComponent(
-			`আসসালামু আলাইকুম ${customerName || 'গ্রাহক'}, আমরা আপনার seedbd অর্ডার (#${orderId}) সংক্রান্ত বিষয়ে যোগাযোগ করছি। আপনার ডেলিভারি কনফার্মেশনের জন্য দয়া করে রিপ্লাই করুন। ধন্যবাদ!`
+			`আসসালামু আলাইকুম ${customerName || 'গ্রাহক'}, আমরা আপনার Haq Plus অর্ডার (#${orderId}) সংক্রান্ত বিষয়ে যোগাযোগ করছি। আপনার ডেলিভারি কনফার্মেশনের জন্য দয়া করে রিপ্লাই করুন। ধন্যবাদ!`
 		);
 		return `https://wa.me/${formattedPhone}?text=${message}`;
 	});

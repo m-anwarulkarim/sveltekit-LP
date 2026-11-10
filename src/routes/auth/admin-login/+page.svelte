@@ -19,7 +19,7 @@
 </script>
 
 <svelte:head>
-	<title>অ্যাডমিন লগইন</title>
+	<title>অ্যাডমিন লগইন | Haq Plus</title>
 	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 

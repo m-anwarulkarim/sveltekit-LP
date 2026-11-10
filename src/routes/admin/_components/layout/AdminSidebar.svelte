@@ -128,7 +128,7 @@
 >
 	<!-- Fixed Top Header Section of Sidebar (Always Sticky, Never Scrolls) -->
 	<div class="shrink-0 bg-white z-20">
-		<!-- Header (seedbd Store Brand + <> Toggle Button) -->
+		<!-- Header (Haq Plus Store Brand + <> Toggle Button) -->
 		<div class="h-16 md:h-20 flex items-center {collapsed ? 'justify-center flex-col gap-2.5 py-3' : 'justify-between px-5'} border-b border-slate-100">
 			{#if !collapsed}
 				<a href="/admin" class="flex items-center gap-3 group">
@@ -140,7 +140,7 @@
 					
 					<div class="flex flex-col">
 						<div class="flex items-center gap-1.5">
-							<span class="font-['Outfit'] font-black text-lg text-slate-900 tracking-wide">seedbd</span>
+							<span class="font-['Outfit'] font-black text-lg text-slate-900 tracking-wide">Haq Plus</span>
 							<span class="px-1.5 py-0.2 rounded text-[8px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-700 border border-indigo-200">
 								PRO
 							</span>

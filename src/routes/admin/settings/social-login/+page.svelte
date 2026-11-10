@@ -51,7 +51,7 @@
 </script>
 
 <svelte:head>
-	<title>Google Social Login | seedbd Settings</title>
+	<title>Google Social Login | Haq Plus Settings</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-3xl mx-auto p-4 sm:p-6 pb-20 font-['Anek_Bangla',sans-serif]">

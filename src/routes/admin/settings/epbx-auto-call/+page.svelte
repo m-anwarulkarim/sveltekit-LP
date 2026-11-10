@@ -20,7 +20,7 @@
 </script>
 
 <svelte:head>
-	<title>ePBX Auto Call Settings | seedbd Enterprise</title>
+	<title>ePBX Auto Call Settings | Haq Plus Enterprise</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-2xl mx-auto p-4 sm:p-6">

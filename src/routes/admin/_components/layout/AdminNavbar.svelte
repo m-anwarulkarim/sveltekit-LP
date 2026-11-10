@@ -159,7 +159,7 @@
 				{:else if isAdminControlActive}
 					<span>Vendor Admins</span>
 				{:else}
-					<span>seedbd Control</span>
+					<span>Haq Plus Control</span>
 				{/if}
 			</h1>
 

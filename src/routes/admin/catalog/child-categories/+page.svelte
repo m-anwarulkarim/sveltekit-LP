@@ -188,7 +188,7 @@
 </script>
 
 <svelte:head>
-	<title>Child Category | seedbd Admin</title>
+	<title>Child Category | Haq Plus Admin</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-[1400px] mx-auto pb-12">

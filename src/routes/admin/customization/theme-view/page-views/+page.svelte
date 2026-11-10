@@ -65,7 +65,7 @@
 </script>
 
 <svelte:head>
-	<title>Page Views - Checkout & Page Layouts - seedbd Admin</title>
+	<title>Page Views - Checkout & Page Layouts - Haq Plus Admin</title>
 </svelte:head>
 
 <form

@@ -113,7 +113,7 @@
 </script>
 
 <svelte:head>
-	<title>Daily Sales Target | seedbd Enterprise</title>
+	<title>Daily Sales Target | Haq Plus Enterprise</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-6xl mx-auto pb-16 font-sans">

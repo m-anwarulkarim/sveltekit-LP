@@ -529,7 +529,7 @@
 				</div>
 
 				<div class="text-slate-400 flex items-center gap-1">
-					<span>seedbd Search Engine</span>
+					<span>Haq Plus Search Engine</span>
 				</div>
 			</div>
 		</div>

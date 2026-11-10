@@ -12,7 +12,7 @@ export const load: PageServerLoad = async ({ parent, platform }) => {
 		enableFreeDelivery: false,
 		freeShippingThreshold: 2000,
 		hotlinePhone: '0156007230',
-		storeName: 'seedbd Store'
+		storeName: 'Haq Plus Store'
 	};
 
 	try {

@@ -101,7 +101,7 @@ export const INITIAL_GALLERY_IMAGES: GalleryImage[] = [
 	},
 	{
 		id: 'img-banner-home',
-		name: 'seedbd Storefront Mega Hero Banner',
+		name: 'Haq Plus Storefront Mega Hero Banner',
 		url: '/images/banners/banner-home.svg',
 		folder: 'banners',
 		size: '112 KB',

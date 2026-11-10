@@ -67,11 +67,11 @@
 		{
 			version: '1.0.0',
 			date: 'Apr 20, 2026',
-			title: 'seedbd Enterprise Commerce & Multi-Landing Page Launch',
+			title: 'Haq Plus Enterprise Commerce & Multi-Landing Page Launch',
 			platforms: ['Admin Panel', 'Website', 'API'],
 			types: ['New Feature'],
 			changes: [
-				'Official release of seedbd Enterprise Multi-Landing Page Engine.',
+				'Official release of Haq Plus Enterprise Multi-Landing Page Engine.',
 				'Real-time analytics dashboard with revenue, orders, and conversion tracking.',
 				'Dynamic Facebook Pixel, TikTok Pixel & Google Tag Manager integration.',
 				'Full Bengali & English dual-language administrative experience.'
@@ -142,7 +142,7 @@
 </script>
 
 <svelte:head>
-	<title>New Release | seedbd Enterprise</title>
+	<title>New Release | Haq Plus Enterprise</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-6xl mx-auto pb-16">

@@ -56,7 +56,7 @@
 </script>
 
 <svelte:head>
-	<title>নতুন কুপন তৈরি করুন | seedbd Admin</title>
+	<title>নতুন কুপন তৈরি করুন | Haq Plus Admin</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-4xl mx-auto pb-16 font-sans">

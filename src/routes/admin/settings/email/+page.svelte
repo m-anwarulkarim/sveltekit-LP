@@ -44,7 +44,7 @@
 </script>
 
 <svelte:head>
-	<title>Email Settings | seedbd Admin</title>
+	<title>Email Settings | Haq Plus Admin</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-3xl mx-auto p-4 sm:p-6 pb-20 font-['Anek_Bangla',sans-serif]">
@@ -158,7 +158,7 @@
 						<label class="text-xs font-bold text-slate-700">Sender Name</label>
 						<Input
 							type="text"
-							placeholder="seedbd Store"
+							placeholder="Haq Plus Store"
 							bind:value={fromName}
 							class="text-xs bg-slate-50/50 border-slate-200 rounded-xl focus:bg-white"
 						/>

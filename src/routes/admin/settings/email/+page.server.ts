@@ -52,7 +52,7 @@ export const actions: Actions = {
 
 			const result = await EmailService.send(db, {
 				to: { email: settings.fromEmail, name: 'Test' },
-				subject: 'Test Email from seedbd Store',
+				subject: 'Test Email from Haq Plus Store',
 				html: '<p>এটি একটি পরীক্ষামূলক ইমেইল। সব ঠিক আছে! ✅</p>'
 			});
 

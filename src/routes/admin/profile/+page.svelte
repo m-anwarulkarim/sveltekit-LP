@@ -150,7 +150,7 @@
 </script>
 
 <svelte:head>
-	<title>Profile Settings | seedbd Enterprise</title>
+	<title>Profile Settings | Haq Plus Enterprise</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-6xl mx-auto pb-16 font-['Anek_Bangla',sans-serif]">

@@ -739,7 +739,7 @@
 								type="text"
 								required
 								bind:value={title}
-								placeholder="যেমন: seedbd Pro Wireless Earbuds - মেগা অফার"
+								placeholder="যেমন: Haq Plus Pro Wireless Earbuds - মেগা অফার"
 								class="rounded-2xl border-slate-200 text-xs sm:text-sm py-2.5 bg-slate-50/50 focus:bg-white"
 							/>
 						</div>

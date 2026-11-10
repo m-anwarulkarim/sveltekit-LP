@@ -6,7 +6,7 @@
 </script>
 
 <svelte:head>
-	<title>{data.product?.name ? `Edit: ${data.product.name}` : 'Edit Product'} | seedbd Admin</title>
+	<title>{data.product?.name ? `Edit: ${data.product.name}` : 'Edit Product'} | Haq Plus Admin</title>
 </svelte:head>
 
 <div class="p-4 sm:p-6 lg:p-8">

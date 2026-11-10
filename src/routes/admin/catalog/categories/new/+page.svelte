@@ -12,7 +12,7 @@
 </script>
 
 <svelte:head>
-	<title>নতুন ক্যাটাগরি তৈরি | seedbd Admin</title>
+	<title>নতুন ক্যাটাগরি তৈরি | Haq Plus Admin</title>
 </svelte:head>
 
 <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 font-['Anek_Bangla',sans-serif]">

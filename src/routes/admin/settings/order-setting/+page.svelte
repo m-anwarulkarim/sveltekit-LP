@@ -159,7 +159,7 @@
 </script>
 
 <svelte:head>
-	<title>Order Setting | seedbd Enterprise</title>
+	<title>Order Setting | Haq Plus Enterprise</title>
 </svelte:head>
 
 <!-- Hidden POST form wired with use:enhance -->

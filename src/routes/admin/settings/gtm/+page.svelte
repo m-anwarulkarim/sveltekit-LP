@@ -18,7 +18,7 @@
 </script>
 
 <svelte:head>
-	<title>Tag Manager & Analytics | seedbd Enterprise</title>
+	<title>Tag Manager & Analytics | Haq Plus Enterprise</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-2xl mx-auto">

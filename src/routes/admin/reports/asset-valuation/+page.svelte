@@ -136,7 +136,7 @@
 </script>
 
 <svelte:head>
-	<title>Asset Valuation | seedbd Reports</title>
+	<title>Asset Valuation | Haq Plus Reports</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-7xl mx-auto pb-16 font-['Plus_Jakarta_Sans',sans-serif]">

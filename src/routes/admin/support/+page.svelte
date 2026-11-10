@@ -37,7 +37,7 @@
 			id: 1,
 			sender: 'agent',
 			name: 'Asif (সাপোর্ট স্পেশালিস্ট)',
-			text: 'আসসালামু আলাইকুম! seedbd সাপোর্টে আপনাকে স্বাগতম। আমি আসিফ, আপনার জন্য অনলাইন আছি। আপনার শপ বা অর্ডার সংক্রান্ত কী সাহায্য প্রয়োজন?',
+			text: 'আসসালামু আলাইকুম! Haq Plus সাপোর্টে আপনাকে স্বাগতম। আমি আসিফ, আপনার জন্য অনলাইন আছি। আপনার শপ বা অর্ডার সংক্রান্ত কী সাহায্য প্রয়োজন?',
 			time: '০২:১১ AM'
 		}
 	]);
@@ -163,7 +163,7 @@
 </script>
 
 <svelte:head>
-	<title>Support Center | seedbd Executive Panel</title>
+	<title>Support Center | Haq Plus Executive Panel</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-7xl mx-auto font-['Anek_Bangla',sans-serif]">
@@ -523,7 +523,7 @@
 <!-- ============================================== -->
 <!-- MODAL 1: LIVE CHAT WINDOW WITH AGENT ASIF      -->
 <!-- ============================================== -->
-<Dialog bind:open={isLiveChatOpen} title="seedbd ইনস্ট্যান্ট লাইভ সাপোর্ট সেশন">
+<Dialog bind:open={isLiveChatOpen} title="Haq Plus ইনস্ট্যান্ট লাইভ সাপোর্ট সেশন">
 	<div class="space-y-4 py-1">
 		
 		<!-- Agent Header Card -->

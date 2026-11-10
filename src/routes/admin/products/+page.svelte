@@ -245,7 +245,7 @@
 </script>
 
 <svelte:head>
-	<title>Product - seedbd Admin</title>
+	<title>Product - Haq Plus Admin</title>
 </svelte:head>
 
 <div class="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">

@@ -341,7 +341,7 @@
 </script>
 
 <svelte:head>
-	<title>Courier Methods | seedbd Enterprise Control</title>
+	<title>Courier Methods | Haq Plus Enterprise Control</title>
 </svelte:head>
 
 <div class="max-w-4xl mx-auto space-y-6 font-['Anek_Bangla',sans-serif] pb-16">

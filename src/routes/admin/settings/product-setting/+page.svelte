@@ -173,7 +173,7 @@
 </script>
 
 <svelte:head>
-	<title>Product Settings | seedbd Admin</title>
+	<title>Product Settings | Haq Plus Admin</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-7xl mx-auto pb-24">

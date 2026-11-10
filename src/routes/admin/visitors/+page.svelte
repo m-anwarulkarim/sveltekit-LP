@@ -33,7 +33,7 @@
 	} from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import VisitorTimeFilter from './_components/VisitorTimeFilter.svelte';
+	import { AdminDateRangePicker } from '../_components/common';
 
 	let { data }: { data: any } = $props();
 
@@ -166,11 +166,11 @@
 
 		<!-- Action Controls -->
 		<div class="flex flex-wrap items-center gap-2">
-			<VisitorTimeFilter
+			<AdminDateRangePicker
 				{activeRange}
 				{activeFrom}
 				{activeTo}
-				onSelectRange={handleRangeChange}
+				onSelect={handleRangeChange}
 			/>
 		</div>
 	</div>

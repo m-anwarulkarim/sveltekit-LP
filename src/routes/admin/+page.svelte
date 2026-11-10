@@ -5,12 +5,50 @@
 		RecentOrdersTable,
 		MainDashboardCourierWidget
 	} from './_components/dashboard';
-	import { Activity, ArrowRight } from 'lucide-svelte';
+	import { Activity, ArrowRight, LayoutDashboard } from 'lucide-svelte';
+	import { goto } from '$app/navigation';
+	import { AdminDateRangePicker } from './_components/common';
 
 	let { data }: { data: any } = $props();
+
+	let activeRange = $derived(data.activeRange || 'today');
+	let activeFrom = $derived(data.activeFrom || null);
+	let activeTo = $derived(data.activeTo || null);
+
+	function handleDateChange(range: string, from?: string, to?: string) {
+		let url = `/admin?range=${encodeURIComponent(range)}`;
+		if (range === 'custom' && from && to) {
+			url += `&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+		}
+		goto(url, { keepFocus: true, noScroll: true });
+	}
 </script>
 
-<div class="space-y-6 max-w-7xl mx-auto">
+<div class="space-y-6 max-w-7xl mx-auto font-['Plus_Jakarta_Sans',sans-serif]">
+	<!-- Dashboard Header with Universal Premium Date Filter -->
+	<div class="bg-white/80 backdrop-blur-md p-4 sm:p-5 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+		<div class="flex items-center gap-3">
+			<div class="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#5845eb] shadow-2xs shrink-0">
+				<LayoutDashboard class="w-5 h-5 stroke-[2.2]" />
+			</div>
+			<div>
+				<h1 class="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+					স্টোর ওভারভিউ ও অ্যানালিটিক্স
+				</h1>
+				<p class="text-xs text-slate-500 font-['Anek_Bangla',sans-serif] mt-0.5">
+					নির্বাচিত সময়ের বিক্রয়, অর্ডার, ট্রাফিক ও কুরিয়ার পারফরম্যান্স মনিটর করুন
+				</p>
+			</div>
+		</div>
+
+		<AdminDateRangePicker
+			{activeRange}
+			{activeFrom}
+			{activeTo}
+			onSelect={handleDateChange}
+		/>
+	</div>
+
 	<!-- Live Storefront Traffic Bar (Quick Glance) -->
 	<div class="bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-wrap items-center justify-between gap-3">
 		<div class="flex items-center gap-3">

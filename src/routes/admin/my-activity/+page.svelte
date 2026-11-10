@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { Button, Input, Badge } from '#lib/components/ui';
+	import { AdminDateRangePicker, parseDateRangeWindow } from '../_components/common';
 	import {
 		RefreshCw,
 		Plus,
@@ -30,8 +31,17 @@
 	// Search & Filter State
 	let searchQuery = $state('');
 	let activeTab = $state<'my' | 'store'>('my');
+	let dateRange = $state('all');
+	let customFrom = $state<string | null>(null);
+	let customTo = $state<string | null>(null);
 	let isRefreshing = $state(false);
 	let toastMessage = $state<string | null>(null);
+
+	function handleDateChange(range: string, from?: string, to?: string) {
+		dateRange = range;
+		customFrom = from || null;
+		customTo = to || null;
+	}
 
 	function showToast(msg: string) {
 		toastMessage = msg;
@@ -69,16 +79,33 @@
 
 	// Filtered orders list
 	let displayedOrders = $derived.by(() => {
-		let list = activeTab === 'my' ? myOrders : allOrders.map((o: any, idx: number) => ({
+		let list = activeTab === 'my' ? myOrders.map((o: any) => ({
+			...o,
+			rawCreatedAt: o.rawCreatedAt || o.createdAt
+		})) : allOrders.map((o: any, idx: number) => ({
 			id: o.orderNumber || o.id || `${1000 + idx}`,
 			customerName: o.customerName || 'Customer',
 			phone: o.customerPhone || o.customerEmail || '01700000000',
 			status: o.status || 'pending',
 			amount: o.total || 0,
+			rawCreatedAt: o.createdAt,
 			createdAt: o.createdAt ? new Date(o.createdAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : 'Today',
 			items: o.items ? (typeof o.items === 'string' && o.items.startsWith('[') ? JSON.parse(o.items)[0]?.name || 'Product' : 'Standard Item') : 'Standard Order Item',
 			callStatus: 'Call Verified'
 		}));
+
+		if (dateRange !== 'all') {
+			const { startTs, endTs } = parseDateRangeWindow(dateRange, customFrom, customTo);
+			list = list.filter((o: any) => {
+				const rawDate = o.rawCreatedAt || o.createdAt;
+				if (!rawDate) return true;
+				const ts = new Date(rawDate).getTime();
+				if (isNaN(ts)) return true;
+				if (ts < startTs) return false;
+				if (endTs && ts > endTs) return false;
+				return true;
+			});
+		}
 
 		if (searchQuery.trim()) {
 			const q = searchQuery.toLowerCase().trim();
@@ -452,9 +479,15 @@
 				</p>
 			</div>
 
-			<!-- Search Bar -->
-			<div class="flex items-center gap-2 w-full sm:w-auto">
-				<div class="relative w-full sm:w-72">
+			<!-- Search Bar & Date Filter -->
+			<div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+				<AdminDateRangePicker
+					activeRange={dateRange}
+					activeFrom={customFrom}
+					activeTo={customTo}
+					onSelect={handleDateChange}
+				/>
+				<div class="relative w-full sm:w-64">
 					<Input
 						type="text"
 						bind:value={searchQuery}

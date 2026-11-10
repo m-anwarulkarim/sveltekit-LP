@@ -29,11 +29,14 @@
 	} from 'lucide-svelte';
 
 	import { invalidateAll } from '$app/navigation';
+	import { AdminDateRangePicker, parseDateRangeWindow } from '../_components/common';
 
 	let { data }: { data: any } = $props();
 
 	// Filters & Local State
-	let dateRange = $state<'24h' | '7d' | '30d' | 'all'>('7d');
+	let dateRange = $state('7days');
+	let customFrom = $state<string | null>(null);
+	let customTo = $state<string | null>(null);
 	let searchQuery = $state('');
 	let categoryFilter = $state<'all' | 'search' | 'headless' | 'ai' | 'blocked'>('all');
 	let toastMessage = $state<string | null>(null);
@@ -111,8 +114,28 @@
 		}
 	}
 
-	// Real raw logs from D1 database
-	let rawLogs = $derived(data?.dbBotLogs || []);
+	// Real raw logs from D1 database filtered dynamically by date/time
+	let allDbBotLogs = $derived(data?.dbBotLogs || []);
+	let rawLogs = $derived.by(() => {
+		const list = allDbBotLogs;
+		if (dateRange === 'all') return list;
+
+		const { startTs, endTs } = parseDateRangeWindow(dateRange, customFrom, customTo);
+		return list.filter((l: any) => {
+			if (!l.createdAt) return true;
+			const ts = new Date(l.createdAt).getTime();
+			if (isNaN(ts)) return true;
+			if (ts < startTs) return false;
+			if (endTs && ts > endTs) return false;
+			return true;
+		});
+	});
+
+	function handleDateChange(range: string, from?: string, to?: string) {
+		dateRange = range;
+		customFrom = from || null;
+		customTo = to || null;
+	}
 
 	function parseBotUserAgent(ua: string) {
 		if (!ua) return { name: 'Unknown Client', category: 'headless', risk: 'high' };
@@ -404,17 +427,12 @@
 
 		<!-- Top Right Action Controls -->
 		<div class="flex flex-wrap items-center gap-2.5">
-			<div class="relative">
-				<select
-					bind:value={dateRange}
-					class="bg-slate-50 hover:bg-slate-100 border border-slate-200/90 rounded-2xl px-3.5 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:border-[#5845eb] cursor-pointer shadow-2xs"
-				>
-					<option value="24h">Last 24 Hours</option>
-					<option value="7d">Last 7 Days</option>
-					<option value="30d">Last 30 Days</option>
-					<option value="all">All Time</option>
-				</select>
-			</div>
+			<AdminDateRangePicker
+				activeRange={dateRange}
+				activeFrom={customFrom}
+				activeTo={customTo}
+				onSelect={handleDateChange}
+			/>
 
 			<!-- Export CSV -->
 			<Button

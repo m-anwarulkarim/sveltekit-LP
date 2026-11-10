@@ -114,15 +114,33 @@
 		}
 	}
 
-	// Initial load
+	let hasInitialized = false;
+
+	// Initial load & automatic form hydration
 	$effect(() => {
-		if (courierMethods.length > 0 && !isAddingNew) {
-			const current = courierMethods.find((m) => m.id === selectedProviderId);
-			if (!current) {
-				const first = courierMethods.find((m) => m.isDefault) || courierMethods[0];
-				loadProviderToForm(first.id);
+		if (courierMethods.length > 0) {
+			if (!hasInitialized) {
+				hasInitialized = true;
+				const target = courierMethods.find((m) => m.id === selectedProviderId)
+					|| courierMethods.find((m) => m.isDefault)
+					|| courierMethods[0];
+				if (target) {
+					loadProviderToForm(target.id, false);
+				}
+			} else if (!isAddingNew) {
+				// Keep credentials hydrated if fields are empty
+				const existing = courierMethods.find((m) => m.id === selectedProviderId);
+				if (existing && existing.credentials) {
+					const creds = existing.credentials;
+					if (creds.apiKey && !formApiKey) formApiKey = creds.apiKey;
+					if (creds.secretKey && !formSecretKey) formSecretKey = creds.secretKey;
+					if (existing.specialInstruction && !formSpecialInstruction) {
+						formSpecialInstruction = existing.specialInstruction;
+					}
+				}
 			}
-		} else if (courierMethods.length === 0) {
+		} else if (!hasInitialized && courierMethods.length === 0) {
+			hasInitialized = true;
 			loadProviderToForm('steadfast', true);
 		}
 	});
@@ -171,6 +189,17 @@
 
 	// Handle Save Action
 	async function handleSave() {
+		if (selectedProviderId === 'steadfast') {
+			if (!formApiKey.trim()) {
+				toast.warning('অনুগ্রহ করে Steadfast API Key ইনপুট দিন');
+				return;
+			}
+			if (!formSecretKey.trim()) {
+				toast.warning('অনুগ্রহ করে Steadfast Secret Key ইনপুট দিন');
+				return;
+			}
+		}
+
 		isSaving = true;
 		testFeedback = null;
 
@@ -213,11 +242,45 @@
 				method: 'POST',
 				body: fd
 			});
-			const result = (await res.json()) as any;
+			const rawText = await res.text();
+			const result = deserialize(rawText) as any;
 
-			await invalidateAll();
-			isAddingNew = false;
-			toast.success(`${providerName} কনফিগারেশন সফলভাবে সংরক্ষিত হয়েছে!`);
+			if (result.type === 'success') {
+				// Immediately update local credentials state
+				const existingIdx = courierMethods.findIndex((m) => m.id === selectedProviderId);
+				const updatedItem: CourierMethodSetting = {
+					id: selectedProviderId,
+					name: providerName,
+					isEnabled: true,
+					isDefault: true,
+					credentials: {
+						apiKey: formApiKey.trim(),
+						secretKey: formSecretKey.trim(),
+						username: formUsername.trim(),
+						password: formPassword.trim(),
+						storeId: formStoreId.trim(),
+						storeName: formStoreName.trim(),
+						paperflyKey: formPaperflyKey.trim(),
+						clientContext: formClientContext.trim(),
+						apiAccessToken: formApiAccessToken.trim()
+					},
+					specialInstruction: formSpecialInstruction.trim(),
+					updatedAt: Date.now()
+				};
+
+				if (existingIdx >= 0) {
+					courierMethods[existingIdx] = updatedItem;
+				} else {
+					courierMethods = [...courierMethods, updatedItem];
+				}
+
+				defaultProvider = selectedProviderId;
+				isAddingNew = false;
+				toast.success(`${providerName} কুরিয়ার গেটওয়ে সফলভাবে সংরক্ষিত হয়েছে!`);
+				await invalidateAll();
+			} else {
+				toast.error(result.data?.message || 'সেটিংস সংরক্ষণ করতে সমস্যা হয়েছে');
+			}
 		} catch (e: any) {
 			console.error('Failed to save courier:', e);
 			toast.error('সেটিংস সংরক্ষণ করতে সমস্যা হয়েছে');
@@ -228,6 +291,13 @@
 
 	// Handle Test Connection
 	async function handleTestConnection() {
+		if (selectedProviderId === 'steadfast') {
+			if (!formApiKey.trim() || !formSecretKey.trim()) {
+				toast.warning('সংযোগ পরীক্ষা করার জন্য API Key এবং Secret Key প্রদান করুন');
+				return;
+			}
+		}
+
 		isTesting = true;
 		testFeedback = null;
 

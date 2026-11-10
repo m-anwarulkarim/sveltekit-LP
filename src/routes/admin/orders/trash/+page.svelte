@@ -10,6 +10,7 @@
 		ArrowRight,
 		X
 	} from 'lucide-svelte';
+	import OrderProductsCell from '../../_components/orders/OrderProductsCell.svelte';
 
 	let { data }: { data: any } = $props();
 
@@ -240,21 +241,12 @@
 									{/if}
 								</td>
 
-								<td class="py-3.5 px-4">
-									{#if parsedItems.length > 0}
-										{@const first = parsedItems[0]}
-										<div class="font-medium text-slate-800 line-clamp-1" title={first.name}>
-											{first.name || 'পণ্য'}
-										</div>
-										<div class="text-[11px] text-slate-400 flex items-center gap-1.5">
-											<span>Qty: {first.quantity || 1}</span>
-											{#if parsedItems.length > 1}
-												<span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold text-[10px]">+{parsedItems.length - 1} আরো</span>
-											{/if}
-										</div>
-									{:else}
-										<span class="text-slate-400">পণ্য তথ্য নেই</span>
-									{/if}
+								<td class="py-3.5 px-4 min-w-[190px]">
+									<OrderProductsCell
+										items={parsedItems}
+										orderNumber={order.orderNumber}
+										orderId={order.id}
+									/>
 								</td>
 
 								<td class="py-3.5 px-4 text-right font-black text-slate-900 font-mono text-sm">

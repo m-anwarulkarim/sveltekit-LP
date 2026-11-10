@@ -19,6 +19,7 @@
 		X,
 		ShoppingBag
 	} from 'lucide-svelte';
+	import OrderProductsCell from '../../_components/orders/OrderProductsCell.svelte';
 
 	let { data, form }: { data: any; form: any } = $props();
 
@@ -416,20 +417,13 @@
 								</td>
 
 								<!-- 4. Abandoned Products & Total -->
-								<td class="py-3.5 px-4 min-w-[180px]">
-									{#if order.parsedItems.length > 0}
-										{@const firstItem = order.parsedItems[0]}
-										<div class="font-bold text-slate-800 line-clamp-1" title={firstItem.name}>
-											{firstItem.name}
-										</div>
-										<div class="text-[11px] text-slate-500 flex items-center gap-1.5">
-											<span>পরিমাণ: {firstItem.quantity || 1} টি</span>
-											{#if order.parsedItems.length > 1}
-												<span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold text-[10px]">+{order.parsedItems.length - 1} আরো</span>
-											{/if}
-										</div>
-									{/if}
-									<div class="text-xs font-black text-slate-900 mt-1">
+								<td class="py-3.5 px-4 min-w-[190px]">
+									<OrderProductsCell
+										items={order.parsedItems}
+										orderNumber={order.orderNumber}
+										orderId={order.id}
+									/>
+									<div class="text-[11px] font-black text-slate-900 mt-1.5 font-mono">
 										সম্ভাব্য বিল: ৳{(order.total || 0).toLocaleString()}
 									</div>
 								</td>

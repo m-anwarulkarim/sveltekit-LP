@@ -25,7 +25,8 @@
 	import {
 		OrderStatusDropdown,
 		ScrollableStatusTabs,
-		OrderSourceBadge
+		OrderSourceBadge,
+		OrderProductsCell
 	} from '../_components/orders';
 
 	let { data }: { data: any } = $props();
@@ -293,33 +294,12 @@
 								</td>
 
 								<!-- Product -->
-								<td class="py-4 px-4">
-									<div class="space-y-1.5">
-										{#each items as item}
-											<div class="flex items-center gap-2.5">
-												<div class="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200/90 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
-													{#if item.image}
-														<img
-															src={item.image}
-															alt={item.name}
-															class="w-full h-full object-cover"
-															onerror={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
-														/>
-													{:else}
-														<ShoppingBag class="w-4 h-4 text-slate-400" />
-													{/if}
-												</div>
-												<div class="min-w-0">
-													<div class="font-bold text-slate-900 text-xs truncate max-w-[170px]" title={item.name}>
-														{item.name || 'পণ্য আইটেম'}
-													</div>
-													<div class="text-[10px] text-slate-400 font-medium">
-														পরিমাণ: <span class="font-bold font-mono text-slate-700">{item.quantity || 1}</span> টি
-													</div>
-												</div>
-											</div>
-										{/each}
-									</div>
+								<td class="py-4 px-4 min-w-[190px]">
+									<OrderProductsCell
+										{items}
+										orderNumber={order.orderNumber}
+										orderId={order.id}
+									/>
 								</td>
 
 								<!-- Total -->

@@ -29,6 +29,7 @@
 	import ScrollableStatusTabs from '../../_components/orders/ScrollableStatusTabs.svelte';
 	import OrderSourceBadge from '../../_components/orders/OrderSourceBadge.svelte';
 	import BulkCourierProgressModal from '../../_components/orders/BulkCourierProgressModal.svelte';
+	import OrderProductsCell from '../../_components/orders/OrderProductsCell.svelte';
 
 	let { data }: { data: any } = $props();
 
@@ -478,42 +479,13 @@
 										</div>
 									</td>
 
-									<!-- Products with Small Thumbnail Image -->
-									<td class="py-4 px-4">
-										{#if items.length === 0}
-											<span class="text-slate-400 text-xs">আইটেম নেই</span>
-										{:else}
-											<div class="space-y-1.5">
-												{#each items as item}
-													<div class="flex items-center gap-2.5">
-														<!-- Small Product Thumbnail -->
-														<div class="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200/90 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
-															{#if item.image}
-																<img
-																	src={item.image}
-																	alt={item.name}
-																	class="w-full h-full object-cover"
-																	onerror={(e) => {
-																		(e.target as HTMLElement).style.display = 'none';
-																	}}
-																/>
-															{:else}
-																<ShoppingBag class="w-4 h-4 text-slate-400" />
-															{/if}
-														</div>
-
-														<div class="min-w-0">
-															<div class="font-bold text-slate-900 text-xs truncate max-w-[170px]" title={item.name}>
-																{item.name || 'পণ্য আইটেম'}
-															</div>
-															<span class="text-[10px] text-slate-400 font-mono font-medium">
-																{item.quantity || 1} টি × ৳{item.price || 0}
-															</span>
-														</div>
-													</div>
-												{/each}
-											</div>
-										{/if}
+									<!-- Products with Small Thumbnail Images & Modal details -->
+									<td class="py-4 px-4 min-w-[190px]">
+										<OrderProductsCell
+											{items}
+											orderNumber={order.orderNumber}
+											orderId={order.id}
+										/>
 									</td>
 
 									<!-- Total -->

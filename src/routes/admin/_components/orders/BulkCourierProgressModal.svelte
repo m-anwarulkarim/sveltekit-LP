@@ -2,6 +2,7 @@
 	import { untrack } from 'svelte';
 	import { deserialize } from '$app/forms';
 	import { Button, Dialog } from '#lib/components/ui';
+	import { toast } from 'svelte-sonner';
 	import { CheckCircle2, XCircle, Loader2, Clock, RotateCcw, AlertTriangle, Settings } from 'lucide-svelte';
 
 	type RowStatus = 'pending' | 'running' | 'success' | 'failed' | 'skipped';
@@ -108,7 +109,22 @@
 			await bookOne(row);
 		}
 		isRunning = false;
-		onfinish?.(rows.filter((r) => r.status === 'success').map((r) => r.id));
+		const successful = rows.filter((r) => r.status === 'success');
+		onfinish?.(successful.map((r) => r.id));
+
+		if (successCount === total && total > 0) {
+			toast.success(`অভিনন্দন! সফলভাবে ${total}টি অর্ডার ${providerName} কুরিয়ারে বুক সম্পন্ন হয়েছে!`, {
+				duration: 4000
+			});
+		} else if (successCount > 0) {
+			toast.warning(`${successCount}টি অর্ডার বুক হয়েছে, ${failedCount}টি অর্ডার ব্যর্থ হয়েছে।`, {
+				duration: 5000
+			});
+		} else if (failedCount > 0) {
+			toast.error(`${providerName} কুরিয়ার বুকিং ব্যর্থ হয়েছে। ত্রুটির বিবরণ নিচে দেখুন।`, {
+				duration: 5000
+			});
+		}
 	}
 
 	function retryFailed() {

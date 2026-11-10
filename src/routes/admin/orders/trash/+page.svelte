@@ -27,10 +27,7 @@
 		}
 	}
 
-	// Only explicitly trashed orders (not just cancelled)
-	let trashedOrders = $derived(
-		(data.orders || []).filter((o: any) => o.isTrashed)
-	);
+	let trashedOrders = $derived(data.orders || []);
 
 	let filteredOrders = $derived(
 		trashedOrders.filter((order: any) => {
@@ -265,9 +262,23 @@
 								</td>
 
 								<td class="py-3.5 px-4 text-center">
-									<Badge variant="destructive" class="text-[10px] px-2 py-0.5">
-										ট্র্যাশ
-									</Badge>
+									{#if order.isTrashed}
+										<Badge variant="destructive" class="text-[10px] px-2 py-0.5">
+											ট্র্যাশ
+										</Badge>
+									{:else if order.status === 'cancelled'}
+										<Badge variant="outline" class="text-[10px] px-2 py-0.5 border-rose-200 text-rose-600 bg-rose-50">
+											বাতিল
+										</Badge>
+									{:else if order.status === 'refunded'}
+										<Badge variant="outline" class="text-[10px] px-2 py-0.5 border-amber-200 text-amber-600 bg-amber-50">
+											রিফান্ড
+										</Badge>
+									{:else}
+										<Badge variant="destructive" class="text-[10px] px-2 py-0.5">
+											ট্র্যাশ
+										</Badge>
+									{/if}
 								</td>
 
 								<td class="py-3.5 px-4 text-right">

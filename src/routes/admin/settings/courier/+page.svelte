@@ -127,17 +127,6 @@
 				if (target) {
 					loadProviderToForm(target.id, false);
 				}
-			} else if (!isAddingNew) {
-				// Keep credentials hydrated if fields are empty
-				const existing = courierMethods.find((m) => m.id === selectedProviderId);
-				if (existing && existing.credentials) {
-					const creds = existing.credentials;
-					if (creds.apiKey && !formApiKey) formApiKey = creds.apiKey;
-					if (creds.secretKey && !formSecretKey) formSecretKey = creds.secretKey;
-					if (existing.specialInstruction && !formSpecialInstruction) {
-						formSpecialInstruction = existing.specialInstruction;
-					}
-				}
 			}
 		} else if (!hasInitialized && courierMethods.length === 0) {
 			hasInitialized = true;
@@ -175,7 +164,17 @@
 		const fd = new FormData();
 		fd.append('id', courierId);
 		try {
-			await fetch('?/setDefault', { method: 'POST', body: fd });
+			const res = await fetch('?/setDefault', { method: 'POST', body: fd });
+			if (!res.ok) {
+				toast.error('ডিফল্ট কুরিয়ার সেট করতে সমস্যা হয়েছে');
+				return;
+			}
+			const raw = await res.text();
+			const result = deserialize(raw) as any;
+			if (result.type === 'failure') {
+				toast.error(result.data?.message || 'ডিফল্ট কুরিয়ার সেট করতে সমস্যা হয়েছে');
+				return;
+			}
 			defaultProvider = courierId;
 			courierMethods = courierMethods.map((m) => ({
 				...m,
@@ -184,6 +183,7 @@
 			toast.success(`${targetName} সক্রিয় কুরিয়ার মেথড হিসেবে নির্বাচিত হয়েছে!`);
 		} catch (e) {
 			console.error('Failed to set default courier:', e);
+			toast.error('ডিফল্ট কুরিয়ার সেট করতে সমস্যা হয়েছে');
 		}
 	}
 
@@ -198,6 +198,30 @@
 				toast.warning('অনুগ্রহ করে Steadfast Secret Key ইনপুট দিন');
 				return;
 			}
+		} else if (selectedProviderId === 'pathao') {
+			if (!formApiKey.trim() || !formSecretKey.trim()) {
+				toast.warning('অনুগ্রহ করে Pathao Client ID ও Secret Key ইনপুট দিন');
+				return;
+			}
+			if (!formUsername.trim() || !formPassword.trim()) {
+				toast.warning('অনুগ্রহ করে Pathao Username ও Password ইনপুট দিন');
+				return;
+			}
+		} else if (selectedProviderId === 'paperfly') {
+			if (!formUsername.trim() || !formPassword.trim() || !formPaperflyKey.trim()) {
+				toast.warning('অনুগ্রহ করে Paperfly Username, Password ও Key ইনপুট দিন');
+				return;
+			}
+		} else if (selectedProviderId === 'carrybee') {
+			if (!formApiKey.trim() || !formSecretKey.trim()) {
+				toast.warning('অনুগ্রহ করে CarryBee API Key ও Secret Key ইনপুট দিন');
+				return;
+			}
+		} else if (selectedProviderId === 'redx') {
+			if (!formApiAccessToken.trim()) {
+				toast.warning('অনুগ্রহ করে REDX Access Token ইনপুট দিন');
+				return;
+			}
 		}
 
 		isSaving = true;
@@ -206,11 +230,15 @@
 		const providerMeta = ALL_PROVIDERS.find((p) => p.id === selectedProviderId);
 		const providerName = providerMeta?.name || 'Courier';
 
+		// Preserve existing default status; only make default if it is currently default or if no methods exist
+		const existingMethod = courierMethods.find((m) => m.id === selectedProviderId);
+		const isCurrentDefault = existingMethod ? existingMethod.isDefault : (courierMethods.length === 0);
+
 		const fd = new FormData();
 		fd.append('providerId', selectedProviderId);
 		fd.append('providerName', providerName);
 		fd.append('specialInstruction', formSpecialInstruction);
-		fd.append('isDefault', 'true');
+		fd.append('isDefault', isCurrentDefault ? 'true' : 'false');
 
 		// Provider-specific credentials
 		if (selectedProviderId === 'steadfast') {
@@ -252,7 +280,7 @@
 					id: selectedProviderId,
 					name: providerName,
 					isEnabled: true,
-					isDefault: true,
+					isDefault: isCurrentDefault,
 					credentials: {
 						apiKey: formApiKey.trim(),
 						secretKey: formSecretKey.trim(),
@@ -356,11 +384,12 @@
 				};
 				toast.error(errorMsg);
 			} else {
+				const errorMsg = (result as any)?.data?.message || 'কানেকশন টেস্ট ব্যর্থ হয়েছে';
 				testFeedback = {
-					success: true,
-					message: 'এপিআই সংযোগ সফল এবং সক্রিয় পাওয়া গেছে!'
+					success: false,
+					message: errorMsg
 				};
-				toast.success('এপিআই সংযোগ সফল এবং সক্রিয়!');
+				toast.error(errorMsg);
 			}
 		} catch (e: any) {
 			const errorMsg = e?.message || 'কানেকশন টেস্ট ব্যর্থ হয়েছে';
@@ -391,7 +420,18 @@
 		fd.append('id', id);
 
 		try {
-			await fetch('?/deleteCourier', { method: 'POST', body: fd });
+			const res = await fetch('?/deleteCourier', { method: 'POST', body: fd });
+			if (!res.ok) {
+				toast.error('কুরিয়ার মেথড মুছে ফেলতে সমস্যা হয়েছে');
+				return;
+			}
+			const raw = await res.text();
+			const result = deserialize(raw) as any;
+			if (result.type === 'failure') {
+				toast.error(result.data?.message || 'কুরিয়ার মেথড মুছে ফেলতে সমস্যা হয়েছে');
+				return;
+			}
+
 			await invalidateAll();
 			toast.success(`${name} কনফিগারেশন মুছে ফেলা হয়েছে`);
 
@@ -440,7 +480,15 @@
 		{#each courierMethods as courier (courier.id)}
 			{@const isSelected = selectedProviderId === courier.id && !isAddingNew}
 			<div
+				role="button"
+				tabindex="0"
 				onclick={() => selectActiveCourier(courier.id)}
+				onkeydown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault();
+						selectActiveCourier(courier.id);
+					}
+				}}
 				class="relative p-4 rounded-2xl transition-all cursor-pointer border text-left flex items-center justify-between gap-3 shadow-2xs group {isSelected
 					? 'bg-white border-[#5845eb] ring-2 ring-[#5845eb]/20 shadow-[0_4px_16px_-4px_rgba(88,69,235,0.15)]'
 					: 'bg-white border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/60'}"
@@ -563,7 +611,7 @@
 					<label class="block text-xs font-bold text-slate-600">API Key</label>
 					<Input
 						type="text"
-						placeholder="যেমন: /ffdcpexos6kxyn43qy5cvudjplztv99"
+						placeholder="যেমন: st_api_key_xxxxxxxx"
 						bind:value={formApiKey}
 						class="font-mono text-xs h-11 rounded-xl bg-slate-50/70 focus:bg-white"
 					/>
@@ -574,7 +622,7 @@
 					<div class="relative">
 						<Input
 							type={showSecret ? 'text' : 'password'}
-							placeholder="যেমন: rbxqqq8r0u6ssvy3hue4hmtk"
+							placeholder="যেমন: st_secret_xxxxxxxx"
 							bind:value={formSecretKey}
 							class="font-mono text-xs h-11 rounded-xl bg-slate-50/70 focus:bg-white pr-10"
 						/>
@@ -600,7 +648,7 @@
 						<label class="block text-xs font-bold text-slate-600">API Key (Client ID)</label>
 						<Input
 							type="text"
-							placeholder="যেমন: 5xe7LIra7r"
+							placeholder="যেমন: pt_client_id_xxxx"
 							bind:value={formApiKey}
 							class="font-mono text-xs h-11 rounded-xl bg-slate-50/70 focus:bg-white"
 						/>
@@ -661,7 +709,7 @@
 					<label class="block text-xs font-bold text-slate-600">Store ID</label>
 					<Input
 						type="text"
-						placeholder="339467"
+						placeholder="যেমন: 12345"
 						bind:value={formStoreId}
 						class="font-mono text-xs h-11 rounded-xl bg-slate-50/70 focus:bg-white"
 					/>

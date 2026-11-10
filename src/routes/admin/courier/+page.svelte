@@ -36,7 +36,7 @@
 		courierFeeTotal: 0,
 		netPayableTotal: 0,
 		liveBalance: 0,
-		liveBalanceProvider: 'Steadfast',
+		liveBalanceProvider: data?.defaultProvider || 'Steadfast',
 		liveBalanceSuccess: false,
 		liveBalanceMessage: 'ব্যালেন্স সিঙ্ক হয়নি'
 	};
@@ -47,9 +47,25 @@
 	let totalMatching = $state(data?.totalMatching ?? 0);
 
 	$effect(() => {
-		kpis = data?.kpis ?? fallbackKpis;
+		const newKpis = data?.kpis ?? fallbackKpis;
+		// Preserve client live balance if already successfully fetched
+		kpis = {
+			...newKpis,
+			liveBalance: kpis.liveBalanceSuccess ? kpis.liveBalance : (newKpis.liveBalance ?? 0),
+			liveBalanceProvider: kpis.liveBalanceSuccess ? kpis.liveBalanceProvider : (newKpis.liveBalanceProvider ?? (data?.defaultProvider || 'Steadfast')),
+			liveBalanceSuccess: kpis.liveBalanceSuccess || (newKpis.liveBalanceSuccess ?? false),
+			liveBalanceMessage: kpis.liveBalanceSuccess ? kpis.liveBalanceMessage : (newKpis.liveBalanceMessage ?? fallbackKpis.liveBalanceMessage)
+		};
 		consignments = data?.consignments ?? [];
 		totalMatching = data?.totalMatching ?? 0;
+
+		// Keep filter states in sync with server URL params (e.g. on browser Back / Forward)
+		if (data?.filters) {
+			selectedDateRange = data.filters.dateRange || 'all';
+			selectedProvider = data.filters.provider || 'all';
+			selectedStatus = data.filters.status || 'all';
+			searchQuery = data.filters.search || '';
+		}
 	});
 
 	// Filter states initialized from server data
@@ -187,7 +203,18 @@
 		handleRefreshBalance(true);
 	});
 
-	// CSV Export
+	// Sanitize CSV cell against formula injection and escape quotes
+	function sanitizeCsvCell(val: any): string {
+		if (val === null || val === undefined) return '""';
+		let str = String(val).replace(/"/g, '""');
+		// Prevent CSV formula injection in spreadsheet applications (=, +, -, @)
+		if (/^[=+\-@\t\r]/.test(str)) {
+			str = "'" + str;
+		}
+		return `"${str}"`;
+	}
+
+	// CSV Export with Blob and formula injection protection
 	function handleExportCsv() {
 		const targetList = selectedIds.length > 0
 			? consignments.filter((c) => selectedIds.includes(c.id))
@@ -214,35 +241,37 @@
 		];
 
 		const rows = targetList.map((item) => [
-			item.orderNumber,
-			`"${(item.customerName || '').replace(/"/g, '""')}"`,
-			item.customerPhone,
-			`"${(item.shippingAddress || '').replace(/"/g, '""')}"`,
-			item.courierProvider,
-			item.trackingCode,
-			item.consignmentId,
-			item.codAmount,
-			item.courierCost,
-			item.netPayable,
-			item.courierStatus,
-			item.createdAt ? new Date(item.createdAt).toISOString().split('T')[0] : ''
+			sanitizeCsvCell(item.orderNumber),
+			sanitizeCsvCell(item.customerName),
+			sanitizeCsvCell(item.customerPhone),
+			sanitizeCsvCell(item.shippingAddress),
+			sanitizeCsvCell(item.courierProvider),
+			sanitizeCsvCell(item.trackingCode),
+			sanitizeCsvCell(item.consignmentId),
+			sanitizeCsvCell(item.codAmount),
+			sanitizeCsvCell(item.courierCost),
+			sanitizeCsvCell(item.netPayable),
+			sanitizeCsvCell(item.courierStatus),
+			sanitizeCsvCell(item.createdAt ? new Date(item.createdAt).toISOString().split('T')[0] : '')
 		]);
 
-		const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-		const encodedUri = encodeURI(csvContent);
+		const csvContent = [headers.join(','), ...rows.map((e) => e.join(','))].join('\r\n');
+		const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+		const blobUrl = URL.createObjectURL(blob);
 		const link = document.createElement('a');
-		link.setAttribute('href', encodedUri);
+		link.setAttribute('href', blobUrl);
 		link.setAttribute('download', `courier_manifest_${new Date().toISOString().split('T')[0]}.csv`);
 		document.body.appendChild(link);
 		link.click();
 		document.body.removeChild(link);
+		URL.revokeObjectURL(blobUrl);
 
 		toast.success(`${targetList.length}টি পার্সেলের CSV সফলভাবে ডাউনলোড হয়েছে!`);
 	}
 </script>
 
 <svelte:head>
-	<title>কুরিয়ার হাব ও পেমেন্ট ট্র্যাকিং | AURA Admin</title>
+	<title>কুরিয়ার হাব ও পেমেন্ট ট্র্যাকিং | Haq Plus Admin</title>
 </svelte:head>
 
 <div class="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto font-['Plus_Jakarta_Sans',sans-serif]">

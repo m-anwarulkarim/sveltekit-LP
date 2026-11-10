@@ -100,9 +100,9 @@
 					originalPrice,
 					saveAmount,
 					deliveryFee: p.freeDelivery ? 0 : (Number(p.deliveryFee) || 0),
-					freeDelivery: Boolean(p.freeDelivery || i > 0),
+					freeDelivery: Boolean(p.freeDelivery),
 					tag: p.tag || (i === 1 ? '🔥 সবচেয়ে জনপ্রিয়' : i === 2 ? '🚀 মেগা সেভার কম্বো' : ''),
-					popular: i === 1 || p.popular
+					popular: Boolean(p.popular) || i === 1
 				};
 			});
 		}

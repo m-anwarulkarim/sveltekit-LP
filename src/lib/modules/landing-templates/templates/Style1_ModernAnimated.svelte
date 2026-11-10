@@ -92,19 +92,22 @@
 	let packages = $derived.by(() => {
 		const raw = config?.packages;
 		if (Array.isArray(raw) && raw.length > 0) {
-			return raw.map((p: any, i: number) => ({
-				id: p.id || `pack_${i + 1}`,
-				qty: p.qty || (i + 1),
-				title: p.title || `${i + 1}টি প্যাকেট`,
-				subtitle: p.subtitle || '',
-				freeGift: p.freeGift || '',
-				price: Number(p.price) || (basePrice * (i + 1)),
-				originalPrice: Number(p.originalPrice) || (baseOriginalPrice * (i + 1)),
-				deliveryFee: p.freeDelivery ? 0 : (Number(p.deliveryFee) || (i === 0 ? 60 : 0)),
-				freeDelivery: Boolean(p.freeDelivery || i > 0),
-				tag: p.tag || (i === 1 ? '🔥 সেরা অফার' : i === 2 ? '🚀 সর্বোচ্চ সাশ্রয়ী' : ''),
-				popular: i === 1 || p.popular
-			}));
+			return raw.map((p: any, i: number) => {
+				const isFreeDelivery = Boolean(p.freeDelivery);
+				return {
+					id: p.id || `pack_${i + 1}`,
+					qty: p.qty || (i + 1),
+					title: p.title || `${i + 1}টি প্যাকেট`,
+					subtitle: p.subtitle || '',
+					freeGift: p.freeGift || '',
+					price: Number(p.price) || (basePrice * (i + 1)),
+					originalPrice: Number(p.originalPrice) || (baseOriginalPrice * (i + 1)),
+					deliveryFee: isFreeDelivery ? 0 : (Number(p.deliveryFee) || 60),
+					freeDelivery: isFreeDelivery,
+					tag: p.tag || (i === 1 ? '🔥 সেরা অফার' : i === 2 ? '🚀 সর্বোচ্চ সাশ্রয়ী' : ''),
+					popular: Boolean(p.popular) || i === 1
+				};
+			});
 		}
 		return [];
 	});

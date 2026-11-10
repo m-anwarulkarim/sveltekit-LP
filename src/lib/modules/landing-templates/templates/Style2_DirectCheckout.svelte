@@ -119,10 +119,10 @@
 				subtitle: p.subtitle || '',
 				price: Number(p.price) || (basePrice * (i + 1)),
 				originalPrice: Number(p.originalPrice) || (originalBasePrice * (i + 1)),
-				deliveryFee: p.freeDelivery ? 0 : (Number(p.deliveryFee) || (i === 0 ? 45 : 0)),
-				freeDelivery: Boolean(p.freeDelivery || i > 0),
+				deliveryFee: p.freeDelivery ? 0 : (Number(p.deliveryFee) || 45),
+				freeDelivery: Boolean(p.freeDelivery),
 				tag: p.tag || (i === 1 ? '🔥 সেরা অফার' : i === 2 ? '🚀 সর্বোচ্চ সাশ্রয়ী' : ''),
-				popular: i === 1 || p.popular
+				popular: Boolean(p.popular) || i === 1
 			}));
 		}
 		// If rawPackages is explicitly defined and empty:

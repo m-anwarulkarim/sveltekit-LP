@@ -530,12 +530,15 @@ export class OrderService {
 		const rows = await db
 			.select({
 				id: schema.orders.id,
+				orderNumber: schema.orders.orderNumber,
 				status: schema.orders.status,
 				total: schema.orders.total,
 				createdAt: schema.orders.createdAt,
 				customerName: schema.orders.customerName,
+				customerPhone: schema.orders.customerPhone,
 				customerEmail: schema.orders.customerEmail,
 				shippingAddress: schema.orders.shippingAddress,
+				deliveryArea: schema.orders.deliveryArea,
 				isTrashed: schema.orders.isTrashed
 			})
 			.from(schema.orders)

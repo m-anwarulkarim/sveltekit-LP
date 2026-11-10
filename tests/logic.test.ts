@@ -24,6 +24,7 @@ import { load as checkoutLoad } from '../src/routes/checkout/+page.server';
 import { actions as lpActions } from '../src/routes/lp/[slug]/+page.server';
 import { resolveLandingOffer, computeCouponDiscount, parseCartItemId } from '../src/lib/utils/order-pricing';
 import { VisitorAnalyticsService } from '../src/lib/server/services/visitor-analytics.service';
+import { load as courierLoad } from '../src/routes/admin/courier/+page.server';
 import { SeoService } from '../src/lib/server/services/seo.service';
 import { SettingsService } from '../src/lib/server/services/settings.service';
 import { CourierService } from '../src/lib/server/services/courier.service';
@@ -808,6 +809,16 @@ await test('courier: getCourierHubData returns resilient KPIs and consignment li
 	assert.equal(typeof hubData.kpis.deliverySuccessRate, 'number');
 	assert.ok(Array.isArray(hubData.consignments));
 	assert.equal(typeof hubData.totalMatching, 'number');
+});
+
+await test('courier: admin courier page load succeeds without throwing', async () => {
+	const url = new URL('http://localhost/admin/courier');
+	const result = await courierLoad({ url, platform: { env: { DB: sqlite } } } as any);
+	assert.ok(result);
+	assert.ok(result.kpis);
+	assert.ok(Array.isArray(result.consignments));
+	assert.ok(Array.isArray(result.courierMethods));
+	assert.equal(result.defaultProvider, 'steadfast');
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -154,7 +155,7 @@
 	}
 
 	// Refresh Live Balance
-	async function handleRefreshBalance() {
+	async function handleRefreshBalance(silent = false) {
 		isRefreshingBalance = true;
 		try {
 			const res = await fetch('/api/admin/courier/balance');
@@ -166,16 +167,25 @@
 					liveBalanceProvider: result.provider,
 					liveBalanceSuccess: true
 				};
-				toast.success('কুরিয়ার লাইভ ব্যালেন্স আপডেট হয়েছে!');
+				if (!silent) toast.success('কুরিয়ার লাইভ ব্যালেন্স আপডেট হয়েছে!');
 			} else {
-				toast.error(result?.message || 'ব্যালেন্স আপডেট করা যায়নি');
+				kpis = {
+					...kpis,
+					liveBalanceSuccess: false,
+					liveBalanceMessage: result?.message || 'ব্যালেন্স আপডেট করা যায়নি'
+				};
+				if (!silent) toast.error(result?.message || 'ব্যালেন্স আপডেট করা যায়নি');
 			}
 		} catch (err) {
-			toast.error('ব্যালেন্স ফেচ করতে সমস্যা হয়েছে');
+			if (!silent) toast.error('ব্যালেন্স ফেচ করতে সমস্যা হয়েছে');
 		} finally {
 			isRefreshingBalance = false;
 		}
 	}
+
+	onMount(() => {
+		handleRefreshBalance(true);
+	});
 
 	// CSV Export
 	function handleExportCsv() {

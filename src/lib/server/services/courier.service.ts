@@ -316,12 +316,12 @@ export class CourierService {
 						if (cleanText.toLowerCase().includes('account is')) {
 							return {
 								success: false,
-								message: `Paperfly এরর: "${cleanText}"`
+								message: `Steadfast অ্যাকাউন্ট এরর: "${cleanText}" — আপনার Steadfast মার্চেন্ট অ্যাকাউন্টটি এখনো সক্রিয় (Active) বা অনুমোদিত নয়। অনুগ্রহ করে Steadfast কাস্টমার কেয়ার/ম্যানেজারের সাথে কথা বলে অ্যাকাউন্টটি সক্রিয় (Activate) করে নিন।`
 							};
 						}
 						return {
 							success: false,
-							message: `Paperfly সার্ভার থেকে অবৈধ রেসপন্স এসেছে: ${cleanText.slice(0, 150)}`
+							message: `Steadfast সার্ভার থেকে অবৈধ রেসপন্স এসেছে: ${cleanText.slice(0, 150)}`
 						};
 					}
 					if (res.ok && data.status === 200) {
@@ -536,12 +536,12 @@ export class CourierService {
 						if (cleanText.toLowerCase().includes('account is')) {
 							return {
 								success: false,
-								message: `Steadfast এরর: "${cleanText}" — আপনার মার্চেন্ট অ্যাকাউন্টটি এখনো সক্রিয় (Active) বা ভেরিফাই করা হয়নি।`
+								message: `Paperfly অ্যাকাউন্ট এরর: "${cleanText}" — আপনার Paperfly মার্চেন্ট অ্যাকাউন্টটি এখনো সক্রিয় (Active) বা ভেরিফাই করা হয়নি।`
 							};
 						}
 						return {
 							success: false,
-							message: `Steadfast সার্ভার থেকে অবৈধ রেসপন্স এসেছে: ${cleanText.slice(0, 150)}`
+							message: `Paperfly সার্ভার থেকে অবৈধ রেসপন্স এসেছে: ${cleanText.slice(0, 150)}`
 						};
 					}
 						return {
@@ -604,12 +604,12 @@ export class CourierService {
 						if (cleanText.toLowerCase().includes('account is')) {
 							return {
 								success: false,
-								message: `Steadfast এরর: "${cleanText}" — আপনার মার্চেন্ট অ্যাকাউন্টটি এখনো সক্রিয় (Active) বা ভেরিফাই করা হয়নি।`
+								message: `Paperfly অ্যাকাউন্ট এরর: "${cleanText}" — আপনার Paperfly মার্চেন্ট অ্যাকাউন্টটি এখনো সক্রিয় (Active) বা ভেরিফাই করা হয়নি।`
 							};
 						}
 						return {
 							success: false,
-							message: `Steadfast সার্ভার থেকে অবৈধ রেসপন্স এসেছে: ${cleanText.slice(0, 150)}`
+							message: `Paperfly সার্ভার থেকে অবৈধ রেসপন্স এসেছে: ${cleanText.slice(0, 150)}`
 						};
 					}
 						return {
@@ -1182,8 +1182,6 @@ export class CourierService {
 				if (!apiKey || !secretKey) {
 					return { success: false, balance: 0, currency: 'BDT', provider: 'Steadfast', message: 'Steadfast API Key/Secret নেই' };
 				}
-				const controller = new AbortController();
-				const timer = setTimeout(() => controller.abort(), 6000);
 				try {
 					const res = await fetch('https://portal.packzy.com/api/v1/get_balance', {
 						method: 'GET',
@@ -1192,10 +1190,37 @@ export class CourierService {
 							'Secret-Key': secretKey,
 							'Content-Type': 'application/json'
 						},
-						signal: controller.signal
+						signal: AbortSignal.timeout(6000)
 					});
-					clearTimeout(timer);
-					const data: any = await res.json().catch(() => ({}));
+
+					const rawText = await res.text();
+					let data: any = null;
+					try {
+						data = JSON.parse(rawText);
+					} catch {
+						// Non-JSON plain text response
+					}
+
+					if (!data) {
+						const cleanText = rawText.replace(/<[^>]*>/g, '').trim();
+						if (cleanText.toLowerCase().includes('account is')) {
+							return {
+								success: false,
+								balance: 0,
+								currency: 'BDT',
+								provider: 'Steadfast',
+								message: `অ্যাকাউন্ট এরর: "${cleanText}" — আপনার মার্চেন্ট অ্যাকাউন্টটি এখনো সক্রিয় নয়।`
+							};
+						}
+						return {
+							success: false,
+							balance: 0,
+							currency: 'BDT',
+							provider: 'Steadfast',
+							message: cleanText ? `সার্ভার রেসপন্স: ${cleanText.slice(0, 100)}` : 'ব্যালেন্স পাওয়া যায়নি'
+						};
+					}
+
 					if (res.ok && data?.current_balance !== undefined) {
 						return {
 							success: true,
@@ -1204,6 +1229,17 @@ export class CourierService {
 							provider: 'Steadfast'
 						};
 					}
+
+					if (res.status === 401 || data?.status === 401) {
+						return {
+							success: false,
+							balance: 0,
+							currency: 'BDT',
+							provider: 'Steadfast',
+							message: 'Steadfast অথেন্টিকেশন ব্যর্থ: ভুল API Key অথবা Secret Key দেওয়া হয়েছে।'
+						};
+					}
+
 					return {
 						success: false,
 						balance: 0,
@@ -1212,13 +1248,12 @@ export class CourierService {
 						message: data?.message || 'ব্যালেন্স আনা যায়নি'
 					};
 				} catch (fetchErr: any) {
-					clearTimeout(timer);
 					return {
 						success: false,
 						balance: 0,
 						currency: 'BDT',
 						provider: 'Steadfast',
-						message: fetchErr.name === 'AbortError' ? 'API টাইমআউট হয়েছে' : 'Steadfast কানেকশন ত্রুটি'
+						message: fetchErr.name === 'TimeoutError' || fetchErr.name === 'AbortError' ? 'API টাইমআউট হয়েছে' : 'Steadfast কানেকশন ত্রুটি'
 					};
 				}
 			}
@@ -1428,15 +1463,7 @@ export class CourierService {
 			const deliverySuccessRate = totalResolved > 0 ? Number(((deliveredCount / totalResolved) * 100).toFixed(1)) : 100;
 			const netPayableTotal = Math.max(0, deliveredCodAmount - courierFeeTotal);
 
-			// Fetch live balance safely
-			const liveBal = await this.getLiveBalance(db).catch(() => ({
-				success: false,
-				balance: 0,
-				currency: 'BDT',
-				provider: 'Steadfast',
-				message: 'অফলাইন'
-			}));
-
+			// Default live balance representation; real-time balance is fetched on client demand to avoid blocking SSR
 			const kpis: CourierHubKPIs = {
 				dispatchedToday,
 				inTransitCount,
@@ -1449,10 +1476,10 @@ export class CourierService {
 				deliveredCodAmount,
 				courierFeeTotal,
 				netPayableTotal,
-				liveBalance: liveBal.balance,
-				liveBalanceProvider: liveBal.provider,
-				liveBalanceSuccess: liveBal.success,
-				liveBalanceMessage: liveBal.message
+				liveBalance: 0,
+				liveBalanceProvider: 'Steadfast',
+				liveBalanceSuccess: false,
+				liveBalanceMessage: 'ব্যালেন্স দেখতে রিফ্রেশ চাপুন'
 			};
 
 			return {

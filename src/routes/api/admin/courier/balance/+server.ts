@@ -17,8 +17,7 @@ export const GET: RequestHandler = async ({ platform }) => {
 	} catch (error: any) {
 		console.error('Error in /api/admin/courier/balance:', error);
 		return json(
-			{ success: false, balance: 0, currency: 'BDT', message: error.message || 'ব্যালেন্স আনা যায়নি।' },
-			{ status: 500 }
+			{ success: false, balance: 0, currency: 'BDT', message: error.message || 'ব্যালেন্স আনা যায়নি।' }
 		);
 	}
 };

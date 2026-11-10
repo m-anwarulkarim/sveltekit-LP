@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types';
 import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, or } from 'drizzle-orm';
 
 export const GET: RequestHandler = async ({ platform, url }) => {
 	const siteUrl = (url?.origin || 'https://seedbd.shop').replace(/\/$/, '');
@@ -39,14 +39,14 @@ export const GET: RequestHandler = async ({ platform, url }) => {
 	try {
 		const db = getDb(platform);
 
-		// 1. Published Single Products
+		// 1. Published Single Products (Accepts 'published' or 'active')
 		const publishedProducts = await db
 			.select({
 				slug: schema.products.slug,
 				updatedAt: schema.products.updatedAt
 			})
 			.from(schema.products)
-			.where(eq(schema.products.status, 'active'))
+			.where(or(eq(schema.products.status, 'published'), eq(schema.products.status, 'active')))
 			.all();
 
 		dynamicProductUrls = publishedProducts.map((p) => ({
@@ -73,14 +73,14 @@ export const GET: RequestHandler = async ({ platform, url }) => {
 			lastmod: lp.updatedAt ? new Date(lp.updatedAt).toISOString().split('T')[0] : now
 		}));
 
-		// 3. Published Categories
+		// 3. Active Categories
 		const publishedCategories = await db
 			.select({
 				slug: schema.categories.slug,
 				updatedAt: schema.categories.updatedAt
 			})
 			.from(schema.categories)
-			.where(eq(schema.categories.status, 'publish'))
+			.where(eq(schema.categories.isActive, true))
 			.all();
 
 		dynamicCategoryUrls = publishedCategories.map((c) => ({

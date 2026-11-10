@@ -94,6 +94,8 @@
 	let editItem = $state<any | null>(null);
 	let editReason = $state('');
 	let editDuration = $state<'permanent' | '24h' | '7d' | '30d'>('permanent');
+	let editIp = $state('');
+	let editPhone = $state('');
 
 	// Common Fraud Reasons
 	const COMMON_REASONS = [
@@ -140,6 +142,15 @@
 	}
 
 	async function unblockItem(id: string, ip: string) {
+		const confirmed = await confirmModal({
+			title: 'আনব্লক নিশ্চিতকরণ',
+			message: `আপনি কি নিশ্চিতভাবে '${ip}' আনব্লক করতে চান?`,
+			confirmText: 'হ্যাঁ, আনব্লক করুন',
+			variant: 'warning',
+			icon: 'alert'
+		});
+		if (!confirmed) return;
+
 		blockedList = blockedList.filter((item) => item.id !== id);
 		selectedIds = selectedIds.filter((item) => item !== id);
 		totalBlocked = Math.max(0, totalBlocked - 1);
@@ -263,6 +274,8 @@
 
 	function openEditModal(item: any) {
 		editItem = { ...item };
+		editIp = item.ipAddress || '';
+		editPhone = item.phoneNo || '';
 		editReason = item.reason || 'Restricted Activity';
 		editDuration = item.isPermanent ? 'permanent' : '7d';
 	}
@@ -274,6 +287,8 @@
 		isSaving = true;
 		const formData = new FormData();
 		formData.append('id', editItem.id);
+		formData.append('ipAddress', editIp.trim());
+		formData.append('phoneNo', editPhone.trim());
 		formData.append('reason', editReason.trim());
 		formData.append('duration', editDuration);
 
@@ -287,6 +302,8 @@
 				if (item.id === editItem.id) {
 					return {
 						...item,
+						ipAddress: editIp.trim() || item.ipAddress,
+						phoneNo: editPhone.trim() || item.phoneNo,
 						reason: editReason.trim(),
 						isPermanent: editDuration === 'permanent',
 						blockUntil: editDuration === 'permanent' ? 'Permanent' : 'Temporary'
@@ -295,13 +312,12 @@
 				return item;
 			});
 
-			showToast('ব্লক রেকর্ড সফলভাবে আপডেট করা হয়েছে!');
+			showToast('ব্লক রেকর্ড সফলভাবে আপডেট করা হয়েছে!');
 			await invalidateAll();
 			editItem = null;
 		} catch (err) {
 			console.error('Failed to update block:', err);
-			showToast('আপডেট করতে ব্যর্থ হয়েছে');
-		} finally {
+			showToast('আপডেট করতে ব্যর্থ হয়েছে');
 			isSaving = false;
 		}
 	}
@@ -398,6 +414,16 @@
 			>
 				<Download class="w-3.5 h-3.5 text-slate-500" />
 				<span>Export CSV</span>
+			</Button>
+
+			<Button
+				variant="outline"
+				size="sm"
+				onclick={() => invalidateAll()}
+				class="h-9 px-3.5 gap-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border-slate-200 rounded-xl shadow-2xs cursor-pointer"
+			>
+				<RotateCw class="w-3.5 h-3.5 text-slate-500" />
+				<span>Refresh</span>
 			</Button>
 
 			<Button
@@ -607,7 +633,86 @@
 			</div>
 		</div>
 
-		<div class="overflow-x-auto">
+
+		<!-- Mobile Card View -->
+		<div class="md:hidden divide-y divide-slate-100">
+			{#if filteredList.length === 0}
+				<div class="py-14 text-center text-slate-400">
+					<div class="flex flex-col items-center justify-center gap-2">
+						<div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+							<ShieldCheck class="w-6 h-6 stroke-[2]" />
+						</div>
+						<span class="font-bold text-sm text-slate-800">কোনো ব্লক করা আইপি বা ফোন নম্বর নেই</span>
+						<p class="text-xs text-slate-400 max-w-sm">
+							আপনার স্টোরফ্রন্ট সুরক্ষিত। কোনো ফ্রড বা ক্ষতিকর ট্র্যাফিক শনাক্ত হলে তা এখানে যুক্ত হবে।
+						</p>
+					</div>
+				</div>
+			{:else}
+				{#each filteredList as item (item.id)}
+					{@const isSelected = selectedIds.includes(item.id)}
+					<div class="p-4 space-y-2.5 {isSelected ? 'bg-indigo-50/30' : ''}">
+						<div class="flex items-start justify-between gap-2">
+							<div class="flex items-center gap-2.5 min-w-0">
+								<button
+									type="button"
+									onclick={() => toggleSelectRow(item.id)}
+									class="w-4.5 h-4.5 rounded border flex items-center justify-center shrink-0 cursor-pointer {isSelected
+										? 'bg-[#5845eb] border-[#5845eb] text-white'
+										: 'border-slate-300 bg-white'}"
+								>
+									{#if isSelected}<Check class="w-3 h-3 stroke-[3]" />{/if}
+								</button>
+								<div class="min-w-0">
+									<div class="flex items-center gap-1.5">
+										<Globe class="w-3.5 h-3.5 text-slate-400 shrink-0" />
+										<span class="font-mono text-xs font-bold text-slate-900 truncate">{item.ipAddress}</span>
+									</div>
+									{#if item.phoneNo && item.phoneNo !== '-'}
+										<div class="flex items-center gap-1.5 mt-0.5">
+											<Phone class="w-3 h-3 text-slate-400 shrink-0" />
+											<span class="font-mono text-[11px] text-slate-600">{item.phoneNo}</span>
+										</div>
+									{/if}
+								</div>
+							</div>
+							<div class="flex items-center gap-1 shrink-0">
+								<button
+									type="button"
+									onclick={() => openEditModal(item)}
+									class="p-1.5 rounded-lg text-slate-500 hover:text-[#5845eb] hover:bg-indigo-50 cursor-pointer"
+								>
+									<Edit3 class="w-3.5 h-3.5" />
+								</button>
+								<button
+									type="button"
+									onclick={() => unblockItem(item.id, item.ipAddress)}
+									class="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 cursor-pointer"
+								>
+									<Trash2 class="w-3.5 h-3.5" />
+								</button>
+							</div>
+						</div>
+						<div class="flex flex-wrap items-center gap-1.5 pl-7">
+							{#if item.type?.toLowerCase().includes('auto')}
+								<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">Auto</span>
+							{:else}
+								<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-[#5845eb] border border-indigo-200">Manual</span>
+							{/if}
+							{#if item.isPermanent}
+								<Badge variant="outline" class="bg-rose-50 text-rose-700 border-rose-200 text-[10px] font-bold px-2 py-0.5">Permanent</Badge>
+							{:else}
+								<span class="text-[10px] text-slate-500 font-mono flex items-center gap-0.5"><Clock class="w-2.5 h-2.5" />{item.blockUntil}</span>
+							{/if}
+						</div>
+						<p class="text-[11px] text-slate-500 pl-7 truncate">{item.reason}</p>
+					</div>
+				{/each}
+			{/if}
+		</div>
+
+		<!-- Desktop Table View -->
+		<div class="overflow-x-auto hidden md:block">
 			<table class="w-full text-left text-xs border-collapse">
 				
 				<!-- Table Header -->
@@ -841,6 +946,18 @@
 					</div>
 				</div>
 
+				<!-- Device ID (Optional) -->
+				<div class="space-y-1.5">
+					<label for="block-device" class="text-xs font-bold text-slate-700 block">Device ID <span class="text-slate-400 font-normal">(ঐচ্ছিক)</span></label>
+					<Input
+						id="block-device"
+						type="text"
+						bind:value={manualDeviceId}
+						placeholder="e.g. abc123xyz"
+						class="text-xs font-mono rounded-xl"
+					/>
+				</div>
+
 				<!-- Duration Presets -->
 				<div class="space-y-1.5">
 					<span class="text-xs font-bold text-slate-700 block">Block Duration</span>
@@ -945,6 +1062,31 @@
 			</div>
 
 			<form onsubmit={handleUpdateBlock} class="space-y-4">
+
+				<!-- IP & Phone -->
+				<div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+					<div class="space-y-1.5">
+						<label for="edit-ip" class="text-xs font-bold text-slate-700 block">IP Address</label>
+						<Input
+							id="edit-ip"
+							type="text"
+							bind:value={editIp}
+							placeholder="e.g. 103.217.111.246"
+							class="text-xs font-mono rounded-xl"
+						/>
+					</div>
+					<div class="space-y-1.5">
+						<label for="edit-phone" class="text-xs font-bold text-slate-700 block">Phone Number</label>
+						<Input
+							id="edit-phone"
+							type="text"
+							bind:value={editPhone}
+							placeholder="e.g. 01811174567"
+							class="text-xs font-mono rounded-xl"
+						/>
+					</div>
+				</div>
+
 				
 				<!-- Duration -->
 				<div class="space-y-1.5">

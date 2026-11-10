@@ -25,6 +25,8 @@ import { actions as lpActions } from '../src/routes/lp/[slug]/+page.server';
 import { resolveLandingOffer, computeCouponDiscount, parseCartItemId } from '../src/lib/utils/order-pricing';
 import { VisitorAnalyticsService } from '../src/lib/server/services/visitor-analytics.service';
 import { SeoService } from '../src/lib/server/services/seo.service';
+import { SettingsService } from '../src/lib/server/services/settings.service';
+import { CourierService } from '../src/lib/server/services/courier.service';
 
 const sqlite = new DatabaseSync(':memory:');
 sqlite.exec('PRAGMA foreign_keys = ON');
@@ -781,6 +783,31 @@ await test('seo: generates schema.org rich snippets with dynamic siteUrl for pro
 	const orgLd = SeoService.getOrganizationJsonLd('https://seedbd.shop');
 	assert.equal(orgLd.url, 'https://seedbd.shop');
 	assert.equal(orgLd.name, 'seedbd');
+});
+
+await test('settings: google console and facebook domain token separation', async () => {
+	// 1. Save Facebook domain token first via setSetting
+	await SettingsService.setSetting(db, 'google_console', 'facebook_domain_token', 'fb-domain-token-12345');
+	let config = await SettingsService.getGoogleConsoleConfig(db);
+	assert.equal(config.facebookDomainToken, 'fb-domain-token-12345');
+
+	// 2. Save Google Console token WITHOUT specifying facebookDomainToken (undefined)
+	await SettingsService.saveGoogleConsoleConfig(db, 'google-site-verification=abcde12345');
+	config = await SettingsService.getGoogleConsoleConfig(db);
+	// Verification token should be updated and sanitized
+	assert.equal(config.verificationToken, 'google-site-verification=abcde12345');
+	// Facebook domain token should NOT be wiped out
+	assert.equal(config.facebookDomainToken, 'fb-domain-token-12345');
+});
+
+await test('courier: getCourierHubData returns resilient KPIs and consignment list', async () => {
+	const hubData = await CourierService.getCourierHubData(db);
+	assert.ok(hubData);
+	assert.ok(hubData.kpis);
+	assert.equal(typeof hubData.kpis.dispatchedToday, 'number');
+	assert.equal(typeof hubData.kpis.deliverySuccessRate, 'number');
+	assert.ok(Array.isArray(hubData.consignments));
+	assert.equal(typeof hubData.totalMatching, 'number');
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

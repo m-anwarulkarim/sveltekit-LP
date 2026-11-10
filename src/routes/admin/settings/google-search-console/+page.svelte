@@ -19,14 +19,12 @@
 	let { data }: { data: any } = $props();
 
 	let verificationToken = $state(data?.googleConsole?.verificationToken ?? '');
-	let facebookDomainToken = $state(data?.googleConsole?.facebookDomainToken ?? '');
 	let isSaving = $state(false);
 	let copiedSitemap = $state(false);
 
 	$effect(() => {
 		if (data?.googleConsole) {
 			verificationToken = data.googleConsole.verificationToken ?? '';
-			facebookDomainToken = data.googleConsole.facebookDomainToken ?? '';
 		}
 	});
 
@@ -128,23 +126,25 @@
 				</p>
 			</div>
 
-			<!-- Meta / Facebook Domain Verification -->
-			<div class="space-y-1.5 pt-3 border-t border-slate-100">
-				<label class="block text-xs font-bold text-slate-700">
-					Meta / Facebook Domain Verification Token (ঐচ্ছিক)
-				</label>
-				<div class="relative rounded-2xl border border-slate-300 hover:border-slate-400 focus-within:border-[#5845eb] focus-within:ring-2 focus-within:ring-[#5845eb]/10 bg-white transition-all">
-					<input
-						type="text"
-						name="facebookDomainToken"
-						bind:value={facebookDomainToken}
-						placeholder="যেমন: facebook-domain-verification টোকেন কোড"
-						class="w-full px-4 py-3 text-xs font-mono font-medium text-slate-900 bg-transparent rounded-2xl focus:outline-none"
-					/>
+			<!-- Meta / Facebook Domain Verification Notice & Link -->
+			<div class="pt-3 border-t border-slate-100">
+				<div class="p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-100 flex items-center justify-between gap-3">
+					<div class="space-y-0.5">
+						<div class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+							<span>Meta / Facebook Domain Verification</span>
+						</div>
+						<p class="text-[11px] text-slate-500">
+							ফেসবুক বিজনেস ম্যানেজারের ডোমেন ভেরিফিকেশন করার জন্য নির্ধারিত আলাদা পেজ রয়েছে।
+						</p>
+					</div>
+					<a
+						href="/admin/settings/facebook-domain-verification"
+						class="shrink-0 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-indigo-200 text-[#5845eb] text-xs font-bold transition-all shadow-2xs hover:shadow-xs inline-flex items-center gap-1.5"
+					>
+						<span>সেটিংস পেজে যান</span>
+						<ExternalLink class="w-3.5 h-3.5" />
+					</a>
 				</div>
-				<p class="text-[11px] text-slate-400 pl-1">
-					ফেসবুক বিজনেস ম্যানেজারে ডোমেন ভেরিফাই করার জন্য এটি ব্যবহৃত হয়।
-				</p>
 			</div>
 
 			<!-- Save Button -->

@@ -165,18 +165,18 @@
 						e.stopPropagation();
 						promptDeleteImage(idx, img);
 					}}
-					class="absolute top-2 right-2 z-30 w-7 h-7 rounded-full bg-rose-600 hover:bg-rose-700 active:scale-90 text-white shadow-md hover:shadow-lg flex items-center justify-center transition-all cursor-pointer"
+					class="absolute top-2 right-2 z-30 w-8 h-8 rounded-full bg-rose-600 hover:bg-rose-700 active:scale-90 text-white shadow-lg ring-2 ring-white flex items-center justify-center transition-all cursor-pointer"
 					title="ছবিটি মুছুন (Delete Image)"
 					aria-label="ছবি মুছুন"
 				>
-					<Trash2 class="w-3.5 h-3.5 stroke-[2.5]" />
+					<Trash2 class="w-4 h-4 stroke-[2.2]" />
 				</button>
 
 				<!-- 2. MAIN BADGE / SET MAIN BUTTON (Top-Left) -->
 				{#if isMain}
-					<div class="absolute top-2 left-2 z-20 px-2 py-0.5 rounded-md bg-[#5845eb] text-white text-[10px] font-bold shadow-md flex items-center gap-1">
+					<div class="absolute top-2 left-2 z-20 px-2 py-1 rounded-lg bg-[#5845eb] text-white text-[10px] font-black tracking-wide shadow-md flex items-center gap-1 ring-2 ring-white">
 						<Star class="w-2.5 h-2.5 fill-white" />
-						<span>মূল</span>
+						<span>★ MAIN</span>
 					</div>
 				{:else}
 					<button
@@ -185,30 +185,44 @@
 							e.stopPropagation();
 							setPrimaryImage(img);
 						}}
-						class="absolute top-2 left-2 z-20 w-7 h-7 rounded-full bg-white/95 text-slate-400 hover:text-amber-500 hover:bg-white border border-slate-200 shadow-md flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95"
+						class="absolute top-2 left-2 z-20 px-2 py-1 rounded-lg bg-white/95 text-slate-700 hover:text-[#5845eb] hover:bg-white border border-slate-200 shadow-md flex items-center gap-1 text-[10px] font-bold transition-all cursor-pointer hover:scale-105 active:scale-95 ring-1 ring-black/5"
 						title="মূল ছবি হিসেবে নির্ধারণ করুন (Set Main)"
 						aria-label="মূল ছবি করুন"
 					>
-						<Star class="w-3.5 h-3.5" />
+						<Star class="w-3 h-3 text-amber-500" />
+						<span>Set Main</span>
 					</button>
 				{/if}
 
-				<!-- 3. HOVER OVERLAY WITH PREVIEW & FILENAME -->
-				<div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/80 via-slate-950/40 to-transparent p-1.5 pt-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-between pointer-events-none">
-					<span class="text-[9px] text-white/90 truncate font-mono max-w-[75%] px-0.5">
+				<!-- 3. HOVER OVERLAY WITH PREVIEW, FILENAME & QUICK DELETE -->
+				<div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/85 via-slate-950/50 to-transparent p-2 pt-5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-between pointer-events-none">
+					<span class="text-[10px] text-white/90 truncate font-mono max-w-[65%] px-0.5">
 						{img.split('/').pop()?.split('?')[0] || 'photo'}
 					</span>
-					<button
-						type="button"
-						onclick={(e) => {
-							e.stopPropagation();
-							previewLightboxUrl = img;
-						}}
-						class="pointer-events-auto p-1 rounded-md bg-white/20 hover:bg-white/40 text-white transition-colors cursor-pointer"
-						title="বড় করে দেখুন"
-					>
-						<Eye class="w-3 h-3" />
-					</button>
+					<div class="flex items-center gap-1.5 pointer-events-auto">
+						<button
+							type="button"
+							onclick={(e) => {
+								e.stopPropagation();
+								previewLightboxUrl = img;
+							}}
+							class="p-1.5 rounded-lg bg-white/20 hover:bg-white/40 text-white transition-colors cursor-pointer"
+							title="বড় করে দেখুন"
+						>
+							<Eye class="w-3.5 h-3.5" />
+						</button>
+						<button
+							type="button"
+							onclick={(e) => {
+								e.stopPropagation();
+								promptDeleteImage(idx, img);
+							}}
+							class="p-1.5 rounded-lg bg-rose-600/90 hover:bg-rose-600 text-white transition-colors cursor-pointer"
+							title="মুছে ফেলুন"
+						>
+							<Trash2 class="w-3.5 h-3.5" />
+						</button>
+					</div>
 				</div>
 			</div>
 		{/each}

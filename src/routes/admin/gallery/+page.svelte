@@ -18,6 +18,7 @@
 		Loader2
 	} from 'lucide-svelte';
 	import type { GalleryImage } from '../_data/gallery.ts';
+	import { optimizeImageFile, MAX_SOURCE_BYTES } from '#lib/utils/image-optimizer';
 
 	let { data }: { data: any } = $props();
 
@@ -92,34 +93,39 @@
 		}
 	}
 
-	// Client-side file drop / pick handler for instant preview
+	// Client-side file drop / pick handler: converts to WebP before preview & submit
 	const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif'];
-	const MAX_BYTES = 5 * 1024 * 1024;
 
-	function handleFileSelected(file: File) {
+	async function handleFileSelected(file: File) {
 		if (!ALLOWED_TYPES.includes(file.type)) {
 			toast.error('শুধুমাত্র PNG, JPG, WEBP, GIF বা AVIF ছবি আপলোড করা যাবে।');
 			return;
 		}
-		if (file.size > MAX_BYTES) {
-			toast.error('ফাইলের সাইজ ৫ MB এর বেশি হতে পারবে না।');
+		if (file.size > MAX_SOURCE_BYTES) {
+			toast.error('ফাইলের সাইজ ১৫ MB এর বেশি হতে পারবে না।');
 			return;
 		}
-		uploadName = file.name.replace(/\.[^/.]+$/, '');
-		uploadFileSize = file.size > 1024 * 1024 ? `${(file.size / 1024 / 1024).toFixed(1)} MB` : `${Math.round(file.size / 1024)} KB`;
 
-		const reader = new FileReader();
-		reader.onload = (e) => {
-			uploadDataUrl = e.target?.result as string;
+		try {
+			const optimized = await optimizeImageFile(file);
+			const finalFile = optimized.file;
+			uploadName = file.name.replace(/\.[^/.]+$/, '');
+			uploadFileSize =
+				finalFile.size > 1024 * 1024
+					? `${(finalFile.size / 1024 / 1024).toFixed(1)} MB`
+					: `${Math.round(finalFile.size / 1024)} KB`;
+			if (optimized.width && optimized.height) {
+				uploadDimensions = `${optimized.width} x ${optimized.height}`;
+			}
 
-			// detect dimensions
-			const img = new Image();
-			img.onload = () => {
-				uploadDimensions = `${img.width} x ${img.height}`;
+			const reader = new FileReader();
+			reader.onload = (e) => {
+				uploadDataUrl = e.target?.result as string;
 			};
-			img.src = uploadDataUrl;
-		};
-		reader.readAsDataURL(file);
+			reader.readAsDataURL(finalFile);
+		} catch (err: any) {
+			toast.error(err?.message || 'ছবি প্রসেস করা যায়নি');
+		}
 	}
 
 	function onDropFile(e: DragEvent) {

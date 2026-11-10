@@ -4,19 +4,32 @@ import { MediaService } from '#lib/server/services/media.service';
 import { R2Service } from '#lib/server/services/r2.service';
 import { MEDIA_MENU_IDS, hasAnyMenuAccess } from '#lib/constants/admin-permissions';
 
-const MAX_SIZE = 5 * 1024 * 1024;
-
-// SVG is excluded on purpose: it can carry scripts that run on this site's origin.
-const ALLOWED_IMAGE_TYPES: Record<string, string> = {
-	'image/png': 'png',
-	'image/jpeg': 'jpg',
-	'image/webp': 'webp',
-	'image/gif': 'gif',
-	'image/avif': 'avif'
+// Animated GIFs can stay big; everything else arrives pre-optimized from the client.
+const MAX_SIZE_BY_EXT: Record<string, number> = {
+	webp: 2 * 1024 * 1024,
+	jpg: 2 * 1024 * 1024,
+	gif: 5 * 1024 * 1024
 };
 
-const INVALID_TYPE_MESSAGE = 'শুধুমাত্র PNG, JPG, WEBP, GIF বা AVIF ছবি আপলোড করা যাবে।';
-const TOO_LARGE_MESSAGE = 'ফাইলের সাইজ ৫ MB এর বেশি হতে পারবে না (Maximum size 5 MB)';
+// SVG is excluded on purpose: it can carry scripts that run on this site's origin.
+// PNG/AVIF are rejected so unoptimized multi-MB uploads can never slow the storefront:
+// the admin client converts them to WebP before calling this endpoint.
+const ALLOWED_IMAGE_TYPES: Record<string, string> = {
+	'image/webp': 'webp',
+	'image/jpeg': 'jpg',
+	'image/gif': 'gif'
+};
+
+const INVALID_TYPE_MESSAGE =
+	'শুধুমাত্র WEBP, JPG বা GIF আপলোড করা যাবে। পুরনো অ্যাডমিন পেজ খোলা থাকলে রিফ্রেশ করে আবার চেষ্টা করুন — PNG/JPG নিজে থেকেই WEBP হয়ে যাবে।';
+const TOO_LARGE_MESSAGE = 'অপটিমাইজ করার পরও ফাইলটি অনেক বড়। ছোট রেজোলিউশনের ছবি ব্যবহার করুন।';
+
+function parseDimensions(width: unknown, height: unknown): string {
+	const w = Math.round(Number(width));
+	const h = Math.round(Number(height));
+	if (w > 0 && w <= 20000 && h > 0 && h <= 20000) return `${w} x ${h}`;
+	return '800 x 800';
+}
 
 function cleanFolder(value: unknown): string {
 	const folder = typeof value === 'string' ? value : '';
@@ -56,13 +69,13 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 			if (!(file instanceof File)) {
 				return json({ success: false, message: 'No file provided' }, { status: 400 });
 			}
-			if (file.size > MAX_SIZE) {
-				return json({ success: false, message: TOO_LARGE_MESSAGE }, { status: 400 });
-			}
 
 			const extension = ALLOWED_IMAGE_TYPES[file.type];
 			if (!extension) {
 				return json({ success: false, message: INVALID_TYPE_MESSAGE }, { status: 400 });
+			}
+			if (file.size > MAX_SIZE_BY_EXT[extension]) {
+				return json({ success: false, message: TOO_LARGE_MESSAGE }, { status: 400 });
 			}
 
 			const fileName = cleanFileName(file.name, extension);
@@ -78,7 +91,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 				url: uploadRes.url,
 				folder,
 				size: formatSize(file.size),
-				dimensions: '800 x 800',
+				dimensions: parseDimensions(formData.get('width'), formData.get('height')),
 				mimeType: file.type
 			});
 
@@ -86,7 +99,13 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		}
 
 		// JSON request (handles base64 or direct URL)
-		const body = (await request.json()) as { dataUrl?: unknown; name?: unknown; folder?: unknown };
+		const body = (await request.json()) as {
+			dataUrl?: unknown;
+			name?: unknown;
+			folder?: unknown;
+			width?: unknown;
+			height?: unknown;
+		};
 		const dataUrl = typeof body?.dataUrl === 'string' ? body.dataUrl : '';
 		const folder = cleanFolder(body?.folder);
 		if (!canUpload(folder)) return forbidden();
@@ -113,7 +132,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 			return json({ success: false, message: INVALID_TYPE_MESSAGE }, { status: 400 });
 		}
 		// Base64 encodes 3 bytes as 4 characters.
-		if (dataUrl.length > (MAX_SIZE * 4) / 3 + 100) {
+		if (dataUrl.length > (MAX_SIZE_BY_EXT[extension] * 4) / 3 + 100) {
 			return json({ success: false, message: TOO_LARGE_MESSAGE }, { status: 400 });
 		}
 
@@ -129,7 +148,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 			url: uploadRes.url,
 			folder,
 			size: formatSize(uploadRes.sizeBytes),
-			dimensions: '800 x 800',
+			dimensions: parseDimensions(body?.width, body?.height),
 			mimeType: declaredType
 		});
 

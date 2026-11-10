@@ -21,7 +21,9 @@ export const load: PageServerLoad = async ({ parent, platform }) => {
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 const FOLDERS = ['products', 'categories', 'banners', 'stickers', 'general'] as const;
 // SVG is excluded on purpose: it can carry scripts that run on this site's origin.
-const IMAGE_DATA_URL = /^data:image\/(png|jpeg|webp|gif|avif);base64,/i;
+// PNG/AVIF are rejected too: the client converts everything to WebP before submitting,
+// so unoptimized multi-MB files can never reach storage.
+const IMAGE_DATA_URL = /^data:image\/(jpeg|webp|gif);base64,/i;
 
 export const actions: Actions = {
 	uploadImage: async ({ request, platform }) => {
@@ -36,7 +38,7 @@ export const actions: Actions = {
 			return fail(400, { message: 'ইমেজ ফাইল আবশ্যক।' });
 		}
 		if (!IMAGE_DATA_URL.test(url)) {
-			return fail(400, { message: 'শুধুমাত্র PNG, JPG, WEBP, GIF বা AVIF ছবি আপলোড করা যাবে।' });
+			return fail(400, { message: 'শুধুমাত্র WEBP, JPG বা GIF আপলোড করা যাবে। পেজ রিফ্রেশ করে আবার চেষ্টা করুন।' });
 		}
 		// Base64 encodes 3 bytes as 4 characters.
 		if (url.length > (MAX_UPLOAD_BYTES * 4) / 3 + 100) {

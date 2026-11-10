@@ -126,6 +126,17 @@
 		if (s.includes('youtube')) return 'bg-rose-50 text-rose-700 border-rose-200';
 		return 'bg-slate-50 text-slate-700 border-slate-200';
 	}
+
+	function getSourceDotClass(source: string): string {
+		const s = (source || '').toLowerCase();
+		if (s.includes('meta ad review')) return 'bg-purple-600';
+		if (s.includes('facebook')) return 'bg-blue-600 animate-pulse';
+		if (s.includes('google')) return 'bg-emerald-600';
+		if (s.includes('tiktok')) return 'bg-pink-600';
+		if (s.includes('whatsapp')) return 'bg-teal-600';
+		if (s.includes('youtube')) return 'bg-rose-600';
+		return 'bg-slate-400';
+	}
 </script>
 
 <svelte:head>
@@ -303,8 +314,9 @@
 						<div class="space-y-1.5">
 							<div class="flex items-center justify-between text-xs">
 								<div class="flex items-center gap-2">
-									<span class="px-2 py-0.5 rounded-lg border font-bold text-[10px] {getSourceBadgeClass(src.source)}">
-										{src.source}
+									<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-bold text-xs whitespace-nowrap {getSourceBadgeClass(src.source)}">
+										<span class="w-1.5 h-1.5 rounded-full shrink-0 {getSourceDotClass(src.source)}"></span>
+										<span>{src.source}</span>
 									</span>
 								</div>
 								<div class="flex items-center gap-3">
@@ -488,11 +500,11 @@
 			</div>
 
 			<!-- Quick Stream Filters -->
-			<div class="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-2xl">
+			<div class="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl overflow-x-auto max-w-full">
 				<button
 					type="button"
 					onclick={() => (streamFilter = 'all')}
-					class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer {streamFilter === 'all'
+					class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 {streamFilter === 'all'
 						? 'bg-white text-slate-900 shadow-2xs'
 						: 'text-slate-600 hover:text-slate-900'}"
 				>
@@ -502,7 +514,7 @@
 				<button
 					type="button"
 					onclick={() => (streamFilter = 'bd')}
-					class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 {streamFilter === 'bd'
+					class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 {streamFilter === 'bd'
 						? 'bg-emerald-600 text-white shadow-2xs'
 						: 'text-slate-600 hover:text-slate-900'}"
 				>
@@ -512,7 +524,7 @@
 				<button
 					type="button"
 					onclick={() => (streamFilter = 'facebook')}
-					class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 {streamFilter === 'facebook'
+					class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 {streamFilter === 'facebook'
 						? 'bg-blue-600 text-white shadow-2xs'
 						: 'text-slate-600 hover:text-slate-900'}"
 				>
@@ -522,7 +534,7 @@
 				<button
 					type="button"
 					onclick={() => (streamFilter = 'admin')}
-					class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 {streamFilter === 'admin'
+					class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 {streamFilter === 'admin'
 						? 'bg-amber-600 text-white shadow-2xs'
 						: 'text-slate-600 hover:text-slate-900'}"
 				>
@@ -533,22 +545,22 @@
 		</div>
 
 		<CardContent class="p-0">
-			<div class="overflow-x-auto">
-				<Table>
-					<TableHeader class="bg-slate-50/80">
+			<div class="overflow-x-auto w-full">
+				<Table class="w-full min-w-[760px]">
+					<TableHeader class="bg-slate-50/90 border-b border-slate-200">
 						<TableRow>
-							<TableHead class="text-xs font-bold text-slate-700 py-3">সময়</TableHead>
-							<TableHead class="text-xs font-bold text-slate-700 py-3">পেজ পাথ ও বিবরণ</TableHead>
-							<TableHead class="text-xs font-bold text-slate-700 py-3">ট্রাফিক সোর্স</TableHead>
-							<TableHead class="text-xs font-bold text-slate-700 py-3">ডিভাইস</TableHead>
-							<TableHead class="text-xs font-bold text-slate-700 py-3">শহর/লোকেশন</TableHead>
-							<TableHead class="text-xs font-bold text-slate-700 py-3 text-right">অ্যাকশন</TableHead>
+							<TableHead class="w-[120px] text-xs font-bold text-slate-700 py-3.5 px-4 whitespace-nowrap">সময়</TableHead>
+							<TableHead class="min-w-[200px] text-xs font-bold text-slate-700 py-3.5 px-4">পেজ পাথ ও বিবরণ</TableHead>
+							<TableHead class="w-[160px] text-xs font-bold text-slate-700 py-3.5 px-4 whitespace-nowrap">ট্রাফিক সোর্স</TableHead>
+							<TableHead class="w-[110px] text-xs font-bold text-slate-700 py-3.5 px-4 whitespace-nowrap">ডিভাইস</TableHead>
+							<TableHead class="w-[140px] text-xs font-bold text-slate-700 py-3.5 px-4 whitespace-nowrap">শহর/লোকেশন</TableHead>
+							<TableHead class="w-[90px] text-xs font-bold text-slate-700 py-3.5 px-4 text-right whitespace-nowrap">অ্যাকশন</TableHead>
 						</TableRow>
 					</TableHeader>
-					<TableBody>
+					<TableBody class="divide-y divide-slate-100">
 						{#if filteredRecentVisitors.length === 0}
 							<TableRow>
-								<TableCell colspan={6} class="text-center py-8 text-xs text-slate-400">
+								<TableCell colspan={6} class="text-center py-10 text-xs text-slate-400">
 									{#if streamFilter === 'bd'}
 										এখনো কোনো বাংলাদেশী ভিজিটর ফিল্টারে মেলেনি।
 									{:else if streamFilter === 'facebook'}
@@ -563,12 +575,12 @@
 						{:else}
 							{#each filteredRecentVisitors as v}
 								<TableRow class="hover:bg-slate-50/80 transition-colors">
-									<TableCell class="text-xs font-mono text-slate-500 whitespace-nowrap">
+									<TableCell class="w-[120px] text-xs font-mono text-slate-500 whitespace-nowrap py-3.5 px-4">
 										{formatTimeAgo(v.createdAt)}
 									</TableCell>
-									<TableCell class="min-w-[180px]">
-										<div class="text-xs font-bold text-slate-900 line-clamp-1 flex items-center gap-1.5">
-											{v.pageTitle}
+									<TableCell class="min-w-[200px] py-3.5 px-4">
+										<div class="text-xs font-bold text-slate-900 truncate max-w-[260px] flex items-center gap-1.5" title={v.pageTitle}>
+											<span class="truncate">{v.pageTitle}</span>
 											{#if v.isAdmin}
 												<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold shrink-0">
 													<ShieldCheck class="w-3 h-3" />
@@ -576,30 +588,42 @@
 												</span>
 											{/if}
 										</div>
-										<div class="text-[11px] font-mono text-slate-400">{v.path}</div>
+										<div class="text-[11px] font-mono text-slate-400 truncate max-w-[260px]" title={v.path}>{v.path}</div>
 									</TableCell>
-									<TableCell>
-										<span class="px-2 py-0.5 rounded-lg border text-[10px] font-bold {getSourceBadgeClass(v.trafficSource)}">
-											{v.trafficSource}
+									<TableCell class="w-[160px] whitespace-nowrap py-3.5 px-4">
+										<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-bold whitespace-nowrap shrink-0 {getSourceBadgeClass(v.trafficSource)}">
+											<span class="w-1.5 h-1.5 rounded-full shrink-0 {getSourceDotClass(v.trafficSource)}"></span>
+											<span>{v.trafficSource}</span>
 										</span>
 									</TableCell>
-									<TableCell class="text-xs text-slate-600 capitalize">
-										{v.deviceType}
+									<TableCell class="w-[110px] text-xs text-slate-600 capitalize whitespace-nowrap py-3.5 px-4">
+										<div class="inline-flex items-center gap-1.5">
+											{#if v.deviceType === 'mobile'}
+												<Smartphone class="w-3.5 h-3.5 text-slate-400 shrink-0" />
+												<span>Mobile</span>
+											{:else if v.deviceType === 'desktop'}
+												<Monitor class="w-3.5 h-3.5 text-slate-400 shrink-0" />
+												<span>Desktop</span>
+											{:else}
+												<Tablet class="w-3.5 h-3.5 text-slate-400 shrink-0" />
+												<span>Tablet</span>
+											{/if}
+										</div>
 									</TableCell>
-									<TableCell class="text-xs text-slate-600">
-										<span class="flex items-center gap-1">
-											<MapPin class="w-3 h-3 text-slate-400" />
-											{v.city}
+									<TableCell class="w-[140px] text-xs text-slate-600 whitespace-nowrap py-3.5 px-4">
+										<span class="inline-flex items-center gap-1.5">
+											<MapPin class="w-3.5 h-3.5 text-slate-400 shrink-0" />
+											<span class="truncate max-w-[110px]" title={v.city}>{v.city}</span>
 										</span>
 									</TableCell>
-									<TableCell class="text-right whitespace-nowrap">
+									<TableCell class="w-[90px] text-right whitespace-nowrap py-3.5 px-4">
 										<form method="POST" action="?/blockIp" class="inline-block">
 											<input type="hidden" name="ipAddress" value={v.ipAddress} />
 											<Button
 												type="submit"
 												variant="ghost"
 												size="sm"
-												class="rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-50 text-xs font-bold h-8 px-2.5"
+												class="rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-50 text-xs font-bold h-8 px-2.5 cursor-pointer"
 												title="সন্দেহজনক ভিজিটর আইপি ব্লক করুন"
 											>
 												<ShieldAlert class="w-3.5 h-3.5 mr-1" />

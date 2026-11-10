@@ -2,6 +2,8 @@
 	import { Button, Input, Dialog, Badge } from '#lib/components/ui';
 	import { Search, X, Check, Upload, Image as ImageIcon } from 'lucide-svelte';
 	import { getGalleryImages, addGalleryImage, type GalleryImage } from '../../_data/gallery.ts';
+	import { uploadOptimizedImage } from '#lib/utils/image-optimizer';
+	import { toast } from 'svelte-sonner';
 
 	interface Props {
 		open?: boolean;
@@ -50,23 +52,29 @@
 		}
 	}
 
-	function handleUploadFile(file: File) {
-		const reader = new FileReader();
-		reader.onload = (uploadEvent) => {
-			const dataUrl = uploadEvent.target?.result as string;
+	// A base64 string must never leave this modal: the optimized file goes to R2
+	// and only its public URL is handed to the consuming form.
+	async function handleUploadFile(file: File) {
+		if (isQuickUploading) return;
+		isQuickUploading = true;
+		try {
+			const uploaded = await uploadOptimizedImage(file, 'products');
 			const newImg: GalleryImage = {
 				id: 'custom-' + Date.now(),
 				name: file.name.replace(/\.[^/.]+$/, ''),
-				url: dataUrl,
+				url: uploaded.url,
 				folder: 'products',
 				size: `${(file.size / 1024).toFixed(0)} KB`,
-				dimensions: '800 x 800',
+				dimensions: uploaded.width ? `${uploaded.width} x ${uploaded.height}` : '800 x 800',
 				uploadedAt: 'মাত্র এখন'
 			};
 			addGalleryImage(newImg);
-			handleChoose(dataUrl);
-		};
-		reader.readAsDataURL(file);
+			handleChoose(uploaded.url);
+		} catch (err: any) {
+			toast.error(err?.message || 'ছবি আপলোড ব্যর্থ হয়েছে');
+		} finally {
+			isQuickUploading = false;
+		}
 	}
 </script>
 

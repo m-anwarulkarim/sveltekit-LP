@@ -35,12 +35,12 @@ export const load: PageServerLoad = async ({ parent, platform }) => {
 			.all();
 		blockedIps = ipRows.map((r) => r.ip);
 
-		// 2. Fetch bot logs
+		// 2. Fetch bot logs (last 500 logs for robust analytics)
 		dbBotLogs = await db
 			.select()
 			.from(schema.botLogs)
 			.orderBy(desc(schema.botLogs.createdAt))
-			.limit(50)
+			.limit(500)
 			.all();
 
 		// 3. Fetch firewall settings

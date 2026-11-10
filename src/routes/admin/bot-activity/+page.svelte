@@ -301,33 +301,42 @@
 	);
 	let bandwidthMB = $derived((totalHits * 0.045).toFixed(1));
 
-	// Dynamic 5-day Bar Chart Data
+	// Dynamic 7-day Bar Chart Data
 	let dailyBars = $derived.by(() => {
+		const toDateKey = (dt: Date | number | string) => {
+			const d = new Date(dt);
+			return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+		};
+
 		const now = new Date();
-		const days: { label: string; dateStr: string; visits: number; heightPct: number }[] = [];
-		for (let i = 4; i >= 0; i--) {
+		const days: { label: string; dateKey: string; visits: number; barHeightPx: number }[] = [];
+		for (let i = 6; i >= 0; i--) {
 			const d = new Date(now);
 			d.setDate(d.getDate() - i);
-			const dateStr = d.toISOString().slice(0, 10);
+			const dateKey = toDateKey(d);
 			const label = d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
-			days.push({ label, dateStr, visits: 0, heightPct: 4 });
+			days.push({ label, dateKey, visits: 0, barHeightPx: 0 });
 		}
 
 		for (const log of rawLogs) {
 			if (!log.createdAt) continue;
-			const logDateStr = new Date(log.createdAt).toISOString().slice(0, 10);
-			const targetDay = days.find((d) => d.dateStr === logDateStr);
+			const logKey = toDateKey(log.createdAt);
+			const targetDay = days.find((d) => d.dateKey === logKey);
 			if (targetDay) {
 				targetDay.visits += 1;
 			}
 		}
 
 		const maxVisits = Math.max(1, ...days.map((d) => d.visits));
+		const CHART_MAX_HEIGHT_PX = 160;
+
 		return days.map((d) => ({
 			...d,
-			heightPct: d.visits > 0 ? Math.max(14, Math.round((d.visits / maxVisits) * 100)) : 4
+			barHeightPx: d.visits > 0 ? Math.max(12, Math.round((d.visits / maxVisits) * CHART_MAX_HEIGHT_PX)) : 0
 		}));
 	});
+
+	let maxDailyVisits = $derived(Math.max(1, ...dailyBars.map((d) => d.visits)));
 
 	// Dynamic Donut Chart Percentages
 	let headlessPct = $derived(totalHits > 0 ? Math.round((headlessHits / totalHits) * 100) : 0);
@@ -574,28 +583,32 @@
 					<div class="relative flex-1 flex items-end justify-around px-4 border-b border-l border-slate-200">
 						<!-- Grid Lines -->
 						<div class="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-40">
-							<div class="border-b border-dashed border-slate-200 w-full flex justify-end pr-2 text-[10px] text-slate-400">Max</div>
-							<div class="border-b border-dashed border-slate-200 w-full flex justify-end pr-2 text-[10px] text-slate-400">75%</div>
-							<div class="border-b border-dashed border-slate-200 w-full flex justify-end pr-2 text-[10px] text-slate-400">50%</div>
-							<div class="border-b border-dashed border-slate-200 w-full flex justify-end pr-2 text-[10px] text-slate-400">25%</div>
-							<div class="w-full flex justify-end pr-2 text-[10px] text-slate-400">0</div>
+							<div class="border-b border-dashed border-slate-200 w-full flex justify-end pr-2 text-[10px] text-slate-400 font-mono">{maxDailyVisits}</div>
+							<div class="border-b border-dashed border-slate-200 w-full flex justify-end pr-2 text-[10px] text-slate-400 font-mono">{Math.round(maxDailyVisits * 0.75)}</div>
+							<div class="border-b border-dashed border-slate-200 w-full flex justify-end pr-2 text-[10px] text-slate-400 font-mono">{Math.round(maxDailyVisits * 0.5)}</div>
+							<div class="border-b border-dashed border-slate-200 w-full flex justify-end pr-2 text-[10px] text-slate-400 font-mono">{Math.round(maxDailyVisits * 0.25)}</div>
+							<div class="w-full flex justify-end pr-2 text-[10px] text-slate-400 font-mono">0</div>
 						</div>
 
 						<!-- Dynamic Bars -->
 						{#each dailyBars as bar}
-							<div class="relative z-10 flex flex-col items-center group w-16">
-								{#if bar.visits > 0}
-									<div class="absolute -top-12 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white rounded-lg px-2.5 py-1 text-[10px] font-bold pointer-events-none z-20 shadow-lg whitespace-nowrap">
-										{bar.label}: {bar.visits} visits
-									</div>
-									<div
-										class="w-10 bg-gradient-to-t from-[#4936d6] to-[#5845eb] rounded-t-xl shadow-xs transition-transform group-hover:scale-y-105 origin-bottom"
-										style="height: {bar.heightPct}%;"
-									></div>
-								{:else}
-									<div class="w-10 h-1.5 bg-slate-200/70 rounded-full transition-all group-hover:bg-indigo-300"></div>
-								{/if}
-								<span class="text-[10px] font-medium text-slate-400 mt-2 font-mono group-hover:text-slate-800 transition-colors">
+							<div class="relative z-10 h-full flex flex-col justify-end items-center group w-12 sm:w-16">
+								<div class="w-full flex-1 flex items-end justify-center pb-1">
+									{#if bar.visits > 0}
+										<div class="relative w-full flex flex-col items-center">
+											<div class="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white rounded-lg px-2.5 py-1 text-[10px] font-bold pointer-events-none z-20 shadow-lg whitespace-nowrap">
+												{bar.label}: {bar.visits} visits
+											</div>
+											<div
+												class="w-7 sm:w-10 bg-gradient-to-t from-[#4936d6] to-[#5845eb] rounded-t-xl shadow-xs transition-all duration-300 group-hover:from-indigo-600 group-hover:to-indigo-400 origin-bottom"
+												style="height: {bar.barHeightPx}px;"
+											></div>
+										</div>
+									{:else}
+										<div class="w-7 sm:w-10 h-1.5 bg-slate-200/70 rounded-full transition-all group-hover:bg-indigo-300"></div>
+									{/if}
+								</div>
+								<span class="text-[10px] font-medium text-slate-400 mt-2 font-mono group-hover:text-slate-800 transition-colors shrink-0">
 									{bar.label}
 								</span>
 							</div>

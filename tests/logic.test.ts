@@ -24,6 +24,7 @@ import { load as checkoutLoad } from '../src/routes/checkout/+page.server';
 import { actions as lpActions } from '../src/routes/lp/[slug]/+page.server';
 import { resolveLandingOffer, computeCouponDiscount, parseCartItemId } from '../src/lib/utils/order-pricing';
 import { VisitorAnalyticsService } from '../src/lib/server/services/visitor-analytics.service';
+import { SeoService } from '../src/lib/server/services/seo.service';
 
 const sqlite = new DatabaseSync(':memory:');
 sqlite.exec('PRAGMA foreign_keys = ON');
@@ -750,6 +751,38 @@ await test('visitor: recordVisit creates and updates session', async () => {
 	const pvCount: any = sqlite.prepare('SELECT count(*) c FROM visitor_pageviews WHERE session_id = ?').get('test-session-123');
 	assert.equal(pvCount.c, 2);
 });
+
+await test('seo: generates schema.org rich snippets with dynamic siteUrl for products and landing pages', () => {
+	const productLd = SeoService.getProductJsonLd({
+		name: 'লাল ঢ্যাঁড়শ বীজ',
+		description: 'সেরা ফলনশীল হাইব্রিড লাল ঢ্যাঁড়শ বীজ',
+		slug: 'lal-dheros',
+		price: 180,
+		inStock: true
+	}, 'https://seedbd.shop');
+
+	assert.equal(productLd['@context'], 'https://schema.org');
+	assert.equal(productLd['@type'], 'Product');
+	assert.equal(productLd.offers.price, 180);
+	assert.equal(productLd.offers.url, 'https://seedbd.shop/products/lal-dheros');
+	assert.equal(productLd.offers.priceCurrency, 'BDT');
+
+	const lpLd = SeoService.getLandingPageJsonLd({
+		name: 'লাল ঢ্যাঁড়শ প্যাকেজ অফার',
+		slug: 'lal-dheros-pack',
+		price: 450,
+		inStock: true
+	}, 'https://seedbd.shop');
+
+	assert.equal(lpLd['@type'], 'Product');
+	assert.equal(lpLd.offers.url, 'https://seedbd.shop/lp/lal-dheros-pack');
+	assert.equal(lpLd.offers.price, 450);
+
+	const orgLd = SeoService.getOrganizationJsonLd('https://seedbd.shop');
+	assert.equal(orgLd.url, 'https://seedbd.shop');
+	assert.equal(orgLd.name, 'seedbd');
+});
+
 console.log(`\n${passed} passed, ${failures.length} failed`);
 if (failures.length) {
 	console.log('Failed:', failures.join(' | '));

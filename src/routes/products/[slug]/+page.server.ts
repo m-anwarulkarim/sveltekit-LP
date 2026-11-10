@@ -138,13 +138,13 @@ export const load: PageServerLoad = async (event) => {
 		ratingValue: realRating,
 		reviewCount: productReviews.length,
 		inStock: product.inStock
-	});
+	}, event.url.origin);
 
 	const breadcrumbsJsonLd = SeoService.getBreadcrumbsJsonLd([
 		{ name: 'হোম', url: '/' },
 		{ name: product.categoryLabel || 'ক্যাটালগ', url: `/categories/${product.category}` },
 		{ name: product.name, url: `/products/${product.slug}` }
-	]);
+	], event.url.origin);
 
 	return {
 		product,

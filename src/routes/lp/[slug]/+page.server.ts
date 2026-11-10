@@ -7,13 +7,14 @@ import { getAuthSecret } from '#lib/server/secrets';
 import { OrderService, OrderValidationError } from '#lib/server/services/order.service';
 import { PixelService } from '#lib/server/services/pixel.service';
 import { resolveLandingOffer } from '#lib/utils/order-pricing';
+import { SeoService } from '#lib/server/services/seo.service';
 
 /** Simple bot-detection by User-Agent — keeps view counts honest. */
 function looksLikeBot(ua: string): boolean {
 	return /bot|crawl|spider|slurp|facebookexternalhit|bingpreview|googlebot/i.test(ua);
 }
 
-export const load: PageServerLoad = async ({ params, platform, request, cookies }) => {
+export const load: PageServerLoad = async ({ params, platform, request, cookies, url }) => {
 	const db = getDb(platform);
 	const landingPage = await LandingPageService.getLandingPageBySlug(db, params.slug);
 
@@ -43,16 +44,61 @@ export const load: PageServerLoad = async ({ params, platform, request, cookies 
 		platform?.ctx?.waitUntil?.(LandingPageService.incrementViews(db, landingPage.id));
 	}
 
+	// Build rich SEO & OpenGraph Social Sharing Metadata
+	const siteUrl = url.origin;
+	const product = landingPage.product;
+	const title = landingPage.title || landingPage.config?.headline || 'ল্যান্ডিং পেজ';
+	const description =
+		landingPage.config?.subheadline ||
+		landingPage.config?.headline ||
+		(product?.description ? product.description.slice(0, 160) : '') ||
+		`${title} - কিনুন বিশেষ অফার মূল্যে seedbd থেকে।`;
+
+	const heroImage =
+		landingPage.config?.heroImage ||
+		product?.image ||
+		landingPage.config?.galleryImages?.[0] ||
+		`${siteUrl}/apple-touch-icon.png`;
+
+	const ogImage = heroImage.startsWith('http') ? heroImage : `${siteUrl}${heroImage}`;
+	const canonicalUrl = `${siteUrl}/lp/${params.slug}`;
+	const effectivePrice = landingPage.config?.customPrice || product?.price || 0;
+	const effectiveRegularPrice = landingPage.config?.customRegularPrice || product?.originalPrice || 0;
+
+	const landingJsonLd = SeoService.getLandingPageJsonLd(
+		{
+			name: title,
+			description,
+			slug: params.slug,
+			price: effectivePrice,
+			regularPrice: effectiveRegularPrice,
+			image: ogImage,
+			inStock: product ? product.inStock : true,
+			brandName: 'seedbd'
+		},
+		siteUrl
+	);
+
+	const seoMeta = {
+		title: `${title} | seedbd`,
+		description,
+		ogImage,
+		canonicalUrl,
+		price: effectivePrice
+	};
+
 	// Visitors must not receive the cost price.
 	if (landingPage.product) {
 		const { costPrice: _costPrice, ...publicProduct } = landingPage.product;
 		return {
 			landingPage: { ...landingPage, product: publicProduct },
-			isAdmin
+			isAdmin,
+			seoMeta,
+			landingJsonLd
 		};
 	}
 
-	return { landingPage, isAdmin };
+	return { landingPage, isAdmin, seoMeta, landingJsonLd };
 };
 
 export const actions: Actions = {

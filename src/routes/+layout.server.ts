@@ -118,7 +118,7 @@ export const load: LayoutServerLoad = async (event) => {
 		activePopup,
 		googleConsole,
 		socialLogin,
-		websiteJsonLd: SeoService.getWebSiteJsonLd(),
-		organizationJsonLd: SeoService.getOrganizationJsonLd()
+		websiteJsonLd: SeoService.getWebSiteJsonLd(event.url.origin),
+		organizationJsonLd: SeoService.getOrganizationJsonLd(event.url.origin)
 	};
 };

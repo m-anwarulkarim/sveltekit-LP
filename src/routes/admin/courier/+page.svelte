@@ -84,7 +84,7 @@
 
 	// Filter update handlers with URL update
 	function updateFilters(newParams: Record<string, string>) {
-		const url = new URL(page.url);
+		const url = new URL(page.url.href);
 		Object.entries(newParams).forEach(([key, val]) => {
 			if (!val || val === 'all') {
 				url.searchParams.delete(key);
@@ -92,11 +92,11 @@
 				url.searchParams.set(key, val);
 			}
 		});
-		goto(url.toString(), { keepFocus: true, noScroll: true });
+		goto(url.toString(), { noScroll: true });
 	}
 
 	function handleDateChange(range: string) {
-		selectedDateRange = range;
+		selectedDateRange = range as any;
 		updateFilters({ range });
 	}
 
@@ -124,7 +124,7 @@
 		selectedProvider = 'all';
 		selectedStatus = 'all';
 		searchQuery = '';
-		goto('/admin/courier', { keepFocus: true });
+		goto('/admin/courier');
 	}
 
 	// 1-Click Sync Active Consignments
@@ -138,13 +138,13 @@
 					orderIds: selectedIds.length > 0 ? selectedIds : undefined
 				})
 			});
-			const result = await res.json();
-			if (result.success) {
+			const result: any = await res.json();
+			if (result?.success) {
 				toast.success(result.message || 'কুরিয়ার স্ট্যাটাস সফলভাবে সিঙ্ক হয়েছে!');
 				// Refresh page data
-				goto(page.url.toString(), { invalidateAll: true });
+				goto(page.url.href, { invalidateAll: true });
 			} else {
-				toast.error(result.message || 'সিঙ্ক করতে সমস্যা হয়েছে');
+				toast.error(result?.message || 'সিঙ্ক করতে সমস্যা হয়েছে');
 			}
 		} catch (err: any) {
 			toast.error('সার্ভারে সমস্যা হয়েছে: ' + err.message);
@@ -158,8 +158,8 @@
 		isRefreshingBalance = true;
 		try {
 			const res = await fetch('/api/admin/courier/balance');
-			const result = await res.json();
-			if (result.success && result.balance !== undefined) {
+			const result: any = await res.json();
+			if (result?.success && result.balance !== undefined) {
 				kpis = {
 					...kpis,
 					liveBalance: result.balance,
@@ -168,7 +168,7 @@
 				};
 				toast.success('কুরিয়ার লাইভ ব্যালেন্স আপডেট হয়েছে!');
 			} else {
-				toast.error(result.message || 'ব্যালেন্স আপডেট করা যায়নি');
+				toast.error(result?.message || 'ব্যালেন্স আপডেট করা যায়নি');
 			}
 		} catch (err) {
 			toast.error('ব্যালেন্স ফেচ করতে সমস্যা হয়েছে');
@@ -317,7 +317,7 @@
 		bind:selectedProvider
 		bind:selectedStatus
 		bind:searchQuery
-		{totalCount}
+		totalCount={totalMatching}
 		onDateChange={handleDateChange}
 		onProviderChange={handleProviderChange}
 		onStatusChange={handleStatusChange}

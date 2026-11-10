@@ -17,6 +17,18 @@ export interface ProductSeoData {
 	brandName?: string;
 }
 
+export interface LandingPageSeoData {
+	name: string;
+	description?: string;
+	slug: string;
+	price?: number;
+	regularPrice?: number;
+	inStock?: boolean;
+	image?: string;
+	sku?: string;
+	brandName?: string;
+}
+
 export interface BreadcrumbItem {
 	name: string;
 	url: string;
@@ -24,27 +36,39 @@ export interface BreadcrumbItem {
 
 export class SeoService {
 	static readonly SITE_NAME = 'seedbd';
-	static readonly SITE_URL = 'https://lp.haqplus.com';
-	static readonly DEFAULT_IMAGE = 'https://lp.haqplus.com/apple-touch-icon.png';
+	static readonly DEFAULT_SITE_URL = 'https://seedbd.shop';
+	static readonly DEFAULT_IMAGE = '/apple-touch-icon.png';
+
+	/**
+	 * Normalizes base site URL
+	 */
+	static getSiteUrl(siteUrl?: string): string {
+		return (siteUrl || this.DEFAULT_SITE_URL).replace(/\/$/, '');
+	}
 
 	/**
 	 * Generates Google Rich Snippet Product Schema (JSON-LD)
 	 */
-	static getProductJsonLd(product: ProductSeoData): Record<string, any> {
+	static getProductJsonLd(product: ProductSeoData, siteUrl?: string): Record<string, any> {
+		const base = this.getSiteUrl(siteUrl);
+		const imageUrl = product.image
+			? product.image.startsWith('http') ? product.image : `${base}${product.image}`
+			: `${base}${this.DEFAULT_IMAGE}`;
+
 		return {
 			'@context': 'https://schema.org',
 			'@type': 'Product',
 			name: product.name,
-			image: product.image ? [product.image] : [this.DEFAULT_IMAGE],
+			image: [imageUrl],
 			description: product.description,
 			sku: product.sku || product.slug,
 			brand: {
 				'@type': 'Brand',
-				name: product.brandName || 'seedbd'
+				name: product.brandName || this.SITE_NAME
 			},
 			offers: {
 				'@type': 'Offer',
-				url: `${this.SITE_URL}/products/${product.slug}`,
+				url: `${base}/products/${product.slug}`,
 				priceCurrency: 'BDT',
 				price: product.price,
 				itemCondition: 'https://schema.org/NewCondition',
@@ -73,9 +97,48 @@ export class SeoService {
 	}
 
 	/**
+	 * Generates Google Rich Snippet Product/Offer Schema for Landing Pages (JSON-LD)
+	 */
+	static getLandingPageJsonLd(lp: LandingPageSeoData, siteUrl?: string): Record<string, any> {
+		const base = this.getSiteUrl(siteUrl);
+		const imageUrl = lp.image
+			? lp.image.startsWith('http') ? lp.image : `${base}${lp.image}`
+			: `${base}${this.DEFAULT_IMAGE}`;
+
+		return {
+			'@context': 'https://schema.org',
+			'@type': 'Product',
+			name: lp.name,
+			image: [imageUrl],
+			description: lp.description || `${lp.name} - কিনুন বিশেষ অফার মূল্যে ${this.SITE_NAME} থেকে।`,
+			sku: lp.sku || lp.slug,
+			brand: {
+				'@type': 'Brand',
+				name: lp.brandName || this.SITE_NAME
+			},
+			offers: {
+				'@type': 'Offer',
+				url: `${base}/lp/${lp.slug}`,
+				priceCurrency: 'BDT',
+				price: lp.price ?? 0,
+				itemCondition: 'https://schema.org/NewCondition',
+				availability:
+					lp.inStock !== false
+						? 'https://schema.org/InStock'
+						: 'https://schema.org/OutOfStock',
+				seller: {
+					'@type': 'Organization',
+					name: this.SITE_NAME
+				}
+			}
+		};
+	}
+
+	/**
 	 * Generates BreadcrumbList Schema (JSON-LD)
 	 */
-	static getBreadcrumbsJsonLd(breadcrumbs: BreadcrumbItem[]): Record<string, any> {
+	static getBreadcrumbsJsonLd(breadcrumbs: BreadcrumbItem[], siteUrl?: string): Record<string, any> {
+		const base = this.getSiteUrl(siteUrl);
 		return {
 			'@context': 'https://schema.org',
 			'@type': 'BreadcrumbList',
@@ -83,7 +146,7 @@ export class SeoService {
 				'@type': 'ListItem',
 				position: index + 1,
 				name: crumb.name,
-				item: crumb.url.startsWith('http') ? crumb.url : `${this.SITE_URL}${crumb.url}`
+				item: crumb.url.startsWith('http') ? crumb.url : `${base}${crumb.url}`
 			}))
 		};
 	}
@@ -91,15 +154,16 @@ export class SeoService {
 	/**
 	 * Generates Website & Search Action Schema (JSON-LD)
 	 */
-	static getWebSiteJsonLd(): Record<string, any> {
+	static getWebSiteJsonLd(siteUrl?: string): Record<string, any> {
+		const base = this.getSiteUrl(siteUrl);
 		return {
 			'@context': 'https://schema.org',
 			'@type': 'WebSite',
 			name: this.SITE_NAME,
-			url: this.SITE_URL,
+			url: base,
 			potentialAction: {
 				'@type': 'SearchAction',
-				target: `${this.SITE_URL}/catalog?search={search_term_string}`,
+				target: `${base}/catalog?search={search_term_string}`,
 				'query-input': 'required name=search_term_string'
 			}
 		};
@@ -108,13 +172,14 @@ export class SeoService {
 	/**
 	 * Generates Organization Schema
 	 */
-	static getOrganizationJsonLd(): Record<string, any> {
+	static getOrganizationJsonLd(siteUrl?: string): Record<string, any> {
+		const base = this.getSiteUrl(siteUrl);
 		return {
 			'@context': 'https://schema.org',
 			'@type': 'Organization',
 			name: this.SITE_NAME,
-			url: this.SITE_URL,
-			logo: `${this.SITE_URL}/favicon.png`,
+			url: base,
+			logo: `${base}/favicon.png`,
 			contactPoint: {
 				'@type': 'ContactPoint',
 				telephone: '+8800156007230',

@@ -27,15 +27,17 @@ export const actions: Actions = {
 	saveSettings: async ({ request, platform }) => {
 		const data = await request.formData();
 		const verificationToken = data.get('verificationToken')?.toString() || '';
+		const facebookDomainToken = data.get('facebookDomainToken')?.toString() || '';
 
 		try {
 			const db = getDb(platform);
-			const saved = await SettingsService.saveGoogleConsoleConfig(db, verificationToken);
+			const saved = await SettingsService.saveGoogleConsoleConfig(db, verificationToken, facebookDomainToken);
 
 			return {
 				success: true,
 				verificationToken: saved.verificationToken,
-				message: 'Google Search Console সেটিংস সফলভাবে সংরক্ষিত হয়েছে'
+				facebookDomainToken: saved.facebookDomainToken,
+				message: 'Google Search Console ও ডোমেন ভেরিফিকেশন সেটিংস সফলভাবে সংরক্ষিত হয়েছে'
 			};
 		} catch (e: any) {
 			console.error('Failed to save Google Search Console config to D1:', e);

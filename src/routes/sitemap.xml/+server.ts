@@ -3,8 +3,8 @@ import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 
-export const GET: RequestHandler = async ({ platform }) => {
-	const siteUrl = 'https://lp.haqplus.com';
+export const GET: RequestHandler = async ({ platform, url }) => {
+	const siteUrl = (url?.origin || 'https://seedbd.shop').replace(/\/$/, '');
 	const now = new Date().toISOString().split('T')[0];
 
 	interface SitemapUrl {
@@ -14,10 +14,12 @@ export const GET: RequestHandler = async ({ platform }) => {
 		lastmod?: string;
 	}
 
-	// Static Core Routes
+	// Static Core Navigational Routes
 	const staticRoutes: SitemapUrl[] = [
 		{ url: `${siteUrl}/`, priority: '1.0', changefreq: 'daily' },
 		{ url: `${siteUrl}/catalog`, priority: '0.9', changefreq: 'daily' },
+		{ url: `${siteUrl}/catalog/all-product`, priority: '0.9', changefreq: 'daily' },
+		{ url: `${siteUrl}/catalog/all-category`, priority: '0.85', changefreq: 'weekly' },
 		{ url: `${siteUrl}/categories`, priority: '0.8', changefreq: 'weekly' },
 		{ url: `${siteUrl}/combos`, priority: '0.8', changefreq: 'weekly' },
 		{ url: `${siteUrl}/track-order`, priority: '0.7', changefreq: 'monthly' },
@@ -31,31 +33,72 @@ export const GET: RequestHandler = async ({ platform }) => {
 	];
 
 	let dynamicProductUrls: SitemapUrl[] = [];
+	let dynamicLandingUrls: SitemapUrl[] = [];
+	let dynamicCategoryUrls: SitemapUrl[] = [];
 
-	if (platform?.env?.DB) {
-		try {
-			const db = getDb(platform.env.DB);
-			const publishedProducts = await db
-				.select({
-					slug: schema.products.slug,
-					updatedAt: schema.products.updatedAt
-				})
-				.from(schema.products)
-				.where(eq(schema.products.status, 'active'))
-				.all();
+	try {
+		const db = getDb(platform);
 
-			dynamicProductUrls = publishedProducts.map((p) => ({
-				url: `${siteUrl}/products/${p.slug}`,
-				priority: '0.9',
-				changefreq: 'weekly',
-				lastmod: p.updatedAt ? new Date(p.updatedAt).toISOString().split('T')[0] : now
-			}));
-		} catch (e) {
-			console.error('Error generating dynamic product sitemap:', e);
-		}
+		// 1. Published Single Products
+		const publishedProducts = await db
+			.select({
+				slug: schema.products.slug,
+				updatedAt: schema.products.updatedAt
+			})
+			.from(schema.products)
+			.where(eq(schema.products.status, 'active'))
+			.all();
+
+		dynamicProductUrls = publishedProducts.map((p) => ({
+			url: `${siteUrl}/products/${p.slug}`,
+			priority: '0.9',
+			changefreq: 'weekly',
+			lastmod: p.updatedAt ? new Date(p.updatedAt).toISOString().split('T')[0] : now
+		}));
+
+		// 2. Published High-Converting Landing Pages
+		const publishedLandingPages = await db
+			.select({
+				slug: schema.landingPages.slug,
+				updatedAt: schema.landingPages.updatedAt
+			})
+			.from(schema.landingPages)
+			.where(eq(schema.landingPages.status, 'Published'))
+			.all();
+
+		dynamicLandingUrls = publishedLandingPages.map((lp) => ({
+			url: `${siteUrl}/lp/${lp.slug}`,
+			priority: '0.95',
+			changefreq: 'daily',
+			lastmod: lp.updatedAt ? new Date(lp.updatedAt).toISOString().split('T')[0] : now
+		}));
+
+		// 3. Published Categories
+		const publishedCategories = await db
+			.select({
+				slug: schema.categories.slug,
+				updatedAt: schema.categories.updatedAt
+			})
+			.from(schema.categories)
+			.where(eq(schema.categories.status, 'publish'))
+			.all();
+
+		dynamicCategoryUrls = publishedCategories.map((c) => ({
+			url: `${siteUrl}/categories/${c.slug}`,
+			priority: '0.8',
+			changefreq: 'weekly',
+			lastmod: c.updatedAt ? new Date(c.updatedAt).toISOString().split('T')[0] : now
+		}));
+	} catch (e) {
+		console.error('Error generating dynamic sitemap:', e);
 	}
 
-	const allUrls = [...staticRoutes, ...dynamicProductUrls];
+	const allUrls = [
+		...staticRoutes,
+		...dynamicLandingUrls,
+		...dynamicProductUrls,
+		...dynamicCategoryUrls
+	];
 
 	const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

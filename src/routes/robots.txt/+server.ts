@@ -1,6 +1,8 @@
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async () => {
+export const GET: RequestHandler = async ({ url }) => {
+	const siteUrl = (url?.origin || 'https://seedbd.shop').replace(/\/$/, '');
+
 	const robotsTxt = `User-agent: *
 Allow: /
 Disallow: /admin/
@@ -8,8 +10,8 @@ Disallow: /account/
 Disallow: /checkout/
 Disallow: /thank-you
 
-# Automated Sitemaps
-Sitemap: https://lp.haqplus.com/sitemap.xml
+# Automated Dynamic Sitemaps
+Sitemap: ${siteUrl}/sitemap.xml
 `;
 
 	return new Response(robotsTxt, {

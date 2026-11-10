@@ -175,27 +175,28 @@ export const load: LayoutServerLoad = async ({ platform, url, locals }) => {
 			customers,
 			profile
 		] = await Promise.all([
-			loadOrderSummary(db),
-			countRows(db, schema.products),
+			loadOrderSummary(db).catch((e) => { console.error('loadOrderSummary:', e); return null; }),
+			countRows(db, schema.products).catch(() => 0),
 			db
 				.select({ value: count() })
 				.from(schema.products)
 				.where(sql`${schema.products.inStock} = 1`)
-				.all(),
-			countRows(db, schema.reviews),
+				.all()
+				.catch(() => [{ value: 0 }]),
+			countRows(db, schema.reviews).catch(() => 0),
 			db
 				.select({ value: count() })
 				.from(schema.reviews)
 				.where(eq(schema.reviews.status, 'pending'))
 				.all()
 				.catch(() => [{ value: 0 }]),
-			countRows(db, schema.newsletter),
+			countRows(db, schema.newsletter).catch(() => 0),
 			countRows(db, schema.landingPages).catch(() => 0),
 			countRows(db, schema.mediaAssets).catch(() => 0),
-			NotificationService.getUnreadCount(db, getVisibleNotificationCategories(currentAdmin.permissions)),
+			NotificationService.getUnreadCount(db, getVisibleNotificationCategories(currentAdmin.permissions)).catch(() => 0),
 			SecurityService.countBlocked(db).catch(() => 0),
 			CustomerService.countCustomers(db).catch(() => 0),
-			AdminProfileService.getProfileById(db, currentAdmin.id)
+			AdminProfileService.getProfileById(db, currentAdmin.id).catch(() => null)
 		]);
 
 		isD1Connected = true;

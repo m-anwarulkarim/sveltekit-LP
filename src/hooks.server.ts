@@ -293,9 +293,11 @@ const handleRequest: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	// 6. Real-Time Storefront Visitor & Traffic Telemetry (Non-admin, non-bot GET requests)
+	// 6. Real-Time Storefront Visitor & Traffic Telemetry (Only real shoppers: exclude admins, dashboard, and bots)
+	const isAdminUser = Boolean(event.locals.admin || event.cookies.get(ADMIN_SESSION_COOKIE));
 	const isStorefrontVisit =
 		event.request.method === 'GET' &&
+		!isAdminUser &&
 		!botCategory &&
 		!pathname.startsWith('/admin') &&
 		!pathname.startsWith('/api') &&

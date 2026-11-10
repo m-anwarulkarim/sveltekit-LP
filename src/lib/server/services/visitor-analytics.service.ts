@@ -80,6 +80,19 @@ export class VisitorAnalyticsService {
 	static determineTrafficSource(params: RecordVisitParams): string {
 		const utm = (params.utmSource || '').trim().toLowerCase();
 		const ref = (params.referrer || '').trim().toLowerCase();
+		const ua = (params.userAgent || '').toLowerCase();
+		const ip = (params.ipAddress || '').toLowerCase();
+
+		// Check for Meta / Facebook Ad Review & Compliance Crawlers
+		if (
+			ua.includes('facebookexternalhit') ||
+			ua.includes('facebot') ||
+			ua.includes('meta-externalagent') ||
+			ua.includes('facebookcatalog') ||
+			ip.startsWith('2a03:2880:')
+		) {
+			return 'Meta Ad Review Bot';
+		}
 
 		if (params.fbclid || utm === 'fb' || utm === 'facebook' || utm.includes('facebook')) return 'Facebook Ads';
 		if (params.ttclid || utm === 'tiktok' || utm.includes('tiktok')) return 'TikTok Ads';

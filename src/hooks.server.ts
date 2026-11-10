@@ -293,12 +293,22 @@ const handleRequest: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	// 6. Real-Time Storefront Visitor & Traffic Telemetry (Only real shoppers: exclude admins, dashboard, and bots)
+	// 6. Real-Time Storefront Visitor & Traffic Telemetry (Only real shoppers: exclude admins, dashboard, scanner probes, and bots)
 	const isAdminUser = Boolean(event.locals.admin || event.cookies.get(ADMIN_SESSION_COOKIE));
+	const isScannerProbe =
+		pathname.startsWith('/wp-') ||
+		pathname.startsWith('/xmlrpc') ||
+		pathname.startsWith('/php') ||
+		pathname.startsWith('/.env') ||
+		pathname.startsWith('/.git') ||
+		pathname.startsWith('/actuator') ||
+		pathname.startsWith('/console');
+
 	const isStorefrontVisit =
 		event.request.method === 'GET' &&
 		!isAdminUser &&
 		!botCategory &&
+		!isScannerProbe &&
 		!pathname.startsWith('/admin') &&
 		!pathname.startsWith('/api') &&
 		!pathname.startsWith('/_app') &&

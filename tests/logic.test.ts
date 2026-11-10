@@ -706,6 +706,20 @@ await test('visitor: parse user agent and traffic source accurately', () => {
 		path: '/'
 	});
 	assert.equal(direct, 'Direct');
+
+	const metaBot = VisitorAnalyticsService.determineTrafficSource({
+		sessionId: 's5',
+		path: '/lp/lal-dheros',
+		userAgent: 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)'
+	});
+	assert.equal(metaBot, 'Meta Ad Review Bot');
+
+	const metaIp = VisitorAnalyticsService.determineTrafficSource({
+		sessionId: 's6',
+		path: '/lp/lal-dheros',
+		ipAddress: '2a03:2880:f80e:25::'
+	});
+	assert.equal(metaIp, 'Meta Ad Review Bot');
 });
 
 await test('visitor: recordVisit creates and updates session', async () => {

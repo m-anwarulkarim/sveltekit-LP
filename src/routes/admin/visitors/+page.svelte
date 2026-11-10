@@ -52,6 +52,42 @@
 	let activeRange = $derived(data.activeRange || 'today');
 	let isRefreshing = $state(false);
 	let blockingIp = $state<string | null>(null);
+	let streamFilter = $state<'all' | 'bd' | 'facebook'>('all');
+
+	const BD_CITIES = new Set([
+		'dhaka', 'chattogram', 'chittagong', 'sylhet', 'khulna', 'rajshahi',
+		'rangpur', 'barishal', 'mymensingh', 'cumilla', 'comilla', 'manikganj',
+		'mānikganj', 'gazipur', 'narayanganj', 'ramganj', 'rāmganj', 'bogra',
+		'jessore', 'cox\'s bazar', 'tangail', 'feni', 'noakhali', 'kushtia',
+		'faridpur', 'dinajpur', 'pabna', 'sirajganj', 'brahmanbaria', 'narsingdi'
+	]);
+
+	function isBdCity(cityName: string): boolean {
+		const lower = (cityName || '').toLowerCase().trim();
+		for (const c of BD_CITIES) {
+			if (lower.includes(c)) return true;
+		}
+		return false;
+	}
+
+	let bdVisitorsCount = $derived(
+		(summary.recentVisitors || []).filter((v: any) => isBdCity(v.city)).length
+	);
+
+	let fbVisitorsCount = $derived(
+		(summary.recentVisitors || []).filter((v: any) => (v.trafficSource || '').toLowerCase().includes('facebook')).length
+	);
+
+	let filteredRecentVisitors = $derived.by(() => {
+		const list = summary.recentVisitors || [];
+		if (streamFilter === 'bd') {
+			return list.filter((v: any) => isBdCity(v.city));
+		}
+		if (streamFilter === 'facebook') {
+			return list.filter((v: any) => (v.trafficSource || '').toLowerCase().includes('facebook'));
+		}
+		return list;
+	});
 
 	async function handleRefresh() {
 		isRefreshing = true;
@@ -73,6 +109,7 @@
 
 	function getSourceBadgeClass(source: string): string {
 		const s = (source || '').toLowerCase();
+		if (s.includes('meta ad review')) return 'bg-purple-50 text-purple-700 border-purple-200';
 		if (s.includes('facebook')) return 'bg-blue-50 text-blue-700 border-blue-200';
 		if (s.includes('google')) return 'bg-emerald-50 text-emerald-700 border-emerald-200';
 		if (s.includes('tiktok')) return 'bg-pink-50 text-pink-700 border-pink-200';
@@ -424,7 +461,7 @@
 
 	<!-- REAL-TIME LIVE ACTIVITY STREAM TABLE -->
 	<Card class="rounded-3xl border-slate-200/90 shadow-2xs overflow-hidden bg-white">
-		<div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+		<div class="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
 			<div class="flex items-center gap-2.5">
 				<div class="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
 					<Clock class="w-4 h-4 stroke-[2]" />
@@ -434,8 +471,38 @@
 					<p class="text-[11px] text-slate-500">সর্বশেষ ভিজিটদের বিস্তারিত তথ্য ও রিয়েল-টাইম পাথ</p>
 				</div>
 			</div>
-			<div class="text-xs text-slate-500 font-medium">
-				মোট ৩০টি সাম্প্রতিক ইভেন্ট প্রদর্শিত
+
+			<!-- Quick Stream Filters -->
+			<div class="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-2xl">
+				<button
+					type="button"
+					onclick={() => (streamFilter = 'all')}
+					class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer {streamFilter === 'all'
+						? 'bg-white text-slate-900 shadow-2xs'
+						: 'text-slate-600 hover:text-slate-900'}"
+				>
+					সব ভিজিটর ({summary.recentVisitors.length})
+				</button>
+
+				<button
+					type="button"
+					onclick={() => (streamFilter = 'bd')}
+					class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 {streamFilter === 'bd'
+						? 'bg-emerald-600 text-white shadow-2xs'
+						: 'text-slate-600 hover:text-slate-900'}"
+				>
+					<span>🇧🇩 বাংলাদেশ কাস্টমার ({bdVisitorsCount})</span>
+				</button>
+
+				<button
+					type="button"
+					onclick={() => (streamFilter = 'facebook')}
+					class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 {streamFilter === 'facebook'
+						? 'bg-blue-600 text-white shadow-2xs'
+						: 'text-slate-600 hover:text-slate-900'}"
+				>
+					<span>Facebook Ads ({fbVisitorsCount})</span>
+				</button>
 			</div>
 		</div>
 
@@ -453,14 +520,20 @@
 						</TableRow>
 					</TableHeader>
 					<TableBody>
-						{#if summary.recentVisitors.length === 0}
+						{#if filteredRecentVisitors.length === 0}
 							<TableRow>
 								<TableCell colspan={6} class="text-center py-8 text-xs text-slate-400">
-									এখনো কোনো সাম্প্রতিক ভিজিটর অ্যাক্টিভিটি নেই।
+									{#if streamFilter === 'bd'}
+										এখনো কোনো বাংলাদেশী ভিজিটর ফিল্টারে মেলেনি।
+									{:else if streamFilter === 'facebook'}
+										এখনো কোনো Facebook Ads ভিজিটর ফিল্টারে মেলেনি।
+									{:else}
+										এখনো কোনো সাম্প্রতিক ভিজিটর অ্যাক্টিভিটি নেই।
+									{/if}
 								</TableCell>
 							</TableRow>
 						{:else}
-							{#each summary.recentVisitors as v}
+							{#each filteredRecentVisitors as v}
 								<TableRow class="hover:bg-slate-50/80 transition-colors">
 									<TableCell class="text-xs font-mono text-slate-500 whitespace-nowrap">
 										{formatTimeAgo(v.createdAt)}

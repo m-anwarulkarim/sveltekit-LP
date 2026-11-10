@@ -21,7 +21,8 @@
 		ShieldCheck,
 		Tag,
 		Eye,
-		MessageSquare
+		MessageSquare,
+		Truck
 	} from 'lucide-svelte';
 	import { hasMenuAccess } from '#lib/constants/admin-permissions';
 
@@ -107,6 +108,7 @@
 	let isVisitorsActive = $derived(currentPath.startsWith('/admin/visitors'));
 	let isDashboardGroupActive = $derived(isDashboard || isMyActivityActive || isBotActivityActive || isVisitorsActive);
 	let isOrdersActive = $derived(currentPath.startsWith('/admin/orders'));
+	let isCourierActive = $derived(currentPath.startsWith('/admin/courier'));
 	let isProductsActive = $derived(currentPath.startsWith('/admin/products'));
 	let isCustomizationActive = $derived(currentPath.startsWith('/admin/customization'));
 	let isSettingsActive = $derived(currentPath.startsWith('/admin/settings'));
@@ -475,6 +477,33 @@
 						</div>
 					{/if}
 				</div>
+			{/if}
+
+			<!-- Courier Hub -->
+			{#if hasMenuAccess(currentPermissions, 'courier')}
+				<a
+					href="/admin/courier"
+					onclick={() => {
+						mobileOpen = false;
+						closeAllSubmenus();
+					}}
+					class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isCourierActive
+						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
+						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
+					title="কুরিয়ার হাব (Courier Hub)"
+				>
+					<div class="flex items-center gap-3.5">
+						<Truck class="w-5 h-5 shrink-0 {isCourierActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" />
+						{#if !collapsed}
+							<span>কুরিয়ার হাব</span>
+						{/if}
+					</div>
+					{#if !collapsed}
+						<span class="text-[11px] font-bold px-2 py-0.5 rounded-full {isCourierActive ? 'bg-white/25 text-white' : 'bg-indigo-50 text-[#5845eb]'}">
+							Hub
+						</span>
+					{/if}
+				</a>
 			{/if}
 
 			<!-- 3. Products -->

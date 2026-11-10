@@ -1,9 +1,64 @@
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc, sql, inArray, gte, lte, or, like } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from '../db/schema';
 import { getCourierTrackingUrl, ALL_COURIER_PROVIDERS, type CourierProviderId } from '#lib/utils/courier';
 
 export type { CourierProviderId };
+
+
+export interface CourierHubFilterOptions {
+	dateRange?: 'today' | 'yesterday' | '7days' | '30days' | 'this_month' | 'all' | 'custom';
+	startDate?: string;
+	endDate?: string;
+	provider?: string;
+	status?: string;
+	search?: string;
+	limit?: number;
+	offset?: number;
+}
+
+export interface CourierConsignmentItem {
+	id: string;
+	orderNumber: string;
+	customerName: string;
+	customerPhone: string;
+	shippingAddress: string;
+	city?: string;
+	district?: string;
+	itemsSummary: string;
+	itemsCount: number;
+	codAmount: number;
+	deliveryCharge: number;
+	courierProvider: string;
+	trackingCode: string;
+	consignmentId: string;
+	courierStatus: string;
+	courierCost: number;
+	netPayable: number;
+	status: string;
+	createdAt: Date;
+	shippedAt?: Date | null;
+	deliveredAt?: Date | null;
+	trackingUrl: string;
+}
+
+export interface CourierHubKPIs {
+	dispatchedToday: number;
+	inTransitCount: number;
+	deliveredCount: number;
+	returnedCount: number;
+	holdCount: number;
+	totalConsignments: number;
+	deliverySuccessRate: number;
+	totalCodAmount: number;
+	deliveredCodAmount: number;
+	courierFeeTotal: number;
+	netPayableTotal: number;
+	liveBalance: number;
+	liveBalanceProvider: string;
+	liveBalanceSuccess: boolean;
+	liveBalanceMessage?: string;
+}
 
 export interface CourierMethodSetting {
 	id: CourierProviderId;
@@ -960,4 +1015,403 @@ export class CourierService {
 			callStatus: 'call_received'
 		});
 	}
+
+
+	/**
+	 * Live Wallet Balance from active Courier Gateway (e.g. Steadfast)
+	 */
+	static async getLiveBalance(db: DrizzleD1Database<typeof schema>): Promise<{
+		success: boolean;
+		balance: number;
+		currency: string;
+		provider: string;
+		message?: string;
+	}> {
+		try {
+			const { methods, defaultProvider } = await this.getCourierSettings(db);
+			const activeMethod = methods.find((m) => m.isEnabled && m.id === defaultProvider) || methods.find((m) => m.isEnabled);
+			if (!activeMethod) {
+				return { success: false, balance: 0, currency: 'BDT', provider: 'None', message: 'কোনো কুরিয়ার সক্রিয় নেই' };
+			}
+
+			if (activeMethod.id === 'steadfast') {
+				const apiKey = activeMethod.credentials?.apiKey || '';
+				const secretKey = activeMethod.credentials?.secretKey || '';
+				if (!apiKey || !secretKey) {
+					return { success: false, balance: 0, currency: 'BDT', provider: 'Steadfast', message: 'Steadfast API Key/Secret নেই' };
+				}
+				const res = await fetch('https://portal.packzy.com/api/v1/get_balance', {
+					method: 'GET',
+					headers: {
+						'Api-Key': apiKey,
+						'Secret-Key': secretKey,
+						'Content-Type': 'application/json'
+					},
+					signal: AbortSignal.timeout(8000)
+				});
+				const data: any = await res.json().catch(() => ({}));
+				if (res.ok && data?.current_balance !== undefined) {
+					return {
+						success: true,
+						balance: Number(data.current_balance) || 0,
+						currency: 'BDT',
+						provider: 'Steadfast'
+					};
+				}
+				return {
+					success: false,
+					balance: 0,
+					currency: 'BDT',
+					provider: 'Steadfast',
+					message: data?.message || 'ব্যালেন্স আনা যায়নি'
+				};
+			}
+
+			return { success: false, balance: 0, currency: 'BDT', provider: activeMethod.name, message: 'ব্যালেন্স API পাওয়া যায়নি' };
+		} catch (err: any) {
+			console.error('getLiveBalance error:', err);
+			return { success: false, balance: 0, currency: 'BDT', provider: 'Courier', message: err.message || 'কানেকশন এরর' };
+		}
+	}
+
+	/**
+	 * Full Hub Data: Aggregated KPIs + Filtered Consignments List
+	 */
+	static async getCourierHubData(
+		db: DrizzleD1Database<typeof schema>,
+		options: CourierHubFilterOptions = {}
+	): Promise<{
+		kpis: CourierHubKPIs;
+		consignments: CourierConsignmentItem[];
+		totalMatching: number;
+	}> {
+		const DHAKA_UTC_OFFSET_MS = 6 * 60 * 60 * 1000;
+		const DAY_MS = 24 * 60 * 60 * 1000;
+		const now = Date.now();
+		const startOfTodayMs = Math.floor((now + DHAKA_UTC_OFFSET_MS) / DAY_MS) * DAY_MS - DHAKA_UTC_OFFSET_MS;
+		const startOfYesterdayMs = startOfTodayMs - DAY_MS;
+
+		// 1. Date filter boundaries
+		let dateStart: number | null = null;
+		let dateEnd: number | null = null;
+
+		const range = options.dateRange || 'all';
+		if (range === 'today') {
+			dateStart = startOfTodayMs;
+		} else if (range === 'yesterday') {
+			dateStart = startOfYesterdayMs;
+			dateEnd = startOfTodayMs;
+		} else if (range === '7days') {
+			dateStart = now - 7 * DAY_MS;
+		} else if (range === '30days') {
+			dateStart = now - 30 * DAY_MS;
+		} else if (range === 'this_month') {
+			const d = new Date(now + DHAKA_UTC_OFFSET_MS);
+			const startOfMonth = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) - DHAKA_UTC_OFFSET_MS;
+			dateStart = startOfMonth;
+		} else if (range === 'custom' && options.startDate) {
+			dateStart = new Date(options.startDate).getTime();
+			if (options.endDate) {
+				dateEnd = new Date(options.endDate).getTime() + DAY_MS;
+			}
+		}
+
+		// 2. Fetch all orders with courier consignment or active dispatch
+		// Either has courierProvider, trackingCode, or is in dispatched/shipped/delivered status
+		const rows = await db
+			.select()
+			.from(schema.orders)
+			.where(
+				and(
+					eq(schema.orders.isTrashed, false),
+					or(
+						sql`${schema.orders.courierProvider} IS NOT NULL AND ${schema.orders.courierProvider} != ''`,
+						sql`${schema.orders.trackingCode} IS NOT NULL AND ${schema.orders.trackingCode} != ''`,
+						inArray(schema.orders.status, ['shipped', 'delivered', 'partial_delivered', 'pending_return', 'returned'])
+					)
+				)
+			)
+			.orderBy(desc(schema.orders.createdAt))
+			.all();
+
+		// 3. Compute overall / today KPIs from all courier rows
+		let dispatchedToday = 0;
+		let inTransitCount = 0;
+		let deliveredCount = 0;
+		let returnedCount = 0;
+		let holdCount = 0;
+		let totalCodAmount = 0;
+		let deliveredCodAmount = 0;
+		let courierFeeTotal = 0;
+
+		const processedConsignments: CourierConsignmentItem[] = [];
+
+		for (const row of rows) {
+			const createdMs = row.createdAt ? new Date(row.createdAt).getTime() : 0;
+			const shippedMs = row.shippedAt ? new Date(row.shippedAt).getTime() : createdMs;
+			const status = (row.status || '').toLowerCase();
+			const courierStatus = (row.courierStatus || '').toLowerCase();
+			const codAmount = Number(row.dueAmount ?? row.total) || 0;
+			const fee = Number(row.courierCost) || (row.deliveryCharge ? Number(row.deliveryCharge) : 60);
+
+			// Count today dispatched
+			if (shippedMs >= startOfTodayMs) {
+				dispatchedToday++;
+			}
+
+			// Operational statuses
+			const isDelivered = status === 'delivered' || status === 'partial_delivered' || courierStatus === 'delivered' || courierStatus === 'partial_delivered';
+			const isReturned = status === 'returned' || status === 'pending_return' || status === 'cancelled' || courierStatus === 'returned' || courierStatus === 'cancelled';
+			const isHold = courierStatus === 'hold' || status === 'hold';
+			const isInTransit = !isDelivered && !isReturned && (status === 'shipped' || courierStatus === 'in_transit' || !!row.trackingCode);
+
+			if (isDelivered) deliveredCount++;
+			else if (isReturned) returnedCount++;
+			else if (isHold) holdCount++;
+			else if (isInTransit) inTransitCount++;
+
+			totalCodAmount += codAmount;
+			if (isDelivered) {
+				deliveredCodAmount += codAmount;
+			}
+			courierFeeTotal += fee;
+
+			// Extract items summary
+			let itemsSummary = '';
+			let itemsCount = 1;
+			try {
+				if (row.items) {
+					const parsed = JSON.parse(row.items);
+					if (Array.isArray(parsed)) {
+						itemsCount = parsed.reduce((sum: number, it: any) => sum + (Number(it.quantity) || 1), 0);
+						itemsSummary = parsed.map((it: any) => `${it.name || 'পণ্য'} (x${it.quantity || 1})`).join(', ');
+					}
+				}
+			} catch (_) {}
+
+			const provider = row.courierProvider || 'Steadfast';
+			const trackingCode = row.trackingCode || row.consignmentId || '';
+			const trackingUrl = getCourierTrackingUrl(provider, trackingCode, row.consignmentId || undefined);
+
+			// Apply Filters for table display
+			let matches = true;
+
+			// Date Filter
+			if (dateStart !== null && shippedMs < dateStart) matches = false;
+			if (dateEnd !== null && shippedMs > dateEnd) matches = false;
+
+			// Provider Filter
+			if (matches && options.provider && options.provider !== 'all') {
+				if (provider.toLowerCase() !== options.provider.toLowerCase()) {
+					matches = false;
+				}
+			}
+
+			// Status Filter
+			if (matches && options.status && options.status !== 'all') {
+				const s = options.status.toLowerCase();
+				if (s === 'in_transit' && !isInTransit) matches = false;
+				else if (s === 'delivered' && !isDelivered) matches = false;
+				else if (s === 'returned' && !isReturned) matches = false;
+				else if (s === 'hold' && !isHold) matches = false;
+			}
+
+			// Search Filter
+			if (matches && options.search && options.search.trim()) {
+				const q = options.search.toLowerCase().trim();
+				const matchNum = (row.orderNumber || '').toLowerCase().includes(q);
+				const matchPhone = (row.customerPhone || '').toLowerCase().includes(q);
+				const matchName = (row.customerName || '').toLowerCase().includes(q);
+				const matchTrack = trackingCode.toLowerCase().includes(q);
+				const matchCid = (row.consignmentId || '').toLowerCase().includes(q);
+				if (!matchNum && !matchPhone && !matchName && !matchTrack && !matchCid) {
+					matches = false;
+				}
+			}
+
+			if (matches) {
+				processedConsignments.push({
+					id: row.id,
+					orderNumber: row.orderNumber || row.id.slice(0, 8),
+					customerName: row.customerName || 'গ্রাহক',
+					customerPhone: row.customerPhone || '',
+					shippingAddress: row.shippingAddress || '',
+					city: row.city || undefined,
+					district: row.district || undefined,
+					itemsSummary: itemsSummary || 'পণ্য অর্ডার',
+					itemsCount,
+					codAmount,
+					deliveryCharge: Number(row.deliveryCharge) || 0,
+					courierProvider: provider,
+					trackingCode,
+					consignmentId: row.consignmentId || trackingCode,
+					courierStatus: isDelivered ? 'delivered' : isReturned ? 'returned' : isHold ? 'hold' : 'in_transit',
+					courierCost: fee,
+					netPayable: isDelivered ? Math.max(0, codAmount - fee) : 0,
+					status: row.status,
+					createdAt: row.createdAt ? new Date(row.createdAt) : new Date(),
+					shippedAt: row.shippedAt ? new Date(row.shippedAt) : null,
+					deliveredAt: row.deliveredAt ? new Date(row.deliveredAt) : null,
+					trackingUrl
+				});
+			}
+		}
+
+		// Calculate delivery success rate
+		const totalResolved = deliveredCount + returnedCount;
+		const deliverySuccessRate = totalResolved > 0 ? Number(((deliveredCount / totalResolved) * 100).toFixed(1)) : 100;
+		const netPayableTotal = Math.max(0, deliveredCodAmount - courierFeeTotal);
+
+		// Fetch live balance in parallel
+		const liveBal = await this.getLiveBalance(db).catch(() => ({
+			success: false,
+			balance: 0,
+			currency: 'BDT',
+			provider: 'Steadfast',
+			message: 'অফলাইন'
+		}));
+
+		const kpis: CourierHubKPIs = {
+			dispatchedToday,
+			inTransitCount,
+			deliveredCount,
+			returnedCount,
+			holdCount,
+			totalConsignments: rows.length,
+			deliverySuccessRate,
+			totalCodAmount,
+			deliveredCodAmount,
+			courierFeeTotal,
+			netPayableTotal,
+			liveBalance: liveBal.balance,
+			liveBalanceProvider: liveBal.provider,
+			liveBalanceSuccess: liveBal.success,
+			liveBalanceMessage: liveBal.message
+		};
+
+		return {
+			kpis,
+			consignments: processedConsignments,
+			totalMatching: processedConsignments.length
+		};
+	}
+
+	/**
+	 * Sync status of active parcels with Courier Gateway APIs (e.g. Steadfast)
+	 */
+	static async syncActiveConsignments(
+		db: DrizzleD1Database<typeof schema>,
+		orderIds?: string[]
+	): Promise<{
+		success: boolean;
+		syncedCount: number;
+		updatedCount: number;
+		errors: string[];
+	}> {
+		const { methods } = await this.getCourierSettings(db);
+		const steadfastConfig = methods.find((m) => m.id === 'steadfast' && m.isEnabled);
+		const apiKey = steadfastConfig?.credentials?.apiKey || '';
+		const secretKey = steadfastConfig?.credentials?.secretKey || '';
+
+		// Find active orders to sync
+		let query = db
+			.select()
+			.from(schema.orders)
+			.where(
+				and(
+					eq(schema.orders.isTrashed, false),
+					sql`${schema.orders.trackingCode} IS NOT NULL AND ${schema.orders.trackingCode} != ''`,
+					sql`${schema.orders.status} NOT IN ('delivered', 'cancelled', 'returned')`
+				)
+			);
+
+		let activeOrders = await query.all();
+		if (orderIds && orderIds.length > 0) {
+			activeOrders = activeOrders.filter((o) => orderIds.includes(o.id));
+		}
+
+		let updatedCount = 0;
+		const errors: string[] = [];
+
+		for (const order of activeOrders) {
+			const provider = (order.courierProvider || '').toLowerCase();
+			const trackingCode = order.trackingCode || '';
+			const cid = order.consignmentId || '';
+
+			if (provider.includes('steadfast') && apiKey && secretKey) {
+				try {
+					const endpoint = cid
+						? `https://portal.packzy.com/api/v1/status_by_cid/${encodeURIComponent(cid)}`
+						: `https://portal.packzy.com/api/v1/status_by_trackingcode/${encodeURIComponent(trackingCode)}`;
+
+					const res = await fetch(endpoint, {
+						method: 'GET',
+						headers: {
+							'Api-Key': apiKey,
+							'Secret-Key': secretKey,
+							'Content-Type': 'application/json'
+						},
+						signal: AbortSignal.timeout(6000)
+					});
+
+					const data: any = await res.json().catch(() => ({}));
+					if (res.ok && data?.delivery_status) {
+						const rawStatus = (data.delivery_status || '').toLowerCase();
+						let newCourierStatus = order.courierStatus;
+						let newOrderStatus = order.status;
+						let isDelivered = false;
+
+						if (rawStatus === 'delivered') {
+							newCourierStatus = 'delivered';
+							newOrderStatus = 'delivered';
+							isDelivered = true;
+						} else if (rawStatus === 'partial_delivered') {
+							newCourierStatus = 'partial_delivered';
+							newOrderStatus = 'partial_delivered';
+							isDelivered = true;
+						} else if (rawStatus === 'cancelled' || rawStatus === 'return' || rawStatus === 'cancelled_approval_pending') {
+							newCourierStatus = 'returned';
+							newOrderStatus = 'returned';
+						} else if (rawStatus === 'hold') {
+							newCourierStatus = 'hold';
+						} else if (rawStatus === 'in_review' || rawStatus === 'pending') {
+							newCourierStatus = 'in_transit';
+						}
+
+						if (newCourierStatus !== order.courierStatus || newOrderStatus !== order.status) {
+							await db
+								.update(schema.orders)
+								.set({
+									courierStatus: newCourierStatus,
+									status: newOrderStatus,
+									...(isDelivered && !order.deliveredAt ? { deliveredAt: new Date() } : {}),
+									updatedAt: new Date()
+								})
+								.where(eq(schema.orders.id, order.id));
+
+							await db.insert(schema.orderNotes).values({
+								id: crypto.randomUUID(),
+								orderId: order.id,
+								adminName: 'Courier Sync',
+								note: `কুরিয়ার স্ট্যাটাস আপডেট: ${rawStatus} (কুরিয়ার থেকে অটো সিঙ্ক হয়েছে)`,
+								callStatus: 'call_received'
+							});
+
+							updatedCount++;
+						}
+					}
+				} catch (err: any) {
+					errors.push(`অর্ডার #${order.orderNumber}: ${err.message}`);
+				}
+			}
+		}
+
+		return {
+			success: true,
+			syncedCount: activeOrders.length,
+			updatedCount,
+			errors
+		};
+	}
+
 }

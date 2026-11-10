@@ -26,6 +26,14 @@ export const ADMIN_MENU_LIST: AdminMenuItem[] = [
 		icon: 'ShoppingBag'
 	},
 	{
+		id: 'courier',
+		name: 'কুরিয়ার হাব',
+		englishName: 'Courier Hub',
+		path: '/admin/courier',
+		desc: 'দৈনিক কুরিয়ার বুকিং, ট্র্যাকিং, লাইভ ব্যালেন্স ও পেমেন্ট হিসাব',
+		icon: 'Truck'
+	},
+	{
 		id: 'products',
 		name: 'প্রোডাক্টস',
 		englishName: 'Products',
@@ -165,6 +173,7 @@ export const ROLE_PRESETS: RolePreset[] = [
 		permissions: [
 			'dashboard',
 			'orders',
+			'courier',
 			'products',
 			'customization',
 			'catalog',
@@ -184,7 +193,7 @@ export const ROLE_PRESETS: RolePreset[] = [
 		label: 'অর্ডার ম্যানেজার (Order Manager)',
 		description: 'শুধুমাত্র অর্ডার হ্যান্ডলিং, ডেলিভারি স্ট্যাটাস ও গ্রাহক তথ্য',
 		badgeClass: 'bg-emerald-600 text-white border-emerald-400',
-		permissions: ['dashboard', 'orders', 'customers']
+		permissions: ['dashboard', 'orders', 'courier', 'customers']
 	},
 	{
 		role: 'Product Specialist',
@@ -260,6 +269,7 @@ export function getMenuIdFromPath(pathname: string): string | null {
 		return 'dashboard';
 	}
 	if (pathname.startsWith('/admin/orders')) return 'orders';
+	if (pathname.startsWith('/admin/courier')) return 'courier';
 	if (pathname.startsWith('/admin/products')) return 'products';
 	if (pathname.startsWith('/admin/customization')) return 'customization';
 	if (pathname.startsWith('/admin/catalog')) return 'catalog';

@@ -2,7 +2,8 @@
 	import {
 		DashboardStats,
 		DashboardChart,
-		RecentOrdersTable
+		RecentOrdersTable,
+		MainDashboardCourierWidget
 	} from './_components/dashboard';
 	import { Activity, ArrowRight } from 'lucide-svelte';
 
@@ -41,6 +42,9 @@
 
 	<!-- 6 KPI Metric Summary Cards -->
 	<DashboardStats {data} />
+
+	<!-- Courier Operations & Live Delivery Overview Widget -->
+	<MainDashboardCourierWidget courierSummary={data.courierSummary} />
 
 	<!-- Visual Dual Analytics Section -->
 	<DashboardChart {data} />

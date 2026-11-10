@@ -10,6 +10,7 @@
 	} from '#lib/modules/products/products.data';
 	import type { Product } from '#lib/modules/products/types';
 	import PromotionalBannerStrip from '#lib/components/storefront/PromotionalBannerStrip.svelte';
+	import LazySection from '#lib/components/storefront/LazySection.svelte';
 	import { page } from '$app/state';
 	import type { PageData } from './$types';
 
@@ -17,20 +18,20 @@
 
 	let { data }: { data: PageData } = $props();
 
-	// 100% Real Database Products from Cloudflare D1
 	const allProducts = $derived.by<Product[]>(() => {
 		return data?.dbProducts || [];
 	});
 
-	// Derived filtered lists for each section (auto updates when products change)
 	const bestSaleItems = $derived(getBestSaleProducts(allProducts).slice(0, SECTION_SIZE));
 	const newArrivalItems = $derived(getNewArrivals(allProducts).slice(0, SECTION_SIZE));
 	const popularItems = $derived(getPopularProducts(allProducts).slice(0, SECTION_SIZE));
 
 	const siteName = $derived(data.websiteInfo?.websiteName || 'seedbd');
-	const pageTitle = $derived(`${siteName} | Premium Lifestyle & Essentials Store`);
+	const pageTitle = $derived(
+		`${siteName} | বাংলাদেশের সেরা বীজ ও কৃষি সরঞ্জামের অনলাইন শপ`
+	);
 	const pageDescription = $derived(
-		`${siteName} - Next-generation lifestyle, skincare and creator essentials store in Bangladesh.`
+		`${siteName} — সবজি, ফুল ও ফলের বীজ, কীটনাশক, সার ও কৃষি টুলস। দ্রুত ডেলিভারি ও সেরা দামে অর্ডার করুন।`
 	);
 </script>
 
@@ -46,22 +47,22 @@
 <StoreLayout user={data.user}>
 	<h1 class="sr-only">{pageTitle}</h1>
 
-	<!-- 1. Hero Showcase Banner Section (Dynamic based on Admin Theme View) -->
+	<!-- 1. Hero Showcase Banner -->
 	<DynamicShowcase
 		activeShowcase={data.themeConfig?.views?.showcase}
 		carousels={data.dbCarousels}
 	/>
 
-	<!-- 2. Shop By Category Section (Dynamic based on Admin Theme View) -->
+	<!-- 2. Shop By Category -->
 	<DynamicCategoryView
 		activeCategory={data.themeConfig?.views?.category}
 		categories={data.dbCategories}
 	/>
 
-	<!-- 3. Best Sale Products (🔥 সেরা অফার ও হট ডিল) -->
+	<!-- 3. Best Sale Products — above fold, renders immediately -->
 	<ProductSection
 		title="Best Sale Products"
-		subtitle="সেরা অফার ও সীমিত সময়ের হট ডিল"
+		subtitle="সেরা অফার ও সীমিত সময়ের হট ডিল"
 		icon="flame"
 		iconColor="text-rose-600"
 		badgeText="HOT DEALS"
@@ -70,30 +71,34 @@
 		seeAllLink="/catalog/all-product?filter=best-sale"
 	/>
 
-	<!-- Promotional Banners Strip (Dynamic from Database) -->
-	<PromotionalBannerStrip banners={data.dbBanners} />
+	<!-- Below-fold: lazy-loaded when scrolled into view -->
+	<LazySection>
+		<PromotionalBannerStrip banners={data.dbBanners} />
+	</LazySection>
 
-	<!-- 4. New Arrivals (✨ সদ্য যোগ হওয়া নতুন কালেকশন) -->
-	<ProductSection
-		title="New Arrivals"
-		subtitle="সদ্য যুক্ত হওয়া ট্রেন্ডিং পণ্য"
-		icon="sparkles"
-		iconColor="text-violet-600"
-		badgeText="JUST IN"
-		badgeBg="bg-violet-50 text-violet-600 border border-violet-200"
-		products={newArrivalItems}
-		seeAllLink="/catalog/all-product?filter=new-arrival"
-	/>
+	<LazySection>
+		<ProductSection
+			title="New Arrivals"
+			subtitle="সদ্য যুক্ত হওয়া ট্রেন্ডিং পণ্য"
+			icon="sparkles"
+			iconColor="text-violet-600"
+			badgeText="JUST IN"
+			badgeBg="bg-violet-50 text-violet-600 border border-violet-200"
+			products={newArrivalItems}
+			seeAllLink="/catalog/all-product?filter=new-arrival"
+		/>
+	</LazySection>
 
-	<!-- 5. Popular Products (⭐ কাস্টমার ফেভারিট ও টপ-রেটেড প্রডাক্ট) -->
-	<ProductSection
-		title="Popular Products"
-		subtitle="গ্রাহকদের সবচেয়ে পছন্দের পণ্য"
-		icon="star"
-		iconColor="text-amber-500"
-		badgeText="TRENDING"
-		badgeBg="bg-amber-50 text-amber-700 border border-amber-200"
-		products={popularItems}
-		seeAllLink="/catalog/all-product?filter=popular"
-	/>
+	<LazySection>
+		<ProductSection
+			title="Popular Products"
+			subtitle="গ্রাহকদের সবচেয়ে পছন্দের পণ্য"
+			icon="star"
+			iconColor="text-amber-500"
+			badgeText="TRENDING"
+			badgeBg="bg-amber-50 text-amber-700 border border-amber-200"
+			products={popularItems}
+			seeAllLink="/catalog/all-product?filter=popular"
+		/>
+	</LazySection>
 </StoreLayout>

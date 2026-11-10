@@ -12,4 +12,5 @@ export { default as ScrollableStatusTabs } from './ScrollableStatusTabs.svelte';
 export { default as OrderCourierCard } from './OrderCourierCard.svelte';
 export { default as OrderSourceBadge } from './OrderSourceBadge.svelte';
 export { default as OrderProductsCell } from './OrderProductsCell.svelte';
+export { default as OrderLocationCell } from './OrderLocationCell.svelte';
 

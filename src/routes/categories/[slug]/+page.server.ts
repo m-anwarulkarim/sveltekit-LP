@@ -1,4 +1,3 @@
-import { publicProductColumns } from '#lib/server/services/product.service';
 import type { PageServerLoad } from './$types';
 import { getCategoryBySlug } from '#lib/modules/products/categories.data';
 import type { Product } from '#lib/modules/products/types';
@@ -7,6 +6,25 @@ import { CategoryService } from '#lib/server/services/category.service';
 import { BrandService } from '#lib/server/services/brand.service';
 import * as schema from '#lib/server/db/schema';
 import { eq, desc } from 'drizzle-orm';
+import { cached } from '#lib/server/cache';
+
+const listingColumns = {
+	id: schema.products.id,
+	name: schema.products.name,
+	slug: schema.products.slug,
+	tagline: schema.products.tagline,
+	category: schema.products.category,
+	price: schema.products.price,
+	originalPrice: schema.products.originalPrice,
+	image: schema.products.image,
+	badge: schema.products.badge,
+	rating: schema.products.rating,
+	reviewsCount: schema.products.reviewsCount,
+	inStock: schema.products.inStock,
+	totalStock: schema.products.totalStock,
+	isPreOrder: schema.products.isPreOrder,
+	model: schema.products.model,
+} as const;
 
 export const load: PageServerLoad = async (event) => {
 	const slug = event.params.slug;
@@ -58,12 +76,14 @@ export const load: PageServerLoad = async (event) => {
 			};
 		}
 
-		const rawProducts = await db
-			.select(publicProductColumns)
-			.from(schema.products)
-			.where(eq(schema.products.status, 'published'))
-			.orderBy(desc(schema.products.createdAt))
-			.all();
+		const rawProducts = await cached('catalog-products', 30_000, () =>
+			db
+				.select(listingColumns)
+				.from(schema.products)
+				.where(eq(schema.products.status, 'published'))
+				.orderBy(desc(schema.products.createdAt))
+				.all()
+		);
 
 		allProducts = rawProducts.map((p) => {
 			const ratingNum = p.rating ? (p.rating > 5 ? p.rating / 10 : p.rating) : 0;
@@ -85,12 +105,10 @@ export const load: PageServerLoad = async (event) => {
 				rating: ratingNum,
 				reviewsCount: p.reviewsCount || 0,
 				discountPercent,
-				deliveryTime: '12-24 HOURS',
 				image: p.image || '/images/placeholder.svg',
 				badge: p.badge || 'Published',
 				badgeColor: 'bg-blue-600 text-white',
 				features: [],
-				description: p.description || p.name,
 				inStock: Boolean(p.inStock),
 				totalStock: p.totalStock !== undefined && p.totalStock !== null ? Number(p.totalStock) : 0,
 				isPreOrder: Boolean(p.isPreOrder)

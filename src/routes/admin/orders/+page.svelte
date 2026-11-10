@@ -26,7 +26,8 @@
 		OrderStatusDropdown,
 		ScrollableStatusTabs,
 		OrderSourceBadge,
-		OrderProductsCell
+		OrderProductsCell,
+		OrderLocationCell
 	} from '../_components/orders';
 
 	let { data }: { data: any } = $props();
@@ -196,7 +197,7 @@
 					<tr>
 						<th class="py-3.5 px-4">অর্ডার আইডি</th>
 						<th class="py-3.5 px-4">কাস্টমার তথ্য</th>
-						<th class="py-3.5 px-4">লোকেশন</th>
+						<th class="py-3.5 px-4 min-w-[150px]">লোকেশন</th>
 						<th class="py-3.5 px-4">পণ্য ও পরিমাণ</th>
 						<th class="py-3.5 px-4">মোট বিল</th>
 						<th class="py-3.5 px-4">বর্তমান স্ট্যাটাস</th>
@@ -275,22 +276,16 @@
 								</td>
 
 								<!-- Location -->
-								<td class="py-4 px-4 max-w-[190px]">
-									<div class="flex items-start gap-1.5">
-										<MapPin class="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
-										<div class="min-w-0">
-											{#if order.deliveryArea === 'inside_dhaka'}
-												<span class="inline-block text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 mb-0.5">ঢাকা সিটি</span>
-											{:else if order.deliveryArea === 'outside_dhaka'}
-												<span class="inline-block text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 mb-0.5">ঢাকার বাইরে</span>
-											{:else if order.deliveryArea === 'sub_dhaka'}
-												<span class="inline-block text-[10px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200 mb-0.5">উপশহর</span>
-											{/if}
-											<p class="text-xs text-slate-700 font-medium line-clamp-2 leading-snug" title={order.shippingAddress}>
-												{order.shippingAddress || 'ঠিকানা দেওয়া হয়নি'}
-											</p>
-										</div>
-									</div>
+								<td class="py-4 px-4 min-w-[150px] max-w-[220px]">
+									<OrderLocationCell
+										shippingAddress={order.shippingAddress}
+										deliveryArea={order.deliveryArea}
+										orderNumber={order.orderNumber}
+										customerName={order.customerName}
+										customerPhone={order.customerPhone}
+										city={order.city}
+										district={order.district}
+									/>
 								</td>
 
 								<!-- Product -->

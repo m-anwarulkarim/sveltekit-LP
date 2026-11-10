@@ -21,6 +21,7 @@
 		ShieldCheck,
 		PackageCheck,
 		AlertCircle,
+		RotateCcw,
 		XCircle,
 		HelpCircle
 	} from 'lucide-svelte';

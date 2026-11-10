@@ -113,11 +113,7 @@
 	});
 
 	let hasPackages = $derived(packages.length > 0);
-	let selectedPackageIndex = $state(0);
-	$effect(() => {
-		if (packages.length >= 2) selectedPackageIndex = 1;
-		else selectedPackageIndex = 0;
-	});
+	let selectedPackageIndex = $state(packages.length >= 2 ? 1 : 0);
 	let currentPackage = $derived(hasPackages ? (packages[selectedPackageIndex] || packages[0]) : null);
 
 	let price = $derived(currentPackage ? currentPackage.price : basePrice);
@@ -213,7 +209,7 @@
 
 					<!-- In Stock Status Badge -->
 					<div class="absolute bottom-3.5 right-3.5 bg-white/95 backdrop-blur-xs text-emerald-700 text-xs font-bold px-3 py-1 rounded-xl shadow-sm border border-emerald-100 flex items-center gap-1.5 z-10">
-						<span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+						<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
 						<span>ইন-স্টক এভেইলেবল</span>
 					</div>
 
@@ -266,7 +262,7 @@
 									? 'border-emerald-600 ring-2 ring-emerald-500/30 shadow-md scale-102'
 									: 'border-slate-200/90 opacity-60 hover:opacity-100 hover:border-slate-400'}"
 							>
-								<img src={img} alt={`Thumb ${idx + 1}`} class="w-full h-full object-cover" />
+								<img src={img} alt={`Thumb ${idx + 1}`} class="w-full h-full object-cover" loading="lazy" />
 								{#if activeImageIndex === idx}
 									<div class="absolute inset-0 bg-emerald-600/10 pointer-events-none"></div>
 								{/if}
@@ -421,34 +417,44 @@
 				</p>
 			</div>
 
-			<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-				<div class="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all text-center space-y-3">
-					<div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto">
-						<Award class="w-6 h-6" />
+			<div class="grid grid-cols-2 gap-3 sm:gap-4">
+				<div class="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all text-center space-y-2 sm:space-y-3">
+					<div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto">
+						<Award class="w-5 h-5 sm:w-6 sm:h-6" />
 					</div>
-					<h3 class="font-bold text-base text-slate-900">১০০% অরিজিনাল কোয়ালিটি</h3>
-					<p class="text-xs text-slate-500 leading-relaxed">
-						সরাসরি ফ্যাক্টরি গ্রেড উপাদান দিয়ে তৈরি, দীর্ঘস্থায়ী ব্যবহারের নিশ্চয়তা।
+					<h3 class="font-bold text-sm sm:text-base text-slate-900">১০০% অরিজিনাল কোয়ালিটি</h3>
+					<p class="text-[11px] sm:text-xs text-slate-500 leading-relaxed">
+						সরাসরি ফ্যাক্টরি গ্রেড উপাদান দিয়ে তৈরি, দীর্ঘস্থায়ী ব্যবহারের নিশ্চয়তা।
 					</p>
 				</div>
 
-				<div class="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all text-center space-y-3">
-					<div class="w-12 h-12 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center mx-auto">
-						<Truck class="w-6 h-6" />
+				<div class="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all text-center space-y-2 sm:space-y-3">
+					<div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center mx-auto">
+						<Truck class="w-5 h-5 sm:w-6 sm:h-6" />
 					</div>
-					<h3 class="font-bold text-base text-slate-900">দ্রুততম হোম ডেলিভারি</h3>
-					<p class="text-xs text-slate-500 leading-relaxed">
+					<h3 class="font-bold text-sm sm:text-base text-slate-900">দ্রুততম হোম ডেলিভারি</h3>
+					<p class="text-[11px] sm:text-xs text-slate-500 leading-relaxed">
 						ঢাকার ভেতরে ২৪ ঘণ্টা এবং সারাদেশে সর্বোচ্চ ৪৮ ঘণ্টার মধ্যে ডেলিভারি।
 					</p>
 				</div>
 
-				<div class="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all text-center space-y-3">
-					<div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
-						<RotateCcw class="w-6 h-6" />
+				<div class="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all text-center space-y-2 sm:space-y-3">
+					<div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+						<RotateCcw class="w-5 h-5 sm:w-6 sm:h-6" />
 					</div>
-					<h3 class="font-bold text-base text-slate-900">নিরাপদ রিপ্লেসমেন্ট</h3>
-					<p class="text-xs text-slate-500 leading-relaxed">
-						পণ্য হাতে পেয়ে কোনো ডিফেক্ট থাকলে সহজেই সাথে সাথে রিটার্ন বা পরিবর্তন সম্ভব।
+					<h3 class="font-bold text-sm sm:text-base text-slate-900">নিরাপদ রিপ্লেসমেন্ট</h3>
+					<p class="text-[11px] sm:text-xs text-slate-500 leading-relaxed">
+						পণ্য হাতে পেয়ে কোনো ডিফেক্ট থাকলে সহজেই সাথে সাথে রিটার্ন বা পরিবর্তন সম্ভব।
+					</p>
+				</div>
+
+				<div class="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all text-center space-y-2 sm:space-y-3">
+					<div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
+						<Headphones class="w-5 h-5 sm:w-6 sm:h-6" />
+					</div>
+					<h3 class="font-bold text-sm sm:text-base text-slate-900">২৪/৭ কাস্টমার সাপোর্ট</h3>
+					<p class="text-[11px] sm:text-xs text-slate-500 leading-relaxed">
+						যেকোনো সমস্যায় আমাদের সাপোর্ট টিম সবসময় আপনার পাশে আছে।
 					</p>
 				</div>
 			</div>

@@ -110,15 +110,7 @@
 		return [];
 	});
 
-	// Selected package index (defaults to 0, or index 1 if 3 packages exist and pack 2 is popular)
-	let selectedPackageIndex = $state(0);
-	$effect(() => {
-		if (packages.length >= 2) {
-			selectedPackageIndex = 1; // Default to most popular pack 2
-		} else {
-			selectedPackageIndex = 0;
-		}
-	});
+	let selectedPackageIndex = $state(packages.length >= 2 ? 1 : 0);
 
 	let currentPackage = $derived(
 		packages.length > 0 ? (packages[selectedPackageIndex] || packages[0]) : null

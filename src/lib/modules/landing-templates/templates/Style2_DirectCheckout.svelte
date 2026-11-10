@@ -134,14 +134,7 @@
 	});
 
 	// Selected package index
-	let selectedPackageIndex = $state(0);
-	$effect(() => {
-		if (packages.length >= 2) {
-			selectedPackageIndex = 1;
-		} else {
-			selectedPackageIndex = 0;
-		}
-	});
+	let selectedPackageIndex = $state(packages.length >= 2 ? 1 : 0);
 
 	let currentPackage = $derived(
 		packages.length > 0 ? (packages[selectedPackageIndex] || packages[0]) : null

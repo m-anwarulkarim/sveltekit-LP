@@ -33,7 +33,8 @@
 		Plus,
 		RotateCcw,
 		ShieldCheck,
-		Gift
+		Gift,
+		MessageSquareQuote
 	} from 'lucide-svelte';
 
 	interface Props {
@@ -183,6 +184,35 @@
 	);
 	let contactPhone = $state(landingPage?.config?.contactPhone || '');
 
+	// Customer Reviews (dynamic)
+	let initialReviews = [
+		{ name: '', location: '', text: '', rating: 5, badge: '' },
+		{ name: '', location: '', text: '', rating: 5, badge: '' },
+		{ name: '', location: '', text: '', rating: 5, badge: '' }
+	];
+	if (landingPage?.config?.reviews && Array.isArray(landingPage.config.reviews) && landingPage.config.reviews.length > 0) {
+		initialReviews = landingPage.config.reviews.map((r: any) => ({
+			name: r.name || '',
+			location: r.location || '',
+			text: r.text || '',
+			rating: r.rating ?? 5,
+			badge: r.badge || ''
+		}));
+	}
+	let reviews = $state<{ name: string; location: string; text: string; rating: number; badge: string }[]>(initialReviews);
+
+	function addReview() {
+		if (reviews.length >= 6) {
+			toast.info('সর্বোচ্চ ৬টি রিভিউ যোগ করা যাবে');
+			return;
+		}
+		reviews = [...reviews, { name: '', location: '', text: '', rating: 5, badge: '' }];
+	}
+
+	function removeReview(idx: number) {
+		reviews = reviews.filter((_, i) => i !== idx);
+	}
+
 	// Template Preview Modal State
 	let isPreviewModalOpen = $state(false);
 	let previewModalTemplate = $state<'style_1_animated' | 'style_2_direct' | 'style_3_lighthouse'>('style_3_lighthouse');
@@ -235,7 +265,8 @@
 				trustBox1Desc: trustBox1Desc || 'কোনো অগ্রিম টাকা দিতে হবে না। অর্ডার প্লেস করার পর আমাদের প্রতিনিধি ফোনে কথা বলে কনফার্ম করবেন এবং পণ্য হাতে পেয়ে দেখে টাকা পরিশোধ করবেন।',
 				trustBox2Title: trustBox2Title || '🤝 আমাদের প্রতিশ্রুতি',
 				trustBox2Desc: trustBox2Desc || 'আমরা সর্বোচ্চ কোয়ালিটি এবং সন্তুষ্টি নিশ্চিত করি। কোনো সমস্যা প্রমাণিত হলে সম্পূর্ণ পরিবর্তন অথবা মানিব্যাক গ্যারান্টি।',
-				contactPhone: contactPhone || undefined
+				contactPhone: contactPhone || undefined,
+				reviews: reviews.filter(r => r.name.trim() && r.text.trim())
 			}
 		};
 	});
@@ -522,6 +553,10 @@
 			formData.append('trustBox2Title', trustBox2Title.trim());
 			formData.append('trustBox2Desc', trustBox2Desc.trim());
 			formData.append('contactPhone', contactPhone.trim());
+
+			// Reviews
+			const validReviews = reviews.filter(r => r.name.trim() && r.text.trim());
+			formData.append('reviews', JSON.stringify(validReviews));
 
 			if (isEditMode && landingPage?.id) {
 				formData.append('id', landingPage.id);
@@ -1295,6 +1330,118 @@
 					</CardContent>
 				</Card>
 			{/if}
+
+				<!-- CARD: গ্রাহক রিভিউ / টেস্টিমনিয়াল -->
+				{#if template === 'style_1_animated' || template === 'style_3_lighthouse'}
+					<Card class="rounded-3xl border-slate-200/90 shadow-xs overflow-hidden bg-white">
+						<CardHeader class="p-5 sm:p-6 pb-4 border-b border-slate-100 bg-slate-50/50">
+							<div class="flex items-center justify-between">
+								<div class="flex items-center gap-2.5">
+									<div class="w-8 h-8 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+										<MessageSquareQuote class="w-4.5 h-4.5" />
+									</div>
+									<div>
+										<CardTitle class="text-sm sm:text-base font-bold text-slate-900">
+											গ্রাহক রিভিউ / টেস্টিমনিয়াল
+										</CardTitle>
+										<p class="text-[11px] text-slate-500">
+											সন্তুষ্ট গ্রাহকদের রিভিউ দিয়ে বিশ্বাসযোগ্যতা বাড়ান (খালি রাখলে ডিফল্ট রিভিউ দেখাবে)
+										</p>
+									</div>
+								</div>
+								{#if reviews.length < 6}
+									<Button
+										type="button"
+										variant="outline"
+										onclick={addReview}
+										class="h-8 text-xs rounded-xl gap-1 cursor-pointer"
+									>
+										<Plus class="w-3.5 h-3.5" />
+										যোগ করুন
+									</Button>
+								{/if}
+							</div>
+						</CardHeader>
+
+						<CardContent class="p-5 sm:p-6 space-y-4">
+							{#each reviews as review, idx}
+								<div class="relative p-4 rounded-2xl bg-slate-50/60 border border-slate-200/80 space-y-3">
+									<div class="flex items-center justify-between">
+										<span class="text-xs font-bold text-slate-500">রিভিউ #{idx + 1}</span>
+										<button
+											type="button"
+											onclick={() => removeReview(idx)}
+											class="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-500 flex items-center justify-center cursor-pointer transition-colors"
+											title="মুছুন"
+										>
+											<Trash2 class="w-3.5 h-3.5" />
+										</button>
+									</div>
+
+									<div class="grid grid-cols-2 gap-3">
+										<div>
+											<label class="block text-[11px] font-bold text-slate-600 mb-1">গ্রাহকের নাম *</label>
+											<Input
+												bind:value={review.name}
+												placeholder="যেমন: তানভীর আহমেদ"
+												class="h-8 text-xs rounded-xl bg-white"
+											/>
+										</div>
+										<div>
+											<label class="block text-[11px] font-bold text-slate-600 mb-1">এলাকা / শহর</label>
+											<Input
+												bind:value={review.location}
+												placeholder="যেমন: ধানমন্ডি, ঢাকা"
+												class="h-8 text-xs rounded-xl bg-white"
+											/>
+										</div>
+									</div>
+
+									<div>
+										<label class="block text-[11px] font-bold text-slate-600 mb-1">রিভিউ টেক্সট *</label>
+										<textarea
+											bind:value={review.text}
+											rows={2}
+											placeholder="গ্রাহকের মতামত লিখুন..."
+											class="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-white resize-none"
+										></textarea>
+									</div>
+
+									<div class="grid grid-cols-2 gap-3">
+										<div>
+											<label class="block text-[11px] font-bold text-slate-600 mb-1">রেটিং (১-৫)</label>
+											<div class="flex items-center gap-1">
+												{#each [1, 2, 3, 4, 5] as starVal}
+													<button
+														type="button"
+														onclick={() => (review.rating = starVal)}
+														class="cursor-pointer"
+													>
+														<Star class="w-5 h-5 {starVal <= review.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}" />
+													</button>
+												{/each}
+											</div>
+										</div>
+										<div>
+											<label class="block text-[11px] font-bold text-slate-600 mb-1">ব্যাজ (ঐচ্ছিক)</label>
+											<Input
+												bind:value={review.badge}
+												placeholder="যেমন: ৩টি প্যাকেট"
+												class="h-8 text-xs rounded-xl bg-white"
+											/>
+										</div>
+									</div>
+								</div>
+							{/each}
+
+							{#if reviews.length === 0}
+								<div class="text-center py-6 text-xs text-slate-400">
+									কোনো রিভিউ যোগ করা হয়নি — ডিফল্ট রিভিউ দেখাবে
+								</div>
+							{/if}
+						</CardContent>
+					</Card>
+				{/if}
 
 		</div>
 

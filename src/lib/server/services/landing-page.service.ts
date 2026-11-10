@@ -35,6 +35,7 @@ export interface LandingPageContent {
 	contactPhone?: string;
 	bannerImage?: string;
 	galleryImages?: string[];
+	reviews?: Array<{ name: string; location: string; text: string; rating: number; badge: string }>;
 }
 
 export interface CreateLandingInput {
@@ -61,6 +62,7 @@ export interface CreateLandingInput {
 	customPrice?: number;
 	customOriginalPrice?: number;
 	galleryImages?: string[];
+	reviews?: Array<{ name: string; location: string; text: string; rating: number; badge: string }>;
 }
 
 // ─── Shared helpers ───────────────────────────────────────────────
@@ -211,7 +213,8 @@ export class LandingPageService {
 			],
 			customPrice: input.customPrice,
 			customOriginalPrice: input.customOriginalPrice,
-			galleryImages: input.galleryImages || []
+			galleryImages: input.galleryImages || [],
+			reviews: input.reviews && input.reviews.length > 0 ? input.reviews : undefined
 		};
 
 		// Use the shared Unicode-safe slugify; fall back to a timestamp slug
@@ -286,7 +289,8 @@ export class LandingPageService {
 			contactPhone: input.contactPhone ?? existing.config.contactPhone,
 			customPrice: input.customPrice ?? existing.config.customPrice,
 			customOriginalPrice: input.customOriginalPrice ?? existing.config.customOriginalPrice,
-			galleryImages: input.galleryImages ?? existing.config.galleryImages ?? []
+			galleryImages: input.galleryImages ?? existing.config.galleryImages ?? [],
+			reviews: input.reviews ?? existing.config.reviews
 		};
 
 		const cleanSlug = input.slug

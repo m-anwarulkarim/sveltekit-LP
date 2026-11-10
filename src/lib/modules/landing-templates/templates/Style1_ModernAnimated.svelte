@@ -124,9 +124,26 @@
 		return `৳${amount.toLocaleString('en-BD')}`;
 	}
 
+	const defaultReviews = [
+		{ name: 'তানভীর আহমেদ', location: 'ধানমন্ডি', text: 'যেমন ছবিতে দেখেছি হুবহু তেমনই পেয়েছি। ডেলিভারি মাত্র ২৪ ঘণ্টার মধ্যে পেয়ে গেছি। অসংখ্য ধন্যবাদ!', rating: 5, badge: '' },
+		{ name: 'ফারহানা ইয়াসমিন', location: 'চট্টগ্রাম', text: 'কোয়ালিটি প্রিমিয়াম। ডেলিভারি ম্যানের সামনে চেক করে টাকা দিয়েছি, কোনো ধরণের ঝামেলা হয়নি।', rating: 5, badge: '' },
+		{ name: 'শফিকুল ইসলাম', location: 'সিলেট', text: 'প্রাইস অনুযায়ী এর চেয়ে সেরা জিনিস আর হতে পারে না। আমি বন্ধুদেরও রিকমেন্ড করেছি।', rating: 5, badge: '' }
+	];
+	let reviews = $derived(
+		config?.reviews && Array.isArray(config.reviews) && config.reviews.length > 0
+			? config.reviews
+			: defaultReviews
+	);
+
 	function scrollToOrderForm() {
 		const el = document.getElementById('order-form');
-		if (el) {
+		if (!el) return;
+		const rect = el.getBoundingClientRect();
+		const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+		if (isVisible) {
+			const form = el.querySelector('form');
+			if (form) form.requestSubmit();
+		} else {
 			el.scrollIntoView({ behavior: 'smooth' });
 		}
 	}
@@ -479,48 +496,35 @@
 		</section>
 
 		<!-- 6. Real Customer Testimonials -->
-		<section class="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200/90 shadow-xs space-y-6">
+		<section id="animated-reviews" class="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200/90 shadow-xs space-y-6">
 			<div class="text-center space-y-1">
 				<h3 class="text-lg sm:text-2xl font-bold text-slate-900">সন্তুষ্ট গ্রাহকদের মতামত</h3>
 				<p class="text-xs text-slate-500">আমাদের শত শত গ্রাহক এই পণ্যটি ব্যবহার করে সন্তুষ্ট</p>
 			</div>
 
 			<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-				<div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-					<div class="flex text-amber-400">
-						{#each Array(5) as _}
-							<Star class="w-3.5 h-3.5 fill-amber-400" />
-						{/each}
+				{#each reviews as review}
+					<div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+						<div class="flex text-amber-400">
+							{#each Array(review.rating || 5) as _}
+								<Star class="w-3.5 h-3.5 fill-amber-400" />
+							{/each}
+						</div>
+						<p class="text-xs text-slate-700 leading-relaxed">
+							"{review.text}"
+						</p>
+						<div class="flex items-center justify-between pt-1">
+							<div class="text-[11px] font-bold text-slate-900">
+								— {review.name}{review.location ? ", " + review.location : ""}
+							</div>
+							{#if review.badge}
+								<span class="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200">
+									{review.badge}
+								</span>
+							{/if}
+						</div>
 					</div>
-					<p class="text-xs text-slate-700 leading-relaxed">
-						"যেমন ছবিতে দেখেছি হুবহু তেমনই পেয়েছি। ডেলিভারি মাত্র ২৪ ঘণ্টার মধ্যে পেয়ে গেছি। অসংখ্য ধন্যবাদ!"
-					</p>
-					<div class="text-[11px] font-bold text-slate-900 pt-1">— তানভীর আহমেদ, ধানমন্ডি</div>
-				</div>
-
-				<div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-					<div class="flex text-amber-400">
-						{#each Array(5) as _}
-							<Star class="w-3.5 h-3.5 fill-amber-400" />
-						{/each}
-					</div>
-					<p class="text-xs text-slate-700 leading-relaxed">
-						"কোয়ালিটি প্রিমিয়াম। ডেলিভারি ম্যানের সামনে চেক করে টাকা দিয়েছি, কোনো ধরণের ঝামেলা হয়নি।"
-					</p>
-					<div class="text-[11px] font-bold text-slate-900 pt-1">— ফারহানা ইয়াসমিন, চট্টগ্রাম</div>
-				</div>
-
-				<div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-					<div class="flex text-amber-400">
-						{#each Array(5) as _}
-							<Star class="w-3.5 h-3.5 fill-amber-400" />
-						{/each}
-					</div>
-					<p class="text-xs text-slate-700 leading-relaxed">
-						"প্রাইস অনুযায়ী এর চেয়ে সেরা জিনিস আর হতে পারে না। আমি বন্ধুদেরও রিকমেন্ড করেছি।"
-					</p>
-					<div class="text-[11px] font-bold text-slate-900 pt-1">— শফিকুল ইসলাম, সিলেট</div>
-				</div>
+				{/each}
 			</div>
 		</section>
 	</main>

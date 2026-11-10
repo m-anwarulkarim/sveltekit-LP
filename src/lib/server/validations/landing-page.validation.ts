@@ -7,6 +7,7 @@ export const LANDING_STATUSES = ['Published', 'Draft'] as const;
 const MAX_PACKAGES = 3;
 const MAX_IMAGES = 20;
 const MAX_BULLETS = 10;
+const MAX_REVIEWS = 6;
 const PHONE_PATTERN = /^\+?[0-9][0-9\s-]{5,18}$/;
 
 export type LandingFormResult =
@@ -69,6 +70,34 @@ function parsePackages(raw: string): Style2Package[] | string {
 	}
 
 	return packages;
+}
+
+export interface LandingReview {
+	name: string;
+	location: string;
+	text: string;
+	rating: number;
+	badge: string;
+}
+
+function parseReviews(raw: string): LandingReview[] {
+	const items = parseJsonArray(raw).slice(0, MAX_REVIEWS);
+	const reviews: LandingReview[] = [];
+	for (const item of items) {
+		const r = item as Record<string, unknown>;
+		const name = String(r?.name ?? '').trim().slice(0, 60);
+		const text = String(r?.text ?? '').trim().slice(0, 500);
+		if (!name || !text) continue;
+		const rating = Number(r?.rating);
+		reviews.push({
+			name,
+			location: String(r?.location ?? '').trim().slice(0, 60),
+			text,
+			rating: Number.isFinite(rating) && rating >= 1 && rating <= 5 ? Math.round(rating) : 5,
+			badge: String(r?.badge ?? '').trim().slice(0, 40)
+		});
+	}
+	return reviews;
 }
 
 function parseImages(raw: string): string[] {
@@ -151,7 +180,8 @@ export function parseLandingPageForm(formData: FormData): LandingFormResult {
 			trustBox2Title: str(formData, 'trustBox2Title', 120) || undefined,
 			trustBox2Desc: str(formData, 'trustBox2Desc', 400) || undefined,
 			contactPhone: contactPhone || undefined,
-			galleryImages: parseImages(formData.get('galleryImages')?.toString() ?? '[]')
+			galleryImages: parseImages(formData.get('galleryImages')?.toString() ?? '[]'),
+			reviews: parseReviews(formData.get('reviews')?.toString() ?? '[]')
 		}
 	};
 }

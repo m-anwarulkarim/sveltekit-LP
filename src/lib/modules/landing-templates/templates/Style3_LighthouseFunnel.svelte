@@ -146,6 +146,17 @@
 	let orderNote = $state('');
 	let isSubmitting = $state(false);
 
+	const defaultReviews = [
+		{ name: 'মীর তানভীর আহমেদ', location: 'মিরপুর, ঢাকা', text: '১০০ পিস কম্বো প্যাকটি নিয়েছি। আমাদের ট্যাপের পানিতে প্রচুর আয়রন আর জং আসত। এই ফিল্টার লাগানোর পর পানি একদম কাঁচের মতো পরিষ্কার। সার্ভিস খুবই ভালো!', rating: 5, badge: '১০০ পিস কম্বো' },
+		{ name: 'নুসরাত জাহান', location: 'উত্তরা, ঢাকা', text: 'বাচ্চাদের জন্য পানির বিশুদ্ধতা নিয়ে খুব টেনশনে থাকতাম। মাত্র এক মিনিটে কিচেন ও বেসিনের ট্যাপে লাগিয়ে নিয়েছি। ডেলিভারি মাত্র ২ দিনে পেয়েছি।', rating: 5, badge: '৫০ পিস প্যাক' },
+		{ name: 'আব্দুল কাইয়ুম', location: 'আগ্রাবাদ, চট্টগ্রাম', text: '২০০ পিসের মেগা সেভার প্যাকটি অর্ডার করেছিলাম। পুরো পরিবারের এক বছরের নিশ্চিন্ত সমাধান হয়ে গেল। কোনো অগ্রিম টাকা দিতে হয়নি।', rating: 5, badge: '২০০ পিস মেগা সেভার' }
+	];
+	let reviews = $derived(
+		config?.reviews && Array.isArray(config.reviews) && config.reviews.length > 0
+			? config.reviews
+			: defaultReviews
+	);
+
 	function formatTaka(amount: number) {
 		return `৳${amount.toLocaleString('en-BD')}`;
 	}
@@ -877,71 +888,31 @@
 			</div>
 
 			<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-				<Card class="rounded-3xl border border-slate-200 p-5 shadow-xs space-y-3 bg-slate-50/50">
-					<div class="flex items-center gap-1 text-amber-400">
-						<Star class="w-4 h-4 fill-amber-400" />
-						<Star class="w-4 h-4 fill-amber-400" />
-						<Star class="w-4 h-4 fill-amber-400" />
-						<Star class="w-4 h-4 fill-amber-400" />
-						<Star class="w-4 h-4 fill-amber-400" />
-					</div>
-					<p class="text-xs text-slate-700 leading-relaxed italic">
-						"১০০ পিস কম্বো প্যাকটি নিয়েছি। আমাদের ট্যাপের পানিতে প্রচুর আয়রন আর জং আসত। এই ফিল্টার লাগানোর পর পানি একদম কাঁচের মতো পরিষ্কার। সার্ভিস খুবই ভালো!"
-					</p>
-					<div class="pt-2 border-t border-slate-200/60 flex items-center justify-between">
-						<div>
-							<div class="text-xs font-black text-slate-900">মীর তানভীর আহমেদ</div>
-							<div class="text-[10px] text-slate-400">মিরপুর, ঢাকা</div>
+				{#each reviews as review}
+					<Card class="rounded-3xl border border-slate-200 p-5 shadow-xs space-y-3 bg-slate-50/50">
+						<div class="flex items-center gap-1 text-amber-400">
+							{#each Array(review.rating || 5) as _}
+								<Star class="w-4 h-4 fill-amber-400" />
+							{/each}
 						</div>
-						<span class="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-							১০০ পিস কম্বো
-						</span>
-					</div>
-				</Card>
-
-				<Card class="rounded-3xl border border-slate-200 p-5 shadow-xs space-y-3 bg-slate-50/50">
-					<div class="flex items-center gap-1 text-amber-400">
-						<Star class="w-4 h-4 fill-amber-400" />
-						<Star class="w-4 h-4 fill-amber-400" />
-						<Star class="w-4 h-4 fill-amber-400" />
-						<Star class="w-4 h-4 fill-amber-400" />
-						<Star class="w-4 h-4 fill-amber-400" />
-					</div>
-					<p class="text-xs text-slate-700 leading-relaxed italic">
-						"বাচ্চাদের জন্য পানির বিশুদ্ধতা নিয়ে খুব টেনশনে থাকতাম। মাত্র এক মিনিটে কিচেন ও বেসিনের ট্যাপে লাগিয়ে নিয়েছি। ডেলিভারি মাত্র ২ দিনে পেয়েছি।"
-					</p>
-					<div class="pt-2 border-t border-slate-200/60 flex items-center justify-between">
-						<div>
-							<div class="text-xs font-black text-slate-900">নুসরাত জাহান</div>
-							<div class="text-[10px] text-slate-400">উত্তরা, ঢাকা</div>
+						<p class="text-xs text-slate-700 leading-relaxed italic">
+							"{review.text}"
+						</p>
+						<div class="pt-2 border-t border-slate-200/60 flex items-center justify-between">
+							<div>
+								<div class="text-xs font-black text-slate-900">{review.name}</div>
+								{#if review.location}
+									<div class="text-[10px] text-slate-400">{review.location}</div>
+								{/if}
+							</div>
+							{#if review.badge}
+								<span class="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+									{review.badge}
+								</span>
+							{/if}
 						</div>
-						<span class="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-							৫০ পিস প্যাক
-						</span>
-					</div>
-				</Card>
-
-				<Card class="rounded-3xl border border-slate-200 p-5 shadow-xs space-y-3 bg-slate-50/50">
-					<div class="flex items-center gap-1 text-amber-400">
-						<Star class="w-4 h-4 fill-amber-400" />
-						<Star class="w-4 h-4 fill-amber-400" />
-						<Star class="w-4 h-4 fill-amber-400" />
-						<Star class="w-4 h-4 fill-amber-400" />
-						<Star class="w-4 h-4 fill-amber-400" />
-					</div>
-					<p class="text-xs text-slate-700 leading-relaxed italic">
-						"২০০ পিসের মেগা সেভার প্যাকটি অর্ডার করেছিলাম। পুরো পরিবারের এক বছরের নিশ্চিন্ত সমাধান হয়ে গেল। কোনো অগ্রিম টাকা দিতে হয়নি।"
-					</p>
-					<div class="pt-2 border-t border-slate-200/60 flex items-center justify-between">
-						<div>
-							<div class="text-xs font-black text-slate-900">আব্দুল কাইয়ুম</div>
-							<div class="text-[10px] text-slate-400">আগ্রাবাদ, চট্টগ্রাম</div>
-						</div>
-						<span class="text-[9px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200">
-							২০০ পিস মেগা সেভার
-						</span>
-					</div>
-				</Card>
+					</Card>
+				{/each}
 			</div>
 		</div>
 	</section>

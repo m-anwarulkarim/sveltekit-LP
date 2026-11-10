@@ -306,7 +306,6 @@ const handleRequest: Handle = async ({ event, resolve }) => {
 
 	const isStorefrontVisit =
 		event.request.method === 'GET' &&
-		!isAdminUser &&
 		!botCategory &&
 		!isScannerProbe &&
 		!pathname.startsWith('/admin') &&
@@ -352,7 +351,8 @@ const handleRequest: Handle = async ({ event, resolve }) => {
 				utmCampaign: searchParams.get('utm_campaign') || undefined,
 				fbclid: searchParams.get('fbclid') || undefined,
 				ttclid: searchParams.get('ttclid') || undefined,
-				gclid: searchParams.get('gclid') || undefined
+				gclid: searchParams.get('gclid') || undefined,
+				isAdmin: isAdminUser
 			}).catch((err) => console.warn('Visitor telemetry recording error:', err));
 
 			if (platform?.ctx?.waitUntil) {

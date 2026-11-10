@@ -32,6 +32,7 @@ export const load: PageServerLoad = async ({ parent, platform, url }) => {
 				deviceBreakdown: [],
 				topPages: [],
 				topCities: [],
+				adminVisitsCount: 0,
 				recentVisitors: []
 			},
 			activeRange: range

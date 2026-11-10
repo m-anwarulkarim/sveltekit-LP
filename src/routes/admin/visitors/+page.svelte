@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import {
 		Button,
 		Badge,
@@ -23,6 +23,7 @@
 		MapPin,
 		RotateCw,
 		ShieldAlert,
+		ShieldCheck,
 		ExternalLink,
 		Clock,
 		Sparkles,
@@ -46,13 +47,14 @@
 		deviceBreakdown: [],
 		topPages: [],
 		topCities: [],
+		adminVisitsCount: 0,
 		recentVisitors: []
 	});
 
 	let activeRange = $derived(data.activeRange || 'today');
 	let isRefreshing = $state(false);
 	let blockingIp = $state<string | null>(null);
-	let streamFilter = $state<'all' | 'bd' | 'facebook'>('all');
+	let streamFilter = $state<'all' | 'bd' | 'facebook' | 'admin'>('all');
 
 	const BD_CITIES = new Set([
 		'dhaka', 'chattogram', 'chittagong', 'sylhet', 'khulna', 'rajshahi',
@@ -78,6 +80,10 @@
 		(summary.recentVisitors || []).filter((v: any) => (v.trafficSource || '').toLowerCase().includes('facebook')).length
 	);
 
+	let adminVisitorsCount = $derived(
+		(summary.recentVisitors || []).filter((v: any) => v.isAdmin).length
+	);
+
 	let filteredRecentVisitors = $derived.by(() => {
 		const list = summary.recentVisitors || [];
 		if (streamFilter === 'bd') {
@@ -85,6 +91,9 @@
 		}
 		if (streamFilter === 'facebook') {
 			return list.filter((v: any) => (v.trafficSource || '').toLowerCase().includes('facebook'));
+		}
+		if (streamFilter === 'admin') {
+			return list.filter((v: any) => v.isAdmin);
 		}
 		return list;
 	});
@@ -219,8 +228,14 @@
 				<span>{summary.todaySessions}</span>
 				<span class="text-xs font-bold text-blue-700 font-['Anek_Bangla']">টি সেশন</span>
 			</div>
-			<div class="mt-2 text-[11px] font-medium text-blue-700">
-				নির্বাচিত সময়ের মোট স্বতন্ত্র ভিজিট
+			<div class="mt-2 text-[11px] font-medium text-blue-700 flex items-center gap-2">
+				<span>নির্বাচিত সময়ের মোট স্বতন্ত্র ভিজিট</span>
+				{#if summary.adminVisitsCount > 0}
+					<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold">
+						<ShieldCheck class="w-3 h-3" />
+						{summary.adminVisitsCount} অ্যাডমিন
+					</span>
+				{/if}
 			</div>
 		</div>
 
@@ -503,6 +518,17 @@
 				>
 					<span>Facebook Ads ({fbVisitorsCount})</span>
 				</button>
+
+				<button
+					type="button"
+					onclick={() => (streamFilter = 'admin')}
+					class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 {streamFilter === 'admin'
+						? 'bg-amber-600 text-white shadow-2xs'
+						: 'text-slate-600 hover:text-slate-900'}"
+				>
+					<ShieldCheck class="w-3.5 h-3.5" />
+					<span>অ্যাডমিন ({adminVisitorsCount})</span>
+				</button>
 			</div>
 		</div>
 
@@ -527,6 +553,8 @@
 										এখনো কোনো বাংলাদেশী ভিজিটর ফিল্টারে মেলেনি।
 									{:else if streamFilter === 'facebook'}
 										এখনো কোনো Facebook Ads ভিজিটর ফিল্টারে মেলেনি।
+									{:else if streamFilter === 'admin'}
+										এখনো কোনো অ্যাডমিন ভিজিট রেকর্ড হয়নি।
 									{:else}
 										এখনো কোনো সাম্প্রতিক ভিজিটর অ্যাক্টিভিটি নেই।
 									{/if}
@@ -539,7 +567,15 @@
 										{formatTimeAgo(v.createdAt)}
 									</TableCell>
 									<TableCell class="min-w-[180px]">
-										<div class="text-xs font-bold text-slate-900 line-clamp-1">{v.pageTitle}</div>
+										<div class="text-xs font-bold text-slate-900 line-clamp-1 flex items-center gap-1.5">
+											{v.pageTitle}
+											{#if v.isAdmin}
+												<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold shrink-0">
+													<ShieldCheck class="w-3 h-3" />
+													অ্যাডমিন
+												</span>
+											{/if}
+										</div>
 										<div class="text-[11px] font-mono text-slate-400">{v.path}</div>
 									</TableCell>
 									<TableCell>

@@ -21,6 +21,7 @@ export const visitorSessions = sqliteTable(
 		firstPage: text('first_page'),
 		lastPage: text('last_page'),
 		pageviewsCount: integer('pageviews_count').notNull().default(1),
+		isAdmin: integer('is_admin', { mode: 'boolean' }).notNull().default(false),
 		hasOrdered: integer('has_ordered', { mode: 'boolean' }).notNull().default(false),
 		lastActiveAt: integer('last_active_at', { mode: 'timestamp_ms' })
 			.notNull()
@@ -48,6 +49,7 @@ export const visitorPageviews = sqliteTable(
 		trafficSource: text('traffic_source').default('Direct'),
 		deviceType: text('device_type').default('mobile'),
 		city: text('city'),
+		isAdmin: integer('is_admin', { mode: 'boolean' }).notNull().default(false),
 		createdAt: integer('created_at', { mode: 'timestamp_ms' })
 			.notNull()
 			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)

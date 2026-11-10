@@ -17,6 +17,7 @@ export interface RecordVisitParams {
 	fbclid?: string;
 	ttclid?: string;
 	gclid?: string;
+	isAdmin?: boolean;
 }
 
 export interface LiveTrafficSummary {
@@ -29,6 +30,7 @@ export interface LiveTrafficSummary {
 	deviceBreakdown: { device: string; count: number; percentage: number }[];
 	topPages: { path: string; title: string; views: number }[];
 	topCities: { city: string; count: number }[];
+	adminVisitsCount: number;
 	recentVisitors: {
 		id: string;
 		sessionId: string;
@@ -38,6 +40,7 @@ export interface LiveTrafficSummary {
 		deviceType: string;
 		city: string;
 		ipAddress: string;
+		isAdmin: boolean;
 		createdAt: number;
 	}[];
 }
@@ -137,13 +140,16 @@ export class VisitorAnalyticsService {
 				.limit(1)
 				.get();
 
+			const isAdmin = params.isAdmin ?? false;
+
 			if (existingSession) {
 				await db
 					.update(schema.visitorSessions)
 					.set({
 						lastActiveAt: new Date(now),
 						lastPage: params.path,
-						pageviewsCount: sql`${schema.visitorSessions.pageviewsCount} + 1`
+						pageviewsCount: sql`${schema.visitorSessions.pageviewsCount} + 1`,
+						...(isAdmin && { isAdmin: true })
 					})
 					.where(eq(schema.visitorSessions.id, existingSession.id));
 			} else {
@@ -163,6 +169,7 @@ export class VisitorAnalyticsService {
 					firstPage: params.path,
 					lastPage: params.path,
 					pageviewsCount: 1,
+					isAdmin,
 					hasOrdered: false,
 					lastActiveAt: new Date(now),
 					createdAt: new Date(now)
@@ -177,6 +184,7 @@ export class VisitorAnalyticsService {
 				trafficSource,
 				deviceType,
 				city,
+				isAdmin,
 				createdAt: new Date(now)
 			});
 		} catch (err) {
@@ -229,7 +237,8 @@ export class VisitorAnalyticsService {
 		const sessionStats = await db
 			.select({
 				total: sql<number>`count(*)`,
-				converted: sql<number>`sum(case when ${schema.visitorSessions.hasOrdered} = 1 then 1 else 0 end)`
+				converted: sql<number>`sum(case when ${schema.visitorSessions.hasOrdered} = 1 then 1 else 0 end)`,
+				adminCount: sql<number>`sum(case when ${schema.visitorSessions.isAdmin} = 1 then 1 else 0 end)`
 			})
 			.from(schema.visitorSessions)
 			.where(gte(schema.visitorSessions.createdAt, new Date(rangeStart)))
@@ -238,6 +247,7 @@ export class VisitorAnalyticsService {
 		const todaySessions = Number(sessionStats?.total) || 0;
 		const convertedCount = Number(sessionStats?.converted) || 0;
 		const conversionRate = todaySessions > 0 ? Number(((convertedCount / todaySessions) * 100).toFixed(1)) : 0;
+		const adminVisitsCount = Number(sessionStats?.adminCount) || 0;
 
 		// 3. Period Pageviews Count
 		const pvStats = await db
@@ -336,6 +346,7 @@ export class VisitorAnalyticsService {
 				trafficSource: schema.visitorPageviews.trafficSource,
 				deviceType: schema.visitorPageviews.deviceType,
 				city: schema.visitorPageviews.city,
+				isAdmin: schema.visitorPageviews.isAdmin,
 				createdAt: schema.visitorPageviews.createdAt
 			})
 			.from(schema.visitorPageviews)
@@ -352,6 +363,7 @@ export class VisitorAnalyticsService {
 			deviceType: r.deviceType || 'mobile',
 			city: r.city || 'ঢাকা',
 			ipAddress: '103.***.***',
+			isAdmin: Boolean(r.isAdmin),
 			createdAt: r.createdAt ? new Date(r.createdAt).getTime() : Date.now()
 		}));
 
@@ -365,6 +377,7 @@ export class VisitorAnalyticsService {
 			deviceBreakdown,
 			topPages,
 			topCities,
+			adminVisitsCount,
 			recentVisitors
 		};
 	}

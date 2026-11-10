@@ -18,3 +18,4 @@ export * from './reviews.schema';
 export * from './auth.schema';
 export * from './newsletter.schema';
 export * from './cart.schema';
+export * from './analytics.schema';

@@ -10,6 +10,7 @@ import { getAuthSecret } from '#lib/server/secrets';
 import { cached, clearCache } from '#lib/server/cache';
 import { getRateLimitTier, isRateLimitAllowed } from '#lib/server/rate-limit';
 import { SecurityService } from '#lib/server/services/security.service';
+import { VisitorAnalyticsService } from '#lib/server/services/visitor-analytics.service';
 import { ADMIN_SESSION_COOKIE, AdminAuthService } from '#lib/server/services/admin-auth.service';
 import {
 	ADMIN_MENU_LIST,
@@ -289,6 +290,64 @@ const handleRequest: Handle = async ({ event, resolve }) => {
 			}
 		} catch (err) {
 			console.error('Failed to init db for bot telemetry:', err);
+		}
+	}
+
+	// 6. Real-Time Storefront Visitor & Traffic Telemetry (Non-admin, non-bot GET requests)
+	const isStorefrontVisit =
+		event.request.method === 'GET' &&
+		!botCategory &&
+		!pathname.startsWith('/admin') &&
+		!pathname.startsWith('/api') &&
+		!pathname.startsWith('/_app') &&
+		!pathname.startsWith('/images') &&
+		!pathname.includes('.');
+
+	if (isStorefrontVisit) {
+		let vSid = event.cookies.get('v_sid');
+		if (!vSid) {
+			vSid = crypto.randomUUID();
+			try {
+				event.cookies.set('v_sid', vSid, {
+					path: '/',
+					httpOnly: true,
+					maxAge: 60 * 60 * 24 * 30, // 30 days
+					sameSite: 'lax'
+				});
+			} catch {
+				// Cookie setting might fail on certain internal calls
+			}
+		}
+
+		try {
+			const cf = (event.request as any).cf;
+			const city = cf?.city || event.request.headers.get('cf-ipcity') || 'Dhaka';
+			const country = cf?.country || event.request.headers.get('cf-ipcountry') || 'BD';
+			const referrer = event.request.headers.get('referer') || '';
+			const searchParams = event.url.searchParams;
+
+			const visitTask = VisitorAnalyticsService.recordVisit(getDb(platform), {
+				sessionId: vSid,
+				ipAddress: clientIp,
+				city,
+				country,
+				userAgent,
+				path: pathname,
+				pageTitle: pathname === '/' ? 'হোমপেজ' : pathname,
+				referrer,
+				utmSource: searchParams.get('utm_source') || undefined,
+				utmMedium: searchParams.get('utm_medium') || undefined,
+				utmCampaign: searchParams.get('utm_campaign') || undefined,
+				fbclid: searchParams.get('fbclid') || undefined,
+				ttclid: searchParams.get('ttclid') || undefined,
+				gclid: searchParams.get('gclid') || undefined
+			}).catch((err) => console.warn('Visitor telemetry recording error:', err));
+
+			if (platform?.ctx?.waitUntil) {
+				platform.ctx.waitUntil(visitTask);
+			}
+		} catch (err) {
+			console.warn('Failed to dispatch visitor telemetry:', err);
 		}
 	}
 

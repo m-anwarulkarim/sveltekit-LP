@@ -23,6 +23,7 @@ import { POST as incomplete } from '../src/routes/api/checkout/incomplete/+serve
 import { load as checkoutLoad } from '../src/routes/checkout/+page.server';
 import { actions as lpActions } from '../src/routes/lp/[slug]/+page.server';
 import { resolveLandingOffer, computeCouponDiscount, parseCartItemId } from '../src/lib/utils/order-pricing';
+import { VisitorAnalyticsService } from '../src/lib/server/services/visitor-analytics.service';
 
 const sqlite = new DatabaseSync(':memory:');
 sqlite.exec('PRAGMA foreign_keys = ON');
@@ -664,6 +665,76 @@ await test('order follow-ups run through defer when the platform provides it', a
 	await Promise.all(deferred);
 	const n: any = sqlite.prepare('select count(*) c from notifications where link = ?').get(`/admin/orders/${o.orderId}`);
 	assert.equal(n.c, 1);
+});
+
+// ---------- visitor analytics ----------
+await test('visitor: parse user agent and traffic source accurately', () => {
+	const mobileUa = 'Mozilla/5.0 (Linux; Android 13; SM-S901B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36';
+	const parsed = VisitorAnalyticsService.parseUserAgent(mobileUa);
+	assert.equal(parsed.deviceType, 'mobile');
+	assert.equal(parsed.os, 'Android');
+	assert.equal(parsed.browser, 'Chrome');
+
+	const desktopUa = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+	const parsedDesktop = VisitorAnalyticsService.parseUserAgent(desktopUa);
+	assert.equal(parsedDesktop.deviceType, 'desktop');
+	assert.equal(parsedDesktop.os, 'Windows');
+
+	const fbSource = VisitorAnalyticsService.determineTrafficSource({
+		sessionId: 's1',
+		path: '/',
+		fbclid: 'IwAR0123456789'
+	});
+	assert.equal(fbSource, 'Facebook Ads');
+
+	const ttSource = VisitorAnalyticsService.determineTrafficSource({
+		sessionId: 's2',
+		path: '/',
+		utmSource: 'tiktok'
+	});
+	assert.equal(ttSource, 'TikTok Ads');
+
+	const googleRef = VisitorAnalyticsService.determineTrafficSource({
+		sessionId: 's3',
+		path: '/',
+		referrer: 'https://www.google.com/search?q=test'
+	});
+	assert.equal(googleRef, 'Google Search');
+
+	const direct = VisitorAnalyticsService.determineTrafficSource({
+		sessionId: 's4',
+		path: '/'
+	});
+	assert.equal(direct, 'Direct');
+});
+
+await test('visitor: recordVisit creates and updates session', async () => {
+	await VisitorAnalyticsService.recordVisit(db, {
+		sessionId: 'test-session-123',
+		path: '/products/tracked',
+		pageTitle: 'Tracked Product',
+		city: 'Dhaka',
+		country: 'BD',
+		fbclid: 'xyz'
+	});
+
+	const s1: any = sqlite.prepare('SELECT pageviews_count, traffic_source, city FROM visitor_sessions WHERE session_id = ?').get('test-session-123');
+	assert.equal(s1.pageviews_count, 1);
+	assert.equal(s1.traffic_source, 'Facebook Ads');
+	assert.equal(s1.city, 'Dhaka');
+
+	// Repeat visit on another page
+	await VisitorAnalyticsService.recordVisit(db, {
+		sessionId: 'test-session-123',
+		path: '/checkout',
+		pageTitle: 'Checkout'
+	});
+
+	const s2: any = sqlite.prepare('SELECT pageviews_count FROM visitor_sessions WHERE session_id = ?').get('test-session-123');
+	assert.equal(s2.pageviews_count, 2);
+
+	const pvCount: any = sqlite.prepare('SELECT count(*) c FROM visitor_pageviews WHERE session_id = ?').get('test-session-123');
+	assert.equal(pvCount.c, 2);
 });
 console.log(`\n${passed} passed, ${failures.length} failed`);
 if (failures.length) {

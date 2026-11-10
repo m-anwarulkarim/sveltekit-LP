@@ -47,7 +47,12 @@
 	// Synchronize open submenu with current active route
 	$effect(() => {
 		const path = page.url.pathname;
-		if (path === '/admin' || path.startsWith('/admin/my-activity') || path.startsWith('/admin/bot-activity')) {
+		if (
+			path === '/admin' ||
+			path.startsWith('/admin/my-activity') ||
+			path.startsWith('/admin/bot-activity') ||
+			path.startsWith('/admin/visitors')
+		) {
 			openSubmenu = 'dashboard';
 		} else if (path.startsWith('/admin/orders')) {
 			openSubmenu = 'orders';
@@ -99,7 +104,8 @@
 	let isDashboard = $derived(currentPath === '/admin');
 	let isMyActivityActive = $derived(currentPath.startsWith('/admin/my-activity'));
 	let isBotActivityActive = $derived(currentPath.startsWith('/admin/bot-activity'));
-	let isDashboardGroupActive = $derived(isDashboard || isMyActivityActive || isBotActivityActive);
+	let isVisitorsActive = $derived(currentPath.startsWith('/admin/visitors'));
+	let isDashboardGroupActive = $derived(isDashboard || isMyActivityActive || isBotActivityActive || isVisitorsActive);
 	let isOrdersActive = $derived(currentPath.startsWith('/admin/orders'));
 	let isProductsActive = $derived(currentPath.startsWith('/admin/products'));
 	let isCustomizationActive = $derived(currentPath.startsWith('/admin/customization'));
@@ -296,7 +302,25 @@
 								<span>My Activity</span>
 							</a>
 
-							<!-- 3. Bot Activity -->
+							<!-- 3. Visitor Analytics -->
+							<a
+								href="/admin/visitors"
+								onclick={() => (mobileOpen = false)}
+								class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition-all {currentPath === '/admin/visitors'
+									? 'bg-indigo-50 text-[#5845eb] font-bold border border-indigo-200/80 shadow-2xs'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}"
+							>
+								<div class="flex items-center gap-2.5">
+									<span class="w-1.5 h-1.5 rounded-full {currentPath === '/admin/visitors' ? 'bg-[#5845eb]' : 'bg-slate-400'}"></span>
+									<span>Visitor Analytics</span>
+								</div>
+								<span class="flex items-center gap-1 text-[9.5px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded-full border border-emerald-200">
+									<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+									Live
+								</span>
+							</a>
+
+							<!-- 4. Bot Activity -->
 							<a
 								href="/admin/bot-activity"
 								onclick={() => (mobileOpen = false)}

@@ -44,6 +44,7 @@
 	let isDashboard = $derived(currentPath === '/admin');
 	let isMyActivityActive = $derived(currentPath.startsWith('/admin/my-activity'));
 	let isBotActivityActive = $derived(currentPath.startsWith('/admin/bot-activity'));
+	let isVisitorsActive = $derived(currentPath.startsWith('/admin/visitors'));
 	let isOrdersActive = $derived(currentPath.startsWith('/admin/orders'));
 	let isProductsActive = $derived(currentPath.startsWith('/admin/products'));
 	let isCarouselActive = $derived(currentPath === '/admin/customization/carousel');
@@ -102,6 +103,8 @@
 					<span>My Activity</span>
 				{:else if isBotActivityActive}
 					<span>Bot Activity</span>
+				{:else if isVisitorsActive}
+					<span>Visitor Analytics</span>
 				{:else if isProductsActive}
 					<span>Product</span>
 				{:else if isCarouselActive}

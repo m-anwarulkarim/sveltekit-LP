@@ -251,7 +251,12 @@ export function getMenuLabel(menuId: string): string {
  * Maps a URL pathname to its corresponding Admin Menu ID
  */
 export function getMenuIdFromPath(pathname: string): string | null {
-	if (pathname === '/admin' || pathname.startsWith('/admin/my-activity') || pathname.startsWith('/admin/bot-activity')) {
+	if (
+		pathname === '/admin' ||
+		pathname.startsWith('/admin/my-activity') ||
+		pathname.startsWith('/admin/bot-activity') ||
+		pathname.startsWith('/admin/visitors')
+	) {
 		return 'dashboard';
 	}
 	if (pathname.startsWith('/admin/orders')) return 'orders';

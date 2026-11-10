@@ -52,12 +52,17 @@
 
 	function formatDate(d: Date | string | null | undefined): string {
 		if (!d) return '—';
-		const dateObj = typeof d === 'string' ? new Date(d) : d;
-		return dateObj.toLocaleDateString('bn-BD', {
-			day: 'numeric',
-			month: 'short',
-			year: 'numeric'
-		});
+		try {
+			const dateObj = typeof d === 'string' ? new Date(d) : d;
+			if (isNaN(dateObj.getTime())) return '—';
+			return dateObj.toLocaleDateString('bn-BD', {
+				day: 'numeric',
+				month: 'short',
+				year: 'numeric'
+			});
+		} catch (_) {
+			return '—';
+		}
 	}
 
 	let isAllSelected = $derived(
@@ -266,3 +271,4 @@
 		</div>
 	{/if}
 </div>
+

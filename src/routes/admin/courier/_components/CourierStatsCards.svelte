@@ -14,12 +14,30 @@
 	} from 'lucide-svelte';
 
 	interface Props {
-		kpis: CourierHubKPIs;
+		kpis?: CourierHubKPIs;
 		onRefreshBalance?: () => void;
 		isRefreshingBalance?: boolean;
 	}
 
-	let { kpis, onRefreshBalance, isRefreshingBalance = false }: Props = $props();
+	const defaultKpis: CourierHubKPIs = {
+		dispatchedToday: 0,
+		inTransitCount: 0,
+		deliveredCount: 0,
+		returnedCount: 0,
+		holdCount: 0,
+		totalConsignments: 0,
+		deliverySuccessRate: 100,
+		totalCodAmount: 0,
+		deliveredCodAmount: 0,
+		courierFeeTotal: 0,
+		netPayableTotal: 0,
+		liveBalance: 0,
+		liveBalanceProvider: 'Steadfast',
+		liveBalanceSuccess: false,
+		liveBalanceMessage: 'ব্যালেন্স সিঙ্ক হয়নি'
+	};
+
+	let { kpis = defaultKpis, onRefreshBalance, isRefreshingBalance = false }: Props = $props();
 
 	function formatTaka(amount: number): string {
 		return '৳ ' + Math.round(amount || 0).toLocaleString('en-IN');
@@ -194,3 +212,4 @@
 		</div>
 	</div>
 </div>
+

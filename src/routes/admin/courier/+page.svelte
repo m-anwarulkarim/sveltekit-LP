@@ -22,22 +22,40 @@
 
 	let { data }: { data: PageData } = $props();
 
+	const fallbackKpis = {
+		dispatchedToday: 0,
+		inTransitCount: 0,
+		deliveredCount: 0,
+		returnedCount: 0,
+		holdCount: 0,
+		totalConsignments: 0,
+		deliverySuccessRate: 100,
+		totalCodAmount: 0,
+		deliveredCodAmount: 0,
+		courierFeeTotal: 0,
+		netPayableTotal: 0,
+		liveBalance: 0,
+		liveBalanceProvider: 'Steadfast',
+		liveBalanceSuccess: false,
+		liveBalanceMessage: 'ব্যালেন্স সিঙ্ক হয়নি'
+	};
+
 	// Reactive states
-	let kpis = $state(data.kpis);
-	let consignments = $state(data.consignments);
-	let totalMatching = $state(data.totalMatching);
+	let kpis = $state(data?.kpis ?? fallbackKpis);
+	let consignments = $state(data?.consignments ?? []);
+	let totalMatching = $state(data?.totalMatching ?? 0);
 
 	$effect(() => {
-		kpis = data.kpis;
-		consignments = data.consignments;
-		totalMatching = data.totalMatching;
+		kpis = data?.kpis ?? fallbackKpis;
+		consignments = data?.consignments ?? [];
+		totalMatching = data?.totalMatching ?? 0;
 	});
 
 	// Filter states initialized from server data
-	let selectedDateRange = $state(data.filters.dateRange || 'all');
-	let selectedProvider = $state(data.filters.provider || 'all');
-	let selectedStatus = $state(data.filters.status || 'all');
-	let searchQuery = $state(data.filters.search || '');
+	let selectedDateRange = $state(data?.filters?.dateRange || 'all');
+	let selectedProvider = $state(data?.filters?.provider || 'all');
+	let selectedStatus = $state(data?.filters?.status || 'all');
+	let searchQuery = $state(data?.filters?.search || '');
 
 	// Selection state for batch operations
 	let selectedIds = $state<string[]>([]);
@@ -323,3 +341,4 @@
 	consignments={selectedIds.length > 0 ? consignments.filter((c) => selectedIds.includes(c.id)) : consignments}
 	onClose={() => (isManifestModalOpen = false)}
 />
+

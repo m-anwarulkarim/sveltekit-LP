@@ -11,7 +11,7 @@ import { defineEnvVars } from '@sveltejs/kit/env';
  */
 export const variables = defineEnvVars({
 	ORIGIN: {
-		description: 'The app origin (base URL), e.g. `http://localhost:5173` or `https://lp.haqplus.com`.'
+		description: 'The app origin (base URL), e.g. `http://localhost:5173` or `https://seedbd.shop`.'
 	}
 });
 
@@ -31,7 +31,7 @@ export interface EnvVariables {
 	/** Flag to enable remote Cloudflare D1 connection in local dev */
 	USE_REMOTE_D1?: string;
 
-	/** Application base URL origin, e.g. http://localhost:5173 or https://lp.haqplus.com */
+	/** Application base URL origin, e.g. http://localhost:5173 or https://seedbd.shop */
 	ORIGIN: string;
 
 	/** Cloudflare R2 Public CDN base URL for serving images */

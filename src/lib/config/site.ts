@@ -1,12 +1,12 @@
 export const siteConfig = {
 	name: 'seedbd',
-	tagline: 'Best Quality Lifestyle Products in Bangladesh',
+	tagline: 'সেরা মানের বীজ ও কৃষি সামগ্রী',
 	description:
-		'The Premier Online Shopping Destination in Bangladesh. Premium products delivered to your doorstep.',
-	url: 'https://lp.haqplus.com',
+		'seedbd - উন্নত জাতের হাইব্রিড ও দেশি শাকসবজি বীজ, ফল ও ফুলের বীজের বিশ্বস্ত অনলাইন শপ।',
+	url: 'https://seedbd.shop',
 	currency: 'BDT',
 	currencySymbol: '৳',
-	supportEmail: 'support@seedbd.com',
+	supportEmail: 'support@seedbd.shop',
 	creatorClubDiscountCode: 'SEED20',
 	discountPercent: 20,
 	socials: {
@@ -15,14 +15,14 @@ export const siteConfig = {
 		discord: 'https://discord.gg/seedbd'
 	},
 	meta: {
-		author: 'seedbd Inc.',
+		author: 'seedbd',
 		keywords: [
-			'Planar Magnetic Headphones',
-			'Spatial Audio',
-			'Neural ANC',
-			'Audiophile In-Ears',
-			'Creator Mixer',
-			'VST3 Plugin'
+			'উন্নত জাতের বীজ',
+			'সবজি বীজ',
+			'হাইব্রিড বীজ',
+			'কৃষি বীজ',
+			'seedbd',
+			'অনলাইন বীজ শপ'
 		]
 	}
 };

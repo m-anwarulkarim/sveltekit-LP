@@ -463,7 +463,7 @@ export class PixelService {
 						event_name: 'Purchase',
 						event_time: Math.floor(Date.now() / 1000),
 						action_source: 'website',
-						event_source_url: orderData.eventSourceUrl || 'https://lp.haqplus.com/checkout',
+						event_source_url: orderData.eventSourceUrl || 'https://seedbd.shop/checkout',
 						event_id: eventId,
 						user_data: {
 							client_ip_address: orderData.ipAddress,

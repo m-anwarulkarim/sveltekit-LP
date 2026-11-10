@@ -153,7 +153,7 @@
 								PRO
 							</span>
 						</div>
-						<span class="text-[11px] text-slate-400 font-mono -mt-0.5">lp.haqplus.com</span>
+						<span class="text-[11px] text-slate-400 font-mono -mt-0.5">seedbd.shop</span>
 					</div>
 				</a>
 

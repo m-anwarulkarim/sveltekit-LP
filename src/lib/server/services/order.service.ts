@@ -525,13 +525,22 @@ export class OrderService {
 		}));
 	}
 
-	/** Only the columns the dashboard reads, across all orders. */
+	/** Lightweight dashboard query: only the columns the UI reads, capped at 500 rows. */
 	static async listDashboardOrders(db: Db) {
-		const { items, userAgent, deviceFingerprint, ipAddress, ...columns } = getTableColumns(schema.orders);
 		const rows = await db
-			.select(columns)
+			.select({
+				id: schema.orders.id,
+				status: schema.orders.status,
+				total: schema.orders.total,
+				createdAt: schema.orders.createdAt,
+				customerName: schema.orders.customerName,
+				customerEmail: schema.orders.customerEmail,
+				shippingAddress: schema.orders.shippingAddress,
+				isTrashed: schema.orders.isTrashed
+			})
 			.from(schema.orders)
 			.orderBy(desc(schema.orders.createdAt))
+			.limit(500)
 			.all();
 		return rows.map((o) => ({ ...o, status: normalizeOrderStatus(o.status) }));
 	}

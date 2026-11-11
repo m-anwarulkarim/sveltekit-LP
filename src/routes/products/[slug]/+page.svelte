@@ -6,6 +6,7 @@
 	import ProductTabs from './_components/ProductTabs.svelte';
 	import RelatedProducts from './_components/RelatedProducts.svelte';
 	import MobileStickyBuyBar from './_components/MobileStickyBuyBar.svelte';
+	import ProductInlineCheckout from './_components/ProductInlineCheckout.svelte';
 	import { ChevronRight, Home } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import { trackMetaEvent } from '#lib/client/meta-pixel';
@@ -17,6 +18,7 @@
 	const product = $derived(data.product);
 	const relatedProducts = $derived(data.relatedProducts || []);
 	const siteName = $derived(data.websiteInfo?.websiteName || 'Store');
+	const activeProductDetails = $derived(data.activeProductDetails || 'product_details_1');
 
 	// Fire Standard Meta Pixel ViewContent & GA4 E-Commerce view_item events
 	$effect(() => {
@@ -88,45 +90,58 @@
 			</span>
 		</nav>
 
-		<!-- 2. Main Product Showcase (2-Column Grid on Desktop) -->
-		<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start mb-8 sm:mb-12">
-			
-			<!-- Left: Interactive Media Gallery (5 cols) -->
-			<div class="lg:col-span-5 w-full">
-				<ProductGallery {product} />
+		<!-- 2. Main Product Showcase -->
+		{#if activeProductDetails === 'product_details_3'}
+			<!-- Product Details 3: Poltisheba-style Direct Inline Checkout -->
+			<ProductInlineCheckout
+				product={data.product}
+				reviews={data.reviews || []}
+				relatedProducts={data.relatedProducts || []}
+				productSettings={data.productSettings}
+				storeConfig={data.storeConfig}
+				websiteInfo={data.websiteInfo}
+				paymentConfig={data.paymentConfig}
+				user={data.user}
+			/>
+		{:else}
+			<!-- Product Details 1 & 2: Classic Split Buy Box Layout (Default) -->
+			<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start mb-8 sm:mb-12">
+				<!-- Left: Interactive Media Gallery (5 cols) -->
+				<div class="lg:col-span-5 w-full">
+					<ProductGallery {product} />
+				</div>
+
+				<!-- Right: Buy Box & Checkout Actions (7 cols) -->
+				<div class="lg:col-span-7 w-full">
+					<ProductBuyBox
+						{product}
+						onBuyNow={() => goto('/checkout')}
+						productSettings={data?.productSettings}
+						storeConfig={data?.storeConfig}
+					/>
+				</div>
 			</div>
 
-			<!-- Right: Buy Box & Checkout Actions (7 cols) -->
-			<div class="lg:col-span-7 w-full">
-				<ProductBuyBox
-					{product}
-					onBuyNow={() => goto('/checkout')}
-					productSettings={data?.productSettings}
-					storeConfig={data?.storeConfig}
-				/>
+			<!-- 3. Tabbed Information & Specifications Section -->
+			<div class="mb-8 sm:mb-12">
+				<ProductTabs {product} reviews={data.reviews || []} />
 			</div>
 
-		</div>
+			<!-- 4. Related Products Carousel -->
+			{#if relatedProducts.length > 0}
+				<div class="mb-12">
+					<RelatedProducts products={relatedProducts} />
+				</div>
+			{/if}
 
-		<!-- 3. Tabbed Information & Specifications Section -->
-		<div class="mb-8 sm:mb-12">
-			<ProductTabs {product} reviews={data.reviews || []} />
-		</div>
-
-		<!-- 4. Related Products Carousel -->
-		{#if relatedProducts.length > 0}
-			<div class="mb-12">
-				<RelatedProducts products={relatedProducts} />
-			</div>
+			<!-- 5. Mobile Sticky Bottom Action Bar -->
+			<MobileStickyBuyBar
+				{product}
+				onBuyNow={() => goto('/checkout')}
+			/>
 		{/if}
 
 	</div>
-
-	<!-- 5. Mobile Sticky Bottom Action Bar -->
-	<MobileStickyBuyBar
-		{product}
-		onBuyNow={() => goto('/checkout')}
-	/>
 
 </StoreLayout>
 

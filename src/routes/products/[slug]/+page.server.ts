@@ -8,6 +8,13 @@ import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
 import { SeoService } from '#lib/server/services/seo.service';
 import { ReviewService } from '#lib/server/services/review.service';
+import {
+	OrderService,
+	OrderPriceChangedError,
+	OrderValidationError
+} from '#lib/server/services/order.service';
+import { PixelService } from '#lib/server/services/pixel.service';
+import { SettingsService } from '#lib/server/services/settings.service';
 import { eq, desc, ne } from 'drizzle-orm';
 
 export const load: PageServerLoad = async (event) => {
@@ -149,18 +156,167 @@ export const load: PageServerLoad = async (event) => {
 		{ name: product.name, url: `/products/${product.slug}` }
 	], siteConfig);
 
+	let paymentConfig = {
+		enableCOD: true,
+		enableBkash: false,
+		enableNagad: false
+	};
+
+	try {
+		const db = getDb(event.platform);
+		const pCfg = await SettingsService.getPaymentConfig(db);
+		if (pCfg) {
+			paymentConfig = {
+				enableCOD: pCfg.enableCOD,
+				enableBkash: pCfg.enableBkash,
+				enableNagad: pCfg.enableNagad
+			};
+		}
+	} catch (e) {
+		console.error('Failed to load payment config:', e);
+	}
+
 	return {
+		user: event.locals.user ?? null,
+		activeProductDetails: parentData.themeConfig?.pageViews?.productDetails || 'product_details_1',
 		product,
 		reviews: productReviews,
 		relatedProducts,
 		productJsonLd,
-		breadcrumbsJsonLd
+		breadcrumbsJsonLd,
+		paymentConfig,
+		storeConfig: parentData.storeConfig,
+		productSettings: parentData.productSettings,
+		websiteInfo: parentData.websiteInfo
 	};
 };
+
+function describeDevice(userAgent: string, locationTag: string): string {
+	const lowerUa = userAgent.toLowerCase();
+	let devType = 'Desktop';
+	let osType = 'OS';
+	let browserType = 'Browser';
+	if (/mobile|android|iphone|ipad|ipod/.test(lowerUa)) {
+		devType = /ipad|tablet/.test(lowerUa) ? 'Tablet' : 'Mobile';
+	}
+	if (lowerUa.includes('android')) osType = 'Android';
+	else if (lowerUa.includes('iphone') || lowerUa.includes('ipad')) osType = 'iOS';
+	else if (lowerUa.includes('windows')) osType = 'Windows';
+	else if (lowerUa.includes('macintosh')) osType = 'macOS';
+
+	if (lowerUa.includes('chrome') && !lowerUa.includes('edg')) browserType = 'Chrome';
+	else if (lowerUa.includes('safari') && !lowerUa.includes('chrome')) browserType = 'Safari';
+	else if (lowerUa.includes('firefox')) browserType = 'Firefox';
+
+	return `${devType}: ${osType} (${browserType}) • ${locationTag}`;
+}
 
 const REVIEW_LIMITS = { author: 80, title: 120, content: 2000 };
 
 export const actions: Actions = {
+	placeOrder: async ({ request, cookies, platform, getClientAddress, locals, url }) => {
+		try {
+			const db = getDb(platform);
+			const formData = await request.formData();
+
+			const customerName = formData.get('customerName')?.toString()?.trim() || '';
+			const customerPhone = formData.get('customerPhone')?.toString()?.trim() || '';
+			const shippingAddress = formData.get('shippingAddress')?.toString()?.trim() || '';
+			const deliveryArea = formData.get('deliveryArea')?.toString() || 'inside_dhaka';
+			const paymentMethod = formData.get('paymentMethod')?.toString() || 'cod';
+			const orderNote = formData.get('orderNote')?.toString()?.trim() || '';
+			const rawExpectedTotal = formData.get('expectedTotal')?.toString();
+
+			let items: unknown;
+			try {
+				items = JSON.parse(formData.get('items')?.toString() || '[]');
+			} catch {
+				return fail(400, { message: 'কার্ট আইটেমের ডাটা সঠিক নয়।' });
+			}
+			if (!Array.isArray(items) || items.length === 0) {
+				return fail(400, { message: 'অর্ডার করতে পণ্য নির্বাচন করুন।' });
+			}
+
+			// Fallback for digital products if address collection is disabled
+			let finalShippingAddress = shippingAddress;
+			if (!finalShippingAddress) {
+				const productSettings = await SettingsService.getProductSettings(db);
+				if (productSettings.productType === 'digital' && !productSettings.enableAddress) {
+					finalShippingAddress = 'ডিজিটাল ডেলিভারি (অনলাইন)';
+				}
+			}
+
+			if (!customerName || !customerPhone || !finalShippingAddress) {
+				return fail(400, { message: 'নাম, মোবাইল নম্বর এবং ঠিকানা পূরণ করা আবশ্যক।' });
+			}
+
+			let ipAddress = request.headers.get('cf-connecting-ip') || '';
+			if (!ipAddress) {
+				try {
+					ipAddress = getClientAddress();
+				} catch {
+					ipAddress = '127.0.0.1';
+				}
+			}
+
+			const userAgent = request.headers.get('user-agent') || undefined;
+			const city = request.headers.get('cf-ipcity') || '';
+			const country = request.headers.get('cf-ipcountry') || 'BD';
+			const locationTag = city ? `${city}, ${country}` : country;
+
+			const result = await OrderService.createWebOrder(
+				db,
+				{
+					customerName,
+					customerPhone,
+					shippingAddress: finalShippingAddress,
+					deliveryArea,
+					paymentMethod,
+					orderNote,
+					couponCode: null,
+					expectedTotal: rawExpectedTotal ? Number(rawExpectedTotal) : null,
+					items,
+					website_url: formData.get('website_url')?.toString()?.trim() || ''
+				},
+				{
+					ipAddress,
+					userAgent,
+					source: formData.get('source')?.toString()?.slice(0, 200) || 'Product Direct Checkout',
+					deviceFingerprint: describeDevice(userAgent || '', locationTag),
+					userId: locals.user?.id,
+					defer: (work) => platform?.ctx?.waitUntil?.(work)
+				}
+			);
+
+			PixelService.dispatchOrderPurchase(db, result, {
+				request,
+				cookies,
+				origin: url.origin,
+				path: url.pathname,
+				ipAddress,
+				deliveryArea,
+				shippingAddress: finalShippingAddress,
+				waitUntil: (p) => platform?.ctx?.waitUntil?.(p)
+			});
+
+			return {
+				success: true,
+				orderId: result.orderId,
+				orderNumber: result.orderNumber,
+				total: result.total
+			};
+		} catch (err) {
+			if (err instanceof OrderPriceChangedError) {
+				return fail(409, { code: 'PRICE_CHANGED', message: err.message, total: err.total });
+			}
+			if (err instanceof OrderValidationError) {
+				return fail(400, { message: err.message });
+			}
+			console.error('CRITICAL PRODUCT ORDER ERROR:', err);
+			return fail(500, { message: 'অর্ডারে ত্রুটি হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।' });
+		}
+	},
+
 	addReview: async ({ request, platform }) => {
 		try {
 			const data = await request.formData();

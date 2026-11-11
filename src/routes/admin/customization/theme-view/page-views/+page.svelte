@@ -141,6 +141,17 @@
 			onSelect={() => (selectedProductDetails = 'product_details_2')}
 			onPreview={() => openPreview('product_details', 'product_details_2', 'Product Details 2 (বুটিখ ইমারসিভ লাক্সারি)')}
 		/>
+
+		<ThemeOptionCard
+			id="product_details_3"
+			title="Product Details 3"
+			badgeText="DIRECT CHECKOUT"
+			badgeVariant="green"
+			schematicType="product_card"
+			selected={selectedProductDetails === 'product_details_3'}
+			onSelect={() => (selectedProductDetails = 'product_details_3')}
+			onPreview={() => openPreview('product_details', 'product_details_3', 'Product Details 3 (ইনলাইন ডিরেক্ট চেকআউট / পল্ট্রি সেবা স্টাইল)')}
+		/>
 	</ThemeSectionContainer>
 
 	<!-- 3. Cart View Section -->

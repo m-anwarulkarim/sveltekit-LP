@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ProductDetails1 from './ProductDetails1.svelte';
 	import ProductDetails2 from './ProductDetails2.svelte';
+	import ProductDetails3 from './ProductDetails3.svelte';
 
 	interface Props {
 		activeProductDetails?: string;
@@ -15,7 +16,9 @@
 	let normalized = $derived((activeProductDetails || 'product_details_1').toLowerCase().trim());
 </script>
 
-{#if normalized === 'product_details_2'}
+{#if normalized === 'product_details_3'}
+	<ProductDetails3 {isStandalonePreview} />
+{:else if normalized === 'product_details_2'}
 	<ProductDetails2 {isStandalonePreview} />
 {:else}
 	<!-- Product Details 1 is Default -->

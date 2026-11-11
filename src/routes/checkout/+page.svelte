@@ -211,8 +211,8 @@
 	// Set when the server reports a different total, so the next click confirms that price.
 	let confirmedServerTotal = $state<number | null>(null);
 
-	async function handlePlaceOrder(e: Event) {
-		e.preventDefault();
+	async function handlePlaceOrder(e?: Event) {
+		if (e) e.preventDefault();
 		errorMessage = '';
 
 		if (data.isLoginRequired && !data.user) {
@@ -269,7 +269,7 @@
 				customerPhone: phone.trim(),
 				shippingAddress: address.trim(),
 				total: confirmedServerTotal ?? grandTotal,
-				retryAction: () => handleSubmitOrder()
+				retryAction: () => handlePlaceOrder()
 			});
 			return;
 		}
@@ -312,7 +312,7 @@
 						customerPhone: phone.trim(),
 						shippingAddress: address.trim(),
 						total: confirmedServerTotal ?? grandTotal,
-						retryAction: () => handleSubmitOrder()
+						retryAction: () => handlePlaceOrder()
 					});
 					return;
 				}

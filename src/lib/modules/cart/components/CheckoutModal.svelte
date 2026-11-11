@@ -30,13 +30,15 @@
 	let city = $state('ঢাকা (Dhaka)');
 	let paymentMethod = $state<'cod' | 'bkash'>('cod');
 	let isSubmitting = $state(false);
+	let hasTrackedModalCheckout = false;
 
 	function formatTaka(amount: number) {
 		return `৳${amount.toLocaleString('en-BD')}`;
 	}
 
 	$effect(() => {
-		if (isOpen && cart.items.length > 0 && typeof window !== 'undefined') {
+		if (isOpen && cart.items.length > 0 && !hasTrackedModalCheckout && typeof window !== 'undefined') {
+			hasTrackedModalCheckout = true;
 			trackMetaEvent('InitiateCheckout', {
 				content_ids: cart.items.map((i) => String(i.id)),
 				content_type: 'product',
@@ -57,6 +59,10 @@
 				total: Number(cart.total),
 				coupon: cart.couponCode || undefined
 			});
+		}
+
+		if (!isOpen) {
+			hasTrackedModalCheckout = false;
 		}
 	});
 

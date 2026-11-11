@@ -47,6 +47,19 @@ declare global {
 let isGtmScriptInjected = false;
 let activeGtmConfig: GtmClientConfig | null = null;
 
+// GTM GA4 Event Deduplication Throttle
+const recentGtmTimestamps = new Map<string, number>();
+const GTM_DEDUPE_MS = 1500;
+
+function isDuplicateGtm(eventName: string, key: string): boolean {
+	const dedupeKey = `${eventName}:${key}`;
+	const now = Date.now();
+	const last = recentGtmTimestamps.get(dedupeKey);
+	if (last && now - last < GTM_DEDUPE_MS) return true;
+	recentGtmTimestamps.set(dedupeKey, now);
+	return false;
+}
+
 /**
  * Initializes GTM Container script in browser head & noscript in body
  */
@@ -165,6 +178,7 @@ export function trackGtmAddToCart(data: {
 }): void {
 	if (typeof window === 'undefined') return;
 	if (activeGtmConfig && activeGtmConfig.events?.addToCart === false) return;
+	if (isDuplicateGtm('add_to_cart', String(data.item.item_id))) return;
 
 	const currency = data.currency || 'BDT';
 	const qty = Number(data.item.quantity) || 1;
@@ -276,6 +290,8 @@ export function trackGtmBeginCheckout(data: {
 }): void {
 	if (typeof window === 'undefined') return;
 	if (activeGtmConfig && activeGtmConfig.events?.beginCheckout === false) return;
+	const itemIds = (data.items || []).map((i) => i.item_id).slice().sort().join(',');
+	if (isDuplicateGtm('begin_checkout', itemIds)) return;
 
 	const currency = data.currency || 'BDT';
 

@@ -7,6 +7,8 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { cart } from '#lib/modules/cart/cart.svelte';
+	import { trackMetaEvent } from '#lib/client/meta-pixel';
+	import { trackGtmAddToCart, trackGtmBeginCheckout } from '#lib/client/gtm';
 	import ProductGallery from './ProductGallery.svelte';
 	import ProductTabs from './ProductTabs.svelte';
 	import RelatedProducts from './RelatedProducts.svelte';
@@ -216,8 +218,77 @@
 		}, 1200);
 	}
 
+	// Funnel tracking: ensure AddToCart & InitiateCheckout fire when user starts checkout
+	let hasTrackedCheckout = false;
+	function handleInlineInitiateCheckout() {
+		if (hasTrackedCheckout || typeof window === 'undefined') return;
+		hasTrackedCheckout = true;
+
+		const matchId = String(product.id);
+		const singlePrice = Number(singleVariantPrice || product.price || 0);
+
+		// 1. Ensure AddToCart is registered in the funnel
+		trackMetaEvent('AddToCart', {
+			content_name: product.name,
+			content_ids: [matchId],
+			content_type: 'product',
+			value: activePrice,
+			currency: 'BDT'
+		});
+
+		trackGtmAddToCart({
+			item: {
+				item_id: matchId,
+				item_name: product.name,
+				price: singlePrice,
+				quantity: quantity
+			},
+			currency: 'BDT'
+		});
+
+		// 2. Fire InitiateCheckout on Meta Pixel
+		trackMetaEvent('InitiateCheckout', {
+			content_name: product.name,
+			content_ids: [matchId],
+			content_type: 'product',
+			num_items: quantity,
+			value: grandTotal,
+			currency: 'BDT'
+		});
+
+		// 3. Fire begin_checkout on GTM GA4
+		trackGtmBeginCheckout({
+			total: grandTotal,
+			currency: 'BDT',
+			items: [
+				{
+					item_id: matchId,
+					item_name: product.name,
+					price: singlePrice,
+					quantity: quantity,
+					item_category: product.categoryLabel,
+					item_variant: selectedVariant.name
+				}
+			]
+		});
+	}
+
+	function selectPaymentMethod(method: 'cod' | 'bkash') {
+		paymentMethod = method;
+		if (typeof window !== 'undefined') {
+			trackMetaEvent('AddPaymentInfo', {
+				content_name: product.name,
+				content_ids: [String(product.id)],
+				value: grandTotal,
+				currency: 'BDT',
+				payment_type: method
+			});
+		}
+	}
+
 	// Smooth Scroll to Order Form from Mobile Sticky Bar
 	export function scrollToOrderForm() {
+		handleInlineInitiateCheckout();
 		const formEl = document.getElementById('order-form');
 		if (formEl) {
 			formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -635,6 +706,7 @@
 								type="text"
 								required
 								bind:value={customerName}
+								onfocus={handleInlineInitiateCheckout}
 								placeholder="সম্পূর্ণ নাম লিখুন"
 								class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border-slate-200 text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-emerald-600"
 							/>
@@ -653,6 +725,7 @@
 								type="tel"
 								required
 								bind:value={customerPhone}
+								onfocus={handleInlineInitiateCheckout}
 								oninput={triggerIncompleteCapture}
 								onblur={triggerIncompleteCapture}
 								placeholder="01XXXXXXXXX (১১ ডিজিট)"
@@ -673,6 +746,7 @@
 								type="text"
 								required
 								bind:value={customerAddress}
+								onfocus={handleInlineInitiateCheckout}
 								placeholder="বাসা নং, রোড নং, এলাকা, থানা ও জেলা"
 								class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border-slate-200 text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-emerald-600"
 							/>
@@ -728,7 +802,7 @@
 							<div class="grid grid-cols-2 gap-2.5">
 								<button
 									type="button"
-									onclick={() => (paymentMethod = 'cod')}
+									onclick={() => selectPaymentMethod('cod')}
 									class="p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between {paymentMethod === 'cod'
 										? 'border-emerald-600 bg-emerald-50/70 ring-1 ring-emerald-600'
 										: 'border-slate-200 bg-slate-50/60 hover:bg-slate-100'}"
@@ -740,7 +814,7 @@
 								</button>
 								<button
 									type="button"
-									onclick={() => (paymentMethod = 'bkash')}
+									onclick={() => selectPaymentMethod('bkash')}
 									class="p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between {paymentMethod === 'bkash'
 										? 'border-pink-600 bg-pink-50/70 ring-1 ring-pink-600'
 										: 'border-slate-200 bg-slate-50/60 hover:bg-slate-100'}"
@@ -766,6 +840,8 @@
 							placeholder="ডেলিভারির জন্য কোনো বিশেষ নির্দেশনা থাকলে লিখুন..."
 							class="w-full px-3 py-2 rounded-xl bg-slate-50 border-slate-200 text-xs text-slate-800"
 						/>
+					</div>
+
 					<!-- কুপন বা ডিসকাউন্ট কোড (ঐচ্ছিক) -->
 					<div>
 						{#if !showCouponBox && !couponInput}

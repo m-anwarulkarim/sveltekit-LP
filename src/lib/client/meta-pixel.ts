@@ -168,6 +168,35 @@ export function trackMetaEvent(
 	dispatchEvent(eventName, params, eventId);
 }
 
+// Global Event Deduplication Engine to prevent duplicate event firing across components
+const recentEventTimestamps = new Map<string, number>();
+const trackedPurchases = new Set<string>();
+const DEDUPE_WINDOW_MS = 1500; // 1.5s throttle window for identical events
+
+function isDuplicateEvent(eventName: string, params: Record<string, any>, eventId?: string): boolean {
+	// Purchase events are strictly 1 per order per session
+	if (eventName === 'Purchase' && eventId) {
+		if (trackedPurchases.has(eventId)) return true;
+		trackedPurchases.add(eventId);
+		return false;
+	}
+
+	// For standard funnel events, throttle identical payloads within DEDUPE_WINDOW_MS
+	const contentKey = Array.isArray(params.content_ids)
+		? params.content_ids.slice().sort().join(',')
+		: (params.content_name || params.value || '');
+	const dedupeKey = `${eventName}:${contentKey}`;
+	const now = Date.now();
+	const lastFired = recentEventTimestamps.get(dedupeKey);
+
+	if (lastFired && now - lastFired < DEDUPE_WINDOW_MS) {
+		return true; // Duplicate call detected and dropped
+	}
+
+	recentEventTimestamps.set(dedupeKey, now);
+	return false;
+}
+
 function isEventEnabled(eventName: string): boolean {
 	const events = activeConfig?.events;
 	if (!events) return true;
@@ -182,6 +211,11 @@ function isEventEnabled(eventName: string): boolean {
 function dispatchEvent(eventName: string, params: Record<string, any>, eventId?: string): void {
 	const cfg = activeConfig;
 	if (!cfg || cfg.trackingMode === 'disabled' || !isEventEnabled(eventName)) return;
+
+	// Deduplication Guard: Stop duplicate events from firing
+	if (isDuplicateEvent(eventName, params, eventId)) {
+		return;
+	}
 
 	// TikTok sees the same funnel; it no-ops unless a TikTok Pixel ID is configured.
 	forwardToTikTok(eventName, params);

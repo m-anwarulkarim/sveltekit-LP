@@ -71,6 +71,19 @@
 	);
 	let paymentMethod = $state<'cod' | 'bkash' | 'nagad'>('cod');
 
+	function selectPaymentMethod(method: 'cod' | 'bkash' | 'nagad') {
+		paymentMethod = method;
+		if (typeof window !== 'undefined' && cart.items.length > 0) {
+			trackMetaEvent('AddPaymentInfo', {
+				content_ids: cart.items.map((i) => String(i.id)),
+				content_type: 'product',
+				value: grandTotal,
+				currency: 'BDT',
+				payment_type: method
+			});
+		}
+	}
+
 	$effect(() => {
 		if (!paymentConfig.enableBkash && paymentMethod === 'bkash') {
 			paymentMethod = 'cod';
@@ -453,8 +466,8 @@
 			<!-- 4. Main 2-Column Grid using shadcn Cards, Inputs, Textarea & Buttons -->
 			<form onsubmit={handlePlaceOrder} class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 				<!-- Bot Honeypot Protection (hidden from real users) -->
-				<div class="hidden" aria-hidden="true" tabindex="-1">
-					<input type="text" name="website_url" aria-label="website_url" bind:value={honeypot} autocomplete="off" />
+				<div class="hidden">
+					<input type="text" name="website_url" aria-label="website_url" tabindex="-1" bind:value={honeypot} autocomplete="off" />
 				</div>
 				
 				<!-- LEFT COLUMN: Customer & Shipping Details (lg:col-span-7) -->
@@ -774,7 +787,7 @@
 							<!-- COD Option (Default and always available) -->
 							<button
 								type="button"
-								onclick={() => (paymentMethod = 'cod')}
+								onclick={() => selectPaymentMethod('cod')}
 								class="w-full p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between {paymentMethod === 'cod'
 									? 'border-[#2563eb] bg-blue-50/50 shadow-2xs ring-1 ring-[#2563eb]'
 									: 'border-slate-200 bg-slate-50/50 hover:bg-slate-100'}"
@@ -804,7 +817,7 @@
 							{#if paymentConfig.enableBkash}
 								<button
 									type="button"
-									onclick={() => (paymentMethod = 'bkash')}
+									onclick={() => selectPaymentMethod('bkash')}
 									class="w-full p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between {paymentMethod === 'bkash'
 										? 'border-[#2563eb] bg-blue-50/50 shadow-2xs ring-1 ring-[#2563eb]'
 										: 'border-slate-200 bg-slate-50/50 hover:bg-slate-100'}"
@@ -834,7 +847,7 @@
 							{#if paymentConfig.enableNagad}
 								<button
 									type="button"
-									onclick={() => (paymentMethod = 'nagad')}
+									onclick={() => selectPaymentMethod('nagad')}
 									class="w-full p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between {paymentMethod === 'nagad'
 										? 'border-[#2563eb] bg-blue-50/50 shadow-2xs ring-1 ring-[#2563eb]'
 										: 'border-slate-200 bg-slate-50/50 hover:bg-slate-100'}"

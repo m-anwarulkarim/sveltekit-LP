@@ -41,7 +41,8 @@
 		ArrowRight,
 		Sparkles,
 		RotateCcw,
-		Zap
+		Zap,
+		Tag
 	} from 'lucide-svelte';
 
 	interface Props {
@@ -52,6 +53,7 @@
 		storeConfig?: any;
 		websiteInfo?: any;
 		paymentConfig?: any;
+		isLoginRequired?: boolean;
 		user?: any;
 	}
 
@@ -63,6 +65,7 @@
 		storeConfig,
 		websiteInfo,
 		paymentConfig = { enableCOD: true, enableBkash: false, enableNagad: false },
+		isLoginRequired = false,
 		user
 	}: Props = $props();
 
@@ -147,6 +150,8 @@
 	let orderNote = $state('');
 	let paymentMethod = $state<'cod' | 'bkash'>('cod');
 	let honeypot = $state('');
+	let couponInput = $state('');
+	let showCouponBox = $state(false);
 	let isSubmitting = $state(false);
 	let errorMessage = $state('');
 
@@ -228,6 +233,12 @@
 		if (e) e.preventDefault();
 		errorMessage = '';
 
+		if (isLoginRequired && !user) {
+			errorMessage = 'এই স্টোরে অর্ডার সম্পন্ন করতে অ্যাকাউন্টে লগইন থাকা আবশ্যক।';
+			goto(`/account?redirectTo=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : '')}`);
+			return;
+		}
+
 		if (isOutOfStock) {
 			errorMessage = `"${product.name}" পণ্যটি বর্তমানে স্টক আউট!`;
 			toast.error(errorMessage);
@@ -284,6 +295,7 @@
 			formData.append('deliveryArea', district === 'dhaka' ? 'inside_dhaka' : 'outside_dhaka');
 			formData.append('paymentMethod', paymentMethod);
 			if (orderNote.trim()) formData.append('orderNote', orderNote.trim());
+			if (couponInput.trim()) formData.append('couponCode', couponInput.trim());
 			formData.append('website_url', honeypot);
 			formData.append('source', getAttributionSource());
 			formData.append('expectedTotal', String(grandTotal));
@@ -754,6 +766,34 @@
 							placeholder="ডেলিভারির জন্য কোনো বিশেষ নির্দেশনা থাকলে লিখুন..."
 							class="w-full px-3 py-2 rounded-xl bg-slate-50 border-slate-200 text-xs text-slate-800"
 						/>
+					<!-- কুপন বা ডিসকাউন্ট কোড (ঐচ্ছিক) -->
+					<div>
+						{#if !showCouponBox && !couponInput}
+							<button
+								type="button"
+								onclick={() => (showCouponBox = true)}
+								class="text-xs text-emerald-700 hover:text-emerald-800 font-bold inline-flex items-center gap-1.5 cursor-pointer py-1"
+							>
+								<Tag class="w-3.5 h-3.5" />
+								<span>+ কোনো কুপন বা ডিসকাউন্ট কোড আছে?</span>
+							</button>
+						{:else}
+							<div class="space-y-1.5">
+								<label for="inline-co-coupon" class="block text-xs font-bold text-slate-700">
+									কুপন কোড <span class="text-slate-400 font-normal">(ঐচ্ছিক)</span>
+								</label>
+								<div class="relative">
+									<Tag class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+									<Input
+										id="inline-co-coupon"
+										type="text"
+										bind:value={couponInput}
+										placeholder="কুপন লিখুন (যেমন: SEED20)"
+										class="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 border-slate-200 text-xs font-mono uppercase text-slate-800"
+									/>
+								</div>
+							</div>
+						{/if}
 					</div>
 
 					<Separator />

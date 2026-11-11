@@ -101,6 +101,7 @@
 				storeConfig={data.storeConfig}
 				websiteInfo={data.websiteInfo}
 				paymentConfig={data.paymentConfig}
+				isLoginRequired={data.isLoginRequired}
 				user={data.user}
 			/>
 		{:else}

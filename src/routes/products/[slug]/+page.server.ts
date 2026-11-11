@@ -178,6 +178,7 @@ export const load: PageServerLoad = async (event) => {
 
 	return {
 		user: event.locals.user ?? null,
+		isLoginRequired: parentData.themeConfig?.pageViews?.checkout === 'checkout_1',
 		activeProductDetails: parentData.themeConfig?.pageViews?.productDetails || 'product_details_1',
 		product,
 		reviews: productReviews,
@@ -217,6 +218,13 @@ export const actions: Actions = {
 	placeOrder: async ({ request, cookies, platform, getClientAddress, locals, url }) => {
 		try {
 			const db = getDb(platform);
+
+			// Member login check if store theme requires login for checkout
+			const themeConfig = await ThemeCustomizationService.getThemeConfig(db);
+			if (themeConfig?.pageViews?.checkout === 'checkout_1' && !locals.user) {
+				return fail(401, { message: 'এই স্টোরে অর্ডার সম্পন্ন করতে অ্যাকাউন্টে লগইন থাকা আবশ্যক।' });
+			}
+
 			const formData = await request.formData();
 
 			const customerName = formData.get('customerName')?.toString()?.trim() || '';
@@ -225,6 +233,7 @@ export const actions: Actions = {
 			const deliveryArea = formData.get('deliveryArea')?.toString() || 'inside_dhaka';
 			const paymentMethod = formData.get('paymentMethod')?.toString() || 'cod';
 			const orderNote = formData.get('orderNote')?.toString()?.trim() || '';
+			const couponCode = formData.get('couponCode')?.toString()?.trim() || '';
 			const rawExpectedTotal = formData.get('expectedTotal')?.toString();
 
 			let items: unknown;
@@ -273,7 +282,7 @@ export const actions: Actions = {
 					deliveryArea,
 					paymentMethod,
 					orderNote,
-					couponCode: null,
+					couponCode: couponCode || null,
 					expectedTotal: rawExpectedTotal ? Number(rawExpectedTotal) : null,
 					items,
 					website_url: formData.get('website_url')?.toString()?.trim() || ''

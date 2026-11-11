@@ -9,9 +9,11 @@
 	import { afterNavigate } from '$app/navigation';
 	import { initMetaPixel, trackPageView } from '#lib/client/meta-pixel';
 	import { initGtm, trackGtmPageView } from '#lib/client/gtm';
+	import { initTikTokPixel, trackTikTokPageView } from '#lib/client/tiktok-pixel';
 	import { captureAttribution } from '#lib/client/attribution';
 	import { cart } from '#lib/modules/cart/cart.svelte';
 	import { jsonLdScript, safeCssColor } from '#lib/utils/html-safe';
+	import StoreLoadingBar from '#lib/components/storefront/StoreLoadingBar.svelte';
 
 	let { data, children }: LayoutProps = $props();
 
@@ -23,6 +25,7 @@
 			// Initialize Meta Pixel and GTM immediately so browser extensions and ad crawlers detect pixel without delay
 			initMetaPixel(data?.pixelConfig);
 			initGtm(data?.gtmConfig);
+			initTikTokPixel(data?.tiktokConfig);
 
 			setTimeout(async () => {
 				const mod = await import('#lib/components/storefront/PromotionalPopup.svelte');
@@ -45,6 +48,7 @@
 		if (to?.url.pathname.startsWith('/admin')) return;
 		trackPageView(data?.pixelConfig);
 		trackGtmPageView();
+		trackTikTokPageView();
 	});
 </script>
 
@@ -93,6 +97,10 @@
 		</noscript>
 	{/if}
 </svelte:head>
+
+{#if !isAdmin}
+	<StoreLoadingBar />
+{/if}
 
 {@render children()}
 

@@ -212,6 +212,115 @@ export class VisitorAnalyticsService {
 	/**
 	 * Computes Real-Time & Historical Traffic Summary for the Admin Dashboard
 	 */
+	/** Stores one funnel event; missing table (migration not yet applied) degrades silently. */
+	static async recordFunnelEvent(
+		db: DrizzleD1Database<typeof schema>,
+		params: { sessionId: string; eventType: string; path?: string; value?: number }
+	): Promise<void> {
+		try {
+			await db.insert(schema.visitorEvents).values({
+				sessionId: params.sessionId,
+				eventType: params.eventType,
+				path: (params.path || '').slice(0, 300),
+				value: Math.max(0, Math.round(Number(params.value) || 0))
+			});
+		} catch (err) {
+			console.warn('[VisitorAnalytics] Failed to record funnel event:', err);
+		}
+	}
+
+	private static resolveRangeWindow(
+		options:
+			| string
+			| { range?: string; from?: string | number | null; to?: string | number | null }
+	): { rangeStart: number; rangeEnd?: number } {
+		const range = typeof options === 'string' ? options : options.range || 'today';
+		const customFrom = typeof options === 'object' ? options.from : null;
+		const customTo = typeof options === 'object' ? options.to : null;
+
+		const now = Date.now();
+		const DHAKA_UTC_OFFSET_MS = 6 * 60 * 60 * 1000;
+		const DAY_MS = 24 * 60 * 60 * 1000;
+		const startOfToday = Math.floor((now + DHAKA_UTC_OFFSET_MS) / DAY_MS) * DAY_MS - DHAKA_UTC_OFFSET_MS;
+
+		let rangeStart = startOfToday;
+		let rangeEnd: number | undefined = undefined;
+
+		if (range === 'yesterday') {
+			rangeStart = startOfToday - DAY_MS;
+			rangeEnd = startOfToday - 1;
+		} else if (range === '7days') {
+			rangeStart = now - 7 * DAY_MS;
+		} else if (range === '30days') {
+			rangeStart = now - 30 * DAY_MS;
+		} else if (range === 'thisMonth') {
+			const dhakaDate = new Date(now + DHAKA_UTC_OFFSET_MS);
+			rangeStart = Date.UTC(dhakaDate.getUTCFullYear(), dhakaDate.getUTCMonth(), 1, 0, 0, 0) - DHAKA_UTC_OFFSET_MS;
+		} else if (range === 'custom') {
+			if (customFrom) {
+				const parsedFrom = new Date(customFrom).getTime();
+				if (!isNaN(parsedFrom)) rangeStart = parsedFrom;
+			}
+			if (customTo) {
+				const parsedTo = new Date(customTo).getTime();
+				if (!isNaN(parsedTo)) rangeEnd = parsedTo;
+			}
+		}
+		return { rangeStart, rangeEnd };
+	}
+
+	/** PageView comes from visitor_pageviews; the other funnel steps from visitor_events. */
+	static async getFunnelSummary(
+		db: DrizzleD1Database<typeof schema>,
+		options: string | { range?: string; from?: string | number | null; to?: string | number | null } = 'today'
+	): Promise<{
+		pageView: number;
+		viewContent: number;
+		addToCart: number;
+		initiateCheckout: number;
+		purchase: number;
+		purchaseValue: number;
+	}> {
+		const { rangeStart, rangeEnd } = this.resolveRangeWindow(options);
+
+		const empty = { pageView: 0, viewContent: 0, addToCart: 0, initiateCheckout: 0, purchase: 0, purchaseValue: 0 };
+		try {
+			const pvConditions = [gte(schema.visitorPageviews.createdAt, new Date(rangeStart))];
+			if (rangeEnd) pvConditions.push(lte(schema.visitorPageviews.createdAt, new Date(rangeEnd)));
+			const pvRow = await db
+				.select({ count: sql<number>`count(*)` })
+				.from(schema.visitorPageviews)
+				.where(pvConditions.length > 1 ? and(...pvConditions) : pvConditions[0])
+				.get();
+
+			const evConditions = [gte(schema.visitorEvents.createdAt, new Date(rangeStart))];
+			if (rangeEnd) evConditions.push(lte(schema.visitorEvents.createdAt, new Date(rangeEnd)));
+			const evRows = await db
+				.select({
+					eventType: schema.visitorEvents.eventType,
+					count: sql<number>`count(*)`,
+					totalValue: sql<number>`sum(${schema.visitorEvents.value})`
+				})
+				.from(schema.visitorEvents)
+				.where(evConditions.length > 1 ? and(...evConditions) : evConditions[0])
+				.groupBy(schema.visitorEvents.eventType)
+				.all();
+
+			const byType = new Map(evRows.map((r) => [r.eventType, r]));
+			return {
+				pageView: Number(pvRow?.count) || 0,
+				viewContent: Number(byType.get('ViewContent')?.count) || 0,
+				addToCart: Number(byType.get('AddToCart')?.count) || 0,
+				initiateCheckout: Number(byType.get('InitiateCheckout')?.count) || 0,
+				purchase: Number(byType.get('Purchase')?.count) || 0,
+				purchaseValue: Number(byType.get('Purchase')?.totalValue) || 0
+			};
+		} catch (err) {
+			console.warn('[VisitorAnalytics] Funnel summary unavailable (table missing?):', err);
+			return empty;
+		}
+	}
+
 	static async getTrafficSummary(
 		db: DrizzleD1Database<typeof schema>,
 		options:

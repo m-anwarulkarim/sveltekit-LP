@@ -31,11 +31,30 @@
 		ArrowUpRight,
 		SlidersHorizontal
 	} from 'lucide-svelte';
+	import { PackageSearch, ShoppingCart, ClipboardCheck, BadgeDollarSign } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { AdminDateRangePicker } from '../_components/common';
 
 	let { data }: { data: any } = $props();
+
+	let funnel = $derived(
+		data.funnel || { pageView: 0, viewContent: 0, addToCart: 0, initiateCheckout: 0, purchase: 0, purchaseValue: 0 }
+	);
+	function stepRate(current: number, previous: number): string {
+		if (!previous || previous <= 0) return '—';
+		return `${Math.min(100, (current / previous) * 100).toFixed(1)}%`;
+	}
+	let funnelSteps = $derived([
+		{ label: 'পেজ ভিউ', en: 'PageView', count: funnel.pageView, rate: '', icon: Eye, color: 'text-sky-600 bg-sky-50 border-sky-100' },
+		{ label: 'প্রোডাক্ট দেখেছে', en: 'ViewContent', count: funnel.viewContent, rate: stepRate(funnel.viewContent, funnel.pageView), icon: PackageSearch, color: 'text-indigo-600 bg-indigo-50 border-indigo-100' },
+		{ label: 'কার্টে যোগ', en: 'AddToCart', count: funnel.addToCart, rate: stepRate(funnel.addToCart, funnel.viewContent), icon: ShoppingCart, color: 'text-amber-600 bg-amber-50 border-amber-100' },
+		{ label: 'চেকআউট শুরু', en: 'InitiateCheckout', count: funnel.initiateCheckout, rate: stepRate(funnel.initiateCheckout, funnel.viewContent), icon: ClipboardCheck, color: 'text-purple-600 bg-purple-50 border-purple-100' },
+		{ label: 'অর্ডার সম্পন্ন', en: 'Purchase', count: funnel.purchase, rate: stepRate(funnel.purchase, funnel.initiateCheckout), icon: BadgeDollarSign, color: 'text-emerald-600 bg-emerald-50 border-emerald-100' }
+	]);
+	let funnelHasData = $derived(
+		funnel.viewContent > 0 || funnel.addToCart > 0 || funnel.initiateCheckout > 0 || funnel.purchase > 0
+	);
 
 	let summary = $derived(data.trafficSummary || {
 		activeNow: 0,
@@ -104,7 +123,7 @@
 		if (range === 'custom' && from && to) {
 			url += `&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
 		}
-		goto(url, { keepFocus: true, noScroll: true });
+		goto(url, { keepFocus: true, noScroll: true } as any);
 	}
 
 	function formatTimeAgo(timestamp: number): string {
@@ -252,6 +271,49 @@
 			</div>
 		</div>
 	</div>
+
+	<!-- CONVERSION FUNNEL: PageView → ViewContent → AddToCart → InitiateCheckout → Purchase -->
+	<Card class="rounded-3xl border-slate-200/90 shadow-2xs overflow-hidden bg-white">
+		<CardContent class="p-5 space-y-4">
+			<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+				<div>
+					<h3 class="text-sm font-bold text-slate-900">কনভার্সন ফানেল</h3>
+					<p class="text-[11px] text-slate-500">
+						নির্বাচিত সময়ে ভিজিটর কোন ধাপে কতজন পৌঁছেছে (সাইটের নিজস্ব ট্র্যাকিং, Meta-র উপর নির্ভরশীল নয়)
+					</p>
+				</div>
+				{#if funnel.purchaseValue > 0}
+					<span class="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl self-start sm:self-auto">
+						মোট বিক্রয় মূল্য: ৳{funnel.purchaseValue.toLocaleString('en-US')}
+					</span>
+				{/if}
+			</div>
+
+			<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+				{#each funnelSteps as step, i}
+					<div class="relative p-3.5 rounded-2xl border {step.color.split(' ').slice(1).join(' ')} space-y-1.5">
+						<div class="flex items-center justify-between">
+							<step.icon class="w-4.5 h-4.5 {step.color.split(' ')[0]}" />
+							{#if i > 0}
+								<span class="text-[10px] font-black {step.color.split(' ')[0]}">{step.rate}</span>
+							{/if}
+						</div>
+						<div class="text-xl font-black text-slate-900 font-mono leading-none">
+							{step.count.toLocaleString('en-US')}
+						</div>
+						<div class="text-[11px] font-bold text-slate-700 leading-tight">{step.label}</div>
+						<div class="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">{step.en}</div>
+					</div>
+				{/each}
+			</div>
+
+			{#if !funnelHasData}
+				<p class="text-[11px] text-slate-400 text-center pt-1">
+					এখনো কোনো ফানেল ইভেন্ট জমা হয়নি — নতুন ভিজিটর এলে ViewContent/AddToCart/Purchase এখানে গণনা শুরু হবে।
+				</p>
+			{/if}
+		</CardContent>
+	</Card>
 
 	<!-- DUAL ANALYTICS: TRAFFIC SOURCES + DEVICE BREAKDOWN -->
 	<div class="grid grid-cols-1 lg:grid-cols-2 gap-5">

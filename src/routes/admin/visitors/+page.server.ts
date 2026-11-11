@@ -15,15 +15,23 @@ export const load: PageServerLoad = async ({ parent, platform, url }) => {
 
 	try {
 		const db = getDb(platform);
-		const summary = await VisitorAnalyticsService.getTrafficSummary(db, {
-			range: range as any,
-			from: fromParam,
-			to: toParam
-		});
+		const [summary, funnel] = await Promise.all([
+			VisitorAnalyticsService.getTrafficSummary(db, {
+				range: range as any,
+				from: fromParam,
+				to: toParam
+			}),
+			VisitorAnalyticsService.getFunnelSummary(db, {
+				range: range as any,
+				from: fromParam,
+				to: toParam
+			})
+		]);
 
 		return {
 			...parentData,
 			trafficSummary: summary,
+			funnel,
 			activeRange: range,
 			activeFrom: fromParam || null,
 			activeTo: toParam || null
@@ -45,6 +53,7 @@ export const load: PageServerLoad = async ({ parent, platform, url }) => {
 				adminVisitsCount: 0,
 				recentVisitors: []
 			},
+			funnel: { pageView: 0, viewContent: 0, addToCart: 0, initiateCheckout: 0, purchase: 0, purchaseValue: 0 },
 			activeRange: range,
 			activeFrom: fromParam || null,
 			activeTo: toParam || null

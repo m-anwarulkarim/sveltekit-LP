@@ -186,6 +186,22 @@ function dispatchEvent(eventName: string, params: Record<string, any>, eventId?:
 	// TikTok sees the same funnel; it no-ops unless a TikTok Pixel ID is configured.
 	forwardToTikTok(eventName, params);
 
+	// First-party funnel counter for the admin Visitors dashboard
+	if (['ViewContent', 'AddToCart', 'InitiateCheckout', 'Purchase'].includes(eventName)) {
+		try {
+			fetch('/api/track/event', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				keepalive: true,
+				body: JSON.stringify({
+					event_name: eventName,
+					value: Number(params.value) || 0,
+					path: location.pathname
+				})
+			}).catch(() => {});
+		} catch {}
+	}
+
 	const mirror = cfg.capiEnabled && SERVER_MIRRORED_EVENTS.has(eventName);
 	const id = eventId || (mirror ? newEventId() : undefined);
 

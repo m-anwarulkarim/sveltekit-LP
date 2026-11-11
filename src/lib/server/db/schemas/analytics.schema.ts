@@ -38,6 +38,25 @@ export const visitorSessions = sqliteTable(
 	]
 );
 
+// Funnel events mirrored from the browser pixel dispatcher (PageView lives in visitor_pageviews)
+export const visitorEvents = sqliteTable(
+	'visitor_events',
+	{
+		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		sessionId: text('session_id').notNull(),
+		eventType: text('event_type').notNull(), // 'ViewContent' | 'AddToCart' | 'InitiateCheckout' | 'Purchase'
+		path: text('path'),
+		value: integer('value').notNull().default(0),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+	},
+	(table) => [
+		index('idx_vevent_type_created').on(table.eventType, table.createdAt),
+		index('idx_vevent_session').on(table.sessionId)
+	]
+);
+
 // 2. Visitor Pageviews (Detailed real-time stream of page events)
 export const visitorPageviews = sqliteTable(
 	'visitor_pageviews',

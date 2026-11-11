@@ -63,8 +63,9 @@
 					items = [];
 				}
 				if (items.length === 0) items = order?.items || [];
+				const useSku = (data as any)?.pixelConfig?.catalogMatchKey === 'sku';
 				const contents = items.map((i: any) => ({
-					id: String(i.id || i.productId),
+					id: String(useSku && i.sku ? i.sku : i.id || i.productId),
 					quantity: Number(i.quantity) || 1,
 					item_price: Number(i.price) || 0
 				}));

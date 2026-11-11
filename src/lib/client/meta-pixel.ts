@@ -88,9 +88,9 @@ export function initMetaPixel(config?: ClientPixelConfig | null): void {
 		return;
 	}
 
-	if (config.trackingMode === 'capi_only') {
-		ensureFbCookies();
-	} else if (!isPixelInitialized && config.pixelId) {
+	ensureFbCookies();
+
+	if (config.trackingMode !== 'capi_only' && !isPixelInitialized && config.pixelId) {
 		/* eslint-disable */
 		(function (f: any, b: any, e: any, v: any, n?: any, t?: any, s?: any) {
 			if (f.fbq) return;

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
+	import { Input } from '#lib/components/ui';
 	import {
 		Package,
 		RefreshCw,
@@ -280,7 +281,7 @@
 		<!-- Search Input -->
 		<div class="relative w-full lg:w-96">
 			<Search class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-			<input
+			<Input
 				type="text"
 				placeholder="প্রোডাক্ট নাম বা SKU দিয়ে খুঁজুন..."
 				bind:value={searchQuery}
@@ -347,8 +348,57 @@
 			{/if}
 		</div>
 
-		<!-- Product Inventory Table -->
-		<div class="overflow-x-auto">
+		<!-- Product Mobile Card View -->
+		<div class="block md:hidden divide-y divide-slate-100">
+			{#if paginatedProducts.length === 0}
+				<div class="py-14 text-center text-slate-400">
+					<Search class="w-8 h-8 mx-auto mb-2 text-slate-300" />
+					<p class="font-medium text-slate-600">No products found</p>
+					<p class="text-[11px] text-slate-400 mt-0.5">Try changing your search</p>
+				</div>
+			{:else}
+				{#each paginatedProducts as product (product.id)}
+					<div class="p-4 space-y-2">
+						<div class="flex items-start gap-3">
+							<img
+								src={product.image}
+								alt={product.name}
+								class="w-11 h-11 rounded-xl object-cover border border-slate-200 shrink-0 bg-slate-50"
+								onerror={(e) => {
+									(e.currentTarget as HTMLImageElement).src = '/images/placeholder.svg';
+								}}
+							/>
+							<div class="min-w-0 flex-1">
+								<p class="font-semibold text-slate-800 text-sm leading-snug line-clamp-2">{product.name}</p>
+								<div class="flex items-center gap-2 mt-1">
+									<span class="font-mono text-[10px] text-slate-400">{product.sku}</span>
+									{#if product.variant !== '-'}
+										<span class="text-[10px] text-slate-400">{product.variant}</span>
+									{/if}
+									{#if product.status !== 'published'}
+										<span class="text-[9px] uppercase px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 font-bold border border-amber-200">{product.status}</span>
+									{/if}
+								</div>
+							</div>
+							<span class="font-bold text-sm shrink-0 {product.stock <= 5 ? 'text-rose-600' : 'text-indigo-600'}">{product.stock.toLocaleString()} pc</span>
+						</div>
+						<div class="flex items-center justify-between text-[11px] pl-14">
+							<div class="space-y-0.5">
+								<p class="text-slate-400">Cost: <span class="font-medium text-slate-600">{product.costPerUnit.toLocaleString()} tk</span></p>
+								<p class="text-slate-400">Sale: <span class="font-bold text-slate-800">{product.salePerUnit.toLocaleString()} tk</span></p>
+							</div>
+							<div class="text-right space-y-0.5">
+								<p class="font-semibold text-blue-600">{product.totalCost.toLocaleString()} tk</p>
+								<p class="font-bold text-emerald-600">{product.totalRetail.toLocaleString()} tk</p>
+							</div>
+						</div>
+					</div>
+				{/each}
+			{/if}
+		</div>
+
+		<!-- Product Desktop Table -->
+		<div class="overflow-x-auto hidden md:block">
 			<table class="w-full text-left border-collapse">
 				<thead>
 					<tr class="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-400">

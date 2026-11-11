@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { Button, Badge, Input, Card, Separator } from '#lib/components/ui';
+	import { Button, Badge, Input, Card, Separator, Textarea } from '#lib/components/ui';
 	import { toast } from 'svelte-sonner';
 	import {
 		MessageSquare,
@@ -440,14 +440,14 @@
 										}}
 									>
 										<input type="hidden" name="id" value={review.id} />
-										<textarea
+										<Textarea
 											name="reply"
 											bind:value={replyText}
-											placeholder="কাস্টমারকে রিপ্লাই লিখুন..."
-											rows="3"
-											class="w-full text-xs border border-slate-200 rounded-lg p-2.5 focus:border-[#5845eb] focus:ring-1 focus:ring-[#5845eb]/20 outline-none resize-none"
-											maxlength="1000"
-										></textarea>
+											placeholder="Reply to customer..."
+											rows={3}
+											class="text-xs rounded-lg resize-none"
+											maxlength={1000}
+										/>
 										<div class="flex items-center gap-2">
 											<Button type="submit" size="sm" class="h-8 text-xs bg-[#5845eb] hover:bg-[#4936d6] text-white cursor-pointer" disabled={!replyText.trim() || isSubmitting}>
 												<Reply class="w-3.5 h-3.5 mr-1" /> রিপ্লাই পাঠান

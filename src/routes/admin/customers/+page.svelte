@@ -29,6 +29,7 @@
 	} from 'lucide-svelte';
 	import type { PageData, ActionData } from './$types';
 	import { toast } from 'svelte-sonner';
+	import { Input, Badge, Card, CardContent } from '#lib/components/ui';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -389,7 +390,7 @@
 			<!-- Search Box -->
 			<div class="relative flex-1 max-w-md">
 				<Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-				<input
+				<Input
 					type="text"
 					bind:value={searchQuery}
 					placeholder="নাম, ফোন নম্বর, এলাকা, ইমেইল বা শহর দিয়ে খুঁজুন..."
@@ -479,8 +480,63 @@
 			</div>
 		</div>
 
-		<!-- Customers Data Table -->
-		<div class="overflow-x-auto">
+		<!-- Customers Mobile Card View -->
+		<div class="block md:hidden divide-y divide-slate-100">
+			{#if filteredCustomers.length === 0}
+				<div class="py-14 text-center text-slate-400">
+					<Users class="w-8 h-8 mx-auto mb-2 text-slate-300" />
+					<p class="font-medium text-slate-700">No customers found</p>
+					<p class="text-[11px] text-slate-400 mt-1">Add a new customer or click "Order Sync" to load data.</p>
+				</div>
+			{:else}
+				{#each filteredCustomers as cust (cust.id)}
+					<div class="p-4 space-y-2.5 {cust.isBanned ? 'bg-rose-50/30' : ''}">
+						<div class="flex items-start justify-between gap-2">
+							<div class="flex items-center gap-2.5 min-w-0">
+								<div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 border {getAvatarColor(cust.name)}">
+									{(cust.name || 'K').slice(0, 2)}
+								</div>
+								<div class="min-w-0">
+									<div class="flex items-center gap-1.5">
+										<span class="font-bold text-slate-900 text-sm truncate">{cust.name}</span>
+										{#if (cust.totalSpent || 0) >= 5000 || (cust.totalOrders || 0) >= 4}
+											<span class="px-1 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-800 border border-amber-200">VIP</span>
+										{/if}
+									</div>
+									<span class="font-mono text-[11px] text-slate-600">{cust.phone}</span>
+								</div>
+							</div>
+							<div class="flex items-center gap-1 shrink-0">
+								{#if cust.isBanned}
+									<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-900 text-rose-300 border border-slate-700">Banned</span>
+								{:else if cust.riskLevel === 'high_risk'}
+									<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-rose-50 text-rose-700 border border-rose-200">High Risk</span>
+								{:else}
+									<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Safe</span>
+								{/if}
+							</div>
+						</div>
+						<div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 pl-11.5">
+							<span class="font-bold text-slate-800">{formatTaka(cust.totalSpent)}</span>
+							<span>{cust.totalOrders ?? 0} orders</span>
+							<span class="px-1.5 py-0.5 rounded text-[10px] font-bold {cust.successRate >= 80 ? 'bg-emerald-50 text-emerald-700' : cust.successRate >= 50 ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700'}">{cust.successRate}%</span>
+							{#if cust.city}
+								<span class="bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">{cust.city}</span>
+							{/if}
+						</div>
+						<div class="flex items-center gap-1.5 pl-11.5">
+							<a href="tel:{cust.phone}" class="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 cursor-pointer"><PhoneCall class="w-3.5 h-3.5" /></a>
+							<a href="https://wa.me/{getCleanPhone(cust.phone)}" target="_blank" rel="noopener noreferrer" class="p-1.5 rounded-lg bg-teal-50 text-teal-600 hover:bg-teal-100 cursor-pointer"><MessageSquare class="w-3.5 h-3.5" /></a>
+							<button type="button" onclick={() => viewCustomerOrders(cust)} class="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 cursor-pointer"><Package class="w-3.5 h-3.5" /></button>
+							<button type="button" onclick={() => openEditModal(cust)} class="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 cursor-pointer"><Edit class="w-3.5 h-3.5" /></button>
+						</div>
+					</div>
+				{/each}
+			{/if}
+		</div>
+
+		<!-- Customers Desktop Table -->
+		<div class="overflow-x-auto hidden md:block">
 			<table class="w-full text-left text-xs">
 				<thead>
 					<tr class="border-b border-slate-200/80 bg-slate-50/90 text-slate-600 font-bold uppercase tracking-wider">

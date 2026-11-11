@@ -7,9 +7,6 @@
 	import { submitAction } from '#lib/client/submit-action';
 	import { slugify } from '#lib/utils/slug';
 	import ThemeComponentPreviewModal from '../../customization/theme-view/_components/ThemeComponentPreviewModal.svelte';
-	import Style1_ModernAnimated from '#lib/modules/landing-templates/templates/Style1_ModernAnimated.svelte';
-	import Style2_DirectCheckout from '#lib/modules/landing-templates/templates/Style2_DirectCheckout.svelte';
-	import Style3_LighthouseFunnel from '#lib/modules/landing-templates/templates/Style3_LighthouseFunnel.svelte';
 	import {
 		ArrowLeft,
 		Sparkles,
@@ -216,6 +213,25 @@
 
 	// Template Preview Modal State
 	let isPreviewModalOpen = $state(false);
+	let previewIframe: HTMLIFrameElement | undefined = $state();
+
+	function pushPreviewToIframe() {
+		const payload = { ...previewLandingPage, template: previewModalTemplate };
+		try {
+			sessionStorage.setItem('lp-preview-data', JSON.stringify(payload));
+		} catch {}
+		previewIframe?.contentWindow?.postMessage(
+			{ type: 'lp-preview', landingPage: payload },
+			location.origin
+		);
+	}
+
+	// Live-sync: any form change while the modal is open updates the iframe instantly
+	$effect(() => {
+		void previewLandingPage;
+		void previewModalTemplate;
+		if (isPreviewModalOpen) pushPreviewToIframe();
+	});
 	let previewModalTemplate = $state<'style_1_animated' | 'style_2_direct' | 'style_3_lighthouse'>('style_3_lighthouse');
 
 	let currentSelectedProduct = $derived(
@@ -1722,14 +1738,13 @@
 	onClose={() => (isPreviewModalOpen = false)}
 	onActivate={activatePreviewedTemplate}
 >
-	{#if previewModalTemplate === 'style_3_lighthouse'}
-		<Style3_LighthouseFunnel landingPage={previewLandingPage} />
-	{:else}
-		{#if previewModalTemplate === 'style_2_direct'}
-			<Style2_DirectCheckout landingPage={previewLandingPage} />
-		{:else}
-			<Style1_ModernAnimated landingPage={previewLandingPage} />
-		{/if}
-	{/if}
+	<!-- The iframe has its own viewport, so Tailwind breakpoints behave exactly like the real page -->
+	<iframe
+		bind:this={previewIframe}
+		src="/admin/landing-pages/preview"
+		title="ল্যান্ডিং পেজ লাইভ প্রিভিউ"
+		class="w-full h-[75vh] min-h-[560px] border-0 bg-white"
+		onload={pushPreviewToIframe}
+	></iframe>
 </ThemeComponentPreviewModal>
 

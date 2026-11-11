@@ -351,7 +351,8 @@ export class LandingPageService {
 			contactPhone: source.config.contactPhone,
 			customPrice: source.config.customPrice,
 			customOriginalPrice: source.config.customOriginalPrice,
-			galleryImages: source.config.galleryImages
+			galleryImages: source.config.galleryImages,
+			reviews: source.config.reviews
 		});
 	}
 }

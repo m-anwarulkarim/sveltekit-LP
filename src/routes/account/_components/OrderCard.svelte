@@ -98,15 +98,24 @@
 		}
 
 		for (const it of itemsList) {
-			cart.addItem({
-				id: it.id || 'prod',
-				name: it.name || 'পণ্য',
-				price: Number(it.price) || 0,
-				image: it.image || '',
-				variantId: it.variantId || null,
-				variantName: it.variantName || null,
-				quantity: Number(it.quantity) || 1
-			});
+			const qty = Math.max(1, Number(it.quantity) || 1);
+			// addItem always adds one unit, so repeat to restore the ordered quantity
+			for (let i = 0; i < qty; i++) {
+				const added = cart.addItem(
+					{
+						id: it.id || 'prod',
+						name: it.name || 'পণ্য',
+						price: Number(it.price) || 0,
+						originalPrice: Number(it.originalPrice ?? it.price) || 0,
+						category: it.category || 'General',
+						image: it.image || '',
+						variantId: it.variantId || null,
+						variantName: it.variantName || null
+					},
+					false
+				);
+				if (added === false) break;
+			}
 		}
 
 		toast.success('আইটেম কার্টে যোগ করা হয়েছে!');

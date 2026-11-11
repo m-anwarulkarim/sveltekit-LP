@@ -1,6 +1,6 @@
 import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, or, inArray } from 'drizzle-orm';
 import { fail } from '@sveltejs/kit';
 import { OrderService } from './services/order.service';
 import { CustomerService } from './services/customer.service';
@@ -15,6 +15,12 @@ import { StockService } from './services/stock.service';
 
 const SAVE_FAILED = 'ডাটাবেসে সেভ করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।';
 
+const VALID_ORDER_STATUSES = new Set([
+	'pending', 'incomplete', 'no_response', 'good_no_response', 'busy', 'hold', 'recall',
+	'confirmed', 'processing', 'printed', 'entry_done', 'shipped', 'delivered',
+	'partial_delivered', 'pending_return', 'returned', 'cancelled', 'missing', 'refunded', 'pre_order'
+]);
+
 async function findOrder(db: ReturnType<typeof getDb>, orderId: string) {
 	return await db.select().from(schema.orders).where(eq(schema.orders.id, orderId)).get();
 }
@@ -27,6 +33,9 @@ export async function handleUpdateStatus(request: Request, platform: any) {
 
 	if (!orderId || !newStatus) {
 		return fail(400, { message: 'Order ID and Status required' });
+	}
+	if (!VALID_ORDER_STATUSES.has(newStatus)) {
+		return fail(400, { message: 'অবৈধ অর্ডার স্ট্যাটাস' });
 	}
 
 	try {
@@ -188,7 +197,8 @@ export async function handleCreateManualOrder(request: Request, platform: any) {
 	const discountAmount = parseInt(data.get('discount')?.toString() || '0', 10);
 	const deliveryCharge = parseInt(data.get('deliveryFee')?.toString() || '60', 10);
 	const advancePayment = parseInt(data.get('advancePaid')?.toString() || '0', 10);
-	const status = data.get('status')?.toString() || 'pending';
+	const rawStatus = data.get('status')?.toString() || 'pending';
+	const status = VALID_ORDER_STATUSES.has(rawStatus) ? rawStatus : 'pending';
 
 	if (!customerName) return fail(400, { message: 'কাস্টমার নাম আবশ্যক।' });
 	if (!customerPhone || customerPhone === '01700000000') return fail(400, { message: 'কাস্টমারের ফোন নম্বর আবশ্যক।' });
@@ -349,7 +359,15 @@ export async function handlePermanentDelete(request: Request, platform: any) {
 export async function handleEmptyTrash(platform: any) {
 	try {
 		const db = getDb(platform);
-		await db.delete(schema.orders).where(eq(schema.orders.isTrashed, true));
+		// Must match the trash list condition, otherwise cancelled/refunded rows survive "empty trash"
+		await db
+			.delete(schema.orders)
+			.where(
+				or(
+					eq(schema.orders.isTrashed, true),
+					inArray(schema.orders.status, ['cancelled', 'refunded'])
+				)
+			);
 		return { success: true, emptied: true };
 	} catch (err: any) {
 		console.error('Failed to empty trash in D1:', err);

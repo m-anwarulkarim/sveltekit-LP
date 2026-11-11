@@ -405,6 +405,26 @@ export class CategoryService {
 	 * Delete category by ID
 	 */
 	static async deleteCategory(db: DrizzleD1Database<typeof schema>, id: string) {
+		// Deleting a parent cascades to its children and detaches products,
+		// so block until the admin has moved them — silent data loss otherwise.
+		const child = await db
+			.select({ id: schema.categories.id })
+			.from(schema.categories)
+			.where(eq(schema.categories.parentId, id))
+			.get();
+		if (child) {
+			throw new Error('এই ক্যাটাগরির অধীনে সাব-ক্যাটাগরি আছে। আগে সাব-ক্যাটাগরিগুলো মুছুন বা সরান।');
+		}
+
+		const product = await db
+			.select({ id: schema.products.id })
+			.from(schema.products)
+			.where(eq(schema.products.categoryId, id))
+			.get();
+		if (product) {
+			throw new Error('এই ক্যাটাগরিতে প্রোডাক্ট আছে। আগে প্রোডাক্টগুলো অন্য ক্যাটাগরিতে সরান।');
+		}
+
 		await db.delete(schema.categories).where(eq(schema.categories.id, id));
 		return { id, success: true };
 	}
@@ -414,8 +434,28 @@ export class CategoryService {
 	 */
 	static async bulkDeleteCategories(db: DrizzleD1Database<typeof schema>, ids: string[]) {
 		if (ids.length === 0) return { count: 0 };
-		await db.delete(schema.categories).where(inArray(schema.categories.id, ids));
-		return { count: ids.length, success: true };
+
+		// Keep categories that still have children or products (same guard as single delete)
+		const blockedIds = new Set<string>();
+		const children = await db
+			.select({ parentId: schema.categories.parentId })
+			.from(schema.categories)
+			.where(inArray(schema.categories.parentId, ids))
+			.all();
+		for (const c of children) if (c.parentId) blockedIds.add(c.parentId);
+
+		const used = await db
+			.select({ categoryId: schema.products.categoryId })
+			.from(schema.products)
+			.where(inArray(schema.products.categoryId, ids))
+			.all();
+		for (const p of used) if (p.categoryId) blockedIds.add(p.categoryId);
+
+		const deletable = ids.filter((id) => !blockedIds.has(id));
+		if (deletable.length > 0) {
+			await db.delete(schema.categories).where(inArray(schema.categories.id, deletable));
+		}
+		return { count: deletable.length, skipped: blockedIds.size, success: true };
 	}
 
 	/**

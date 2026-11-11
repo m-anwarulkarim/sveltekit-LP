@@ -213,9 +213,9 @@
 
 	<!-- Variant Selector using shadcn Button components -->
 	<div class="space-y-2">
-		<label class="text-xs font-bold text-slate-700 block">
+		<span class="text-xs font-bold text-slate-700 block">
 			প্যাকেজ / ভ্যারিয়েন্ট নির্বাচন করুন:
-		</label>
+		</span>
 		<div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
 			{#each variantOptions as variant}
 				{@const isSelected = selectedVariantId === variant.id}

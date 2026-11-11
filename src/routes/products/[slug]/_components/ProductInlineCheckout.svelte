@@ -195,14 +195,16 @@
 							deliveryArea: district === 'dhaka' ? 'inside_dhaka' : 'outside_dhaka',
 							items: [
 								{
-									id: selectedVariant.id === 'standard' ? product.id : `${product.id}-${selectedVariant.id}`,
+									id: selectedVariant.id === 'standard' ? String(product.id) : `${product.id}-${selectedVariant.id}`,
 									name:
 										selectedVariant.id === 'standard'
 											? product.name
 											: `${product.name} [${selectedVariant.name}]`,
 									price: singleVariantPrice,
+									originalPrice: Number(product.originalPrice || singleVariantPrice),
 									quantity: quantity,
-									image: product.image
+									image: product.image,
+									category: product.categoryLabel || 'General'
 								}
 							],
 							subtotal: activePrice,
@@ -400,8 +402,8 @@
 			}
 
 			const orderData = result.data;
-			const orderSnapshot = {
-				orderId: orderData.orderNumber,
+			const orderSnapshot: import('#lib/modules/cart/cart.svelte').OrderDetails = {
+				orderId: String(orderData.orderNumber || orderData.orderId || ''),
 				customerName: customerName.trim(),
 				customerPhone: customerPhone.trim(),
 				customerAddress: customerAddress.trim(),
@@ -412,20 +414,27 @@
 						: 'বিকাশ অনলাইন পেমেন্ট (bKash)',
 				items: [
 					{
-						id: product.id,
+						id: String(product.id),
 						name:
 							selectedVariant.id === 'standard'
 								? product.name
 								: `${product.name} [${selectedVariant.name}]`,
 						price: singleVariantPrice,
+						originalPrice: Number(product.originalPrice || singleVariantPrice),
+						image: product.image,
 						quantity: quantity,
-						image: product.image
+						category: product.categoryLabel || 'General',
+						variantId: selectedVariant.id === 'standard' ? null : selectedVariant.id,
+						variantName: selectedVariant.name,
+						inStock: product.inStock,
+						totalStock: product.totalStock,
+						isPreOrder: product.isPreOrder
 					}
 				],
 				subtotal: activePrice,
 				deliveryCharge: deliveryFee,
 				discountAmount: 0,
-				total: orderData.total,
+				total: Number(orderData.total) || grandTotal,
 				createdAt: new Date().toISOString()
 			};
 
@@ -582,9 +591,9 @@
 
 				<!-- Variant Selector -->
 				<div class="space-y-1.5">
-					<label class="text-xs font-bold text-slate-700 block">
+					<span class="text-xs font-bold text-slate-700 block">
 						প্যাকেজ / ভ্যারিয়েন্ট বেছে নিন:
-					</label>
+					</span>
 					<div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
 						{#each variantOptions as variant}
 							{@const isSelected = selectedVariantId === variant.id}
@@ -755,9 +764,9 @@
 
 					<!-- ডেলিভারি এরিয়া বাটন সিলেক্টর (ঢাকা / ঢাকার বাইরে) -->
 					<div>
-						<label class="block text-xs font-bold text-slate-800 mb-1.5">
+						<span class="block text-xs font-bold text-slate-800 mb-1.5">
 							ডেলিভারি এরিয়া বেছে নিন <span class="text-rose-500">*</span>
-						</label>
+						</span>
 						<div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
 							<button
 								type="button"
@@ -796,9 +805,9 @@
 					<!-- পেমেন্ট মেথড (ডিফল্ট ক্যাশ অন ডেলিভারি) -->
 					{#if paymentConfig.enableBkash}
 						<div>
-							<label class="block text-xs font-bold text-slate-800 mb-1.5">
+							<span class="block text-xs font-bold text-slate-800 mb-1.5">
 								পেমেন্ট মেথড
-							</label>
+							</span>
 							<div class="grid grid-cols-2 gap-2.5">
 								<button
 									type="button"

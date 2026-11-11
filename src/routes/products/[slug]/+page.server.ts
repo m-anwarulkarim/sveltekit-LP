@@ -15,6 +15,7 @@ import {
 } from '#lib/server/services/order.service';
 import { PixelService } from '#lib/server/services/pixel.service';
 import { SettingsService } from '#lib/server/services/settings.service';
+import { ThemeCustomizationService } from '#lib/server/services/theme-customization.service';
 import { eq, desc, ne } from 'drizzle-orm';
 
 export const load: PageServerLoad = async (event) => {

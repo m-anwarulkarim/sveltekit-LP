@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Product } from '#lib/modules/products/types.ts';
+	import type { Product } from '#lib/modules/products/types';
 	import { cart } from '#lib/modules/cart/cart.svelte';
 	import { Button } from '#lib/components/ui';
 	import { Zap, ShoppingBag } from 'lucide-svelte';

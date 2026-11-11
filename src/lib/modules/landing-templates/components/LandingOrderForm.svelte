@@ -1,6 +1,9 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { submitAction } from '#lib/client/submit-action';
 	import { Button, Input, Card, CardHeader, CardContent } from '#lib/components/ui';
+	import { trackMetaEvent } from '#lib/client/meta-pixel';
+	import { trackGtmBeginCheckout } from '#lib/client/gtm';
 	import {
 		User,
 		Phone,
@@ -65,6 +68,37 @@
 		return `৳${amount.toLocaleString('en-BD')}`;
 	}
 
+	let hasFiredInitiateCheckout = false;
+	function handleInitiateCheckout() {
+		if (hasFiredInitiateCheckout || isPreview || typeof window === 'undefined') return;
+		hasFiredInitiateCheckout = true;
+		const matchId = String(product?.id || landingPage?.id || 'lp-prod');
+		const title = product?.name || config?.headline || landingPage?.title || 'Landing Product';
+		const amt = Number(subtotal || price || 0);
+
+		trackMetaEvent('InitiateCheckout', {
+			content_name: title,
+			content_ids: [matchId],
+			content_type: 'product',
+			value: amt,
+			currency: 'BDT',
+			num_items: Number(currentPackage?.qty || quantity || 1)
+		});
+
+		trackGtmBeginCheckout({
+			value: amt,
+			currency: 'BDT',
+			items: [
+				{
+					item_id: matchId,
+					item_name: title,
+					price: Number(price || 0),
+					quantity: Number(currentPackage?.qty || quantity || 1)
+				}
+			]
+		});
+	}
+
 	async function handleSubmit(e: SubmitEvent) {
 		e.preventDefault();
 
@@ -112,7 +146,11 @@
 
 			if (result.ok) {
 				toast.success('আপনার অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে!');
-				window.location.href = `/thank-you?order_id=${result.data.orderId}`;
+				try {
+					await goto(`/thank-you?order_id=${result.data.orderId}`);
+				} catch {
+					window.location.href = `/thank-you?order_id=${result.data.orderId}`;
+				}
 			} else {
 				toast.error(result.message);
 			}
@@ -215,6 +253,7 @@
 							type="text"
 							required
 							bind:value={name}
+							onfocus={handleInitiateCheckout}
 							placeholder="এখানে আপনার নাম লিখুন"
 							class="w-full pl-10 pr-4 py-3 rounded-2xl bg-white border-slate-200/90 text-sm focus:border-emerald-600"
 						/>
@@ -233,6 +272,7 @@
 							type="tel"
 							required
 							bind:value={phone}
+							onfocus={handleInitiateCheckout}
 							placeholder="01XXXXXXXXX"
 							class="w-full pl-10 pr-4 py-3 rounded-2xl bg-white border-slate-200/90 text-sm font-mono focus:border-emerald-600"
 						/>
@@ -251,6 +291,7 @@
 							type="text"
 							required
 							bind:value={address}
+							onfocus={handleInitiateCheckout}
 							placeholder="এখানে আপনার সম্পূর্ণ ঠিকানা লিখুন"
 							class="w-full pl-10 pr-4 py-3 rounded-2xl bg-white border-slate-200/90 text-sm focus:border-emerald-600"
 						/>

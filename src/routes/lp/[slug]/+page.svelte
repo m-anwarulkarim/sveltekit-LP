@@ -2,10 +2,44 @@
 	import type { PageData } from './$types';
 	import DynamicLandingEngine from '#lib/modules/landing-templates/DynamicLandingEngine.svelte';
 	import { jsonLdScript } from '#lib/utils/html-safe';
+	import { trackMetaEvent } from '#lib/client/meta-pixel';
+	import { trackGtmViewItem } from '#lib/client/gtm';
 
 	let { data }: { data: PageData } = $props();
 
 	let seo = $derived(data.seoMeta);
+	let landingPage = $derived(data.landingPage);
+	let product = $derived(landingPage?.product);
+	let siteName = $derived(data?.websiteInfo?.websiteName || 'Store');
+
+	// Fire Standard Meta Pixel ViewContent & GA4 E-Commerce view_item events on landing pages
+	$effect(() => {
+		if (landingPage && typeof window !== 'undefined') {
+			const matchId = String(product?.id || landingPage.id);
+			const price = Number(landingPage.config?.customPrice || product?.price || 0);
+			const title = landingPage.title || landingPage.config?.headline || product?.name || 'Landing Page Product';
+
+			trackMetaEvent('ViewContent', {
+				content_name: title,
+				content_ids: [matchId],
+				content_type: 'product',
+				value: price,
+				currency: 'BDT'
+			});
+
+			trackGtmViewItem({
+				item: {
+					item_id: matchId,
+					item_name: title,
+					item_brand: product?.brand || siteName,
+					item_category: product?.category || landingPage.category || 'General',
+					price: price,
+					quantity: 1
+				},
+				currency: 'BDT'
+			});
+		}
+	});
 </script>
 
 <svelte:head>

@@ -50,17 +50,17 @@
 		return '৳ ' + Math.round(amount || 0).toLocaleString('en-IN');
 	}
 
-	function formatDate(d: Date | string | null | undefined): string {
+	function formatDate(d: any): string {
 		if (!d) return '—';
 		try {
-			const dateObj = typeof d === 'string' ? new Date(d) : d;
+			const dateObj = d instanceof Date ? d : new Date(d);
 			if (isNaN(dateObj.getTime())) return '—';
 			return dateObj.toLocaleDateString('bn-BD', {
 				day: 'numeric',
 				month: 'short',
 				year: 'numeric'
 			});
-		} catch (_) {
+		} catch {
 			return '—';
 		}
 	}

@@ -20,6 +20,8 @@
 	import LandingCountdown from '../components/LandingCountdown.svelte';
 	import LandingOrderForm from '../components/LandingOrderForm.svelte';
 	import LandingNavbar from '../components/LandingNavbar.svelte';
+	import { trackMetaEvent } from '#lib/client/meta-pixel';
+	import { trackGtmBeginCheckout } from '#lib/client/gtm';
 
 	interface Props {
 		landingPage: any;
@@ -135,7 +137,39 @@
 			: defaultReviews
 	);
 
+	let hasTrackedCheckout = false;
+	function triggerInitiateCheckout() {
+		if (hasTrackedCheckout || typeof window === 'undefined') return;
+		hasTrackedCheckout = true;
+		const matchId = String(product?.id || landingPage?.id || 'lp-prod');
+		const title = product?.name || config?.headline || landingPage?.title || 'Landing Product';
+		const amt = Number(price || basePrice || 0);
+
+		trackMetaEvent('InitiateCheckout', {
+			content_name: title,
+			content_ids: [matchId],
+			content_type: 'product',
+			value: amt,
+			currency: 'BDT',
+			num_items: Number(currentPackage?.qty || 1)
+		});
+
+		trackGtmBeginCheckout({
+			value: amt,
+			currency: 'BDT',
+			items: [
+				{
+					item_id: matchId,
+					item_name: title,
+					price: amt,
+					quantity: Number(currentPackage?.qty || 1)
+				}
+			]
+		});
+	}
+
 	function scrollToOrderForm() {
+		triggerInitiateCheckout();
 		const el = document.getElementById('order-form');
 		if (!el) return;
 		const rect = el.getBoundingClientRect();

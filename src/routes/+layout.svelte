@@ -20,15 +20,10 @@
 	onMount(() => {
 		if (!page.url.pathname.startsWith('/admin')) {
 			captureAttribution();
-			const init = () => {
-				initMetaPixel(data?.pixelConfig);
-				initGtm(data?.gtmConfig);
-			};
-			if ('requestIdleCallback' in window) {
-				requestIdleCallback(init, { timeout: 3000 });
-			} else {
-				setTimeout(init, 2000);
-			}
+			// Initialize Meta Pixel and GTM immediately so browser extensions and ad crawlers detect pixel without delay
+			initMetaPixel(data?.pixelConfig);
+			initGtm(data?.gtmConfig);
+
 			setTimeout(async () => {
 				const mod = await import('#lib/components/storefront/PromotionalPopup.svelte');
 				PromotionalPopup = mod.default;

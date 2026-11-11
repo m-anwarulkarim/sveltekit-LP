@@ -41,25 +41,40 @@
 		liveBalanceMessage: 'ব্যালেন্স সিঙ্ক হয়নি'
 	};
 
-	// Reactive states
-	let kpis = $state(data?.kpis ?? fallbackKpis);
-	let consignments = $state(data?.consignments ?? []);
-	let totalMatching = $state(data?.totalMatching ?? 0);
+	// Client-side live balance state fetched asynchronously
+	let clientBalance = $state<{
+		liveBalance?: number;
+		liveBalanceProvider?: string;
+		liveBalanceSuccess: boolean;
+		liveBalanceMessage: string;
+	} | null>(null);
 
+	// Derived KPIs combining server data with client-fetched live balance safely without cyclic effects
+	let kpis = $derived.by(() => {
+		const base = data?.kpis ?? fallbackKpis;
+		if (clientBalance && clientBalance.liveBalanceSuccess) {
+			return {
+				...base,
+				liveBalance: clientBalance.liveBalance ?? base.liveBalance ?? 0,
+				liveBalanceProvider: clientBalance.liveBalanceProvider ?? base.liveBalanceProvider ?? (data?.defaultProvider || 'Steadfast'),
+				liveBalanceSuccess: true,
+				liveBalanceMessage: clientBalance.liveBalanceMessage || 'লাইভ ব্যালেন্স সিঙ্ক হয়েছে'
+			};
+		}
+		return base;
+	});
+
+	let consignments = $derived(data?.consignments ?? []);
+	let totalMatching = $derived(data?.totalMatching ?? 0);
+
+	// Filter states initialized from server data
+	let selectedDateRange = $state(data?.filters?.dateRange || 'all');
+	let selectedProvider = $state(data?.filters?.provider || 'all');
+	let selectedStatus = $state(data?.filters?.status || 'all');
+	let searchQuery = $state(data?.filters?.search || '');
+
+	// Keep filter states in sync with server URL params when URL changes
 	$effect(() => {
-		const newKpis = data?.kpis ?? fallbackKpis;
-		// Preserve client live balance if already successfully fetched
-		kpis = {
-			...newKpis,
-			liveBalance: kpis.liveBalanceSuccess ? kpis.liveBalance : (newKpis.liveBalance ?? 0),
-			liveBalanceProvider: kpis.liveBalanceSuccess ? kpis.liveBalanceProvider : (newKpis.liveBalanceProvider ?? (data?.defaultProvider || 'Steadfast')),
-			liveBalanceSuccess: kpis.liveBalanceSuccess || (newKpis.liveBalanceSuccess ?? false),
-			liveBalanceMessage: kpis.liveBalanceSuccess ? kpis.liveBalanceMessage : (newKpis.liveBalanceMessage ?? fallbackKpis.liveBalanceMessage)
-		};
-		consignments = data?.consignments ?? [];
-		totalMatching = data?.totalMatching ?? 0;
-
-		// Keep filter states in sync with server URL params (e.g. on browser Back / Forward)
 		if (data?.filters) {
 			selectedDateRange = data.filters.dateRange || 'all';
 			selectedProvider = data.filters.provider || 'all';
@@ -67,12 +82,6 @@
 			searchQuery = data.filters.search || '';
 		}
 	});
-
-	// Filter states initialized from server data
-	let selectedDateRange = $state(data?.filters?.dateRange || 'all');
-	let selectedProvider = $state(data?.filters?.provider || 'all');
-	let selectedStatus = $state(data?.filters?.status || 'all');
-	let searchQuery = $state(data?.filters?.search || '');
 
 	// Selection state for batch operations
 	let selectedIds = $state<string[]>([]);
@@ -177,16 +186,17 @@
 			const res = await fetch('/api/admin/courier/balance');
 			const result: any = await res.json();
 			if (result?.success && result.balance !== undefined) {
-				kpis = {
-					...kpis,
+				clientBalance = {
 					liveBalance: result.balance,
 					liveBalanceProvider: result.provider,
-					liveBalanceSuccess: true
+					liveBalanceSuccess: true,
+					liveBalanceMessage: 'লাইভ ব্যালেন্স সিঙ্ক হয়েছে'
 				};
 				if (!silent) toast.success('কুরিয়ার লাইভ ব্যালেন্স আপডেট হয়েছে!');
 			} else {
-				kpis = {
-					...kpis,
+				clientBalance = {
+					liveBalance: 0,
+					liveBalanceProvider: data?.defaultProvider || 'Steadfast',
 					liveBalanceSuccess: false,
 					liveBalanceMessage: result?.message || 'ব্যালেন্স আপডেট করা যায়নি'
 				};

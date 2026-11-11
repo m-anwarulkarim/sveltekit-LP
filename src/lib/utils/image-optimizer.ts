@@ -56,21 +56,33 @@ export async function optimizeImageFile(
 	ctx.drawImage(bitmap, 0, 0, width, height);
 	bitmap.close();
 
-	const encode = (type: string) =>
-		new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality));
+	const encode = (type: string, q: number) =>
+		new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, q));
 
-	let blob = await encode('image/webp');
+	let blob = await encode('image/webp', quality);
 	// Older Safari ignores the WebP request and hands back PNG.
 	if (!blob || blob.type !== 'image/webp') {
-		blob = await encode('image/jpeg');
+		blob = await encode('image/jpeg', quality);
 	}
 	if (!blob) {
 		return { file: source, width, height };
 	}
 
-	// Re-encoding an already well-compressed file can grow it; keep the smaller one.
+	// Large photos can stay heavy even after resizing: step the quality down
+	// until the file is small enough for a fast storefront.
+	const TARGET_BYTES = 350 * 1024;
+	let q = quality;
+	while (blob.size > TARGET_BYTES && q > 0.52) {
+		q -= 0.1;
+		const next = await encode(blob.type, q);
+		if (!next || next.size >= blob.size) break;
+		blob = next;
+	}
+
+	// Re-encoding an already well-compressed file can grow it; keep the smaller one —
+	// but only when no resize was needed, otherwise an oversized original would slip through.
 	const sourceIsAccepted = source.type === 'image/webp' || source.type === 'image/jpeg';
-	if (sourceIsAccepted && blob.size >= source.size) {
+	if (sourceIsAccepted && blob.size >= source.size && scale === 1) {
 		return { file: source, width, height };
 	}
 

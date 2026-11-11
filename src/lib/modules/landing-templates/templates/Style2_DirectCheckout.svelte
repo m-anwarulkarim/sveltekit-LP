@@ -1,5 +1,8 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { submitAction } from '#lib/client/submit-action';
+	import { trackMetaEvent } from '#lib/client/meta-pixel';
+	import { trackGtmBeginCheckout } from '#lib/client/gtm';
 	import { Button, Badge, Card, CardHeader, CardTitle, CardContent, Input, Textarea, Separator } from '#lib/components/ui';
 	import {
 		ShieldCheck,
@@ -164,7 +167,39 @@
 		return `৳${amount.toLocaleString('en-BD')}`;
 	}
 
+	let hasTrackedCheckout = false;
+	function triggerInitiateCheckout() {
+		if (hasTrackedCheckout || isPreview || typeof window === 'undefined') return;
+		hasTrackedCheckout = true;
+		const matchId = String(product?.id || landingPage?.id || 'lp-prod');
+		const title = product?.name || config?.headline || landingPage?.title || 'Landing Product';
+		const amt = Number(subtotal || unitPrice || 0);
+
+		trackMetaEvent('InitiateCheckout', {
+			content_name: title,
+			content_ids: [matchId],
+			content_type: 'product',
+			value: amt,
+			currency: 'BDT',
+			num_items: Number(currentPackage?.qty || quantity || 1)
+		});
+
+		trackGtmBeginCheckout({
+			value: amt,
+			currency: 'BDT',
+			items: [
+				{
+					item_id: matchId,
+					item_name: title,
+					price: Number(unitPrice || 0),
+					quantity: Number(currentPackage?.qty || quantity || 1)
+				}
+			]
+		});
+	}
+
 	function scrollToCheckout() {
+		triggerInitiateCheckout();
 		const el = document.getElementById('direct-checkout-form');
 		if (el) {
 			el.scrollIntoView({ behavior: 'smooth' });
@@ -218,7 +253,11 @@
 
 			if (result.ok) {
 				toast.success('আপনার অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে!');
-				window.location.href = `/thank-you?order_id=${result.data.orderId}`;
+				try {
+					await goto(`/thank-you?order_id=${result.data.orderId}`);
+				} catch {
+					window.location.href = `/thank-you?order_id=${result.data.orderId}`;
+				}
 			} else {
 				toast.error(result.message);
 			}
@@ -521,6 +560,7 @@
 									id="order-name"
 									type="text"
 									bind:value={customerName}
+									onfocus={triggerInitiateCheckout}
 									placeholder="যেমন: মো: আরিফুল ইসলাম"
 									required
 									class="pl-10 h-11 text-xs sm:text-sm rounded-xl border-slate-200 focus:border-emerald-600 focus:ring-emerald-500"
@@ -542,6 +582,7 @@
 									id="order-phone"
 									type="tel"
 									bind:value={customerPhone}
+									onfocus={triggerInitiateCheckout}
 									placeholder="01XXXXXXXXX"
 									required
 									class="w-full px-3.5 py-2.5 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none bg-transparent"

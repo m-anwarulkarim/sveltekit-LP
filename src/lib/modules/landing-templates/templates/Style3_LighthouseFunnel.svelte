@@ -1,5 +1,8 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { submitAction } from '#lib/client/submit-action';
+	import { trackMetaEvent } from '#lib/client/meta-pixel';
+	import { trackGtmBeginCheckout } from '#lib/client/gtm';
 	import { Button, Badge, Card, CardHeader, CardTitle, CardContent, Input, Textarea, Separator } from '#lib/components/ui';
 	import {
 		ShieldCheck,
@@ -146,6 +149,37 @@
 	let orderNote = $state('');
 	let isSubmitting = $state(false);
 
+	let hasTrackedCheckout = false;
+	function triggerInitiateCheckout() {
+		if (hasTrackedCheckout || isPreview || typeof window === 'undefined') return;
+		hasTrackedCheckout = true;
+		const matchId = String(product?.id || landingPage?.id || 'lp-prod');
+		const title = product?.name || config?.headline || landingPage?.title || 'Landing Product';
+		const amt = Number(subtotal || unitPrice || 0);
+
+		trackMetaEvent('InitiateCheckout', {
+			content_name: title,
+			content_ids: [matchId],
+			content_type: 'product',
+			value: amt,
+			currency: 'BDT',
+			num_items: Number(currentPackage?.qty || quantity || 1)
+		});
+
+		trackGtmBeginCheckout({
+			value: amt,
+			currency: 'BDT',
+			items: [
+				{
+					item_id: matchId,
+					item_name: title,
+					price: Number(unitPrice || 0),
+					quantity: Number(currentPackage?.qty || quantity || 1)
+				}
+			]
+		});
+	}
+
 	const defaultReviews = [
 		{ name: 'মীর তানভীর আহমেদ', location: 'মিরপুর, ঢাকা', text: '১০০ পিস কম্বো প্যাকটি নিয়েছি। আমাদের ট্যাপের পানিতে প্রচুর আয়রন আর জং আসত। এই ফিল্টার লাগানোর পর পানি একদম কাঁচের মতো পরিষ্কার। সার্ভিস খুবই ভালো!', rating: 5, badge: '১০০ পিস কম্বো' },
 		{ name: 'নুসরাত জাহান', location: 'উত্তরা, ঢাকা', text: 'বাচ্চাদের জন্য পানির বিশুদ্ধতা নিয়ে খুব টেনশনে থাকতাম। মাত্র এক মিনিটে কিচেন ও বেসিনের ট্যাপে লাগিয়ে নিয়েছি। ডেলিভারি মাত্র ২ দিনে পেয়েছি।', rating: 5, badge: '৫০ পিস প্যাক' },
@@ -162,6 +196,7 @@
 	}
 
 	function scrollToCheckout() {
+		triggerInitiateCheckout();
 		const el = document.getElementById('lighthouse-checkout-step');
 		if (el) {
 			el.scrollIntoView({ behavior: 'smooth' });
@@ -254,7 +289,11 @@
 
 			if (result.ok) {
 				toast.success('আপনার অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে!');
-				window.location.href = `/thank-you?order_id=${result.data.orderId}`;
+				try {
+					await goto(`/thank-you?order_id=${result.data.orderId}`);
+				} catch {
+					window.location.href = `/thank-you?order_id=${result.data.orderId}`;
+				}
 			} else {
 				toast.error(result.message);
 			}
@@ -547,6 +586,7 @@
 									id="lh-customer-name"
 									type="text"
 									required
+									onfocus={triggerInitiateCheckout}
 									placeholder="যেমন: মোঃ আরিফুল ইসলাম"
 									bind:value={customerName}
 									class="h-11 rounded-xl bg-slate-50/80 border-slate-200 text-xs sm:text-sm focus:bg-white focus:border-[#e8007c] focus:ring-1 focus:ring-[#e8007c]"
@@ -563,6 +603,7 @@
 									id="lh-customer-phone"
 									type="tel"
 									required
+									onfocus={triggerInitiateCheckout}
 									placeholder="017xxxxxxxx"
 									bind:value={customerPhone}
 									class="h-11 rounded-xl bg-slate-50/80 border-slate-200 text-xs sm:text-sm font-mono focus:bg-white focus:border-[#e8007c] focus:ring-1 focus:ring-[#e8007c]"

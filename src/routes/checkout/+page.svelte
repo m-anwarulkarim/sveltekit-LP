@@ -6,7 +6,6 @@
 	import StoreLayout from '#lib/modules/layout/components/StoreLayout.svelte';
 	import { cart } from '#lib/modules/cart/cart.svelte';
 	import { goto } from '$app/navigation';
-	import { deserialize } from '$app/forms';
 	import { trackMetaEvent } from '#lib/client/meta-pixel';
 	import { trackGtmBeginCheckout } from '#lib/client/gtm';
 	import { toast } from 'svelte-sonner';
@@ -15,7 +14,6 @@
 	import {
 		Button,
 		Input,
-		Textarea,
 		Badge,
 		Card,
 		CardHeader,
@@ -456,7 +454,7 @@
 			<form onsubmit={handlePlaceOrder} class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 				<!-- Bot Honeypot Protection (hidden from real users) -->
 				<div class="hidden" aria-hidden="true" tabindex="-1">
-					<input type="text" name="website_url" bind:value={honeypot} autocomplete="off" />
+					<input type="text" name="website_url" aria-label="website_url" bind:value={honeypot} autocomplete="off" />
 				</div>
 				
 				<!-- LEFT COLUMN: Customer & Shipping Details (lg:col-span-7) -->
@@ -917,7 +915,7 @@
 												size="icon"
 												onclick={() => cart.updateQuantity(item.id, -1)}
 												class="w-5 h-5 rounded-none text-slate-500 hover:bg-slate-100 p-0"
-												aria-label="Decrease"
+												aria-label="পরিমাণ কমান"
 											>
 												<Minus class="w-2.5 h-2.5" />
 											</Button>
@@ -929,7 +927,7 @@
 												size="icon"
 												onclick={() => cart.updateQuantity(item.id, 1)}
 												class="w-5 h-5 rounded-none text-slate-500 hover:bg-slate-100 p-0"
-												aria-label="Increase"
+												aria-label="পরিমাণ বাড়ান"
 											>
 												<Plus class="w-2.5 h-2.5" />
 											</Button>
@@ -968,6 +966,8 @@
 										<div class="relative flex-1">
 											<Tag class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 z-10" />
 											<Input
+												id="co-coupon"
+												aria-label="কুপন কোড"
 												type="text"
 												bind:value={couponInput}
 												placeholder="কুপন কোড (SEED20)"
@@ -1008,7 +1008,7 @@
 
 								{#if cart.discountAmount > 0}
 									<div class="flex justify-between items-center text-emerald-600 font-medium">
-											<span>ডিসকাউন্ট {cart.couponTerms?.discountType === 'percentage' ? "({cart.discountPercent}%)" : ''}</span>
+										<span>ডিসকাউন্ট {cart.couponTerms?.discountType === 'percentage' && cart.discountPercent ? `(${cart.discountPercent}%)` : ''}</span>
 										<span class="font-bold font-mono">-{formatTaka(cart.discountAmount)}</span>
 									</div>
 								{/if}

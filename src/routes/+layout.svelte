@@ -14,12 +14,17 @@
 	import { cart } from '#lib/modules/cart/cart.svelte';
 	import { jsonLdScript, safeCssColor } from '#lib/utils/html-safe';
 	import StoreLoadingBar from '#lib/components/storefront/StoreLoadingBar.svelte';
+	import OfflineStatusPill from '#lib/components/storefront/OfflineStatusPill.svelte';
+	import OfflineOrderModal from '#lib/components/storefront/OfflineOrderModal.svelte';
+	import { network } from '#lib/stores/network.svelte';
 
 	let { data, children }: LayoutProps = $props();
 
 	const isAdmin = $derived(page.url.pathname.startsWith('/admin'));
 
 	onMount(() => {
+		const removeNetworkListeners = network.init();
+
 		if (!page.url.pathname.startsWith('/admin')) {
 			captureAttribution();
 			// Initialize Meta Pixel and GTM immediately so browser extensions and ad crawlers detect pixel without delay
@@ -32,6 +37,10 @@
 				PromotionalPopup = mod.default;
 			}, 3000);
 		}
+
+		return () => {
+			removeNetworkListeners?.();
+		};
 	});
 
 	$effect(() => {
@@ -100,6 +109,8 @@
 
 {#if !isAdmin}
 	<StoreLoadingBar />
+	<OfflineStatusPill />
+	<OfflineOrderModal />
 {/if}
 
 {@render children()}

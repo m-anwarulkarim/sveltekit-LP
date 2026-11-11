@@ -5,12 +5,14 @@
 	import { toast } from 'svelte-sonner';
 	import { playNotificationSound } from '#lib/utils/notificationSound';
 	import { installFetchInterceptor } from '#lib/stores/admin-loading.svelte';
+	import { network } from '#lib/stores/network.svelte';
 	import {
 		AdminSidebar,
 		AdminNavbar,
 		AdminMobileBottomNav,
 		AdminSearchModal,
-		AdminLoadingBar
+		AdminLoadingBar,
+		AdminOfflineBanner
 	} from './_components/layout';
 	import {
 		PackageProModal
@@ -33,6 +35,7 @@
 
 	onMount(() => {
 		const removeFetchInterceptor = installFetchInterceptor();
+		const removeNetworkListeners = network.init();
 		let isFirstCheck = true;
 
 		async function checkLiveNotifications() {
@@ -88,6 +91,7 @@
 		return () => {
 			clearInterval(pollInterval);
 			removeFetchInterceptor();
+			removeNetworkListeners?.();
 		};
 	});
 </script>
@@ -103,6 +107,7 @@
 </svelte:head>
 
 <AdminLoadingBar />
+<AdminOfflineBanner />
 
 <!-- Fullscreen Warm Ivory Executive Frame with Pure White SaaS Sidebar -->
 <div class="admin-theme min-h-screen bg-[#faf7f2] text-slate-800 flex flex-col md:flex-row font-['Anek_Bangla',sans-serif] selection:bg-[#5845eb]/20 selection:text-[#5845eb] antialiased">

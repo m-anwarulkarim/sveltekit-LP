@@ -4,6 +4,7 @@
 	import { Button, Input, Card, CardHeader, CardContent } from '#lib/components/ui';
 	import { trackMetaEvent } from '#lib/client/meta-pixel';
 	import { trackGtmAddToCart, trackGtmBeginCheckout } from '#lib/client/gtm';
+	import { network } from '#lib/stores/network.svelte';
 	import {
 		User,
 		Phone,
@@ -151,6 +152,18 @@
 			return;
 		}
 
+		// Prevent broken network failure: trigger OfflineOrderModal with preserved data & hotline
+		if (network.isOffline) {
+			network.openOfflineOrderModal({
+				customerName: name.trim(),
+				customerPhone: phone.trim(),
+				shippingAddress: address.trim(),
+				total: price,
+				retryAction: () => handleSubmit(e)
+			});
+			return;
+		}
+
 		isSubmitting = true;
 
 		try {
@@ -182,7 +195,17 @@
 					window.location.href = `/thank-you?order_id=${result.data.orderId}`;
 				}
 			} else {
-				toast.error(result.message);
+				if (network.isOffline || result.message.includes('নেটওয়ার্ক')) {
+					network.openOfflineOrderModal({
+						customerName: name.trim(),
+						customerPhone: phone.trim(),
+						shippingAddress: address.trim(),
+						total: price,
+						retryAction: () => handleSubmit(e)
+					});
+				} else {
+					toast.error(result.message);
+				}
 			}
 		} finally {
 			isSubmitting = false;

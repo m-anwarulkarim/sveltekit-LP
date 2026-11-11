@@ -3,3 +3,4 @@ export { default as AdminNavbar } from './AdminNavbar.svelte';
 export { default as AdminMobileBottomNav } from './AdminMobileBottomNav.svelte';
 export { default as AdminSearchModal } from './AdminSearchModal.svelte';
 export { default as AdminLoadingBar } from './AdminLoadingBar.svelte';
+export { default as AdminOfflineBanner } from './AdminOfflineBanner.svelte';

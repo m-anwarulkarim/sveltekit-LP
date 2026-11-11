@@ -11,6 +11,7 @@
 	import { trackGtmBeginCheckout } from '#lib/client/gtm';
 	import { toast } from 'svelte-sonner';
 	import { getAttributionSource } from '#lib/client/attribution';
+	import { network } from '#lib/stores/network.svelte';
 	import {
 		Button,
 		Input,
@@ -262,6 +263,17 @@
 			return;
 		}
 
+		if (network.isOffline) {
+			network.openOfflineOrderModal({
+				customerName: name.trim(),
+				customerPhone: phone.trim(),
+				shippingAddress: address.trim(),
+				total: confirmedServerTotal ?? grandTotal,
+				retryAction: () => handleSubmitOrder()
+			});
+			return;
+		}
+
 		isSubmitting = true;
 
 		try {
@@ -294,6 +306,16 @@
 			const result = await submitAction('?/placeOrder', formData);
 
 			if (!result.ok) {
+				if (network.isOffline || result.message?.includes('নেটওয়ার্ক')) {
+					network.openOfflineOrderModal({
+						customerName: name.trim(),
+						customerPhone: phone.trim(),
+						shippingAddress: address.trim(),
+						total: confirmedServerTotal ?? grandTotal,
+						retryAction: () => handleSubmitOrder()
+					});
+					return;
+				}
 				errorMessage = result.message;
 				confirmedServerTotal = result.data?.code === 'PRICE_CHANGED' ? Number(result.data.total) : null;
 				return;

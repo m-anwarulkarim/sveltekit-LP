@@ -118,7 +118,7 @@
 				url.searchParams.set(key, val);
 			}
 		});
-		goto(url.toString(), { noScroll: true });
+		goto(url.toString(), { noScroll: true } as any);
 	}
 
 	function handleDateChange(range: string) {

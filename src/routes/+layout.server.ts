@@ -42,6 +42,7 @@ export const load: LayoutServerLoad = async (event) => {
 		capiEnabled: false,
 		testEventCode: undefined
 	};
+	let tiktokConfig: { pixelId: string; testEventCode: string } = { pixelId: '', testEventCode: '' };
 	let gtmConfig: Awaited<ReturnType<typeof GtmService.getPublicConfig>> = {
 		isEnabled: DEFAULT_GTM_SETTINGS.isEnabled,
 		gtmId: DEFAULT_GTM_SETTINGS.gtmId,
@@ -69,7 +70,7 @@ export const load: LayoutServerLoad = async (event) => {
 
 	try {
 		const db = getDb(event.platform);
-		const [tc, pc, gtm, cats, sCfg, pCfg, wInfo, popup, gConsole, sLogin] = await cached('root-layout', 30_000, () => Promise.all([
+		const [tc, pc, gtm, cats, sCfg, pCfg, wInfo, popup, gConsole, sLogin, ttk] = await cached('root-layout', 30_000, () => Promise.all([
 			ThemeCustomizationService.getThemeConfig(db).catch(() => DEFAULT_THEME_CONFIG),
 			PixelService.getPublicConfig(db).catch(() => pixelConfig),
 			GtmService.getPublicConfig(db).catch(() => gtmConfig),
@@ -79,7 +80,8 @@ export const load: LayoutServerLoad = async (event) => {
 			SettingsService.getWebsiteInfo(db).catch(() => DEFAULT_WEBSITE_INFO),
 			CustomizationService.getActivePopupForStorefront(db).catch(() => null),
 			SettingsService.getGoogleConsoleConfig(db).catch(() => DEFAULT_GOOGLE_CONSOLE_CONFIG),
-			SettingsService.getSocialLoginConfig(db).catch(() => DEFAULT_SOCIAL_LOGIN_CONFIG)
+			SettingsService.getSocialLoginConfig(db).catch(() => DEFAULT_SOCIAL_LOGIN_CONFIG),
+			SettingsService.getSettingsGroup(db, 'tiktok_pixel').catch(() => ({}) as Record<string, any>)
 		]));
 		if (tc) themeConfig = tc;
 		if (pc) pixelConfig = pc;
@@ -101,6 +103,13 @@ export const load: LayoutServerLoad = async (event) => {
 				googleClientId: sLogin.googleClientId || ''
 			};
 		}
+		// Only the public Pixel ID goes to the browser — the Events API token stays server-side.
+		if (ttk?.tiktokPixelId) {
+			tiktokConfig = {
+				pixelId: String(ttk.tiktokPixelId || ''),
+				testEventCode: String(ttk.testEventCode || '')
+			};
+		}
 	} catch (err) {
 		console.error('Failed to load database in root layout:', err);
 	}
@@ -119,6 +128,7 @@ export const load: LayoutServerLoad = async (event) => {
 		themeConfig,
 		pixelConfig,
 		gtmConfig,
+		tiktokConfig,
 		categories,
 		storeConfig,
 		productSettings,

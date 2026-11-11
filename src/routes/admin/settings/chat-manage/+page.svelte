@@ -1,22 +1,38 @@
 <script lang="ts">
+	import { submitAction } from '#lib/client/submit-action';
+	import { toast } from 'svelte-sonner';
+
+	let { data } = $props();
+	const saved = data.settings ?? {};
 	import { Button, Card, Input, Switch } from '#lib/components/ui';
 	import { ArrowLeft, CheckCircle2, Check, MessageCircle } from 'lucide-svelte';
 
 	let isSaved = $state(false);
 	let saveMessage = $state('Chat Settings Saved!');
 
-	let enableWhatsApp = $state(false);
-	let whatsappNumber = $state('');
-	let whatsappDefaultMessage = $state('হ্যালো! প্রোডাক্ট সম্পর্কে বিস্তারিত জানতে চাই।');
+	let enableWhatsApp = $state(saved.enableWhatsApp ?? false);
+	let whatsappNumber = $state(saved.whatsappNumber ?? '');
+	let whatsappDefaultMessage = $state(saved.whatsappDefaultMessage ?? 'হ্যালো! প্রোডাক্ট সম্পর্কে বিস্তারিত জানতে চাই।');
 	let buttonPosition = $state<'bottom-right' | 'bottom-left'>('bottom-right');
 
-	let enableMessenger = $state(false);
-	let messengerPageId = $state('');
+	let enableMessenger = $state(saved.enableMessenger ?? false);
+	let messengerPageId = $state(saved.messengerPageId ?? '');
 
-	let enableTawkTo = $state(false);
-	let tawkPropertyId = $state('');
+	let enableTawkTo = $state(saved.enableTawkTo ?? false);
+	let tawkPropertyId = $state(saved.tawkPropertyId ?? '');
 
-	function triggerSave(msg = 'Chat Settings Saved!') {
+	let isSaving = $state(false);
+	async function triggerSave(msg = 'Chat Settings Saved!') {
+		if (isSaving) return;
+		isSaving = true;
+		const fd = new FormData();
+		fd.append('settings', JSON.stringify({ enableWhatsApp, whatsappNumber, whatsappDefaultMessage, enableMessenger, messengerPageId, enableTawkTo, tawkPropertyId }));
+		const res = await submitAction('?/save', fd);
+		isSaving = false;
+		if (!res.ok) {
+			toast.error(res.message || 'সংরক্ষণ ব্যর্থ হয়েছে');
+			return;
+		}
 		isSaved = true;
 		saveMessage = msg;
 		setTimeout(() => (isSaved = false), 3000);

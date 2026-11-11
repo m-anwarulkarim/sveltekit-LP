@@ -1,17 +1,33 @@
 <script lang="ts">
+	import { submitAction } from '#lib/client/submit-action';
+	import { toast } from 'svelte-sonner';
+
+	let { data } = $props();
+	const saved = data.settings ?? {};
 	import { Button, Card, Input, Switch } from '#lib/components/ui';
 	import { ArrowLeft, CheckCircle2, Check, Globe, ShieldCheck } from 'lucide-svelte';
 
 	let isSaved = $state(false);
 	let saveMessage = $state('Domain Settings Saved!');
 
-	let primaryDomain = $state('thecolorlighthouse.com');
-	let defaultSubdomain = $state('thecolorlight.saleecom.com');
-	let forceHttps = $state(true);
-	let redirectWww = $state(true);
-	let sslStatus = $state('Active (Cloudflare Universal SSL)');
+	let primaryDomain = $state(saved.primaryDomain ?? 'thecolorlighthouse.com');
+	let defaultSubdomain = $state(saved.defaultSubdomain ?? 'thecolorlight.saleecom.com');
+	let forceHttps = $state(saved.forceHttps ?? true);
+	let redirectWww = $state(saved.redirectWww ?? true);
+	let sslStatus = $state(saved.sslStatus ?? 'Active (Cloudflare Universal SSL)');
 
-	function triggerSave(msg = 'Domain Settings Saved!') {
+	let isSaving = $state(false);
+	async function triggerSave(msg = 'Domain Settings Saved!') {
+		if (isSaving) return;
+		isSaving = true;
+		const fd = new FormData();
+		fd.append('settings', JSON.stringify({ primaryDomain, defaultSubdomain, forceHttps, redirectWww, sslStatus }));
+		const res = await submitAction('?/save', fd);
+		isSaving = false;
+		if (!res.ok) {
+			toast.error(res.message || 'সংরক্ষণ ব্যর্থ হয়েছে');
+			return;
+		}
 		isSaved = true;
 		saveMessage = msg;
 		setTimeout(() => (isSaved = false), 3000);

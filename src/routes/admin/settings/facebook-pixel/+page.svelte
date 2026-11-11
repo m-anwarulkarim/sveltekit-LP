@@ -254,6 +254,16 @@
 </svelte:head>
 
 <div class="max-w-4xl mx-auto space-y-6 font-['Anek_Bangla',sans-serif] pb-16">
+	<Card class="p-4 rounded-2xl border-amber-200 bg-amber-50/70 shadow-2xs">
+		<div class="flex items-start gap-3">
+			<span class="text-lg leading-none mt-0.5">⚠️</span>
+			<div class="space-y-1">
+				<h4 class="text-xs font-bold text-amber-900">ডাবল ট্র্যাকিং এড়াতে সতর্কতা</h4>
+				<p class="text-[11px] text-amber-800 leading-relaxed">এই Pixel সাইট থেকে সরাসরি fire হয় (CAPI deduplication সহ)। Google Tag Manager-এর ভিতরে আলাদা Meta Pixel tag বসাবেন না — একই event দুইবার গণনা হবে এবং Ads reporting ভুল দেখাবে।</p>
+			</div>
+		</div>
+	</Card>
+
 
 	<!-- Top Navigation & Page Title -->
 	<div class="flex items-center justify-between gap-4 flex-wrap">

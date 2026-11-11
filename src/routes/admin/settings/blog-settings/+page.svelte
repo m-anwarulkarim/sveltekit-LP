@@ -1,17 +1,33 @@
 <script lang="ts">
+	import { submitAction } from '#lib/client/submit-action';
+	import { toast } from 'svelte-sonner';
+
+	let { data } = $props();
+	const saved = data.settings ?? {};
 	import { Button, Card, Input, Switch } from '#lib/components/ui';
 	import { ArrowLeft, CheckCircle2, Check, BookOpen } from 'lucide-svelte';
 
 	let isSaved = $state(false);
 	let saveMessage = $state('Blog Settings Saved!');
 
-	let enableBlog = $state(true);
-	let postsPerPage = $state(9);
-	let enableComments = $state(true);
-	let autoApproveComments = $state(false);
-	let blogTitle = $state('The Color Light - Articles & Tips');
+	let enableBlog = $state(saved.enableBlog ?? true);
+	let postsPerPage = $state(saved.postsPerPage ?? 9);
+	let enableComments = $state(saved.enableComments ?? true);
+	let autoApproveComments = $state(saved.autoApproveComments ?? false);
+	let blogTitle = $state(saved.blogTitle ?? 'The Color Light - Articles & Tips');
 
-	function triggerSave(msg = 'Blog Settings Saved!') {
+	let isSaving = $state(false);
+	async function triggerSave(msg = 'Blog Settings Saved!') {
+		if (isSaving) return;
+		isSaving = true;
+		const fd = new FormData();
+		fd.append('settings', JSON.stringify({ enableBlog, postsPerPage, enableComments, autoApproveComments, blogTitle }));
+		const res = await submitAction('?/save', fd);
+		isSaving = false;
+		if (!res.ok) {
+			toast.error(res.message || 'সংরক্ষণ ব্যর্থ হয়েছে');
+			return;
+		}
 		isSaved = true;
 		saveMessage = msg;
 		setTimeout(() => (isSaved = false), 3000);

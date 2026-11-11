@@ -1,18 +1,34 @@
 <script lang="ts">
+	import { submitAction } from '#lib/client/submit-action';
+	import { toast } from 'svelte-sonner';
+
+	let { data } = $props();
+	const saved = data.settings ?? {};
 	import { Button, Card, Input, Switch } from '#lib/components/ui';
 	import { ArrowLeft, CheckCircle2, Check, RefreshCw } from 'lucide-svelte';
 
 	let isSaved = $state(false);
 	let saveMessage = $state('Bizmation Sync Settings Saved!');
 
-	let enableSync = $state(false);
-	let bizmationStoreId = $state('');
-	let apiKey = $state('');
-	let syncInventory = $state(false);
-	let syncIntervalMinutes = $state(15);
-	let syncOrdersToAccounting = $state(false);
+	let enableSync = $state(saved.enableSync ?? false);
+	let bizmationStoreId = $state(saved.bizmationStoreId ?? '');
+	let apiKey = $state(saved.apiKey ?? '');
+	let syncInventory = $state(saved.syncInventory ?? false);
+	let syncIntervalMinutes = $state(saved.syncIntervalMinutes ?? 15);
+	let syncOrdersToAccounting = $state(saved.syncOrdersToAccounting ?? false);
 
-	function triggerSave(msg = 'Bizmation Sync Settings Saved!') {
+	let isSaving = $state(false);
+	async function triggerSave(msg = 'Bizmation Sync Settings Saved!') {
+		if (isSaving) return;
+		isSaving = true;
+		const fd = new FormData();
+		fd.append('settings', JSON.stringify({ enableSync, bizmationStoreId, apiKey, syncInventory, syncIntervalMinutes, syncOrdersToAccounting }));
+		const res = await submitAction('?/save', fd);
+		isSaving = false;
+		if (!res.ok) {
+			toast.error(res.message || 'সংরক্ষণ ব্যর্থ হয়েছে');
+			return;
+		}
 		isSaved = true;
 		saveMessage = msg;
 		setTimeout(() => (isSaved = false), 3000);

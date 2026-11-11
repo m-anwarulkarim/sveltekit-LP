@@ -9,7 +9,7 @@ import { eq, or } from 'drizzle-orm';
  */
 export const POST: RequestHandler = async ({ request, platform }) => {
 	try {
-		const payload = await request.json().catch(() => ({}));
+		const payload = (await request.json().catch(() => ({}))) as Record<string, unknown>;
 		const consignmentId = String(payload?.consignment_id || payload?.cid || '');
 		const trackingCode = String(payload?.tracking_code || '');
 		const rawStatus = String(payload?.status || payload?.delivery_status || '').toLowerCase().trim();

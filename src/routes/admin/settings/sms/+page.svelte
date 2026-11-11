@@ -1,19 +1,35 @@
 <script lang="ts">
+	import { submitAction } from '#lib/client/submit-action';
+	import { toast } from 'svelte-sonner';
+
+	let { data } = $props();
+	const saved = data.settings ?? {};
 	import { Button, Card, Input, Switch } from '#lib/components/ui';
 	import { ArrowLeft, CheckCircle2, Check, MessageSquare } from 'lucide-svelte';
 
 	let isSaved = $state(false);
 	let saveMessage = $state('SMS Gateway Settings Saved!');
 
-	let smsProvider = $state('greenweb');
-	let apiKey = $state('');
-	let senderId = $state('');
-	let sendOnNewOrder = $state(false);
-	let sendOnShipping = $state(false);
-	let sendOnDelivery = $state(false);
-	let newOrderTemplate = $state('প্রিয় {customer_name}, আপনার অর্ডার #{order_id} সফলভাবে গৃহীত হয়েছে। মোট মূল্য: ৳{amount}। ধন্যবাদ!');
+	let smsProvider = $state(saved.smsProvider ?? 'greenweb');
+	let apiKey = $state(saved.apiKey ?? '');
+	let senderId = $state(saved.senderId ?? '');
+	let sendOnNewOrder = $state(saved.sendOnNewOrder ?? false);
+	let sendOnShipping = $state(saved.sendOnShipping ?? false);
+	let sendOnDelivery = $state(saved.sendOnDelivery ?? false);
+	let newOrderTemplate = $state(saved.newOrderTemplate ?? 'প্রিয় {customer_name}, আপনার অর্ডার #{order_id} সফলভাবে গৃহীত হয়েছে। মোট মূল্য: ৳{amount}। ধন্যবাদ!');
 
-	function triggerSave(msg = 'SMS Gateway Settings Saved!') {
+	let isSaving = $state(false);
+	async function triggerSave(msg = 'SMS Gateway Settings Saved!') {
+		if (isSaving) return;
+		isSaving = true;
+		const fd = new FormData();
+		fd.append('settings', JSON.stringify({ smsProvider, apiKey, senderId, sendOnNewOrder, sendOnShipping, sendOnDelivery, newOrderTemplate }));
+		const res = await submitAction('?/save', fd);
+		isSaving = false;
+		if (!res.ok) {
+			toast.error(res.message || 'সংরক্ষণ ব্যর্থ হয়েছে');
+			return;
+		}
 		isSaved = true;
 		saveMessage = msg;
 		setTimeout(() => (isSaved = false), 3000);

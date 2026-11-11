@@ -134,6 +134,16 @@
 </svelte:head>
 
 <div class="space-y-6 max-w-4xl mx-auto p-4 sm:p-6 pb-20">
+	<Card class="p-4 rounded-2xl border-amber-200 bg-amber-50/70 shadow-2xs">
+		<div class="flex items-start gap-3">
+			<span class="text-lg leading-none mt-0.5">⚠️</span>
+			<div class="space-y-1">
+				<h4 class="text-xs font-bold text-amber-900">GTM container-এ কোন tag রাখবেন না</h4>
+				<p class="text-[11px] text-amber-800 leading-relaxed">এই সাইট Meta Pixel ও TikTok Pixel নিজেই fire করে। GTM container-এর ভিতরে Meta বা TikTok-এর আলাদা tag বসালে প্রতিটি event দুইবার কাউন্ট হবে। GTM শুধু GA4 ও অন্যান্য tag-এর জন্য ব্যবহার করুন।</p>
+			</div>
+		</div>
+	</Card>
+
 	<!-- Top Navigation & Action Bar -->
 	<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
 		<div class="flex items-center gap-3">

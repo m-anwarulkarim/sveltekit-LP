@@ -1,18 +1,34 @@
 <script lang="ts">
+	import { submitAction } from '#lib/client/submit-action';
+	import { toast } from 'svelte-sonner';
+
+	let { data } = $props();
+	const saved = data.settings ?? {};
 	import { Button, Card, Input, Switch } from '#lib/components/ui';
 	import { ArrowLeft, CheckCircle2, Check, PhoneCall } from 'lucide-svelte';
 
 	let isSaved = $state(false);
 	let saveMessage = $state('ePBX Settings Saved!');
 
-	let enableAutoCall = $state(false);
-	let ivrProvider = $state('bangladesh_epbx');
-	let apiUrl = $state('');
-	let authToken = $state('');
-	let retryAttempts = $state(2);
-	let promptAudioUrl = $state('');
+	let enableAutoCall = $state(saved.enableAutoCall ?? false);
+	let ivrProvider = $state(saved.ivrProvider ?? 'bangladesh_epbx');
+	let apiUrl = $state(saved.apiUrl ?? '');
+	let authToken = $state(saved.authToken ?? '');
+	let retryAttempts = $state(saved.retryAttempts ?? 2);
+	let promptAudioUrl = $state(saved.promptAudioUrl ?? '');
 
-	function triggerSave(msg = 'ePBX Settings Saved!') {
+	let isSaving = $state(false);
+	async function triggerSave(msg = 'ePBX Settings Saved!') {
+		if (isSaving) return;
+		isSaving = true;
+		const fd = new FormData();
+		fd.append('settings', JSON.stringify({ enableAutoCall, ivrProvider, apiUrl, authToken, retryAttempts, promptAudioUrl }));
+		const res = await submitAction('?/save', fd);
+		isSaving = false;
+		if (!res.ok) {
+			toast.error(res.message || 'সংরক্ষণ ব্যর্থ হয়েছে');
+			return;
+		}
 		isSaved = true;
 		saveMessage = msg;
 		setTimeout(() => (isSaved = false), 3000);

@@ -1,18 +1,34 @@
 <script lang="ts">
+	import { submitAction } from '#lib/client/submit-action';
+	import { toast } from 'svelte-sonner';
+
+	let { data } = $props();
+	const saved = data.settings ?? {};
 	import { Button, Card, Input } from '#lib/components/ui';
 	import { ArrowLeft, CheckCircle2, Check, Coins } from 'lucide-svelte';
 
 	let isSaved = $state(false);
 	let saveMessage = $state('Currency Settings Saved!');
 
-	let primaryCurrency = $state('BDT');
-	let currencySymbol = $state('৳');
+	let primaryCurrency = $state(saved.primaryCurrency ?? 'BDT');
+	let currencySymbol = $state(saved.currencySymbol ?? '৳');
 	let symbolPosition = $state<'left' | 'right'>('left');
-	let decimalDigits = $state(0);
-	let defaultCountry = $state('Bangladesh');
-	let timeZone = $state('Asia/Dhaka (GMT+6)');
+	let decimalDigits = $state(saved.decimalDigits ?? 0);
+	let defaultCountry = $state(saved.defaultCountry ?? 'Bangladesh');
+	let timeZone = $state(saved.timeZone ?? 'Asia/Dhaka (GMT+6)');
 
-	function triggerSave(msg = 'Currency Settings Saved!') {
+	let isSaving = $state(false);
+	async function triggerSave(msg = 'Currency Settings Saved!') {
+		if (isSaving) return;
+		isSaving = true;
+		const fd = new FormData();
+		fd.append('settings', JSON.stringify({ primaryCurrency, currencySymbol, decimalDigits, defaultCountry, timeZone }));
+		const res = await submitAction('?/save', fd);
+		isSaving = false;
+		if (!res.ok) {
+			toast.error(res.message || 'সংরক্ষণ ব্যর্থ হয়েছে');
+			return;
+		}
 		isSaved = true;
 		saveMessage = msg;
 		setTimeout(() => (isSaved = false), 3000);

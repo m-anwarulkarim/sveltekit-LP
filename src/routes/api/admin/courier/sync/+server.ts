@@ -8,7 +8,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 		let orderIds: string[] | undefined = undefined;
 
 		try {
-			const body = await request.json();
+			const body = (await request.json()) as { orderIds?: unknown };
 			if (Array.isArray(body?.orderIds)) {
 				orderIds = body.orderIds;
 			}

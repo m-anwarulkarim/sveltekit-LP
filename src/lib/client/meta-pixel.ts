@@ -4,6 +4,8 @@
  * with the same event_id so Meta deduplicates them. Purchase is sent server-side by the order action.
  */
 
+import { forwardToTikTok } from '#lib/client/tiktok-pixel';
+
 export interface ClientPixelConfig {
 	trackingMode: 'native_direct' | 'capi_only' | 'disabled';
 	pixelId?: string;
@@ -180,6 +182,9 @@ function isEventEnabled(eventName: string): boolean {
 function dispatchEvent(eventName: string, params: Record<string, any>, eventId?: string): void {
 	const cfg = activeConfig;
 	if (!cfg || cfg.trackingMode === 'disabled' || !isEventEnabled(eventName)) return;
+
+	// TikTok sees the same funnel; it no-ops unless a TikTok Pixel ID is configured.
+	forwardToTikTok(eventName, params);
 
 	const mirror = cfg.capiEnabled && SERVER_MIRRORED_EVENTS.has(eventName);
 	const id = eventId || (mirror ? newEventId() : undefined);

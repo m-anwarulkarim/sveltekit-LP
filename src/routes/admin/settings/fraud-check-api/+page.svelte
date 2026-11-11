@@ -1,17 +1,33 @@
 <script lang="ts">
+	import { submitAction } from '#lib/client/submit-action';
+	import { toast } from 'svelte-sonner';
+
+	let { data } = $props();
+	const saved = data.settings ?? {};
 	import { Button, Card, Input, Switch } from '#lib/components/ui';
 	import { ArrowLeft, CheckCircle2, Check, ShieldCheck, AlertTriangle } from 'lucide-svelte';
 
 	let isSaved = $state(false);
 	let saveMessage = $state('Fraud Check API Settings Saved!');
 
-	let enableCourierFraudCheck = $state(false);
-	let returnRateThreshold = $state(25);
-	let autoBlockBadIps = $state(false);
-	let steadFastApiKey = $state('');
-	let pathaoSecret = $state('');
+	let enableCourierFraudCheck = $state(saved.enableCourierFraudCheck ?? false);
+	let returnRateThreshold = $state(saved.returnRateThreshold ?? 25);
+	let autoBlockBadIps = $state(saved.autoBlockBadIps ?? false);
+	let steadFastApiKey = $state(saved.steadFastApiKey ?? '');
+	let pathaoSecret = $state(saved.pathaoSecret ?? '');
 
-	function triggerSave(msg = 'Fraud Check API Settings Saved!') {
+	let isSaving = $state(false);
+	async function triggerSave(msg = 'Fraud Check API Settings Saved!') {
+		if (isSaving) return;
+		isSaving = true;
+		const fd = new FormData();
+		fd.append('settings', JSON.stringify({ enableCourierFraudCheck, returnRateThreshold, autoBlockBadIps, steadFastApiKey, pathaoSecret }));
+		const res = await submitAction('?/save', fd);
+		isSaving = false;
+		if (!res.ok) {
+			toast.error(res.message || 'সংরক্ষণ ব্যর্থ হয়েছে');
+			return;
+		}
 		isSaved = true;
 		saveMessage = msg;
 		setTimeout(() => (isSaved = false), 3000);

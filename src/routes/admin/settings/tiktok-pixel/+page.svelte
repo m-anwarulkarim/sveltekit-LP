@@ -1,16 +1,32 @@
 <script lang="ts">
+	import { submitAction } from '#lib/client/submit-action';
+	import { toast } from 'svelte-sonner';
+
+	let { data } = $props();
+	const saved = data.settings ?? {};
 	import { Button, Card, Input, Textarea, Switch } from '#lib/components/ui';
 	import { ArrowLeft, CheckCircle2, Check } from 'lucide-svelte';
 
 	let isSaved = $state(false);
 	let saveMessage = $state('TikTok Pixel Settings Saved!');
 
-	let tiktokPixelId = $state('');
-	let tiktokAccessToken = $state('');
-	let enableTikTokEventsAPI = $state(false);
-	let testEventCode = $state('');
+	let tiktokPixelId = $state(saved.tiktokPixelId ?? '');
+	let tiktokAccessToken = $state(saved.tiktokAccessToken ?? '');
+	let enableTikTokEventsAPI = $state(saved.enableTikTokEventsAPI ?? false);
+	let testEventCode = $state(saved.testEventCode ?? '');
 
-	function triggerSave(msg = 'TikTok Pixel Settings Saved!') {
+	let isSaving = $state(false);
+	async function triggerSave(msg = 'TikTok Pixel Settings Saved!') {
+		if (isSaving) return;
+		isSaving = true;
+		const fd = new FormData();
+		fd.append('settings', JSON.stringify({ tiktokPixelId, tiktokAccessToken, enableTikTokEventsAPI, testEventCode }));
+		const res = await submitAction('?/save', fd);
+		isSaving = false;
+		if (!res.ok) {
+			toast.error(res.message || 'সংরক্ষণ ব্যর্থ হয়েছে');
+			return;
+		}
 		isSaved = true;
 		saveMessage = msg;
 		setTimeout(() => (isSaved = false), 3000);
@@ -22,6 +38,16 @@
 </svelte:head>
 
 <div class="space-y-6 max-w-2xl mx-auto">
+	<Card class="p-4 rounded-2xl border-amber-200 bg-amber-50/70 shadow-2xs">
+		<div class="flex items-start gap-3">
+			<span class="text-lg leading-none mt-0.5">⚠️</span>
+			<div class="space-y-1">
+				<h4 class="text-xs font-bold text-amber-900">কিভাবে কাজ করে</h4>
+				<p class="text-[11px] text-amber-800 leading-relaxed">Pixel ID সেভ করলেই সাইট নিজে TikTok-এ PageView, ViewContent, InitiateCheckout ও CompletePayment পাঠায় — GTM-এ TikTok tag বসানোর প্রয়োজন নেই (বসালে double count হবে)। Events API token এখন শুধু সংরক্ষিত হয়; server-side event পরে চালু হবে।</p>
+			</div>
+		</div>
+	</Card>
+
 	{#if isSaved}
 		<div class="fixed bottom-6 right-6 z-50 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-bold animate-in fade-in slide-in-from-bottom-4">
 			<CheckCircle2 class="w-4 h-4" />

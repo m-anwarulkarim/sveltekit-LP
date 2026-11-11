@@ -114,6 +114,31 @@
 		if (quantity > 1) quantity -= 1;
 	}
 
+	function handleAddToCart() {
+		if (isOutOfStock) {
+			toast.warning(`"${product.name}" পণ্যটি বর্তমানে স্টক আউট!`);
+			return;
+		}
+		for (let i = 0; i < quantity; i++) {
+			cart.addItem({
+				id: selectedVariant.id === 'standard' ? product.id : `${product.id}-${selectedVariant.id}`,
+				name:
+					selectedVariant.id === 'standard'
+						? product.name
+						: `${product.name} [${selectedVariant.name}]`,
+				price: singleVariantPrice,
+				originalPrice: (product.originalPrice || product.price) * selectedVariant.multiplier,
+				image: product.image,
+				category: product.categoryLabel,
+				inStock: product.inStock,
+				totalStock: product.totalStock,
+				isPreOrder: product.isPreOrder
+			});
+		}
+		toast.success(`"${product.name}" শপিং ব্যাগে যোগ করা হয়েছে!`);
+		cart.openCart();
+	}
+
 	// Form fields
 	let customerName = $state('');
 	let customerPhone = $state('');
@@ -524,6 +549,28 @@
 					</div>
 				</div>
 
+				<!-- Dual Quick Actions: Add to Cart (Secondary) & Direct Order Scroll (Primary) -->
+				<div class="flex items-center gap-2 pt-2">
+					<button
+						type="button"
+						onclick={handleAddToCart}
+						disabled={isOutOfStock}
+						class="flex-1 py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+					>
+						<ShoppingBag class="w-4 h-4 text-slate-500" />
+						<span>কার্টে রাখুন</span>
+					</button>
+					<button
+						type="button"
+						onclick={scrollToOrderForm}
+						disabled={isOutOfStock}
+						class="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer disabled:opacity-40"
+					>
+						<Zap class="w-4 h-4 fill-white" />
+						<span>সরাসরি অর্ডার করুন</span>
+					</button>
+				</div>
+
 			</div>
 
 			<!-- INLINE DIRECT CHECKOUT ORDER FORM (The Poltisheba Style Star Feature) -->
@@ -824,15 +871,29 @@
 				</div>
 			</div>
 
-			<Button
-				type="button"
-				variant="default"
-				onclick={scrollToOrderForm}
-				class="h-auto px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/25 flex items-center gap-1.5 cursor-pointer shrink-0"
-			>
-				<Zap class="w-3.5 h-3.5 fill-white" />
-				<span>অর্ডার করুন</span>
-			</Button>
+			<div class="flex items-center gap-2 shrink-0">
+				<!-- Add to Cart Icon Button -->
+				<button
+					type="button"
+					onclick={handleAddToCart}
+					disabled={isOutOfStock}
+					class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 flex items-center justify-center cursor-pointer disabled:opacity-40"
+					title="কার্টে যোগ করুন"
+					aria-label="Add to cart"
+				>
+					<ShoppingBag class="w-4 h-4 text-slate-700" />
+				</button>
+
+				<Button
+					type="button"
+					variant="default"
+					onclick={scrollToOrderForm}
+					class="h-auto px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/25 flex items-center gap-1.5 cursor-pointer shrink-0"
+				>
+					<Zap class="w-3.5 h-3.5 fill-white" />
+					<span>অর্ডার করুন</span>
+				</Button>
+			</div>
 		</div>
 	</div>
 

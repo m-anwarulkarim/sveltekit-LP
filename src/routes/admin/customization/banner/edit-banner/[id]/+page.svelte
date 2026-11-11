@@ -211,7 +211,7 @@
 				</div>
 
 				<div>
-					<label for="banner-priority" class="block text-xs font-bold text-slate-700 mb-1.5">customization.priority</label>
+					<label for="banner-priority" class="block text-xs font-bold text-slate-700 mb-1.5">Priority</label>
 					<Input
 						id="banner-priority"
 						type="number"

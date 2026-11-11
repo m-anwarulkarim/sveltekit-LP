@@ -41,17 +41,14 @@
 				method: 'POST',
 				body: fd
 			});
-			const result: any = await res.json();
-			if (result?.type === 'success' || res.ok) {
+			if (res.ok) {
 				toast.success('ডিফল্ট সেটিংস সফলভাবে রিসেট হয়েছে!');
 				window.location.reload();
 			} else {
-				toast.success('ডিফল্ট সেটিংস সফলভাবে রিসেট হয়েছে!');
-				window.location.reload();
+				toast.error('Reset failed. Please try again.');
 			}
 		} catch (e) {
-			toast.success('ডিফল্ট সেটিংস সফলভাবে রিসেট হয়েছে!');
-			window.location.reload();
+			toast.error('Server connection failed.');
 		} finally {
 			isResetting = false;
 		}

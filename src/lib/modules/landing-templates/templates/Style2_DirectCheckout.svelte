@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { submitAction } from '#lib/client/submit-action';
 	import { trackMetaEvent } from '#lib/client/meta-pixel';
-	import { trackGtmBeginCheckout } from '#lib/client/gtm';
+	import { trackGtmAddToCart, trackGtmBeginCheckout } from '#lib/client/gtm';
 	import { Button, Badge, Card, CardHeader, CardTitle, CardContent, Input, Textarea, Separator } from '#lib/components/ui';
 	import {
 		ShieldCheck,
@@ -167,10 +167,39 @@
 		return `৳${amount.toLocaleString('en-BD')}`;
 	}
 
+	let hasTrackedAddToCart = false;
+	function triggerAddToCart() {
+		if (hasTrackedAddToCart || isPreview || typeof window === 'undefined') return;
+		hasTrackedAddToCart = true;
+		const matchId = String(product?.id || landingPage?.id || 'lp-prod');
+		const title = product?.name || config?.headline || landingPage?.title || 'Landing Product';
+		const amt = Number(subtotal || unitPrice || 0);
+
+		trackMetaEvent('AddToCart', {
+			content_name: title,
+			content_ids: [matchId],
+			content_type: 'product',
+			value: amt,
+			currency: 'BDT'
+		});
+
+		trackGtmAddToCart({
+			item: {
+				item_id: matchId,
+				item_name: title,
+				price: Number(unitPrice || 0),
+				quantity: Number(currentPackage?.qty || 1)
+			},
+			currency: 'BDT'
+		});
+	}
+
 	let hasTrackedCheckout = false;
 	function triggerInitiateCheckout() {
 		if (hasTrackedCheckout || isPreview || typeof window === 'undefined') return;
 		hasTrackedCheckout = true;
+		triggerAddToCart();
+
 		const matchId = String(product?.id || landingPage?.id || 'lp-prod');
 		const title = product?.name || config?.headline || landingPage?.title || 'Landing Product';
 		const amt = Number(subtotal || unitPrice || 0);
@@ -199,7 +228,7 @@
 	}
 
 	function scrollToCheckout() {
-		triggerInitiateCheckout();
+		triggerAddToCart();
 		const el = document.getElementById('direct-checkout-form');
 		if (el) {
 			el.scrollIntoView({ behavior: 'smooth' });

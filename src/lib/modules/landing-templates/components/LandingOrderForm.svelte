@@ -3,7 +3,7 @@
 	import { submitAction } from '#lib/client/submit-action';
 	import { Button, Input, Card, CardHeader, CardContent } from '#lib/components/ui';
 	import { trackMetaEvent } from '#lib/client/meta-pixel';
-	import { trackGtmBeginCheckout } from '#lib/client/gtm';
+	import { trackGtmAddToCart, trackGtmBeginCheckout } from '#lib/client/gtm';
 	import {
 		User,
 		Phone,
@@ -68,10 +68,40 @@
 		return `৳${amount.toLocaleString('en-BD')}`;
 	}
 
+	let hasFiredAddToCart = false;
+	function ensureAddToCart() {
+		if (hasFiredAddToCart || isPreview || typeof window === 'undefined') return;
+		hasFiredAddToCart = true;
+		const matchId = String(product?.id || landingPage?.id || 'lp-prod');
+		const title = product?.name || config?.headline || landingPage?.title || 'Landing Product';
+		const amt = Number(subtotal || price || 0);
+
+		trackMetaEvent('AddToCart', {
+			content_name: title,
+			content_ids: [matchId],
+			content_type: 'product',
+			value: amt,
+			currency: 'BDT'
+		});
+
+		trackGtmAddToCart({
+			item: {
+				item_id: matchId,
+				item_name: title,
+				price: Number(price || 0),
+				quantity: Number(currentPackage?.qty || quantity || 1)
+			},
+			currency: 'BDT'
+		});
+	}
+
 	let hasFiredInitiateCheckout = false;
 	function handleInitiateCheckout() {
 		if (hasFiredInitiateCheckout || isPreview || typeof window === 'undefined') return;
 		hasFiredInitiateCheckout = true;
+		// Ensure AddToCart is registered in the funnel first if user directly focuses on the form
+		ensureAddToCart();
+
 		const matchId = String(product?.id || landingPage?.id || 'lp-prod');
 		const title = product?.name || config?.headline || landingPage?.title || 'Landing Product';
 		const amt = Number(subtotal || price || 0);

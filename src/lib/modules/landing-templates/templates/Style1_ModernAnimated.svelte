@@ -21,7 +21,7 @@
 	import LandingOrderForm from '../components/LandingOrderForm.svelte';
 	import LandingNavbar from '../components/LandingNavbar.svelte';
 	import { trackMetaEvent } from '#lib/client/meta-pixel';
-	import { trackGtmBeginCheckout } from '#lib/client/gtm';
+	import { trackGtmAddToCart } from '#lib/client/gtm';
 
 	interface Props {
 		landingPage: any;
@@ -137,39 +137,34 @@
 			: defaultReviews
 	);
 
-	let hasTrackedCheckout = false;
-	function triggerInitiateCheckout() {
-		if (hasTrackedCheckout || typeof window === 'undefined') return;
-		hasTrackedCheckout = true;
+	function triggerAddToCart() {
+		if (typeof window === 'undefined') return;
 		const matchId = String(product?.id || landingPage?.id || 'lp-prod');
 		const title = product?.name || config?.headline || landingPage?.title || 'Landing Product';
 		const amt = Number(price || basePrice || 0);
+		const qty = Number(currentPackage?.qty || 1);
 
-		trackMetaEvent('InitiateCheckout', {
+		trackMetaEvent('AddToCart', {
 			content_name: title,
 			content_ids: [matchId],
 			content_type: 'product',
 			value: amt,
-			currency: 'BDT',
-			num_items: Number(currentPackage?.qty || 1)
+			currency: 'BDT'
 		});
 
-		trackGtmBeginCheckout({
-			total: amt,
-			currency: 'BDT',
-			items: [
-				{
-					item_id: matchId,
-					item_name: title,
-					price: amt,
-					quantity: Number(currentPackage?.qty || 1)
-				}
-			]
+		trackGtmAddToCart({
+			item: {
+				item_id: matchId,
+				item_name: title,
+				price: amt,
+				quantity: qty
+			},
+			currency: 'BDT'
 		});
 	}
 
 	function scrollToOrderForm() {
-		triggerInitiateCheckout();
+		triggerAddToCart();
 		const el = document.getElementById('order-form');
 		if (!el) return;
 		const rect = el.getBoundingClientRect();
@@ -346,7 +341,10 @@
 						{#each packages as pkg, idx}
 							<button
 								type="button"
-								onclick={() => (selectedPackageIndex = idx)}
+								onclick={() => {
+									selectedPackageIndex = idx;
+									triggerAddToCart();
+								}}
 								class="w-full text-left p-3.5 rounded-2xl border-2 transition-all cursor-pointer relative {selectedPackageIndex === idx
 									? 'border-emerald-600 bg-emerald-50/60 ring-1 ring-emerald-500/30 shadow-md'
 									: 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-xs'}"

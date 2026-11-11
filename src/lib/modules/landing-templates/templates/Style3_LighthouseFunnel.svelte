@@ -163,18 +163,18 @@
 			content_type: 'product',
 			value: amt,
 			currency: 'BDT',
-			num_items: Number(currentPackage?.qty || quantity || 1)
+			num_items: Number(quantity || 1)
 		});
 
 		trackGtmBeginCheckout({
-			value: amt,
+			total: amt,
 			currency: 'BDT',
 			items: [
 				{
 					item_id: matchId,
 					item_name: title,
 					price: Number(unitPrice || 0),
-					quantity: Number(currentPackage?.qty || quantity || 1)
+					quantity: Number(quantity || 1)
 				}
 			]
 		});

@@ -155,7 +155,7 @@
 		});
 
 		trackGtmBeginCheckout({
-			value: amt,
+			total: amt,
 			currency: 'BDT',
 			items: [
 				{

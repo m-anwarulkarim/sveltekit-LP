@@ -25,6 +25,9 @@ export const load: PageServerLoad = async ({ parent, platform, url }) => {
 				range: range as any,
 				from: fromParam,
 				to: toParam
+			}).catch((err) => {
+				console.error('Failed to load funnel summary:', err);
+				return { pageView: 0, viewContent: 0, addToCart: 0, initiateCheckout: 0, purchase: 0, purchaseValue: 0 };
 			})
 		]);
 

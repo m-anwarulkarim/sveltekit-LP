@@ -131,10 +131,10 @@
 				</a>
 			{/if}
 
-			<!-- Quick Order Button -->
+			<!-- Quick Order Button with Shimmer Highlight -->
 			<button
 				type="button"
-				class="inline-flex items-center gap-1.5 text-white font-black text-xs px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl shadow-md cursor-pointer transition-all active:scale-95 whitespace-nowrap"
+				class="inline-flex items-center gap-1.5 text-white font-black text-xs px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl shadow-md cursor-pointer transition-all active:scale-95 whitespace-nowrap cta-nav-shimmer"
 				style="background-color: {accentColor};"
 				onclick={handleOrderAction}
 			>
@@ -207,4 +207,38 @@
 		</div>
 	{/if}
 </header>
+
+<style>
+	@keyframes nav-shimmer {
+		0% {
+			transform: translateX(-150%) skewX(-20deg);
+		}
+		35%, 100% {
+			transform: translateX(250%) skewX(-20deg);
+		}
+	}
+
+	.cta-nav-shimmer {
+		position: relative;
+		overflow: hidden;
+	}
+
+	.cta-nav-shimmer::after {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 50%;
+		height: 100%;
+		background: linear-gradient(
+			90deg,
+			rgba(255, 255, 255, 0) 0%,
+			rgba(255, 255, 255, 0.4) 50%,
+			rgba(255, 255, 255, 0) 100%
+		);
+		transform: translateX(-150%) skewX(-20deg);
+		animation: nav-shimmer 3s ease-in-out infinite;
+		pointer-events: none;
+	}
+</style>
 

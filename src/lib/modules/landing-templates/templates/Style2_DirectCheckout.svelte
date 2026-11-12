@@ -320,18 +320,21 @@
 
 		<!-- 2. Product Hero Title & Bullet Highlights -->
 		<div class="space-y-3">
-			<!-- Tag & Rating Badge -->
+			<!-- Tag & Rating Badge with Animated Highlights -->
 			<div class="flex flex-wrap items-center gap-2">
-				<Badge variant="outline" class="bg-emerald-50 text-emerald-800 border-emerald-200 text-xs font-bold px-2.5 py-0.5 rounded-lg flex items-center gap-1">
-					<Sparkles class="w-3 h-3 text-emerald-600" />
+				<Badge variant="outline" class="bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-800 border-emerald-300 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 shadow-2xs">
+					<Sparkles class="w-3.5 h-3.5 text-emerald-600 animate-spin" style="animation-duration: 9s;" />
 					<span>{landingPage?.tag || 'বিশেষ সিজনাল অফার'}</span>
 				</Badge>
-				<span class="text-xs font-bold text-amber-600 flex items-center gap-1 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200/60">
+
+				<span class="text-xs font-bold text-amber-700 flex items-center gap-1 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200/80 shadow-2xs">
 					<Star class="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-					<span>৪.৯/৫ (৩,৫০০+ সন্তুষ্ট চাষী)</span>
+					<span>৪.৯/৫ (৩,৫০০+ সন্তুষ্ট ক্রেতা)</span>
 				</span>
-				<span class="text-xs font-extrabold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200/60">
-					-২০% অফার চলছে
+
+				<span class="relative inline-flex items-center gap-1 text-xs font-black text-white bg-gradient-to-r from-rose-500 via-red-600 to-rose-600 px-3 py-1 rounded-full shadow-md shadow-rose-500/30 offer-badge-pop">
+					<Flame class="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
+					<span>{config?.offerBadge || '-২০% স্পেশাল অফার'}</span>
 				</span>
 			</div>
 
@@ -425,37 +428,39 @@
 
 		<!-- 4. SIGNATURE: Multi-Package Selection (Sarder Seed Style) -->
 		{#if packages.length > 0}
-			<div id="direct-packages" class="space-y-3 scroll-mt-20">
-				<div class="flex items-center justify-between">
+			<div id="direct-packages" class="space-y-3.5 scroll-mt-20">
+				<div class="flex items-center justify-between gap-2 flex-wrap">
 					<h3 class="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
 						<span>প্যাকেজ নির্বাচন করুন</span>
-						{#if packages.some((p) => p.freeDelivery)}
-							<span class="text-xs font-normal text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-								(২ বা ৩ প্যাকেট নিলে ডেলিভারি ফ্রি)
-							</span>
-						{/if}
 					</h3>
+					{#if packages.some((p) => p.freeDelivery)}
+						<span class="relative inline-flex items-center gap-1.5 text-xs font-black text-emerald-800 bg-emerald-100/90 px-3 py-1 rounded-full border border-emerald-300 shadow-2xs">
+							<span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+							<span>২ বা ৩ প্যাকেট নিলে ফ্রি ডেলিভারি!</span>
+						</span>
+					{/if}
 				</div>
 
 				<div class="grid gap-1.5 sm:gap-3 {packages.length === 1 ? 'grid-cols-1 max-w-sm mx-auto' : packages.length === 2 ? 'grid-cols-2 max-w-xl mx-auto' : 'grid-cols-3'}">
 					{#each packages as pkg, idx}
+						{@const isSelected = selectedPackageIndex === idx}
 						<button
 							type="button"
 							onclick={() => (selectedPackageIndex = idx)}
-							class="text-left rounded-xl sm:rounded-2xl p-2 sm:p-4 border-2 transition-all relative cursor-pointer flex flex-col justify-between {selectedPackageIndex === idx ? 'border-emerald-600 bg-emerald-50/40 shadow-md ring-2 ring-emerald-500/20' : 'border-slate-200 bg-white hover:border-slate-300 shadow-2xs'}"
+							class="text-left rounded-xl sm:rounded-2xl p-2.5 sm:p-4 border-2 transition-all relative cursor-pointer flex flex-col justify-between {isSelected ? 'border-emerald-600 bg-gradient-to-b from-emerald-50/80 via-emerald-50/30 to-white ring-2 ring-emerald-500/40 shadow-lg shadow-emerald-600/15 package-card-selected' : 'border-slate-200 bg-white hover:border-emerald-300 hover:shadow-sm shadow-2xs'}"
 						>
-							<!-- Top badge -->
+							<!-- Top badge with animated shine -->
 							{#if pkg.tag}
-								<span class="absolute -top-2 sm:-top-3 right-1 sm:right-3 px-1 sm:px-2 py-0.2 sm:py-0.5 rounded-full text-[7.5px] sm:text-[10px] font-black uppercase text-white shadow-xs whitespace-nowrap {pkg.popular ? 'bg-emerald-600' : 'bg-indigo-600'}">
+								<span class="absolute -top-2.5 sm:-top-3 right-1 sm:right-3 px-2 sm:px-2.5 py-0.5 rounded-full text-[8px] sm:text-[10px] font-black uppercase text-white shadow-md whitespace-nowrap cta-shimmer-btn offer-badge-pop {pkg.popular ? 'bg-gradient-to-r from-emerald-600 to-teal-700 shadow-emerald-500/30' : 'bg-gradient-to-r from-indigo-600 to-violet-700 shadow-indigo-500/30'}">
 									{pkg.tag}
 								</span>
 							{/if}
 
 							<div class="space-y-0.5 sm:space-y-1">
 								<div class="flex items-start justify-between gap-1">
-									<span class="text-[11px] sm:text-sm font-black text-slate-900 leading-tight">{pkg.title}</span>
-									<div class="w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full border flex items-center justify-center shrink-0 transition-colors {selectedPackageIndex === idx ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-300 bg-white'}">
-										{#if selectedPackageIndex === idx}
+									<span class="text-[11px] sm:text-sm font-black leading-tight {isSelected ? 'text-emerald-950 font-black' : 'text-slate-900'}">{pkg.title}</span>
+									<div class="w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full border flex items-center justify-center shrink-0 transition-all {isSelected ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs scale-105' : 'border-slate-300 bg-white'}">
+										{#if isSelected}
 											<Check class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 stroke-[3]" />
 										{/if}
 									</div>
@@ -465,16 +470,16 @@
 								{/if}
 							</div>
 
-							<div class="mt-2 sm:mt-4 pt-1.5 sm:pt-3 border-t border-slate-200/80 flex flex-col gap-1">
+							<div class="mt-2.5 sm:mt-4 pt-1.5 sm:pt-3 border-t border-slate-200/80 flex flex-col gap-1">
 								<div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-0.5">
-									<span class="text-xs sm:text-lg font-black text-slate-900 leading-none">{formatTaka(pkg.price)}</span>
+									<span class="text-xs sm:text-lg font-black text-slate-900 leading-none {isSelected ? 'text-emerald-700' : ''}">{formatTaka(pkg.price)}</span>
 									{#if pkg.originalPrice && pkg.originalPrice > pkg.price}
 										<span class="text-[9px] sm:text-xs text-slate-400 line-through">{formatTaka(pkg.originalPrice)}</span>
 									{/if}
 								</div>
 
 								{#if pkg.freeDelivery}
-									<span class="text-[7.5px] sm:text-[10px] font-extrabold text-emerald-700 bg-emerald-100/90 px-1 py-0.5 rounded text-center self-start whitespace-nowrap">
+									<span class="text-[7.5px] sm:text-[10px] font-black text-emerald-700 bg-emerald-100/90 px-1.5 py-0.5 rounded text-center self-start whitespace-nowrap shadow-2xs">
 										ফ্রি ডেলিভারি
 									</span>
 								{:else}
@@ -721,24 +726,31 @@
 								<span class="text-lg text-emerald-700">{formatTaka(grandTotal)}</span>
 							</div>
 							{#if savings > 0}
-								<p class="text-[11px] text-emerald-700 font-bold text-right">
-									🎉 এই অর্ডারে আপনি মোট {formatTaka(savings)} সাশ্রয় করছেন!
-								</p>
+								<div class="p-2.5 rounded-xl bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-emerald-500/15 border border-emerald-300 text-emerald-900 text-xs font-bold flex items-center justify-between gap-2 shadow-2xs">
+									<div class="flex items-center gap-1.5">
+										<Sparkles class="w-4 h-4 text-emerald-600 shrink-0 animate-bounce" />
+										<span>অভিনন্দন! এই অফারে আপনার মোট সাশ্রয়:</span>
+									</div>
+									<span class="font-black text-emerald-700 text-sm font-mono whitespace-nowrap bg-white/80 px-2 py-0.5 rounded-lg border border-emerald-200">
+										{formatTaka(savings)}
+									</span>
+								</div>
 							{/if}
 						</div>
 
-						<!-- Big Pulsing Green Submit Button -->
+						<!-- Big Pulsing Shiny Green Submit Button -->
 						<Button
 							type="submit"
 							disabled={isSubmitting}
-							class="w-full py-6 text-base sm:text-lg font-black bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl shadow-xl shadow-emerald-600/30 gap-2 cursor-pointer transition-all active:scale-98"
+							class="w-full py-6 text-base sm:text-lg font-black bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl shadow-xl shadow-emerald-600/35 gap-2.5 cursor-pointer transition-all active:scale-98 cta-shimmer-btn glow-btn"
 						>
 							{#if isSubmitting}
 								<Loader2 class="w-5 h-5 animate-spin" />
 								<span>অর্ডার প্রসেস হচ্ছে...</span>
 							{:else}
+								<ShoppingCart class="w-5 h-5" />
 								<span>অর্ডার কনফার্ম করুন — {formatTaka(grandTotal)}</span>
-								<ArrowRight class="w-5 h-5" />
+								<ArrowRight class="w-5 h-5 stroke-[2.5] animate-pulse" />
 							{/if}
 						</Button>
 
@@ -766,20 +778,22 @@
 	</main>
 
 	<!-- 8. Sticky Bottom Action Bar on Mobile -->
-	<div class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 shadow-2xl flex items-center justify-between gap-3">
-		<div>
-			<span class="text-[11px] text-slate-500 font-bold block leading-tight">{currentPackage?.title || (product?.name || headline)}</span>
-			<span class="text-base font-black text-emerald-700 leading-tight">{formatTaka(grandTotal)}</span>
-			{#if currentPackage?.freeDelivery}
-				<span class="text-[9px] font-extrabold text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 ml-1">
-					ফ্রি শিপিং
-				</span>
-			{/if}
+	<div class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200/90 p-2.5 px-4 shadow-2xl flex items-center justify-between gap-3 font-sans">
+		<div class="min-w-0">
+			<span class="text-[11px] text-slate-500 font-bold block leading-tight truncate">{currentPackage?.title || (product?.name || headline)}</span>
+			<div class="flex items-baseline gap-1.5">
+				<span class="text-base font-black text-emerald-700 leading-tight font-mono">{formatTaka(grandTotal)}</span>
+				{#if currentPackage?.freeDelivery}
+					<span class="text-[9px] font-black text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded-full border border-emerald-300">
+						ফ্রি শিপিং
+					</span>
+				{/if}
+			</div>
 		</div>
 
 		<Button
 			size="sm"
-			class="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-5 py-2.5 rounded-xl shadow-md shadow-emerald-600/30 gap-1.5 cursor-pointer"
+			class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-emerald-600/35 gap-1.5 cursor-pointer active:scale-95 cta-shimmer-btn glow-btn shrink-0"
 			onclick={scrollToCheckout}
 		>
 			<ShoppingCart class="w-4 h-4" />
@@ -871,5 +885,72 @@
 	:global(.lp-rich-text th) {
 		background-color: #f8fafc;
 		font-weight: 700;
+	}
+
+	/* Luxury Shimmer Sweep Animation */
+	@keyframes cta-shimmer {
+		0% {
+			transform: translateX(-150%) skewX(-20deg);
+		}
+		35%, 100% {
+			transform: translateX(250%) skewX(-20deg);
+		}
+	}
+
+	.cta-shimmer-btn {
+		position: relative;
+		overflow: hidden;
+	}
+
+	.cta-shimmer-btn::after {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 50%;
+		height: 100%;
+		background: linear-gradient(
+			90deg,
+			rgba(255, 255, 255, 0) 0%,
+			rgba(255, 255, 255, 0.45) 50%,
+			rgba(255, 255, 255, 0) 100%
+		);
+		transform: translateX(-150%) skewX(-20deg);
+		animation: cta-shimmer 2.8s ease-in-out infinite;
+		pointer-events: none;
+	}
+
+	/* Pulsing Glow Effect for Primary Action */
+	@keyframes glow-pulse {
+		0%, 100% {
+			box-shadow: 0 10px 25px -4px rgba(5, 150, 105, 0.4), 0 4px 12px -2px rgba(5, 150, 105, 0.25);
+		}
+		50% {
+			box-shadow: 0 14px 35px 0 rgba(5, 150, 105, 0.65), 0 0 24px 2px rgba(16, 185, 129, 0.4);
+		}
+	}
+
+	.glow-btn {
+		animation: glow-pulse 2.2s infinite;
+	}
+
+	/* Badge Pop Animation */
+	@keyframes badge-pop {
+		0%, 100% {
+			transform: scale(1);
+		}
+		50% {
+			transform: scale(1.06);
+		}
+	}
+
+	.offer-badge-pop {
+		animation: badge-pop 2.4s ease-in-out infinite;
+	}
+
+	/* Elevated Selected Package State */
+	.package-card-selected {
+		box-shadow: 0 0 0 2px #059669, 0 10px 25px -5px rgba(5, 150, 105, 0.25);
+		transform: translateY(-2px);
 	}
 </style>

@@ -44,7 +44,7 @@
 </script>
 
 <svelte:head>
-	<title>Email Settings | Haq Plus Admin</title>
+	<title>Email Settings | Admin</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-3xl mx-auto p-4 sm:p-6 pb-20 font-['Anek_Bangla',sans-serif]">

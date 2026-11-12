@@ -37,7 +37,7 @@
 </script>
 
 <svelte:head>
-	<title>Theme Designs - Ready-Made Storefront Themes - Haq Plus Admin</title>
+	<title>Theme Designs - Ready-Made Storefront Themes - Admin</title>
 </svelte:head>
 
 <div class="space-y-6 animate-in fade-in duration-150 max-w-5xl mx-auto">

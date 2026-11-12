@@ -96,7 +96,7 @@
 </script>
 
 <svelte:head>
-	<title>Theme Views - Modular Layout Sections - Haq Plus Admin</title>
+	<title>Theme Views - Modular Layout Sections - Admin</title>
 </svelte:head>
 
 <form

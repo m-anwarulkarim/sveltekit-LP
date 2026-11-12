@@ -36,7 +36,7 @@
 
 {#if isOpen}
 	<div
-		class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 font-['Plus_Jakarta_Sans',sans-serif]"
+		class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 font-['Anek_Bangla',sans-serif]"
 		role="dialog"
 		aria-modal="true"
 	>

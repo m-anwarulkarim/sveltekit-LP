@@ -57,7 +57,7 @@
 
 <StoreLayout user={data.user}>
 	<div class="bg-slate-50/60 min-h-[85vh] py-6 sm:py-10">
-		<div class="max-w-6xl mx-auto px-4 sm:px-6 space-y-6 font-['Plus_Jakarta_Sans',sans-serif]">
+		<div class="max-w-6xl mx-auto px-4 sm:px-6 space-y-6 font-['Anek_Bangla',sans-serif]">
 			
 			<!-- Breadcrumb Navigation -->
 			<nav class="flex items-center gap-1.5 text-xs text-slate-500 font-medium">

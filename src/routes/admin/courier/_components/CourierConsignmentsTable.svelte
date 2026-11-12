@@ -70,7 +70,7 @@
 	);
 </script>
 
-<div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
+<div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden font-['Anek_Bangla',sans-serif]">
 	{#if consignments.length === 0}
 		<div class="text-center py-16 px-4 space-y-3">
 			<div class="w-14 h-14 rounded-2xl bg-indigo-50 text-[#5845eb] flex items-center justify-center mx-auto shadow-2xs">

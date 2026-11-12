@@ -59,7 +59,7 @@
 	);
 </script>
 
-<div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-2xs space-y-3 font-['Plus_Jakarta_Sans',sans-serif]">
+<div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-2xs space-y-3 font-['Anek_Bangla',sans-serif]">
 	<!-- Row 1: Status Tabs + Active Filter Reset -->
 	<div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
 		<!-- Status Filter Pills -->

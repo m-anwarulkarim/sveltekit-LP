@@ -281,10 +281,10 @@
 </script>
 
 <svelte:head>
-	<title>কুরিয়ার হাব ও পেমেন্ট ট্র্যাকিং | Haq Plus Admin</title>
+	<title>কুরিয়ার হাব ও পেমেন্ট ট্র্যাকিং | Admin</title>
 </svelte:head>
 
-<div class="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto font-['Plus_Jakarta_Sans',sans-serif]">
+<div class="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto font-['Anek_Bangla',sans-serif]">
 	<!-- Page Header -->
 	<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white rounded-3xl p-6 border border-slate-200/90 shadow-2xs">
 		<div class="space-y-1">

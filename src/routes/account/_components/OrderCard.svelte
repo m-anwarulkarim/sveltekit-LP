@@ -137,7 +137,7 @@
 	});
 </script>
 
-<div class="bg-white rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-shadow overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
+<div class="bg-white rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-shadow overflow-hidden font-['Anek_Bangla',sans-serif]">
 	<!-- Order Card Header -->
 	<div class="p-4 sm:p-5 bg-slate-50/70 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
 		<div class="flex items-center gap-2 sm:gap-3">

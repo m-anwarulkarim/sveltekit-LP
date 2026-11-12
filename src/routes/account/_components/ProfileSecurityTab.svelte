@@ -23,7 +23,7 @@
 	let isChangingPassword = $state(false);
 </script>
 
-<div class="space-y-6 font-['Plus_Jakarta_Sans',sans-serif]">
+<div class="space-y-6 font-['Anek_Bangla',sans-serif]">
 	<!-- Section 1: Personal Details (ব্যক্তিগত প্রোফাইল) -->
 	<div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-2xs space-y-5">
 		<div class="flex items-center gap-3 pb-4 border-b border-slate-100">

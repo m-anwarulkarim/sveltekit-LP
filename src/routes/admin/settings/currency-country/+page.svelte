@@ -36,7 +36,7 @@
 </script>
 
 <svelte:head>
-	<title>Shop Currency & Country | Haq Plus Enterprise</title>
+	<title>Shop Currency & Country | Admin</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-2xl mx-auto p-4 sm:p-6">

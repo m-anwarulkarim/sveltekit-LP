@@ -80,7 +80,7 @@
 	});
 </script>
 
-<div class="space-y-6 font-['Plus_Jakarta_Sans',sans-serif]">
+<div class="space-y-6 font-['Anek_Bangla',sans-serif]">
 	<!-- Welcome Banner (Daraz Style) -->
 	<div class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 text-white rounded-3xl p-6 sm:p-7 shadow-sm relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 		<!-- Background watermark -->

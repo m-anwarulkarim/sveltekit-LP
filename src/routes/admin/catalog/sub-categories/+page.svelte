@@ -181,7 +181,7 @@
 </script>
 
 <svelte:head>
-	<title>Sub Category | Haq Plus Admin</title>
+	<title>Sub Category | Admin</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-[1400px] mx-auto pb-12">

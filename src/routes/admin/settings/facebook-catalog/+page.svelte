@@ -104,7 +104,7 @@
 </script>
 
 <svelte:head>
-	<title>FB Catalog | Haq Plus Settings</title>
+	<title>FB Catalog | Admin</title>
 </svelte:head>
 
 <div class="max-w-4xl mx-auto space-y-6 font-['Anek_Bangla',sans-serif] pb-16">

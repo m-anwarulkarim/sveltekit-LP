@@ -254,7 +254,7 @@ import { confirmModal } from '#lib/stores/confirm.svelte';
 />
 
 <svelte:head>
-	<title>Carousel - Customization - Haq Plus Admin</title>
+	<title>Carousel - Customization - Admin</title>
 </svelte:head>
 
 <div class="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">

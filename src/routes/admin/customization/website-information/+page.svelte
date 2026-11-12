@@ -154,7 +154,7 @@
 </script>
 
 <svelte:head>
-	<title>Website Information - Customization - Haq Plus Admin</title>
+	<title>Website Information - Customization - Admin</title>
 </svelte:head>
 
 <div class="p-4 sm:p-6 lg:p-10 max-w-4xl mx-auto space-y-8 font-sans">

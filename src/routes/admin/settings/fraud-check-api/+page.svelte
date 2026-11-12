@@ -35,7 +35,7 @@
 </script>
 
 <svelte:head>
-	<title>Fraud Check API | Haq Plus Enterprise</title>
+	<title>Fraud Check API | Admin</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-2xl mx-auto p-4 sm:p-6">

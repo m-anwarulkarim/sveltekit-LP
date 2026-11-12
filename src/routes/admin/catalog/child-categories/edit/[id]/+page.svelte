@@ -16,7 +16,7 @@
 </script>
 
 <svelte:head>
-	<title>চাইল্ড-ক্যাটাগরি সম্পাদনা | Haq Plus Admin</title>
+	<title>চাইল্ড-ক্যাটাগরি সম্পাদনা | Admin</title>
 </svelte:head>
 
 <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 font-['Anek_Bangla',sans-serif]">

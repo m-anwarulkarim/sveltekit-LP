@@ -139,7 +139,7 @@
 </script>
 
 <svelte:head>
-	<title>Invoice Settings | Haq Plus Enterprise</title>
+	<title>Invoice Settings | Admin</title>
 </svelte:head>
 
 <div class="space-y-8 max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">

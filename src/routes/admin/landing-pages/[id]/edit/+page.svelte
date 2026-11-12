@@ -6,7 +6,7 @@
 </script>
 
 <svelte:head>
-	<title>{data.landingPage?.title || 'ল্যান্ডিং পেজ সম্পাদনা'} | Haq Plus Admin</title>
+	<title>{data.landingPage?.title || 'ল্যান্ডিং পেজ সম্পাদনা'} | Admin</title>
 </svelte:head>
 
 <div class="p-4 sm:p-6 lg:p-8">

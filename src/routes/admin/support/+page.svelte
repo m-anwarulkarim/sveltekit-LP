@@ -163,7 +163,7 @@
 </script>
 
 <svelte:head>
-	<title>Support Center | Haq Plus Executive Panel</title>
+	<title>Support Center | Admin</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-7xl mx-auto font-['Anek_Bangla',sans-serif]">

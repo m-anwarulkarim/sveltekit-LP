@@ -34,7 +34,7 @@
 </script>
 
 <svelte:head>
-	<title>TikTok Pixel | Haq Plus Enterprise</title>
+	<title>TikTok Pixel | Admin</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-2xl mx-auto">

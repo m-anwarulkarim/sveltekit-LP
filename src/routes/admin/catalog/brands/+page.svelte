@@ -236,7 +236,7 @@
 </script>
 
 <svelte:head>
-	<title>Brands Management | Haq Plus Admin</title>
+	<title>Brands Management | Admin</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-[1400px] mx-auto pb-16">

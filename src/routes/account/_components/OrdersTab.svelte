@@ -100,7 +100,7 @@
 	});
 </script>
 
-<div class="space-y-5 font-['Plus_Jakarta_Sans',sans-serif]">
+<div class="space-y-5 font-['Anek_Bangla',sans-serif]">
 	<!-- Filter & Search Toolbar (Daraz Style) -->
 	<div class="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs space-y-4">
 		<!-- Search Bar -->

@@ -159,7 +159,7 @@
 </script>
 
 <svelte:head>
-	<title>Order Setting | Haq Plus Enterprise</title>
+	<title>Order Setting | Admin</title>
 </svelte:head>
 
 <!-- Hidden POST form wired with use:enhance -->

@@ -235,7 +235,7 @@
 
 	<!-- Scrollable Navigation Links Menu -->
 	<div class="flex-1 flex flex-col min-h-0 overflow-y-auto no-scrollbar">
-		<nav class="p-3 space-y-1.5 font-['Plus_Jakarta_Sans',sans-serif]">
+		<nav class="p-3 space-y-1.5 font-['Anek_Bangla',sans-serif]">
 			
 			<!-- 1. Dashboard Dropdown (With Overview, My Activity, Bot Activity) -->
 			{#if hasMenuAccess(currentPermissions, 'dashboard')}

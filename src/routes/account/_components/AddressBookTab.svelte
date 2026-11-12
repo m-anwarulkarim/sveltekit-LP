@@ -64,7 +64,7 @@
 	}
 </script>
 
-<div class="space-y-6 font-['Plus_Jakarta_Sans',sans-serif]">
+<div class="space-y-6 font-['Anek_Bangla',sans-serif]">
 	<!-- Address Book Header -->
 	<div class="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 		<div class="space-y-1">

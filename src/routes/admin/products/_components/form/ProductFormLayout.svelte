@@ -203,7 +203,7 @@
 	}
 </script>
 
-<div class="space-y-6 max-w-7xl mx-auto font-['Plus_Jakarta_Sans',sans-serif]">
+<div class="space-y-6 max-w-7xl mx-auto font-['Anek_Bangla',sans-serif]">
 	<!-- 1. Top Header & Action Bar -->
 	<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
 		<div class="flex items-center gap-3">

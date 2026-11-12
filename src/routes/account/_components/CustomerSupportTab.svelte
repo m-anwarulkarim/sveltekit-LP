@@ -35,7 +35,7 @@
 	];
 </script>
 
-<div class="space-y-6 font-['Plus_Jakarta_Sans',sans-serif]">
+<div class="space-y-6 font-['Anek_Bangla',sans-serif]">
 	<!-- Customer Care & Helpline Header -->
 	<div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-2xs space-y-4">
 		<div class="flex items-center gap-3">

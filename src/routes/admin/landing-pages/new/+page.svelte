@@ -6,7 +6,7 @@
 </script>
 
 <svelte:head>
-	<title>নতুন ল্যান্ডিং পেজ তৈরি করুন | Haq Plus Admin</title>
+	<title>নতুন ল্যান্ডিং পেজ তৈরি করুন | Admin</title>
 </svelte:head>
 
 <div class="p-4 sm:p-6 lg:p-8">

@@ -162,7 +162,7 @@
 </script>
 
 <svelte:head>
-	<title>নতুন অর্ডার তৈরি (New Order) | Haq Plus Pro</title>
+	<title>নতুন অর্ডার তৈরি (New Order) | Admin</title>
 </svelte:head>
 
 <div class="space-y-4 pb-12 print:p-0 print:space-y-2">

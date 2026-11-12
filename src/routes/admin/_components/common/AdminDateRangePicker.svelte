@@ -159,7 +159,7 @@
 
 	<!-- 1. Presets + Custom Button Bar -->
 	<div
-		class="inline-flex items-center gap-1 p-1 rounded-2xl bg-white/90 backdrop-blur-md border border-slate-200/90 shadow-2xs max-w-full overflow-x-auto no-scrollbar font-['Plus_Jakarta_Sans',sans-serif]"
+		class="inline-flex items-center gap-1 p-1 rounded-2xl bg-white/90 backdrop-blur-md border border-slate-200/90 shadow-2xs max-w-full overflow-x-auto no-scrollbar font-['Anek_Bangla',sans-serif]"
 	>
 		{#if showPresets}
 			{#each DEFAULT_PRESETS as preset}
@@ -226,7 +226,7 @@
 		></button>
 
 		<div
-			class="absolute {align === 'right' ? 'right-0' : 'left-0'} top-full mt-2.5 z-50 w-[340px] sm:w-[410px] max-w-[94vw] bg-white rounded-3xl border border-slate-200/95 shadow-2xl p-4 sm:p-5 font-['Plus_Jakarta_Sans',sans-serif] animate-in fade-in slide-in-from-top-2 duration-150 ring-1 ring-black/5"
+			class="absolute {align === 'right' ? 'right-0' : 'left-0'} top-full mt-2.5 z-50 w-[340px] sm:w-[410px] max-w-[94vw] bg-white rounded-3xl border border-slate-200/95 shadow-2xl p-4 sm:p-5 font-['Anek_Bangla',sans-serif] animate-in fade-in slide-in-from-top-2 duration-150 ring-1 ring-black/5"
 		>
 			<!-- Card Header -->
 			<div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3.5">

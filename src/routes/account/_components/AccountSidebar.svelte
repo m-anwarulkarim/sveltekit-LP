@@ -59,7 +59,7 @@
 	];
 </script>
 
-<div class="bg-white rounded-3xl border border-slate-200/90 shadow-2xs overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
+<div class="bg-white rounded-3xl border border-slate-200/90 shadow-2xs overflow-hidden font-['Anek_Bangla',sans-serif]">
 	<!-- User Profile Header Summary -->
 	<div class="p-5 sm:p-6 bg-gradient-to-br from-indigo-50/70 via-purple-50/40 to-white border-b border-slate-100 flex items-center gap-3.5">
 		<!-- Avatar -->

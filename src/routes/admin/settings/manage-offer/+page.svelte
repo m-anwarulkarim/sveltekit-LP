@@ -139,7 +139,7 @@
 <svelte:window onclick={handleClickOutside} />
 
 <svelte:head>
-	<title>Offers - Settings - Haq Plus Admin</title>
+	<title>Offers - Settings - Admin</title>
 </svelte:head>
 
 <div class="p-4 sm:p-6 lg:p-8 space-y-6 max-w-6xl mx-auto font-['Anek_Bangla',sans-serif]">

@@ -153,7 +153,7 @@
 	</div>
 {/if}
 
-<div class="space-y-6 max-w-7xl mx-auto font-['Plus_Jakarta_Sans',sans-serif]">
+<div class="space-y-6 max-w-7xl mx-auto font-['Anek_Bangla',sans-serif]">
 	
 	<!-- 1. Super Admin Profile Banner -->
 	<div class="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-2xs hover:shadow-sm transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-5">

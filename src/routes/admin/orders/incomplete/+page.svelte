@@ -139,7 +139,7 @@
 
 		const customerName = order.customerName || 'সম্মানিত গ্রাহক';
 		const productName = order.parsedItems[0]?.name || 'আমাদের পণ্য';
-		const text = `আসসালামু আলাইকুম ${customerName} ভাই/ম্যাম, আপনি আমাদের Haq Plus-এ "${productName}"-এর অর্ডারটি শুরু করেছিলেন কিন্তু সম্পন্ন করেননি। কোনো সহযোগিতা বা তথ্যের প্রয়োজন হলে আমাদের জানাতে পারেন। ধন্যবাদ!`;
+		const text = `আসসালামু আলাইকুম ${customerName} ভাই/ম্যাম, আপনি আমাদের স্টোরে "${productName}"-এর অর্ডারটি শুরু করেছিলেন কিন্তু সম্পন্ন করেননি। কোনো সহযোগিতা বা তথ্যের প্রয়োজন হলে আমাদের জানাতে পারেন। ধন্যবাদ!`;
 
 		const url = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(text)}`;
 		window.open(url, '_blank');

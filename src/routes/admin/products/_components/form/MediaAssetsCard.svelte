@@ -113,7 +113,7 @@
 	}
 </script>
 
-<div class="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 md:p-6 space-y-4 font-['Plus_Jakarta_Sans',sans-serif]">
+<div class="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 md:p-6 space-y-4 font-['Anek_Bangla',sans-serif]">
 	<!-- Card Header -->
 	<div class="flex items-center justify-between border-b border-slate-100 pb-3">
 		<div class="flex items-center gap-2">
@@ -288,7 +288,7 @@
 {#if deleteTarget}
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150 font-['Plus_Jakarta_Sans',sans-serif]"
+		class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150 font-['Anek_Bangla',sans-serif]"
 		onclick={closeDeleteDialog}
 		onkeydown={(e) => e.key === 'Escape' && closeDeleteDialog()}
 		role="dialog"

@@ -148,6 +148,7 @@ export const load: LayoutServerLoad = async ({ platform, url, locals }) => {
 
 	let isD1Connected = false;
 	let ownerProfile: Awaited<ReturnType<typeof AdminProfileService.getProfileById>> = null;
+	let websiteInfo = DEFAULT_WEBSITE_INFO;
 	let unreadNotificationsCount = 0;
 	let blockedIpsCount = 0;
 	let customersCount = 0;
@@ -174,7 +175,8 @@ export const load: LayoutServerLoad = async ({ platform, url, locals }) => {
 			unread,
 			blocked,
 			customers,
-			profile
+			profile,
+			siteInfo
 		] = await Promise.all([
 			loadOrderSummary(db).catch((e) => { console.error('loadOrderSummary:', e); return null; }),
 			countRows(db, schema.products).catch(() => 0),
@@ -197,7 +199,8 @@ export const load: LayoutServerLoad = async ({ platform, url, locals }) => {
 			NotificationService.getUnreadCount(db, getVisibleNotificationCategories(currentAdmin.permissions)).catch(() => 0),
 			SecurityService.countBlocked(db).catch(() => 0),
 			CustomerService.countCustomers(db).catch(() => 0),
-			AdminProfileService.getProfileById(db, currentAdmin.id).catch(() => null)
+			AdminProfileService.getProfileById(db, currentAdmin.id).catch(() => null),
+			SettingsService.getWebsiteInfo(db).catch(() => DEFAULT_WEBSITE_INFO)
 		]);
 
 		isD1Connected = true;
@@ -213,18 +216,9 @@ export const load: LayoutServerLoad = async ({ platform, url, locals }) => {
 		blockedIpsCount = blocked;
 		customersCount = customers;
 		ownerProfile = profile;
+		websiteInfo = siteInfo;
 	} catch (error) {
 		console.error('Failed to query D1 database:', error);
-	}
-
-	let websiteInfo = DEFAULT_WEBSITE_INFO;
-	try {
-		if (isD1Connected) {
-			const db = getDb(platform);
-			websiteInfo = await SettingsService.getWebsiteInfo(db);
-		}
-	} catch {
-		// fall back to default
 	}
 
 	const totalOrders = summary?.totalOrders ?? 0;

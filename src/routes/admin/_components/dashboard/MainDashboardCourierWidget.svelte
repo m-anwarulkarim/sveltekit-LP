@@ -19,7 +19,7 @@
 	}
 </script>
 
-<div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-4 font-['Plus_Jakarta_Sans',sans-serif]">
+<div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-4 font-['Anek_Bangla',sans-serif]">
 	<div class="flex items-center gap-3.5">
 		<div class="w-11 h-11 rounded-2xl bg-[#5845eb]/30 border border-[#5845eb]/40 text-[#a59bff] flex items-center justify-center shrink-0 shadow-inner">
 			<Truck class="w-6 h-6 stroke-[2.2]" />

@@ -176,10 +176,10 @@
 </script>
 
 <svelte:head>
-	<title>দৈনিক বিজনেস সামারি | Haq Plus Reports</title>
+	<title>দৈনিক বিজনেস সামারি | Admin</title>
 </svelte:head>
 
-<div class="space-y-6 max-w-5xl mx-auto pb-16 font-['Plus_Jakarta_Sans',sans-serif]">
+<div class="space-y-6 max-w-5xl mx-auto pb-16 font-['Anek_Bangla',sans-serif]">
 	<!-- Page Title Heading -->
 	<div>
 		<h2 class="text-2xl font-bold text-slate-900 tracking-tight">
@@ -347,7 +347,7 @@
 					<span class="text-[11px] font-mono text-slate-400">
 						তৈরি হয়েছে: {new Date().toLocaleDateString('bn-BD', { month: 'short', day: 'numeric', year: 'numeric' })}
 					</span>
-					<div class="text-xs font-bold text-indigo-600">Haq Plus Enterprise Deck</div>
+					<div class="text-xs font-bold text-indigo-600">Admin Deck</div>
 				</div>
 			</div>
 		</div>

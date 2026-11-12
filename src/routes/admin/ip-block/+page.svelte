@@ -359,7 +359,7 @@
 	<title>IP & Phone Sentinel Blacklist | Admin Deck</title>
 </svelte:head>
 
-<div class="space-y-6 max-w-[1400px] mx-auto pb-16 font-['Plus_Jakarta_Sans',sans-serif]">
+<div class="space-y-6 max-w-[1400px] mx-auto pb-16 font-['Anek_Bangla',sans-serif]">
 	
 	<!-- 1. Header Row -->
 	<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs">

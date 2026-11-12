@@ -182,10 +182,10 @@
 </script>
 
 <svelte:head>
-	<title>Tags | Haq Plus Admin</title>
+	<title>Tags | Admin</title>
 </svelte:head>
 
-<div class="space-y-6 max-w-[1400px] mx-auto pb-12 font-['Plus_Jakarta_Sans',sans-serif]">
+<div class="space-y-6 max-w-[1400px] mx-auto pb-12 font-['Anek_Bangla',sans-serif]">
 	<!-- Top Bar: Title & Support Button -->
 	<div class="flex items-center justify-between gap-4">
 		<div>

@@ -67,11 +67,11 @@
 		{
 			version: '1.0.0',
 			date: 'Apr 20, 2026',
-			title: 'Haq Plus Enterprise Commerce & Multi-Landing Page Launch',
+			title: 'Admin Commerce & Multi-Landing Page Launch',
 			platforms: ['Admin Panel', 'Website', 'API'],
 			types: ['New Feature'],
 			changes: [
-				'Official release of Haq Plus Enterprise Multi-Landing Page Engine.',
+				'Official release of Admin Multi-Landing Page Engine.',
 				'Real-time analytics dashboard with revenue, orders, and conversion tracking.',
 				'Dynamic Facebook Pixel, TikTok Pixel & Google Tag Manager integration.',
 				'Full Bengali & English dual-language administrative experience.'
@@ -142,7 +142,7 @@
 </script>
 
 <svelte:head>
-	<title>New Release | Haq Plus Enterprise</title>
+	<title>New Release | Admin</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-6xl mx-auto pb-16">
@@ -254,7 +254,7 @@
 
 					<!-- Version Title & Date Header -->
 					<div class="flex items-center gap-2 mb-3">
-						<span class="text-base font-bold text-slate-900 font-['Plus_Jakarta_Sans',sans-serif]">
+						<span class="text-base font-bold text-slate-900 font-['Anek_Bangla',sans-serif]">
 							Version {release.version}
 						</span>
 						<span class="text-xs font-medium text-slate-400">

@@ -6,7 +6,7 @@
 </script>
 
 <svelte:head>
-	<title>New Product | Haq Plus Admin</title>
+	<title>New Product | Admin</title>
 </svelte:head>
 
 <div class="p-4 sm:p-6 lg:p-8">

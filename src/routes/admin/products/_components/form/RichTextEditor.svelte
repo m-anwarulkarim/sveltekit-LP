@@ -133,7 +133,7 @@
 	}
 </script>
 
-<div class="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs focus-within:border-[#5845eb] focus-within:ring-3 focus-within:ring-[#5845eb]/10 transition-all font-['Plus_Jakarta_Sans',sans-serif]">
+<div class="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs focus-within:border-[#5845eb] focus-within:ring-3 focus-within:ring-[#5845eb]/10 transition-all font-['Anek_Bangla',sans-serif]">
 	
 	<!-- Top Controls: Mode Switcher & Tools -->
 	<div class="p-2 sm:p-2.5 bg-slate-50/90 border-b border-slate-200/90 flex flex-wrap items-center justify-between gap-2">

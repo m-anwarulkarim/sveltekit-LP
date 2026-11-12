@@ -24,7 +24,7 @@
 	}
 </script>
 
-<div class="space-y-6 max-w-7xl mx-auto font-['Plus_Jakarta_Sans',sans-serif]">
+<div class="space-y-6 max-w-7xl mx-auto font-['Anek_Bangla',sans-serif]">
 	<!-- Dashboard Header with Universal Premium Date Filter -->
 	<div class="bg-white/80 backdrop-blur-md p-4 sm:p-5 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
 		<div class="flex items-center gap-3">

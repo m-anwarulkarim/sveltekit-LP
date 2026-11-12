@@ -40,7 +40,7 @@
 </script>
 
 <svelte:head>
-	<title>Appearance & Colors - Theme View Customization - Haq Plus Admin</title>
+	<title>Appearance & Colors - Theme View Customization - Admin</title>
 </svelte:head>
 
 <form

@@ -137,10 +137,10 @@
 </script>
 
 <svelte:head>
-	<title>Asset Valuation | Haq Plus Reports</title>
+	<title>Asset Valuation | Admin</title>
 </svelte:head>
 
-<div class="space-y-6 max-w-7xl mx-auto pb-16 font-['Plus_Jakarta_Sans',sans-serif]">
+<div class="space-y-6 max-w-7xl mx-auto pb-16 font-['Anek_Bangla',sans-serif]">
 	<!-- Hero Banner Card -->
 	<div
 		class="bg-gradient-to-r from-emerald-50/70 via-teal-50/40 to-white rounded-3xl border border-emerald-200/80 p-5 md:p-6 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4"

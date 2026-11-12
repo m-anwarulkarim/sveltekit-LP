@@ -32,7 +32,7 @@
 </script>
 
 <svelte:head>
-	<title>{status} Error | Admin Control Deck | Haq Plus</title>
+	<title>{status} Error | Admin Control Deck |</title>
 </svelte:head>
 
 <div class="max-w-3xl mx-auto py-8 md:py-16 px-4 font-['Anek_Bangla',sans-serif]">

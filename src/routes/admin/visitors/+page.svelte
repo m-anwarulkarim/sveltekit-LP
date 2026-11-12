@@ -157,7 +157,7 @@
 </script>
 
 <svelte:head>
-	<title>Visitor Analytics & Real-Time Traffic | Haq Plus Admin</title>
+	<title>Visitor Analytics & Real-Time Traffic | Admin</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-7xl mx-auto pb-16 font-['Anek_Bangla',sans-serif]">

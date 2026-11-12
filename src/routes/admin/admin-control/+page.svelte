@@ -643,7 +643,7 @@
 <svelte:window onclick={handleWindowClick} onscroll={handleWindowClick} onresize={handleWindowClick} />
 
 <svelte:head>
-	<title>অ্যাডমিন ও রোল পারমিশন কন্ট্রোল | Haq Plus Admin Control</title>
+	<title>অ্যাডমিন ও রোল পারমিশন কন্ট্রোল | Admin</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-7xl mx-auto pb-16 font-['Anek_Bangla',sans-serif]">

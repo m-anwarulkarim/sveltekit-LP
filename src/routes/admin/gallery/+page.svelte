@@ -156,7 +156,7 @@
 	<title>My Gallery | সেন্ট্রালাইজড মিডিয়া লাইব্রেরি</title>
 </svelte:head>
 
-<div class="space-y-6 pb-28 font-['Plus_Jakarta_Sans',sans-serif]">
+<div class="space-y-6 pb-28 font-['Anek_Bangla',sans-serif]">
 
 	<!-- Header Area -->
 	<div class="flex items-center justify-between pb-1">

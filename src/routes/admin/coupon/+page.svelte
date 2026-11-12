@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { enhance } from '$app/forms';
 	import {
 		Tag,
@@ -49,11 +49,11 @@
 	});
 
 	function formatTaka(amount: number) {
-		return '? ' + (amount || 0).toLocaleString('en-US');
+		return '৳ ' + (amount || 0).toLocaleString('en-US');
 	}
 
 	function formatDisplayDate(dateStr: string | null): string {
-		if (!dateStr) return '????? ??????';
+		if (!dateStr) return 'আজীবন মেয়াদী';
 		try {
 			const d = new Date(dateStr);
 			if (isNaN(d.getTime())) return dateStr;
@@ -67,7 +67,7 @@
 		if (typeof navigator !== 'undefined' && navigator.clipboard) {
 			navigator.clipboard.writeText(code);
 			copiedId = id;
-			toast.success(`???? ??? "${code}" ??? ??? ?????!`);
+			toast.success(`কুপন কোড "${code}" কপি করা হয়েছে!`);
 			setTimeout(() => {
 				if (copiedId === id) copiedId = null;
 			}, 2000);
@@ -76,7 +76,7 @@
 </script>
 
 <svelte:head>
-	<title>???? ??????????? | Admin</title>
+	<title>কুপন ব্যবস্থাপনা | Admin</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-7xl mx-auto pb-16 font-sans">
@@ -85,10 +85,10 @@
 		<div>
 			<h2 class="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
 				<Tag class="w-6 h-6 text-[#635BFF]" />
-				<span>???? ? ????????? ???? (Coupons)</span>
+				<span>কুপন ও ডিসকাউন্ট অফার (Coupons)</span>
 			</h2>
 			<p class="text-xs text-slate-500 mt-1">
-				????????? ???? ????? ????????? ???, ??????? ???? ? ?????????? ?????????? ???????? ????
+				গ্রাহকদের জন্য বিশেষ ডিসকাউন্ট কোড, ফ্ল্যাট অফার ও প্রচারমূলক ক্যাম্পেইন পরিচালনা করুন
 			</p>
 		</div>
 
@@ -98,7 +98,7 @@
 				class="bg-[#635BFF] hover:bg-[#5249e6] text-white font-bold px-5 py-2.5 rounded-xl shadow-sm text-xs flex items-center gap-2 cursor-pointer active:scale-95 transition-all"
 			>
 				<Plus class="w-4 h-4 stroke-[2.5]" />
-				<span>???? ???? ??? ???? (Add Coupon)</span>
+				<span>নতুন কুপন যোগ করুন (Add Coupon)</span>
 			</Button>
 		</div>
 	</div>
@@ -107,9 +107,9 @@
 	<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
 		<Card class="p-4 rounded-3xl border-slate-200/90 shadow-2xs bg-white flex items-center justify-between">
 			<div>
-				<p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">??? ????</p>
-				<h3 class="text-2xl font-black text-slate-900 mt-1 font-['Outfit']">{data.counts.all} ??</h3>
-				<span class="text-[11px] text-slate-500 font-medium mt-0.5 inline-block">??????? ????</span>
+				<p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">মোট কুপন</p>
+				<h3 class="text-2xl font-black text-slate-900 mt-1 font-['Outfit']">{data.counts.all} টি</h3>
+				<span class="text-[11px] text-slate-500 font-medium mt-0.5 inline-block">সর্বমোট অফার</span>
 			</div>
 			<div class="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#635BFF]">
 				<Tag class="w-5 h-5" />
@@ -118,9 +118,9 @@
 
 		<Card class="p-4 rounded-3xl border-slate-200/90 shadow-2xs bg-white flex items-center justify-between">
 			<div>
-				<p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">???????? (Active)</p>
-				<h3 class="text-2xl font-black text-emerald-600 mt-1 font-['Outfit']">{data.counts.publish} ??</h3>
-				<span class="text-[11px] text-emerald-700/80 font-medium mt-0.5 inline-block">???? ?????? ???</span>
+				<p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">প্রকাশিত (Active)</p>
+				<h3 class="text-2xl font-black text-emerald-600 mt-1 font-['Outfit']">{data.counts.publish} টি</h3>
+				<span class="text-[11px] text-emerald-700/80 font-medium mt-0.5 inline-block">লাইভ চেকআউট সচল</span>
 			</div>
 			<div class="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
 				<Sparkles class="w-5 h-5" />
@@ -129,9 +129,9 @@
 
 		<Card class="p-4 rounded-3xl border-slate-200/90 shadow-2xs bg-white flex items-center justify-between">
 			<div>
-				<p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">?????? (Draft)</p>
-				<h3 class="text-2xl font-black text-slate-700 mt-1 font-['Outfit']">{data.counts.draft} ??</h3>
-				<span class="text-[11px] text-slate-500 font-medium mt-0.5 inline-block">????????? ????</span>
+				<p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ড্রাফট (Draft)</p>
+				<h3 class="text-2xl font-black text-slate-700 mt-1 font-['Outfit']">{data.counts.draft} টি</h3>
+				<span class="text-[11px] text-slate-500 font-medium mt-0.5 inline-block">অপ্রকাশিত অফার</span>
 			</div>
 			<div class="w-10 h-10 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600">
 				<Edit3 class="w-5 h-5" />
@@ -140,9 +140,9 @@
 
 		<Card class="p-4 rounded-3xl border-slate-200/90 shadow-2xs bg-white flex items-center justify-between">
 			<div>
-				<p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">??????? (Trash)</p>
-				<h3 class="text-2xl font-black text-rose-600 mt-1 font-['Outfit']">{data.counts.trash} ??</h3>
-				<span class="text-[11px] text-rose-700/80 font-medium mt-0.5 inline-block">???????? ????</span>
+				<p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ট্র্যাশ (Trash)</p>
+				<h3 class="text-2xl font-black text-rose-600 mt-1 font-['Outfit']">{data.counts.trash} টি</h3>
+				<span class="text-[11px] text-rose-700/80 font-medium mt-0.5 inline-block">বাতিলকৃত কুপন</span>
 			</div>
 			<div class="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600">
 				<Trash2 class="w-5 h-5" />
@@ -162,7 +162,7 @@
 						? 'bg-white text-slate-900 shadow-xs'
 						: 'text-slate-600 hover:text-slate-900'}"
 				>
-					<span>?? ????</span>
+					<span>সব কুপন</span>
 					<Badge variant="outline" class="h-4 px-1.5 text-[10px] font-mono {activeTab === 'all' ? 'bg-indigo-50 text-[#5845eb] border-indigo-200' : 'bg-slate-200/80 text-slate-600'}">
 						{data.counts.all}
 					</Badge>
@@ -174,7 +174,7 @@
 						? 'bg-white text-slate-900 shadow-xs'
 						: 'text-slate-600 hover:text-slate-900'}"
 				>
-					<span>????????</span>
+					<span>প্রকাশিত</span>
 					<Badge variant="outline" class="h-4 px-1.5 text-[10px] font-mono {activeTab === 'publish' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-200/80 text-slate-600'}">
 						{data.counts.publish}
 					</Badge>
@@ -186,7 +186,7 @@
 						? 'bg-white text-slate-900 shadow-xs'
 						: 'text-slate-600 hover:text-slate-900'}"
 				>
-					<span>??????</span>
+					<span>ড্রাফট</span>
 					<Badge variant="outline" class="h-4 px-1.5 text-[10px] font-mono {activeTab === 'draft' ? 'bg-slate-100 text-slate-700 border-slate-300' : 'bg-slate-200/80 text-slate-600'}">
 						{data.counts.draft}
 					</Badge>
@@ -198,7 +198,7 @@
 						? 'bg-white text-slate-900 shadow-xs'
 						: 'text-slate-600 hover:text-slate-900'}"
 				>
-					<span>???????</span>
+					<span>ট্র্যাশ</span>
 					<Badge variant="outline" class="h-4 px-1.5 text-[10px] font-mono {activeTab === 'trash' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-200/80 text-slate-600'}">
 						{data.counts.trash}
 					</Badge>
@@ -214,7 +214,7 @@
 				<Input
 					type="search"
 					name="search"
-					placeholder="?????? ??? ?? ??? ??????..."
+					placeholder="কুপনের নাম বা কোড খুঁজুন..."
 					bind:value={searchQuery}
 					class="pl-10 pr-4 h-10 rounded-2xl bg-slate-50/80 border-slate-200 text-xs font-medium focus:bg-white"
 				/>
@@ -324,11 +324,11 @@
 						<Tag class="w-8 h-8 stroke-[1.75]" />
 					</div>
 					<div class="space-y-1">
-						<h4 class="text-base font-bold text-slate-900">???? ???? ????? ?????</h4>
+						<h4 class="text-base font-bold text-slate-900">কোনো কুপন পাওয়া যায়নি</h4>
 						<p class="text-xs text-slate-400 max-w-sm">
 							{searchQuery
-								? '????? ????? ??? ?????? ???? ??? ???? ???? ???? ????? ??????'
-								: '????????? ???? ???? ????????? ???? ???? ???? ????? ????? ????? ?????'}
+								? 'আপনার সার্চ করা শব্দের সাথে মিল রেখে কোনো কুপন পাওয়া যায়নি।'
+								: 'গ্রাহকদের জন্য নতুন ডিসকাউন্ট অফার তৈরি করতে নিচের বাটনে ক্লিক করুন।'}
 						</p>
 					</div>
 					<Button
@@ -336,22 +336,22 @@
 						class="bg-[#635BFF] hover:bg-[#5249e6] text-white font-bold px-6 py-2 rounded-xl text-xs mt-2"
 					>
 						<Plus class="w-3.5 h-3.5 mr-1.5" />
-						???? ???? ???? ????
+						নতুন কুপন তৈরি করুন
 					</Button>
 				</div>
 			{:else}
 				<Table>
 					<TableHeader>
 						<TableRow class="bg-slate-50/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-							<TableHead class="w-16 text-center">???????</TableHead>
-							<TableHead>?????? ?????</TableHead>
-							<TableHead>???? ???</TableHead>
-							<TableHead>????? ??????</TableHead>
-							<TableHead>??????? ??????</TableHead>
-							<TableHead class="text-center">???????</TableHead>
-							<TableHead>????????</TableHead>
-							<TableHead class="text-center">?????????</TableHead>
-							<TableHead class="text-right">???????</TableHead>
+							<TableHead class="w-16 text-center">ব্যানার</TableHead>
+							<TableHead>কুপনের বিবরণ</TableHead>
+							<TableHead>কুপন কোড</TableHead>
+							<TableHead>ছাড়ের পরিমাণ</TableHead>
+							<TableHead>নূন্যতম অর্ডার</TableHead>
+							<TableHead class="text-center">ব্যবহার</TableHead>
+							<TableHead>মেয়াদকাল</TableHead>
+							<TableHead class="text-center">স্ট্যাটাস</TableHead>
+							<TableHead class="text-right">অ্যাকশন</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
@@ -388,7 +388,7 @@
 										type="button"
 										onclick={() => copyToClipboard(coupon.code, coupon.id)}
 										class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200/90 text-[#5845eb] font-mono font-bold text-xs hover:bg-indigo-100/80 transition-colors cursor-pointer"
-										title="??? ???? ????? ????"
+										title="কপি করতে ক্লিক করুন"
 									>
 										<span>{coupon.code}</span>
 										{#if copiedId === coupon.id}
@@ -403,25 +403,25 @@
 								<TableCell>
 									{#if coupon.discountType === 'percentage'}
 										<Badge variant="outline" class="font-bold text-emerald-700 bg-emerald-50 border-emerald-200">
-											{coupon.discountValue}% ???
+											{coupon.discountValue}% ছাড়
 										</Badge>
 									{:else}
 										<Badge variant="outline" class="font-bold text-sky-700 bg-sky-50 border-sky-200">
-											{formatTaka(coupon.discountValue)} ???????
+											{formatTaka(coupon.discountValue)} ফ্ল্যাট
 										</Badge>
 									{/if}
 								</TableCell>
 
 								<!-- Min Order -->
 								<TableCell class="font-mono font-semibold text-slate-700">
-									{coupon.minOrderAmount > 0 ? formatTaka(coupon.minOrderAmount) : '??? ???? ???'}
+									{coupon.minOrderAmount > 0 ? formatTaka(coupon.minOrderAmount) : 'কোন শর্ত নেই'}
 								</TableCell>
 								<TableCell class="text-center text-xs">
 									<span class="font-bold text-slate-800">{coupon.usageCount ?? 0}</span>
 									{#if coupon.usageLimit}
 										<span class="text-slate-400"> / {coupon.usageLimit}</span>
 									{:else}
-										<span class="text-[10px] text-slate-400 block">???????</span>
+										<span class="text-[10px] text-slate-400 block">সীমাহীন</span>
 									{/if}
 								</TableCell>
 
@@ -429,7 +429,7 @@
 								<TableCell class="text-[11px] text-slate-600">
 									<div class="flex items-center gap-1">
 										<Calendar class="w-3 h-3 text-slate-400 shrink-0" />
-										<span>{formatDisplayDate(coupon.startDate)} � {formatDisplayDate(coupon.endDate)}</span>
+										<span>{formatDisplayDate(coupon.startDate)} — {formatDisplayDate(coupon.endDate)}</span>
 									</div>
 								</TableCell>
 
@@ -437,7 +437,7 @@
 								<TableCell class="text-center">
 									{#if coupon.status === 'trash'}
 										<Badge variant="outline" class="bg-rose-50 text-rose-700 border-rose-200 text-[10px] font-bold">
-											???????? ???
+											ট্র্যাশে আছে
 										</Badge>
 									{:else}
 										<form method="POST" action="?/toggleStatus" use:enhance>
@@ -449,7 +449,7 @@
 													: 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'}"
 											>
 												<span class="w-1.5 h-1.5 rounded-full {coupon.status === 'publish' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}"></span>
-												<span>{coupon.status === 'publish' ? '???????' : '??????'}</span>
+												<span>{coupon.status === 'publish' ? 'পাবলিশড' : 'ড্রাফট'}</span>
 											</button>
 										</form>
 									{/if}
@@ -466,19 +466,19 @@
 													variant="ghost"
 													size="icon"
 													class="h-8 w-8 text-emerald-600 hover:bg-emerald-50 rounded-xl"
-													title="??????? ????"
+													title="রিস্টোর করুন"
 												>
 													<RotateCcw class="w-4 h-4" />
 												</Button>
 											</form>
-											<form method="POST" action="?/deletePermanent" use:enhance={({ cancel }) => { if (!confirm(`"${coupon.code}" ?????? ??????????? ???? ??????? ??? ????????????? ?????? ???? ??!`)) cancel(); }}>
+											<form method="POST" action="?/deletePermanent" use:enhance={({ cancel }) => { if (!confirm(`"${coupon.code}" কুপনটি স্থায়ীভাবে মুছে ফেলবেন? এটি পূর্বাবস্থায় ফেরানো যাবে না!`)) cancel(); }}>
 												<input type="hidden" name="id" value={coupon.id} />
 												<Button
 													type="submit"
 													variant="ghost"
 													size="icon"
 													class="h-8 w-8 text-rose-600 hover:bg-rose-50 rounded-xl"
-													title="?????????? ?????"
+													title="স্থায়ীভাবে মুছুন"
 												>
 													<Trash2 class="w-4 h-4" />
 												</Button>
@@ -489,18 +489,18 @@
 												variant="ghost"
 												size="icon"
 												class="h-8 w-8 text-sky-600 hover:bg-sky-50 rounded-xl"
-												title="???? ????"
+												title="এডিট করুন"
 											>
 												<Edit3 class="w-4 h-4" />
 											</Button>
-											<form method="POST" action="?/trash" use:enhance={({ cancel }) => { if (!confirm(`"${coupon.name}" ?????? ???????? ????? ????`)) cancel(); }}>
+											<form method="POST" action="?/trash" use:enhance={({ cancel }) => { if (!confirm(`"${coupon.name}" কুপনটি ট্র্যাশে সরাতে চান?`)) cancel(); }}>
 												<input type="hidden" name="id" value={coupon.id} />
 												<Button
 													type="submit"
 													variant="ghost"
 													size="icon"
 													class="h-8 w-8 text-rose-600 hover:bg-rose-50 rounded-xl"
-													title="???????? ????"
+													title="ট্র্যাশে সরান"
 												>
 													<Trash2 class="w-4 h-4" />
 												</Button>

@@ -80,16 +80,14 @@ export class FraudService {
 			console.error('Failed to get fraud settings:', err);
 		}
 
-		const steadfastMethod = courierSettings.methods.find(
-			(m) => m.id === 'steadfast' && m.isEnabled
-		);
-		const pathaoMethod = courierSettings.methods.find(
-			(m) => m.id === 'pathao' && m.isEnabled
-		);
+		const steadfastMethod = courierSettings.methods.find((m) => m.id === 'steadfast');
+		const pathaoMethod = courierSettings.methods.find((m) => m.id === 'pathao');
 
 		const stApiKey = (fraudSettings.steadFastApiKey || steadfastMethod?.credentials?.apiKey || '').trim();
 		const stSecretKey = (fraudSettings.steadFastSecretKey || steadfastMethod?.credentials?.secretKey || '').trim();
 		const hasSteadfast = !!(stApiKey && stSecretKey);
+
+		console.log(`[FraudCheck] Phone: ${phone}, Steadfast configured: ${hasSteadfast}, API Key present: ${!!stApiKey}, Secret present: ${!!stSecretKey}`);
 
 		const paApiKey = (fraudSettings.pathaoApiKey || pathaoMethod?.credentials?.apiKey || '').trim();
 		const paSecret = (fraudSettings.pathaoSecret || pathaoMethod?.credentials?.secretKey || '').trim();
@@ -369,23 +367,58 @@ export class FraudService {
 					continue;
 				}
 
-				const data = (await res.json()) as any;
+				const rawText = await res.text();
+				let data: any;
+				try {
+					data = JSON.parse(rawText);
+				} catch {
+					console.warn(`Steadfast API response not JSON from ${url}:`, rawText.slice(0, 200));
+					continue;
+				}
+
+				console.log(`[FraudCheck] Steadfast API response from ${url}:`, JSON.stringify(data).slice(0, 500));
+
 				const payload = data?.data || data?.Summaries?.Steadfast || data || {};
 				const total = Number(
-					payload.total_parcels ?? payload.Total_parcels ?? payload.total ?? 0
+					payload.total_parcels ?? payload.Total_parcels ?? payload.parcel_volume
+					?? payload.total ?? payload.consignment_count ?? 0
 				);
 				const delivered = Number(
-					payload.total_delivered ?? payload.delivered ?? payload.success ?? 0
+					payload.total_delivered ?? payload.delivered_parcel ?? payload.delivered
+					?? payload.success ?? payload.delivery_count ?? 0
 				);
 				const cancelled = Number(
-					payload.total_cancelled ?? payload.cancelled ?? payload.cancel ?? 0
+					payload.total_cancelled ?? payload.cancelled_parcel ?? payload.cancelled
+					?? payload.cancel ?? payload.cancel_count ?? 0
 				);
-				const returned = Number(payload.total_returned ?? payload.returned ?? 0);
-				const partialDelivered = Number(payload.total_partial_delivered ?? payload.partial_delivered ?? 0);
-				const fraudReported = Number(payload.fraud_reported ?? payload.reported ?? payload.flagged ?? 0);
+				const returned = Number(
+					payload.total_returned ?? payload.returned ?? payload.return_count ?? 0
+				);
+				const partialDelivered = Number(
+					payload.total_partial_delivered ?? payload.partial_delivered
+					?? payload.partial_delivery_count ?? 0
+				);
+				const fraudReported = Number(
+					payload.fraud_reported ?? payload.merchant_reports ?? payload.reported
+					?? payload.flagged ?? payload.report_count ?? 0
+				);
 				const codAmount = Number(payload.total_cod ?? payload.cod_amount ?? 0);
-				const successRate = total > 0 ? Math.round((delivered / total) * 100) : 0;
 
+				if (total === 0 && delivered === 0 && cancelled === 0) {
+					const deliveryPct = Number(payload.delivery_percentage ?? payload.delivered_percentage ?? 0);
+					const cancelPct = Number(payload.cancel_percentage ?? payload.cancelled_percentage ?? 0);
+					if (deliveryPct > 0 || cancelPct > 0) {
+						const inferredTotal = Number(payload.parcel_volume ?? payload.total_parcels ?? 0);
+						if (inferredTotal > 0) {
+							const inferredDelivered = Math.round((deliveryPct / 100) * inferredTotal);
+							const inferredCancelled = Math.round((cancelPct / 100) * inferredTotal);
+							const successRate = inferredTotal > 0 ? Math.round((inferredDelivered / inferredTotal) * 100) : 0;
+							return { total: inferredTotal, delivered: inferredDelivered, cancelled: inferredCancelled, successRate, returned, partialDelivered, fraudReported, codAmount };
+						}
+					}
+				}
+
+				const successRate = total > 0 ? Math.round((delivered / total) * 100) : 0;
 				return { total, delivered, cancelled, successRate, returned, partialDelivered, fraudReported, codAmount };
 			} catch (err: any) {
 				console.warn(`Steadfast fetch from ${url} error:`, err?.message);

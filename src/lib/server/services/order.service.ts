@@ -588,9 +588,25 @@ export class OrderService {
 
 		const matchConditions: any[] = [];
 		if (phone && phone.trim()) {
-			matchConditions.push(eq(schema.orders.customerPhone, phone.trim()));
+			const rawPhone = phone.trim();
+			const cleanPhone = normalizeBdPhone(rawPhone);
+			const phoneVariants = new Set<string>();
+			if (rawPhone) phoneVariants.add(rawPhone);
+			if (cleanPhone) {
+				phoneVariants.add(cleanPhone);
+				phoneVariants.add(`88${cleanPhone}`);
+				phoneVariants.add(`+88${cleanPhone}`);
+				if (cleanPhone.startsWith('0')) {
+					phoneVariants.add(cleanPhone.slice(1));
+					phoneVariants.add(`+880${cleanPhone.slice(1)}`);
+				}
+			}
+			for (const p of phoneVariants) {
+				matchConditions.push(eq(schema.orders.customerPhone, p));
+				matchConditions.push(eq(schema.orders.customerEmail, p));
+			}
 		}
-		if (email && email.trim()) {
+		if (email && email.trim() && !email.includes('@') === false) {
 			matchConditions.push(eq(schema.orders.customerEmail, email.trim()));
 		}
 
@@ -601,7 +617,7 @@ export class OrderService {
 		const cleanExclude = (excludeOrderId || '').trim();
 		const noHashExclude = cleanExclude.replace(/^#/, '');
 
-		const whereClause = cleanExclude
+		const historyWhere = cleanExclude
 			? and(
 					or(...matchConditions),
 					ne(schema.orders.id, cleanExclude),
@@ -624,7 +640,7 @@ export class OrderService {
 				createdAt: schema.orders.createdAt
 			})
 			.from(schema.orders)
-			.where(whereClause)
+			.where(historyWhere)
 			.orderBy(desc(schema.orders.createdAt))
 			.limit(50)
 			.all();

@@ -16,6 +16,8 @@ export interface CourierStatsBreakdown {
 	codAmount?: number;
 }
 
+export type FraudApiStatus = 'ok' | 'rate_limited' | 'auth_failed' | 'unavailable' | 'not_configured';
+
 export interface FraudRiskAssessment {
 	phone: string;
 	totalParcels: number;
@@ -29,11 +31,18 @@ export interface FraudRiskAssessment {
 	courierName?: string;
 	badgeLabel?: string;
 	isConfigured?: boolean;
+	apiStatus?: FraudApiStatus;
+	apiMessage?: string;
+	hasData?: boolean;
 	byCourier?: {
 		steadfast?: CourierStatsBreakdown;
 		pathao?: CourierStatsBreakdown;
 	};
 }
+
+type SteadfastFetchResult =
+	| { ok: true; stats: CourierStatsBreakdown }
+	| { ok: false; status: Exclude<FraudApiStatus, 'ok'>; message: string };
 
 /**
  * Enterprise Fraud & Courier Delivery Telemetry Service
@@ -336,72 +345,98 @@ export class FraudService {
 	}
 
 	/**
-	 * Queries Steadfast Live Fraud Check API
+	 * Queries the Steadfast fraud-check API.
+	 *
+	 * Steadfast meters this endpoint to a small allowance of lookups per account
+	 * and answers 429 once it is gone, so exactly one request is made per call.
+	 * Earlier revisions probed a list of candidate URLs in sequence, which spent
+	 * the entire allowance within a few page loads.
 	 */
 	private static async fetchSteadfastFraud(
 		phone: string,
 		credentials: Record<string, string>
-	): Promise<CourierStatsBreakdown | null> {
+	): Promise<SteadfastFetchResult> {
 		const apiKey = (credentials.apiKey || '').trim();
 		const secretKey = (credentials.secretKey || '').trim();
-		if (!apiKey || !secretKey) return null;
-
-		const cleanPhone = normalizeBdPhone(phone);
-		if (!cleanPhone) return null;
-
-		const endpoints = [
-			`https://portal.packzy.com/api/v1/fraud_check/score/${cleanPhone}`,
-			`https://portal.steadfast.com.bd/api/v1/fraud_check/score/${cleanPhone}`,
-			`https://portal.packzy.com/api/v1/fraud_check/${cleanPhone}`
-		];
-
-		for (const url of endpoints) {
-			try {
-				const res = await fetch(url, {
-					method: 'GET',
-					headers: {
-						'Api-Key': apiKey,
-						'Secret-Key': secretKey,
-						'Content-Type': 'application/json',
-						Accept: 'application/json'
-					},
-					signal: AbortSignal.timeout(6000)
-				});
-
-				if (!res.ok) {
-					console.warn(`Steadfast API ${url} failed with status:`, res.status);
-					continue;
-				}
-
-				const rawText = await res.text();
-				let data: any;
-				try {
-					data = JSON.parse(rawText);
-				} catch {
-					console.warn(`Steadfast API response not JSON from ${url}:`, rawText.slice(0, 200));
-					continue;
-				}
-
-				console.log(`[FraudCheck] Steadfast API response from ${url}:`, JSON.stringify(data).slice(0, 500));
-
-				const parsed = this.extractSteadfastStats(data);
-				if (parsed) return parsed;
-
-				console.warn(`[FraudCheck] No recognizable fraud fields from ${url}, trying next endpoint.`);
-			} catch (err: any) {
-				console.warn(`Steadfast fetch from ${url} error:`, err?.message);
-			}
+		if (!apiKey || !secretKey) {
+			return { ok: false, status: 'not_configured', message: 'Steadfast API Key/Secret কনফিগার করা নেই।' };
 		}
 
-		return null;
+		const cleanPhone = normalizeBdPhone(phone);
+		if (!cleanPhone) {
+			return { ok: false, status: 'unavailable', message: 'ফোন নম্বরটি সঠিক নয়।' };
+		}
+
+		const url = `https://portal.packzy.com/api/v1/fraud_check/score/${cleanPhone}`;
+
+		try {
+			const res = await fetch(url, {
+				method: 'GET',
+				headers: {
+					'Api-Key': apiKey,
+					'Secret-Key': secretKey,
+					'Content-Type': 'application/json',
+					Accept: 'application/json'
+				},
+				signal: AbortSignal.timeout(8000)
+			});
+
+			const rawText = await res.text();
+			let data: any = null;
+			try {
+				data = JSON.parse(rawText);
+			} catch {
+				/* non-JSON body is classified below */
+			}
+
+			if (res.status === 429) {
+				const limit = Number(data?.limit ?? 0);
+				const current = Number(data?.current ?? 0);
+				const detail = limit > 0 ? ` (${current}/${limit})` : '';
+				return {
+					ok: false,
+					status: 'rate_limited',
+					message: `Steadfast ফ্রড চেক লিমিট শেষ${detail}। লিমিট বাড়াতে Steadfast-এর সাথে যোগাযোগ করুন।`
+				};
+			}
+
+			if (res.status === 401 || res.status === 403) {
+				return {
+					ok: false,
+					status: 'auth_failed',
+					message: 'Steadfast API Key/Secret সঠিক নয় অথবা ফ্রড চেক পারমিশন নেই।'
+				};
+			}
+
+			if (!res.ok) {
+				console.warn(`[FraudCheck] Steadfast returned ${res.status}:`, rawText.slice(0, 200));
+				return {
+					ok: false,
+					status: 'unavailable',
+					message: `Steadfast সার্ভার সাড়া দেয়নি (HTTP ${res.status})।`
+				};
+			}
+
+			if (!data) {
+				return { ok: false, status: 'unavailable', message: 'Steadfast থেকে অপ্রত্যাশিত উত্তর এসেছে।' };
+			}
+
+			const parsed = this.extractSteadfastStats(data);
+			if (parsed) return { ok: true, stats: parsed };
+
+			console.warn('[FraudCheck] Unrecognized Steadfast payload:', JSON.stringify(data).slice(0, 500));
+			return { ok: false, status: 'unavailable', message: 'Steadfast ডেটার ফরম্যাট চেনা যায়নি।' };
+		} catch (err: any) {
+			console.warn('[FraudCheck] Steadfast fetch error:', err?.message);
+			return { ok: false, status: 'unavailable', message: 'Steadfast সার্ভারে সংযোগ করা যায়নি।' };
+		}
 	}
 
 	/**
-	 * Steadfast has shipped several shapes for this payload and nests it
-	 * inconsistently, so values are located by key name at any depth rather
-	 * than by a fixed path. Returns null when nothing recognizable is present,
-	 * which lets the caller fall through to the next endpoint instead of
-	 * reporting a real customer as having no history.
+	 * Steadfast nests this payload inconsistently, so values are located by key
+	 * name at any depth rather than by a fixed path. Returns null when nothing
+	 * recognizable is present, so the caller reports an API fault rather than
+	 * describing a real customer as having no delivery history.
 	 */
 	private static extractSteadfastStats(data: any): CourierStatsBreakdown | null {
 		const found = new Map<string, number>();

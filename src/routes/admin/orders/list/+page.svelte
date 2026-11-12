@@ -100,17 +100,21 @@
 
 	let filteredOrders = $derived(
 		orderListOrders.filter((order: any) => {
+			const hasSearch = orderSearchQuery.trim() !== '';
+
 			const matchesStatus =
-				orderListStatusFilter === 'all' ? true : order.status === orderListStatusFilter;
+				hasSearch || orderListStatusFilter === 'all'
+					? true
+					: order.status === orderListStatusFilter;
 
 			const matchesSearch =
-				orderSearchQuery === ''
+				!hasSearch
 					? true
 					: (order.orderNumber || '').toLowerCase().includes(orderSearchQuery.toLowerCase()) ||
 						(order.id || '').toLowerCase().includes(orderSearchQuery.toLowerCase()) ||
 						(order.customerName || '').toLowerCase().includes(orderSearchQuery.toLowerCase()) ||
-						(order.customerPhone || '').includes(orderSearchQuery) ||
-						(order.customerEmail || '').includes(orderSearchQuery) ||
+						(order.customerPhone || '').includes(orderSearchQuery.trim()) ||
+						(order.customerEmail || '').includes(orderSearchQuery.trim()) ||
 						(order.trackingCode || '').toLowerCase().includes(orderSearchQuery.toLowerCase()) ||
 						(order.shippingAddress || '').toLowerCase().includes(orderSearchQuery.toLowerCase());
 

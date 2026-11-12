@@ -59,21 +59,23 @@
 
 	let filteredWebOrders = $derived(
 		webOrders.filter((order: any) => {
+			const hasSearch = orderSearchQuery.trim() !== '';
+
 			const matchesStatus =
-				webStatusFilter === 'all'
+				hasSearch || webStatusFilter === 'all'
 					? true
 					: webStatusFilter === 'good_no_response'
 						? order.status === 'good_no_response' || order.status === 'no_response_3'
 						: order.status === webStatusFilter;
 
 			const matchesSearch =
-				orderSearchQuery === ''
+				!hasSearch
 					? true
 					: (order.orderNumber || '').toLowerCase().includes(orderSearchQuery.toLowerCase()) ||
 						(order.id || '').toLowerCase().includes(orderSearchQuery.toLowerCase()) ||
 						(order.customerName || '').toLowerCase().includes(orderSearchQuery.toLowerCase()) ||
-						(order.customerPhone || '').includes(orderSearchQuery) ||
-						(order.customerEmail || '').includes(orderSearchQuery);
+						(order.customerPhone || '').includes(orderSearchQuery.trim()) ||
+						(order.customerEmail || '').includes(orderSearchQuery.trim());
 
 			const matchesSource =
 				selectedSourceFilter === 'all'

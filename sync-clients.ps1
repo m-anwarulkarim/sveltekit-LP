@@ -82,7 +82,7 @@ foreach ($c in $clients) {
             $results.synced++
 
         } else {
-            # Local project: robocopy src + drizzle -> commit
+            # Local/copy project: robocopy src + drizzle -> commit -> (optionally push)
             Write-Step ">>" "Copying src/..." "Gray"
             robocopy "$CORE\src" "$path\src" /E /IS /IT /NFL /NDL /NJH /NJS | Out-Null
 
@@ -93,8 +93,18 @@ foreach ($c in $clients) {
             if ($changes) {
                 git -C $path add src drizzle
                 git -C $path commit -m "sync: update from core template $(Get-Date -Format 'yyyy-MM-dd')" 2>&1 | Out-Null; $null = $LASTEXITCODE
-                Write-Step "OK" "Committed (local)" "Green"
-                Write-Log "OK (local): $($c.name)"
+
+                # push to GitHub if push:true in config
+                if ($c.push) {
+                    Write-Step ">>" "Pushing to GitHub..." "Gray"
+                    git -C $path push origin $c.branch 2>&1 | Out-Null
+                    if ($LASTEXITCODE -ne 0) { throw "git push failed" }
+                    Write-Step "OK" "Committed + Pushed to GitHub" "Green"
+                    Write-Log "OK (copy+push): $($c.name)"
+                } else {
+                    Write-Step "OK" "Committed (local)" "Green"
+                    Write-Log "OK (local): $($c.name)"
+                }
                 $results.synced++
             } else {
                 Write-Step "--" "No changes" "DarkGray"

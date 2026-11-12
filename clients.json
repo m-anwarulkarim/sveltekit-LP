@@ -2,13 +2,15 @@
   {
     "name": "faris shop new",
     "branch": "main",
-    "github": true,
+    "github": false,
+    "push": true,
     "note": "Faris local shop project"
-  }
-  ,{
+  },
+  {
     "name": "poltisheba",
     "branch": "main",
-    "github": true,
+    "github": false,
+    "push": true,
     "note": "Poltisheba project"
   }
 ]

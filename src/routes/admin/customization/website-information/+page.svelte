@@ -24,7 +24,7 @@
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	// Initialize states from loaded data
-	let websiteName = $state(data.websiteInfo?.websiteName || 'thecolorlighthouse');
+	let websiteName = $state(data.websiteInfo?.websiteName || 'haqplus');
 	let shortDescription = $state(data.websiteInfo?.shortDescription || '');
 	let whatsappNumber = $state(data.websiteInfo?.whatsappNumber || '');
 
@@ -33,7 +33,7 @@
 	);
 
 	let emails = $state<string[]>(
-		data.websiteInfo?.emails?.length ? [...data.websiteInfo.emails] : ['support@thecolorlighthouse.com']
+		data.websiteInfo?.emails?.length ? [...data.websiteInfo.emails] : ['support@haqplus.com']
 	);
 
 	let logoUrl = $state(data.websiteInfo?.logoUrl || '/images/products/window-sticker.svg');

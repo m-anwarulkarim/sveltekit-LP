@@ -23,6 +23,7 @@ export interface ThemeViewsConfig {
 	productCard: string; // e.g. 'product_card_3'
 	bottomNav: string; // e.g. 'bottom_nav_1'
 	footer: string; // e.g. 'footer_1'
+	showAllProducts: boolean; // show all products section with load more
 }
 
 export interface ThemePageViewsConfig {
@@ -58,7 +59,8 @@ export const DEFAULT_THEME_CONFIG: CompleteThemeConfig = {
 		productSections: ['tag'],
 		productCard: 'product_card_3',
 		bottomNav: 'bottom_nav_1',
-		footer: 'footer_1'
+		footer: 'footer_1',
+		showAllProducts: false
 	},
 	pageViews: {
 		checkout: 'checkout_2',

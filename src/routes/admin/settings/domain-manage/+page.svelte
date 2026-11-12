@@ -10,8 +10,8 @@
 	let isSaved = $state(false);
 	let saveMessage = $state('Domain Settings Saved!');
 
-	let primaryDomain = $state(saved.primaryDomain ?? 'thecolorlighthouse.com');
-	let defaultSubdomain = $state(saved.defaultSubdomain ?? 'thecolorlight.saleecom.com');
+	let primaryDomain = $state(saved.primaryDomain ?? 'haqplus.com');
+	let defaultSubdomain = $state(saved.defaultSubdomain ?? 'haqplus.saleecom.com');
 	let forceHttps = $state(saved.forceHttps ?? true);
 	let redirectWww = $state(saved.redirectWww ?? true);
 	let sslStatus = $state(saved.sslStatus ?? 'Active (Cloudflare Universal SSL)');

@@ -89,7 +89,7 @@
 					<polyline points="9 21 9 12 15 12 15 21" />
 				</svg>
 				<span class="text-[6.5px] font-black text-pink-500 uppercase tracking-tighter leading-none -mt-0.5">
-					COLOR LIGHT
+					Haq Plus
 				</span>
 			</div>
 		</a>

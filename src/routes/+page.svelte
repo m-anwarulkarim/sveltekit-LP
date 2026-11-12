@@ -3,6 +3,7 @@
 	import DynamicShowcase from '#lib/modules/layout/showcases/DynamicShowcase.svelte';
 	import DynamicCategoryView from '#lib/modules/layout/category-views/DynamicCategoryView.svelte';
 	import ProductSection from '#lib/modules/products/components/ProductSection.svelte';
+	import AllProductsSection from '#lib/modules/products/components/AllProductsSection.svelte';
 	import {
 		getBestSaleProducts,
 		getNewArrivals,
@@ -101,4 +102,10 @@
 			seeAllLink="/catalog/all-product?filter=popular"
 		/>
 	</LazySection>
+
+	{#if data.themeConfig?.views?.showAllProducts}
+		<LazySection>
+			<AllProductsSection products={allProducts} pageSize={20} />
+		</LazySection>
+	{/if}
 </StoreLayout>

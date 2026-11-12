@@ -6,7 +6,7 @@ const page = makeSettingsPage('blog', {
 	postsPerPage: 9,
 	enableComments: true,
 	autoApproveComments: false,
-	blogTitle: 'The Color Light - Articles & Tips',
+	blogTitle: 'Haq Plus - Articles & Tips',
 });
 
 export const load: PageServerLoad = page.load;

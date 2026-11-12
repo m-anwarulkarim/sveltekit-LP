@@ -14,7 +14,7 @@
 	let postsPerPage = $state(saved.postsPerPage ?? 9);
 	let enableComments = $state(saved.enableComments ?? true);
 	let autoApproveComments = $state(saved.autoApproveComments ?? false);
-	let blogTitle = $state(saved.blogTitle ?? 'The Color Light - Articles & Tips');
+	let blogTitle = $state(saved.blogTitle ?? 'Haq Plus - Articles & Tips');
 
 	let isSaving = $state(false);
 	async function triggerSave(msg = 'Blog Settings Saved!') {

@@ -820,10 +820,10 @@
 								<td class="py-3.5 px-4">
 									<div class="flex items-center gap-3">
 										<div class="w-9 h-9 rounded-xl {admin.avatarBg} flex items-center justify-center font-black text-[9px] tracking-tight shadow-2xs border shrink-0">
-											{#if admin.avatarText === 'COLOR LIGHT'}
+											{#if admin.avatarText === 'Haq Plus'}
 												<div class="flex flex-col items-center leading-none text-center">
-													<span class="text-[7px] text-pink-400">COLOR</span>
-													<span class="text-[7px] text-pink-500">LIGHT</span>
+													<span class="text-[7px] text-pink-400">Haq</span>
+													<span class="text-[7px] text-pink-500">Plus</span>
 												</div>
 											{:else}
 												<span>{admin.avatarText}</span>

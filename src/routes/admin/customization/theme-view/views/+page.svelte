@@ -12,7 +12,7 @@
 	import DynamicBottomNav from '#lib/modules/layout/bottom-navs/DynamicBottomNav.svelte';
 	import { productsData } from '#lib/modules/products/products.data';
 	import { CATEGORIES_DATA } from '#lib/modules/products/categories.data';
-	import { Flame, Sparkles, Tag, ArrowRight, Clock, Eye } from 'lucide-svelte';
+	import { Flame, Sparkles, Tag, ArrowRight, Clock, Eye, LayoutGrid } from 'lucide-svelte';
 
 	let { data, form }: { data: any; form: any } = $props();
 
@@ -37,6 +37,7 @@
 	let selectedProductCard = $state(views.productCard);
 	let selectedBottomNav = $state(views.bottomNav);
 	let selectedFooter = $state(views.footer);
+	let showAllProducts = $state<boolean>(views.showAllProducts ?? false);
 
 	// Universal Reusable Component Preview Modal State
 	type PreviewType = 'header' | 'footer' | 'showcase' | 'category' | 'product_section' | 'product_card' | 'bottom_nav';
@@ -61,6 +62,7 @@
 			selectedProductCard = views.productCard;
 			selectedBottomNav = views.bottomNav;
 			selectedFooter = views.footer;
+			showAllProducts = views.showAllProducts ?? false;
 		}
 	});
 
@@ -118,6 +120,7 @@
 	<input type="hidden" name="productCard" value={selectedProductCard} />
 	<input type="hidden" name="bottomNav" value={selectedBottomNav} />
 	<input type="hidden" name="footer" value={selectedFooter} />
+	<input type="hidden" name="showAllProducts" value={String(showAllProducts)} />
 
 	<!-- 1. Header Section -->
 	<ThemeSectionContainer
@@ -482,6 +485,38 @@
 			onPreview={() => openPreview('footer', 'footer_7', 'Footer 7 (Compact Quick Strip)')}
 		/>
 	</ThemeSectionContainer>
+	<!-- 8. All Products Section Toggle -->
+	<div class="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+		<div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+			<div class="flex items-center gap-3">
+				<div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+					<LayoutGrid class="w-5 h-5" />
+				</div>
+				<div>
+					<h3 class="text-sm font-black text-slate-900">All Products Section</h3>
+					<p class="text-xs text-slate-500">হোমপেজের শেষে সব পণ্য দেখানো হবে (Load More সহ)</p>
+				</div>
+			</div>
+			<button
+				type="button"
+				role="switch"
+				aria-checked={showAllProducts}
+				onclick={() => (showAllProducts = !showAllProducts)}
+				class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none {showAllProducts ? 'bg-slate-900' : 'bg-slate-200'}"
+			>
+				<span
+					class="pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200 {showAllProducts ? 'translate-x-5' : 'translate-x-0'}"
+				></span>
+			</button>
+		</div>
+		<div class="px-5 py-3 bg-slate-50/60 flex items-center gap-4 text-xs text-slate-500">
+			<span class="flex items-center gap-1.5">
+				<span class="w-2 h-2 rounded-full {showAllProducts ? 'bg-green-500' : 'bg-slate-300'}"></span>
+				{showAllProducts ? 'চালু — হোমপেজে সব পণ্য দেখাবে' : 'বন্ধ — সেকশনটি লুকানো থাকবে'}
+			</span>
+			<span>প্রতিবার ২০টি করে লোড হবে</span>
+		</div>
+	</div>
 </form>
 
 <!-- Single Reusable Universal Component Preview Modal -->

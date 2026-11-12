@@ -50,14 +50,14 @@ export class AdminProfileService {
 			const adm = owner[0];
 			return {
 				id: adm.id,
-				name: adm.name || 'Thecolorlighthouse',
-				username: adm.username || 'thecolorlighthouse',
-				email: adm.email || 'contact@thecolorlighthouse.com',
+				name: adm.name || 'Haq Plus',
+				username: adm.username || 'haqplus',
+				email: adm.email || 'contact@haqplus.com',
 				phone: adm.phone || '01780081623',
 				role: adm.role || 'OWNER',
 				avatarUrl: R2Service.resolvePublicUrl(adm.avatarUrl),
 				avatarBg: adm.avatarBg || 'bg-black text-pink-500 border-pink-500/40',
-				avatarText: adm.avatarText || 'COLOR LIGHT',
+				avatarText: adm.avatarText || 'Haq Plus',
 				hasPassword: Boolean(adm.passwordHash),
 				createdAt: adm.createdAt ? new Date(adm.createdAt) : new Date('2025-09-03'),
 				updatedAt: adm.updatedAt ? new Date(adm.updatedAt) : new Date()
@@ -67,14 +67,14 @@ export class AdminProfileService {
 		// Fallback default
 		return {
 			id: '1',
-			name: 'Thecolorlighthouse',
-			username: 'thecolorlighthouse',
-			email: 'admin@thecolorlighthouse.com',
+			name: 'Haq Plus',
+			username: 'haqplus',
+			email: 'admin@haqplus.com',
 			phone: '01780081623',
 			role: 'OWNER',
 			avatarUrl: null,
 			avatarBg: 'bg-black text-pink-500 border-pink-500/40',
-			avatarText: 'COLOR LIGHT',
+			avatarText: 'Haq Plus',
 			hasPassword: true,
 			createdAt: new Date('2025-09-03'),
 			updatedAt: new Date()

@@ -183,17 +183,14 @@
 							}}
 						/>
 					{:else}
-						<!-- Exact "COLOR LIGHT HOUSE" Logo -->
+						<!-- Haq Plus Logo -->
 						<div class="flex flex-col items-center justify-center select-none">
 							<div class="p-2 rounded bg-pink-950/40 border border-pink-500/20">
 								<div class="text-[13px] font-black uppercase tracking-wider text-pink-400 leading-none">
-									COLOR
+									Haq
 								</div>
 								<div class="text-[14px] font-black uppercase tracking-widest text-pink-500 leading-tight mt-0.5">
-									LIGHT
-								</div>
-								<div class="text-[8px] font-bold uppercase tracking-[0.25em] text-pink-300/80 leading-none mt-0.5">
-									HOUSE
+									Plus
 								</div>
 							</div>
 						</div>

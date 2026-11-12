@@ -19,6 +19,7 @@ export const actions: Actions = {
 		const bottomNav = data.get('bottomNav')?.toString() || 'bottom_nav_1';
 		const footer = data.get('footer')?.toString() || 'footer_1';
 		const productSectionsJson = data.get('productSections')?.toString() || '["tag"]';
+		const showAllProducts = data.get('showAllProducts') === 'true';
 
 		let productSections = ['tag'];
 		try {
@@ -36,7 +37,8 @@ export const actions: Actions = {
 				productCard,
 				bottomNav,
 				footer,
-				productSections
+				productSections,
+				showAllProducts
 			});
 
 			return {

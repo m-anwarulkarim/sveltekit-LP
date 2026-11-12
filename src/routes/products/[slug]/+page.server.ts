@@ -79,7 +79,9 @@ export const load: PageServerLoad = async (event) => {
 				description: sanitizeRichText(rawProduct.description) || rawProduct.name,
 				inStock: Boolean(rawProduct.inStock),
 				totalStock: rawProduct.totalStock !== undefined && rawProduct.totalStock !== null ? Number(rawProduct.totalStock) : 0,
-				isPreOrder: Boolean(rawProduct.isPreOrder)
+				isPreOrder: Boolean(rawProduct.isPreOrder),
+				enableBundle: Boolean(rawProduct.enableBundle),
+				bundleUnitLabel: rawProduct.bundleUnitLabel || ''
 			};
 
 			// Query related products from same category or published products

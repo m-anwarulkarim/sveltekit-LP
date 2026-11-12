@@ -43,6 +43,8 @@ export interface AdminProduct {
 	openingStock?: number;
 	sku?: string;
 	isPreOrder?: boolean;
+	enableBundle?: boolean;
+	bundleUnitLabel?: string;
 	isWholesale?: boolean;
 	landingPageLink?: string;
 	urgencyMessage?: string;

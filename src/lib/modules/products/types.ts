@@ -21,4 +21,6 @@ export interface Product {
 	inStock?: boolean;
 	totalStock?: number;
 	isPreOrder?: boolean;
+	enableBundle?: boolean;
+	bundleUnitLabel?: string;
 }

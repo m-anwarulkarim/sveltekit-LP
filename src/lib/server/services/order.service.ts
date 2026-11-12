@@ -19,6 +19,7 @@ import {
 	computeDeliveryCharge,
 	computeOfferDiscount,
 	getBundlePrice,
+	getBundlesWithLabel,
 	parseCartItemId
 } from '../../utils/order-pricing';
 
@@ -178,9 +179,13 @@ export class OrderService {
 			}
 
 			const isBundle = line.bundle.id !== 'standard';
+			if (isBundle && !product.enableBundle) {
+				throw new OrderValidationError(`"${product.name}" পণ্যে এখন প্যাকেজ অফার চালু নেই। কার্ট থেকে সরিয়ে আবার যোগ করুন।`);
+			}
+			const bundleName = getBundlesWithLabel(product.bundleUnitLabel).find((b) => b.id === line.bundle.id)?.name ?? line.bundle.name;
 			items.push({
 				id: line.id,
-				name: isBundle ? `${product.name} [${line.bundle.name}]` : product.name,
+				name: isBundle ? `${product.name} [${bundleName}]` : product.name,
 				price: getBundlePrice(variant?.price ?? product.price, line.bundle),
 				quantity: line.quantity,
 				variantId: variant?.id ?? null,

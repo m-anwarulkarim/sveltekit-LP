@@ -74,9 +74,10 @@
 	const storeName = $derived(websiteInfo?.websiteName || 'Store');
 
 	// URL-driven active tab (never stale on direct navigation or refresh)
-	const activeTab = $derived.by<'home' | 'categories' | 'account' | null>(() => {
+	const activeTab = $derived.by<'home' | 'products' | 'categories' | 'account' | null>(() => {
 		const p = page.url.pathname;
 		if (p === '/') return 'home';
+		if (p === '/catalog/all-product' || p.startsWith('/products')) return 'products';
 		if (p.startsWith('/catalog') || p.startsWith('/categories')) return 'categories';
 		if (p.startsWith('/account') || p.startsWith('/auth')) return 'account';
 		return null;
@@ -433,12 +434,12 @@
 						<Home class="w-3.5 h-3.5 {activeTab === 'home' ? 'text-[#5845eb]' : 'text-slate-400 group-hover:text-[#5845eb]'} transition-colors" />
 						<span>হোম</span>
 					</a>
-					<a href="/catalog/all-product" class={desktopNavClass(page.url.pathname.startsWith('/catalog'))}>
-						<Package class="w-3.5 h-3.5 {page.url.pathname.startsWith('/catalog') ? 'text-[#5845eb]' : 'text-slate-400 group-hover:text-[#5845eb]'} transition-colors" />
+					<a href="/catalog/all-product" class={desktopNavClass(page.url.pathname === '/catalog/all-product' || page.url.pathname.startsWith('/products'))}>
+						<Package class="w-3.5 h-3.5 {page.url.pathname === '/catalog/all-product' || page.url.pathname.startsWith('/products') ? 'text-[#5845eb]' : 'text-slate-400 group-hover:text-[#5845eb]'} transition-colors" />
 						<span>সকল পণ্য</span>
 					</a>
-					<a href="/catalog/all-category" class={desktopNavClass(page.url.pathname.startsWith('/categories'))}>
-						<LayoutGrid class="w-3.5 h-3.5 {page.url.pathname.startsWith('/categories') ? 'text-[#5845eb]' : 'text-slate-400 group-hover:text-[#5845eb]'} transition-colors" />
+					<a href="/catalog/all-category" class={desktopNavClass(page.url.pathname.startsWith('/catalog/all-category') || page.url.pathname.startsWith('/categories'))}>
+						<LayoutGrid class="w-3.5 h-3.5 {page.url.pathname.startsWith('/catalog/all-category') || page.url.pathname.startsWith('/categories') ? 'text-[#5845eb]' : 'text-slate-400 group-hover:text-[#5845eb]'} transition-colors" />
 						<span>ক্যাটাগরি</span>
 					</a>
 					<a href={user ? '/account' : '/auth/login'} class={desktopNavClass(activeTab === 'account')}>
@@ -601,13 +602,13 @@
 			type="button"
 			onclick={() => (isMobileDrawerOpen = true)}
 			class="flex flex-col items-center justify-center gap-0.5 min-h-[56px] flex-1 relative transition-colors cursor-pointer
-				{activeTab === 'categories' ? 'text-[#5845eb]' : 'text-slate-500'}"
+				{activeTab === 'categories' || activeTab === 'products' ? 'text-[#5845eb]' : 'text-slate-500'}"
 		>
-			{#if activeTab === 'categories'}
+			{#if activeTab === 'categories' || activeTab === 'products'}
 				<span class="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-0.5 rounded-b-full bg-[#5845eb]"></span>
 			{/if}
-			<div class="p-1 rounded-xl transition-colors {activeTab === 'categories' ? 'bg-indigo-50' : ''}">
-				<LayoutGrid class="w-5 h-5 {activeTab === 'categories' ? 'stroke-[2.5]' : 'stroke-[1.8]'}" />
+			<div class="p-1 rounded-xl transition-colors {activeTab === 'categories' || activeTab === 'products' ? 'bg-indigo-50' : ''}">
+				<LayoutGrid class="w-5 h-5 {activeTab === 'categories' || activeTab === 'products' ? 'stroke-[2.5]' : 'stroke-[1.8]'}" />
 			</div>
 			<span class="text-[10px] font-bold leading-none">ক্যাটাগরি</span>
 		</button>

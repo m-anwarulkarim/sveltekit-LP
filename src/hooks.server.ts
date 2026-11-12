@@ -399,6 +399,15 @@ export const handleError: HandleServerError = (input) => {
 	// Anything else is unexpected: log the details and show the visitor only a reference.
 	const errorId = crypto.randomUUID();
 	console.error(`SERVER ERROR ${errorId} AT`, input.event.url.pathname, ':', input.error);
+
+	if (dev) {
+		const err = input.error as any;
+		return {
+			message: err?.message || String(input.error || 'সার্ভারে একটি সমস্যা হয়েছে।'),
+			errorId
+		};
+	}
+
 	return {
 		message: 'সার্ভারে একটি সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।',
 		errorId

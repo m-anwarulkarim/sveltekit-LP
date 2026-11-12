@@ -73,6 +73,8 @@ export const productInputSchema = z
 		status: z.enum(['published', 'draft', 'archived']).default('published'),
 		isPreOrder: z.boolean().nullish(),
 		isWholesale: z.boolean().nullish(),
+		enableBundle: z.boolean().nullish(),
+		bundleUnitLabel: text('বান্ডেল ইউনিট', 20).nullish(),
 		enableProcessing: z.boolean().nullish(),
 		urgencyMessage: text('জরুরি বার্তা', 300).nullish(),
 		processingOptions: z.array(text('Processing অপশন', 100).min(1)).max(20).nullish(),

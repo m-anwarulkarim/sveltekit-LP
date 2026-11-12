@@ -46,6 +46,18 @@
 
 	type TabId = 'description' | 'specifications' | 'reviews' | 'shipping';
 	let activeTab = $state<TabId>('description');
+
+	const tabs = $derived([
+		{ id: 'description' as const, icon: FileText, short: 'বিবরণী', long: 'পণ্য বিবরণী' },
+		{ id: 'specifications' as const, icon: Sliders, short: 'স্পেসিফিকেশন', long: 'স্পেসিফিকেশন' },
+		{
+			id: 'reviews' as const,
+			icon: MessageSquare,
+			short: `রিভিউ (${product.reviewsCount})`,
+			long: `রিভিউ ও রেটিং (${product.reviewsCount})`
+		},
+		{ id: 'shipping' as const, icon: Truck, short: 'ডেলিভারি', long: 'ডেলিভারি ও রিটার্ন' }
+	]);
 	let isWritingReview = $state(false);
 	let newRating = $state(5);
 	let isSubmitting = $state(false);
@@ -53,39 +65,19 @@
 
 <div class="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden font-['Anek_Bangla',sans-serif]">
 	<Tabs bind:value={activeTab} defaultValue="description" class="w-full">
-		<!-- Tab Bar using shadcn TabsList and TabsTrigger -->
-		<TabsList class="w-full justify-start h-auto p-0 bg-slate-50/70 border-b border-slate-200/80 rounded-none overflow-x-auto no-scrollbar px-2 sm:px-4">
-			<TabsTrigger
-				value="description"
-				class="px-4 py-3 sm:py-4 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 rounded-none transition-all cursor-pointer shrink-0 data-[state=active]:border-[#2563eb] data-[state=active]:text-[#2563eb] data-[state=active]:bg-white data-[state=active]:rounded-t-xl data-[state=active]:shadow-2xs {activeTab === 'description' ? 'border-[#2563eb] text-[#2563eb] bg-white rounded-t-xl shadow-2xs' : 'border-transparent text-slate-600 hover:text-slate-900 bg-transparent shadow-none'}"
-			>
-				<FileText class="w-4 h-4" />
-				<span>পণ্য বিবরণী</span>
-			</TabsTrigger>
-
-			<TabsTrigger
-				value="specifications"
-				class="px-4 py-3 sm:py-4 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 rounded-none transition-all cursor-pointer shrink-0 data-[state=active]:border-[#2563eb] data-[state=active]:text-[#2563eb] data-[state=active]:bg-white data-[state=active]:rounded-t-xl data-[state=active]:shadow-2xs {activeTab === 'specifications' ? 'border-[#2563eb] text-[#2563eb] bg-white rounded-t-xl shadow-2xs' : 'border-transparent text-slate-600 hover:text-slate-900 bg-transparent shadow-none'}"
-			>
-				<Sliders class="w-4 h-4" />
-				<span>স্পেসিফিকেশন</span>
-			</TabsTrigger>
-
-			<TabsTrigger
-				value="reviews"
-				class="px-4 py-3 sm:py-4 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 rounded-none transition-all cursor-pointer shrink-0 data-[state=active]:border-[#2563eb] data-[state=active]:text-[#2563eb] data-[state=active]:bg-white data-[state=active]:rounded-t-xl data-[state=active]:shadow-2xs {activeTab === 'reviews' ? 'border-[#2563eb] text-[#2563eb] bg-white rounded-t-xl shadow-2xs' : 'border-transparent text-slate-600 hover:text-slate-900 bg-transparent shadow-none'}"
-			>
-				<MessageSquare class="w-4 h-4" />
-				<span>রিভিউ ও রেটিং ({product.reviewsCount})</span>
-			</TabsTrigger>
-
-			<TabsTrigger
-				value="shipping"
-				class="px-4 py-3 sm:py-4 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 rounded-none transition-all cursor-pointer shrink-0 data-[state=active]:border-[#2563eb] data-[state=active]:text-[#2563eb] data-[state=active]:bg-white data-[state=active]:rounded-t-xl data-[state=active]:shadow-2xs {activeTab === 'shipping' ? 'border-[#2563eb] text-[#2563eb] bg-white rounded-t-xl shadow-2xs' : 'border-transparent text-slate-600 hover:text-slate-900 bg-transparent shadow-none'}"
-			>
-				<Truck class="w-4 h-4" />
-				<span>ডেলিভারি ও রিটার্ন</span>
-			</TabsTrigger>
+		<!-- Tab bar: 4 equal columns on phones, a scrollable row from sm up -->
+		<TabsList class="grid grid-cols-4 gap-0.5 w-full h-auto p-1 rounded-none bg-slate-50/70 border-b border-slate-200/80 sm:flex sm:justify-start sm:gap-1 sm:overflow-x-auto sm:no-scrollbar sm:px-4">
+			{#each tabs as tab (tab.id)}
+				{@const Icon = tab.icon}
+				<TabsTrigger
+					value={tab.id}
+					class="flex-col gap-1 px-0.5 py-2 text-[10.5px] leading-tight font-bold text-center whitespace-normal rounded-lg sm:flex-row sm:gap-2 sm:px-4 sm:py-3.5 sm:text-sm sm:whitespace-nowrap sm:shrink-0 {activeTab === tab.id ? 'bg-white text-[#2563eb] shadow-sm' : 'text-slate-600'}"
+				>
+					<Icon class="w-4 h-4 shrink-0" />
+					<span class="sm:hidden">{tab.short}</span>
+					<span class="hidden sm:inline">{tab.long}</span>
+				</TabsTrigger>
+			{/each}
 		</TabsList>
 
 		<!-- Tab Contents using shadcn TabsContent -->
@@ -97,7 +89,7 @@
 						<h3 class="text-base sm:text-lg font-bold text-slate-900">
 							{product.name} সম্পর্কে বিস্তারিত:
 						</h3>
-						<div class="prose prose-slate max-w-none text-sm text-slate-700 leading-relaxed font-['Anek_Bangla',sans-serif]">
+						<div class="prose prose-slate max-w-none text-sm text-slate-700 leading-relaxed break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:block [&_table]:overflow-x-auto [&_iframe]:max-w-full font-['Anek_Bangla',sans-serif]">
 							{#if product.description}
 								{@html product.description}
 							{:else}
@@ -152,7 +144,7 @@
 						</div>
 						<div class="grid grid-cols-3 p-3 bg-slate-50/50">
 							<span class="font-bold text-slate-500">স্টক অবস্থা</span>
-							<span class="col-span-2 text-emerald-600 font-bold">ইন স্টক (সরাসরি রেডি টু শিপ)</span>
+							<span class="col-span-2 font-bold {product.inStock === false && !product.isPreOrder ? 'text-rose-600' : 'text-emerald-600'}">{product.isPreOrder ? 'প্রি-অর্ডার' : product.inStock === false ? 'স্টক শেষ' : 'ইন স্টক (সরাসরি রেডি টু শিপ)'}</span>
 						</div>
 						<div class="grid grid-cols-3 p-3">
 							<span class="font-bold text-slate-500">ডেলিভারি সময়সীমা</span>

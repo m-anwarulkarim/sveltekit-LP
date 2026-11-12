@@ -39,6 +39,8 @@
 	let slug = $state(initialProduct?.slug || '');
 	let autoSlug = $state(!initialProduct?.slug);
 	let isPreOrder = $state(initialProduct?.isPreOrder || false);
+	let enableBundle = $state(initialProduct?.enableBundle || false);
+	let bundleUnitLabel = $state(initialProduct?.bundleUnitLabel || '');
 	let description = $state(initialProduct?.description || '');
 
 	// Price & Stock
@@ -162,6 +164,8 @@
 			description,
 			status,
 			isPreOrder,
+			enableBundle,
+			bundleUnitLabel: bundleUnitLabel.trim(),
 			isWholesale,
 			urgencyMessage,
 			enableProcessing,
@@ -287,6 +291,8 @@
 				bind:slug
 				bind:autoSlug
 				bind:isPreOrder
+				bind:enableBundle
+				bind:bundleUnitLabel
 				bind:description
 			/>
 

@@ -39,6 +39,8 @@ export const products = sqliteTable(
 		priority: text('priority').default('-'),
 		isPreOrder: integer('is_pre_order', { mode: 'boolean' }).notNull().default(false),
 		isWholesale: integer('is_wholesale', { mode: 'boolean' }).notNull().default(false),
+		enableBundle: integer('enable_bundle', { mode: 'boolean' }).notNull().default(false),
+		bundleUnitLabel: text('bundle_unit_label'), // 'প্যাকেট' | 'পিস' | 'বক্স'
 		urgencyMessage: text('urgency_message'),
 
 		// Processing Fees

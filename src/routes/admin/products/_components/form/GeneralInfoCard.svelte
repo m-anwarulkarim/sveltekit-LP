@@ -1,12 +1,15 @@
 <script lang="ts">
 	import RichTextEditor from './RichTextEditor.svelte';
 	import { slugify } from '#lib/utils/slug';
+	import { Input } from '#lib/components/ui';
 
 	interface Props {
 		name: string;
 		slug: string;
 		autoSlug: boolean;
 		isPreOrder: boolean;
+		enableBundle: boolean;
+		bundleUnitLabel: string;
 		description: string;
 	}
 
@@ -15,6 +18,8 @@
 		slug = $bindable(''),
 		autoSlug = $bindable(true),
 		isPreOrder = $bindable(false),
+		enableBundle = $bindable(false),
+		bundleUnitLabel = $bindable(''),
 		description = $bindable('')
 	}: Props = $props();
 
@@ -56,6 +61,36 @@
 				<span>Is Pre-Order</span>
 			</label>
 		</div>
+	</div>
+
+	<!-- Package / Bundle Offer (per product) -->
+	<div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
+		<label class="flex items-start gap-3 cursor-pointer select-none">
+			<input
+				type="checkbox"
+				bind:checked={enableBundle}
+				class="w-4 h-4 mt-0.5 rounded text-[#5845eb] focus:ring-[#5845eb] border-slate-300"
+			/>
+			<span>
+				<span class="block text-sm font-bold text-slate-800">প্যাকেজ অফার চালু করুন (Package Offer)</span>
+				<span class="block text-[11px] text-slate-500 mt-0.5">চালু করলে প্রোডাক্ট পেজে ১ / ২ / ৩ ইউনিটের প্যাকেজ নির্বাচনের অপশন দেখাবে (২ ইউনিটে ১০%, ৩ ইউনিটে ১৫% ছাড়)। বন্ধ রাখলে কোনো প্যাকেজ দেখাবে না।</span>
+			</span>
+		</label>
+		{#if enableBundle}
+			<div class="flex flex-wrap items-center gap-3 pl-7">
+				<label for="bundle-unit-input" class="text-xs font-bold text-slate-700">ইউনিটের নাম:</label>
+				<Input
+					id="bundle-unit-input"
+					bind:value={bundleUnitLabel}
+					maxlength={20}
+					placeholder="প্যাকেট"
+					class="w-40 h-9 text-sm"
+				/>
+				<span class="text-[11px] text-slate-500">
+					প্রিভিউ: ১ {bundleUnitLabel || 'প্যাকেট'} • ২ {bundleUnitLabel || 'প্যাকেট'} • ৩ {bundleUnitLabel || 'প্যাকেট'}
+				</span>
+			</div>
+		{/if}
 	</div>
 
 	<!-- Product Name -->

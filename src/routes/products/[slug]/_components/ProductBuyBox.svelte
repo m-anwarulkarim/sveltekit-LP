@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { PRODUCT_BUNDLES, getBundlePrice } from '#lib/utils/order-pricing';
+	import { PRODUCT_BUNDLES, getBundlePrice, getBundlesWithLabel } from '#lib/utils/order-pricing';
+	import type { ProductBundle } from '#lib/utils/order-pricing';
 	import type { Product } from '#lib/modules/products/types.ts';
 	import { cart } from '#lib/modules/cart/cart.svelte';
 	import { Button, Badge, Separator } from '#lib/components/ui';
@@ -37,10 +38,15 @@
 	let quantity = $state(1);
 	let isAdded = $state(false);
 
-	const variantOptions = PRODUCT_BUNDLES;
+	const showBundles = $derived(Boolean(product.enableBundle));
+	const variantOptions = $derived(
+		showBundles
+			? getBundlesWithLabel(product.bundleUnitLabel)
+			: PRODUCT_BUNDLES
+	);
 
 	let selectedVariantId = $state('standard');
-	const selectedVariant = $derived(
+	const selectedVariant: ProductBundle = $derived(
 		variantOptions.find((v) => v.id === selectedVariantId) || variantOptions[0]
 	);
 
@@ -145,7 +151,7 @@
 		{:else}
 			<Badge variant="outline" class="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border-emerald-200 px-2.5 py-1 rounded-full">
 				<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-				<span>ইন স্টক (মজুদ আছে)</span>
+				<span>ইন স্টক</span>
 			</Badge>
 		{/if}
 	</div>
@@ -211,7 +217,8 @@
 		</div>
 	</div>
 
-	<!-- Variant Selector using shadcn Button components -->
+	<!-- Variant / Bundle Selector (Only shown when the product has packages enabled) -->
+	{#if showBundles}
 	<div class="space-y-2">
 		<span class="text-xs font-bold text-slate-700 block">
 			প্যাকেজ / ভ্যারিয়েন্ট নির্বাচন করুন:
@@ -235,6 +242,7 @@
 			{/each}
 		</div>
 	</div>
+	{/if}
 
 	<!-- Quantity Selector -->
 	<div class="flex items-center gap-4 pt-1">

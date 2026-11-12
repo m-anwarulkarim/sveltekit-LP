@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { PRODUCT_BUNDLES, getBundlePrice, computeDeliveryCharge } from '#lib/utils/order-pricing';
+	import { PRODUCT_BUNDLES, getBundlePrice, getBundlesWithLabel, computeDeliveryCharge } from '#lib/utils/order-pricing';
 	import type { Product } from '#lib/modules/products/types';
 	import { submitAction } from '#lib/client/submit-action';
 	import { network } from '#lib/stores/network.svelte';
@@ -79,14 +79,19 @@
 	);
 
 	// Variant / Package options
-	const variantOptions = PRODUCT_BUNDLES;
+	const showBundles = $derived(Boolean(product.enableBundle));
+	const variantOptions = $derived(
+		showBundles
+			? getBundlesWithLabel(product.bundleUnitLabel)
+			: PRODUCT_BUNDLES
+	);
 	let selectedVariantId = $state('standard');
 	const selectedVariant = $derived(
 		variantOptions.find((v) => v.id === selectedVariantId) || variantOptions[0]
 	);
 
-	// Quantity state
-	let quantity = $state(1);
+	// One product per order; the package tiers carry the multiple units.
+	const quantity = 1;
 
 	// Dynamic Price Calculation
 	const singleVariantPrice = $derived(getBundlePrice(product.price, selectedVariant));
@@ -111,39 +116,6 @@
 		return `৳${amount.toLocaleString('en-BD')}`;
 	}
 
-	function increment() {
-		quantity += 1;
-	}
-
-	function decrement() {
-		if (quantity > 1) quantity -= 1;
-	}
-
-	function handleAddToCart() {
-		if (isOutOfStock) {
-			toast.warning(`"${product.name}" পণ্যটি বর্তমানে স্টক আউট!`);
-			return;
-		}
-		for (let i = 0; i < quantity; i++) {
-			cart.addItem({
-				id: selectedVariant.id === 'standard' ? product.id : `${product.id}-${selectedVariant.id}`,
-				name:
-					selectedVariant.id === 'standard'
-						? product.name
-						: `${product.name} [${selectedVariant.name}]`,
-				price: singleVariantPrice,
-				originalPrice: (product.originalPrice || product.price) * selectedVariant.multiplier,
-				image: product.image,
-				category: product.categoryLabel,
-				inStock: product.inStock,
-				totalStock: product.totalStock,
-				isPreOrder: product.isPreOrder
-			});
-		}
-		toast.success(`"${product.name}" শপিং ব্যাগে যোগ করা হয়েছে!`);
-		cart.openCart();
-	}
-
 	// Form fields
 	let customerName = $state('');
 	let customerPhone = $state('');
@@ -158,24 +130,27 @@
 	let errorMessage = $state('');
 
 	// Compute Delivery Charge matching server rules
-	const deliveryFee = $derived(
-		computeDeliveryCharge({
-			subtotal: activePrice,
-			area: district === 'dhaka' ? 'inside_dhaka' : 'outside_dhaka',
-			store: storeConfig,
-			productSettings
-		})
-	);
+	const feeFor = (area: 'inside_dhaka' | 'outside_dhaka') =>
+		computeDeliveryCharge({ subtotal: activePrice, area, store: storeConfig, productSettings });
+	const dhakaFee = $derived(feeFor('inside_dhaka'));
+	const outsideFee = $derived(feeFor('outside_dhaka'));
+	const deliveryFee = $derived(district === 'dhaka' ? dhakaFee : outsideFee);
+
+	const deliveryOptions = $derived([
+		{ key: 'dhaka' as const, label: 'ঢাকার ভিতরে', fee: dhakaFee, time: '১২-২৪ ঘণ্টা' },
+		{ key: 'outside' as const, label: 'ঢাকার বাইরে', fee: outsideFee, time: '২৪-৪৮ ঘণ্টা' }
+	]);
 
 	const grandTotal = $derived(Math.max(0, activePrice + deliveryFee));
 
 	// Contact phone & WhatsApp for instant call/chat
 	const hotlinePhone = $derived(
-		websiteInfo?.contactPhone || storeConfig?.orderPhone || '01700000000'
+		String(websiteInfo?.contactPhone || storeConfig?.hotlinePhone || storeConfig?.orderPhone || '').trim()
 	);
-	const hotlineWhatsApp = $derived(
-		websiteInfo?.contactPhone ? websiteInfo.contactPhone.replace(/\D/g, '') : '8801700000000'
-	);
+	const hotlineWhatsApp = $derived.by(() => {
+		const digits = hotlinePhone.replace(/\D/g, '');
+		return digits.startsWith('0') ? '88' + digits : digits;
+	});
 
 	// Debounced lead capture for drop-offs
 	let incompleteTimer: any = null;
@@ -301,6 +276,18 @@
 		}
 	}
 
+	// Hide the sticky bar while the order form itself is on screen
+	let formInView = $state(false);
+	$effect(() => {
+		const el = document.getElementById('order-form');
+		if (!el) return;
+		const observer = new IntersectionObserver(([entry]) => (formInView = entry.isIntersecting), {
+			threshold: 0.15
+		});
+		observer.observe(el);
+		return () => observer.disconnect();
+	});
+
 	// Handle Direct Order Submission
 	async function handlePlaceOrder(e?: Event) {
 		if (e) e.preventDefault();
@@ -326,7 +313,7 @@
 		}
 
 		const cleanPhone = customerPhone.trim().replace(/\D/g, '');
-		if (cleanPhone.length < 11) {
+		if (!/^01[3-9]\d{8}$/.test(cleanPhone.replace(/^88/, ''))) {
 			errorMessage = 'অনুগ্রহ করে সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন (যেমন: 017xxxxxxxx)।';
 			const el = document.getElementById('inline-co-phone');
 			if (el) el.focus();
@@ -467,7 +454,7 @@
 	}
 </script>
 
-<div class="space-y-8 font-['Anek_Bangla',sans-serif]">
+<div class="space-y-8 pb-20 lg:pb-0 font-['Anek_Bangla',sans-serif]">
 
 	<!-- 1. Top Section: Product Showcase + Inline Order Form (2-Col Desktop / 1-Col Mobile) -->
 	<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
@@ -477,6 +464,7 @@
 			<ProductGallery {product} />
 
 			<!-- Mobile Quick Call / WhatsApp Bar (Visible on mobile right under gallery) -->
+			{#if hotlinePhone}
 			<div class="flex items-center gap-2 p-3 bg-emerald-50/90 border border-emerald-200 rounded-2xl sm:hidden">
 				<a
 					href="tel:{hotlinePhone}"
@@ -495,6 +483,7 @@
 					<span>হোয়াটসঅ্যাপ</span>
 				</a>
 			</div>
+			{/if}
 
 			<!-- Desktop Highlights Box -->
 			<div class="hidden lg:block bg-slate-50/80 rounded-2xl border border-slate-200/90 p-5 space-y-3">
@@ -549,7 +538,7 @@
 					{:else}
 						<Badge variant="outline" class="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border-emerald-200 px-2.5 py-1 rounded-full">
 							<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-							<span>ইন স্টক (মজুদ আছে)</span>
+							<span>ইন স্টক </span>
 						</Badge>
 					{/if}
 				</div>
@@ -589,80 +578,34 @@
 					{/if}
 				</div>
 
-				<!-- Variant Selector -->
-				<div class="space-y-1.5">
-					<span class="text-xs font-bold text-slate-700 block">
-						প্যাকেজ / ভ্যারিয়েন্ট বেছে নিন:
-					</span>
-					<div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-						{#each variantOptions as variant}
-							{@const isSelected = selectedVariantId === variant.id}
-							<button
-								type="button"
-								onclick={() => (selectedVariantId = variant.id)}
-								class="p-2.5 text-xs font-bold text-left rounded-xl border transition-all flex flex-col items-start gap-0.5 cursor-pointer {isSelected
-									? 'bg-[#2563eb] text-white border-[#2563eb] shadow-xs ring-2 ring-blue-300'
-									: 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'}"
-							>
-								<span>{variant.name}</span>
-								<span class="text-[10px] font-medium {isSelected ? 'text-blue-100' : 'text-slate-400'}">
-									{variant.subtitle}
-								</span>
-							</button>
-						{/each}
+				<!-- Package selector (only when this product has packages enabled) -->
+				{#if showBundles}
+					<div class="space-y-2">
+						<span class="text-xs font-bold text-slate-700 block">প্যাকেজ বেছে নিন:</span>
+						<div class="grid grid-cols-3 gap-2" role="radiogroup" aria-label="প্যাকেজ">
+							{#each variantOptions as variant}
+								{@const isSelected = selectedVariantId === variant.id}
+								<button
+									type="button"
+									role="radio"
+									aria-checked={isSelected}
+									onclick={() => (selectedVariantId = variant.id)}
+									class="p-2 sm:p-3 rounded-xl border text-center transition-all flex flex-col items-center gap-0.5 cursor-pointer {isSelected
+										? 'bg-[#2563eb] text-white border-[#2563eb] shadow-xs ring-2 ring-blue-300'
+										: 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'}"
+								>
+									<span class="text-xs sm:text-sm font-black">{variant.name}</span>
+									<span class="text-[11px] sm:text-xs font-bold font-mono">
+										{formatTaka(getBundlePrice(product.price, variant))}
+									</span>
+									<span class="text-[10px] font-semibold {isSelected ? 'text-blue-100' : variant.discount > 0 ? 'text-rose-600' : 'text-slate-400'}">
+										{variant.subtitle}
+									</span>
+								</button>
+							{/each}
+						</div>
 					</div>
-				</div>
-
-				<!-- Quantity Selector -->
-				<div class="flex items-center justify-between gap-3 pt-1">
-					<span class="text-xs font-bold text-slate-700">পরিমাণ (Quantity):</span>
-					<div class="flex items-center rounded-xl border border-slate-200 bg-slate-50 p-1 shadow-2xs">
-						<button
-							type="button"
-							onclick={decrement}
-							class="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 disabled:opacity-40 flex items-center justify-center cursor-pointer"
-							disabled={quantity <= 1 || isOutOfStock}
-							aria-label="পরিমাণ কমান"
-						>
-							<Minus class="w-3.5 h-3.5" />
-						</button>
-						<span class="w-10 text-center font-black text-sm text-slate-900 font-['Outfit']">
-							{quantity}
-						</span>
-						<button
-							type="button"
-							onclick={increment}
-							class="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 disabled:opacity-40 flex items-center justify-center cursor-pointer"
-							disabled={isOutOfStock}
-							aria-label="পরিমাণ বাড়ান"
-						>
-							<Plus class="w-3.5 h-3.5" />
-						</button>
-					</div>
-				</div>
-
-				<!-- Dual Quick Actions: Add to Cart (Secondary) & Direct Order Scroll (Primary) -->
-				<div class="flex items-center gap-2 pt-2">
-					<button
-						type="button"
-						onclick={handleAddToCart}
-						disabled={isOutOfStock}
-						class="flex-1 py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
-					>
-						<ShoppingBag class="w-4 h-4 text-slate-500" />
-						<span>কার্টে রাখুন</span>
-					</button>
-					<button
-						type="button"
-						onclick={scrollToOrderForm}
-						disabled={isOutOfStock}
-						class="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer disabled:opacity-40"
-					>
-						<Zap class="w-4 h-4 fill-white" />
-						<span>সরাসরি অর্ডার করুন</span>
-					</button>
-				</div>
-
+				{/if}
 			</div>
 
 			<!-- INLINE DIRECT CHECKOUT ORDER FORM (The Poltisheba Style Star Feature) -->
@@ -763,42 +706,32 @@
 					</div>
 
 					<!-- ডেলিভারি এরিয়া বাটন সিলেক্টর (ঢাকা / ঢাকার বাইরে) -->
-					<div>
+										<div>
 						<span class="block text-xs font-bold text-slate-800 mb-1.5">
 							ডেলিভারি এরিয়া বেছে নিন <span class="text-rose-500">*</span>
 						</span>
-						<div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-							<button
-								type="button"
-								onclick={() => (district = 'dhaka')}
-								class="p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between {district === 'dhaka'
-									? 'border-emerald-600 bg-emerald-50/70 shadow-2xs ring-1 ring-emerald-600'
-									: 'border-slate-200 bg-slate-50/60 hover:bg-slate-100'}"
-							>
-								<div>
-									<div class="text-xs font-bold text-slate-900">ঢাকা সিটির ভিতরে</div>
-									<div class="text-[10px] text-slate-500 mt-0.5">ডেলিভারি চার্জ: ৳৬০ (১২-২৪ ঘণ্টা)</div>
-								</div>
-								{#if district === 'dhaka'}
-									<Check class="w-4 h-4 text-emerald-600 stroke-[3]" />
-								{/if}
-							</button>
-
-							<button
-								type="button"
-								onclick={() => (district = 'outside')}
-								class="p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between {district === 'outside'
-									? 'border-emerald-600 bg-emerald-50/70 shadow-2xs ring-1 ring-emerald-600'
-									: 'border-slate-200 bg-slate-50/60 hover:bg-slate-100'}"
-							>
-								<div>
-									<div class="text-xs font-bold text-slate-900">ঢাকার বাহিরে (সারাদেশ)</div>
-									<div class="text-[10px] text-slate-500 mt-0.5">ডেলিভারি চার্জ: ৳১২০ (২৪-৪৮ ঘণ্টা)</div>
-								</div>
-								{#if district === 'outside'}
-									<Check class="w-4 h-4 text-emerald-600 stroke-[3]" />
-								{/if}
-							</button>
+						<div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="ডেলিভারি এরিয়া">
+							{#each deliveryOptions as opt}
+								{@const isSelected = district === opt.key}
+								<button
+									type="button"
+									role="radio"
+									aria-checked={isSelected}
+									onclick={() => (district = opt.key)}
+									class="relative px-2 py-2.5 rounded-xl border text-center transition-all cursor-pointer {isSelected
+										? 'border-emerald-600 bg-emerald-50/70 shadow-2xs ring-1 ring-emerald-600'
+										: 'border-slate-200 bg-slate-50/60 hover:bg-slate-100'}"
+								>
+									{#if isSelected}
+										<Check class="absolute top-1.5 right-1.5 w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+									{/if}
+									<div class="text-xs sm:text-sm font-bold text-slate-900">{opt.label}</div>
+									<div class="text-[11px] text-slate-500 mt-0.5">
+										<span class="font-mono font-bold text-emerald-700">{opt.fee === 0 ? 'ফ্রি' : formatTaka(opt.fee)}</span>
+										<span class="mx-0.5">•</span>{opt.time}
+									</div>
+								</button>
+							{/each}
 						</div>
 					</div>
 
@@ -948,6 +881,7 @@
 			</div>
 
 			<!-- Direct Phone Call / WhatsApp Help Center Card -->
+			{#if hotlinePhone}
 			<div class="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 flex items-center justify-between gap-3 flex-wrap">
 				<div class="flex items-center gap-2.5">
 					<div class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0">
@@ -966,6 +900,7 @@
 					<ArrowRight class="w-3.5 h-3.5" />
 				</a>
 			</div>
+			{/if}
 
 		</div>
 
@@ -983,43 +918,32 @@
 		</div>
 	{/if}
 
-	<!-- 4. Mobile Sticky Bottom Floating Action Bar for Direct Order -->
-	<div class="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl p-3 lg:hidden font-['Anek_Bangla',sans-serif]">
-		<div class="flex items-center justify-between gap-3 max-w-lg mx-auto">
-			<div class="flex items-center gap-2.5 min-w-0">
-				<div class="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 p-1 shrink-0 overflow-hidden">
-					<img src={product.image} alt={product.name} class="w-full h-full object-contain" />
+	<!-- 4. Mobile sticky order bar: sits above the storefront bottom navigation -->
+	{#if !formInView}
+		<div class="fixed inset-x-0 z-40 bottom-[calc(57px+env(safe-area-inset-bottom,0px))] md:bottom-0 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl p-3 lg:hidden font-['Anek_Bangla',sans-serif]">
+			<div class="flex items-center justify-between gap-3 max-w-lg mx-auto">
+				<div class="flex items-center gap-2.5 min-w-0">
+					<div class="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 p-1 shrink-0 overflow-hidden">
+						<img src={product.image} alt={product.name} class="w-full h-full object-contain" />
+					</div>
+					<div class="min-w-0">
+						<div class="text-[11px] font-bold text-slate-800 truncate">{product.name}</div>
+						<div class="text-sm font-black text-emerald-700 leading-tight font-mono">{formatTaka(activePrice)}</div>
+					</div>
 				</div>
-				<div class="min-w-0">
-					<div class="text-[11px] font-bold text-slate-800 truncate">{product.name}</div>
-					<div class="text-sm font-black text-emerald-700 leading-tight font-mono">{formatTaka(grandTotal)}</div>
-				</div>
-			</div>
-
-			<div class="flex items-center gap-2 shrink-0">
-				<!-- Add to Cart Icon Button -->
-				<button
-					type="button"
-					onclick={handleAddToCart}
-					disabled={isOutOfStock}
-					class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 flex items-center justify-center cursor-pointer disabled:opacity-40"
-					title="কার্টে যোগ করুন"
-					aria-label="Add to cart"
-				>
-					<ShoppingBag class="w-4 h-4 text-slate-700" />
-				</button>
 
 				<Button
 					type="button"
 					variant="default"
 					onclick={scrollToOrderForm}
-					class="h-auto px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/25 flex items-center gap-1.5 cursor-pointer shrink-0"
+					disabled={isOutOfStock}
+					class="h-auto px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/25 flex items-center gap-1.5 cursor-pointer shrink-0"
 				>
 					<Zap class="w-3.5 h-3.5 fill-white" />
-					<span>অর্ডার করুন</span>
+					<span>{isOutOfStock ? 'স্টক শেষ' : 'অর্ডার করুন'}</span>
 				</Button>
 			</div>
 		</div>
-	</div>
+	{/if}
 
 </div>

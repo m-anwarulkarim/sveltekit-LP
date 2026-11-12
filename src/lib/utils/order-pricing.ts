@@ -3,31 +3,33 @@
  * (what is actually charged), so the two can never drift apart.
  */
 
-export const PRODUCT_BUNDLES = [
-	{
-		id: 'standard',
-		name: 'Standard Edition',
-		subtitle: '১টি একক প্যাক',
-		multiplier: 1,
-		discount: 0
-	},
-	{
-		id: 'combo',
-		name: 'Combo Value Pack (Save 10%)',
-		subtitle: '২টি প্যাক • ১০% অতিরিক্ত ছাড়',
-		multiplier: 2,
-		discount: 0.1
-	},
-	{
-		id: 'pro-duo',
-		name: 'Pro Duo Bundle (Save 15%)',
-		subtitle: 'সেরা ভ্যালু কম্বো • ১৫% ছাড়',
-		multiplier: 2,
-		discount: 0.15
-	}
+export interface ProductBundle {
+	id: string;
+	name: string;
+	subtitle: string;
+	multiplier: number;
+	discount: number;
+}
+
+const BUNDLE_TIERS = [
+	{ id: 'standard', digit: '১', multiplier: 1, discount: 0 },
+	{ id: 'combo', digit: '২', multiplier: 2, discount: 0.1 },
+	{ id: 'pro-duo', digit: '৩', multiplier: 3, discount: 0.15 }
 ] as const;
 
-export type ProductBundle = (typeof PRODUCT_BUNDLES)[number];
+/** The three package tiers for a product. The id, multiplier and discount are what the server charges. */
+export function getBundlesWithLabel(unitLabel?: string | null): ProductBundle[] {
+	const unit = unitLabel?.trim() || 'প্যাকেট';
+	return BUNDLE_TIERS.map((tier) => ({
+		id: tier.id,
+		name: `${tier.digit} ${unit}`,
+		subtitle: tier.discount > 0 ? `${Math.round(tier.discount * 100)}% ছাড়` : 'স্ট্যান্ডার্ড',
+		multiplier: tier.multiplier,
+		discount: tier.discount
+	}));
+}
+
+export const PRODUCT_BUNDLES: readonly ProductBundle[] = getBundlesWithLabel();
 
 /** Cart lines for a bundle use the id `<productId>-<bundleId>`. */
 export function parseCartItemId(cartItemId: string): { productId: string; bundle: ProductBundle } {

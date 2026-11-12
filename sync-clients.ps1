@@ -24,6 +24,40 @@ function Write-Step ($tag, $msg, $color = "White") {
     Write-Host "  [$tag] $msg" -ForegroundColor $color
 }
 
+# Backup files listed in .syncignore, return hashtable of path->content
+function Backup-Ignored ($projectPath) {
+    $ignorePath = Join-Path $projectPath ".syncignore"
+    $backups = @{}
+    if (-not (Test-Path $ignorePath)) { return $backups }
+
+    Get-Content $ignorePath | Where-Object { $_.Trim() -ne "" -and -not $_.StartsWith("#") } | ForEach-Object {
+        $rel  = $_.Trim()
+        $full = Join-Path $projectPath $rel
+        if (Test-Path $full) {
+            $backups[$rel] = Get-Content $full -Raw
+        }
+    }
+    return $backups
+}
+
+# Restore backed-up files
+function Restore-Ignored ($projectPath, $backups) {
+    foreach ($rel in $backups.Keys) {
+        $full = Join-Path $projectPath $rel
+        $dir  = Split-Path $full -Parent
+        if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Force $dir | Out-Null }
+        Set-Content -Path $full -Value $backups[$rel] -NoNewline
+    }
+}
+
+# Count new drizzle migration files vs what the project already had
+function Get-NewMigrations ($projectPath) {
+    $coreMigrations    = Get-ChildItem "$CORE\drizzle" -Filter "*.sql" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name
+    $clientMigrations  = Get-ChildItem "$projectPath\drizzle" -Filter "*.sql" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name
+    $newOnes = $coreMigrations | Where-Object { $clientMigrations -notcontains $_ }
+    return $newOnes
+}
+
 if (-not (Test-Path $CONFIG_FILE)) {
     Write-Host "ERROR: clients.json not found at $CONFIG_FILE" -ForegroundColor Red
     exit 1
@@ -57,14 +91,22 @@ foreach ($c in $clients) {
     }
 
     if ($dryRun) {
-        Write-Step "--" "Would sync -> $path" "DarkYellow"
+        # Show what would be protected
+        $ignorePath = Join-Path $path ".syncignore"
+        if (Test-Path $ignorePath) {
+            $protected = Get-Content $ignorePath | Where-Object { $_.Trim() -ne "" -and -not $_.StartsWith("#") }
+            Write-Step "--" "Would sync -> $path" "DarkYellow"
+            foreach ($p in $protected) { Write-Step ">>" "Protected (will not overwrite): $p" "DarkGray" }
+        } else {
+            Write-Step "--" "Would sync -> $path (no .syncignore)" "DarkYellow"
+        }
         $results.skipped++
         continue
     }
 
     try {
         if ($c.github) {
-            # GitHub project: fetch upstream -> merge -> push
+            # GitHub project with shared history: fetch upstream -> merge -> push
             Write-Step ">>" "Fetching upstream..." "Gray"
             git -C $path fetch upstream 2>&1 | Out-Null
             if ($LASTEXITCODE -ne 0) { throw "git fetch failed" }
@@ -82,19 +124,37 @@ foreach ($c in $clients) {
             $results.synced++
 
         } else {
-            # Local/copy project: robocopy src + drizzle -> commit -> (optionally push)
+            # Copy project: backup ignored -> robocopy -> restore ignored -> commit -> (push)
+
+            # 1. Check for new migrations before copy
+            $newMigrations = Get-NewMigrations $path
+
+            # 2. Backup .syncignore files
+            $backups = Backup-Ignored $path
+            if ($backups.Count -gt 0) {
+                Write-Step ">>" "Protecting $($backups.Count) file(s) from overwrite..." "DarkGray"
+            }
+
+            # 3. Robocopy
             Write-Step ">>" "Copying src/..." "Gray"
             robocopy "$CORE\src" "$path\src" /E /IS /IT /NFL /NDL /NJH /NJS | Out-Null
 
             Write-Step ">>" "Copying drizzle/..." "Gray"
             robocopy "$CORE\drizzle" "$path\drizzle" /E /IS /IT /NFL /NDL /NJH /NJS | Out-Null
 
+            # 4. Restore protected files
+            if ($backups.Count -gt 0) {
+                Restore-Ignored $path $backups
+                Write-Step "OK" "Restored $($backups.Count) protected file(s)" "DarkGray"
+            }
+
+            # 5. Commit if changes exist
             $changes = git -C $path status --short
             if ($changes) {
                 git -C $path add src drizzle
                 git -C $path commit -m "sync: update from core template $(Get-Date -Format 'yyyy-MM-dd')" 2>&1 | Out-Null; $null = $LASTEXITCODE
 
-                # push to GitHub if push:true in config
+                # 6. Push to GitHub if configured
                 if ($c.push) {
                     Write-Step ">>" "Pushing to GitHub..." "Gray"
                     git -C $path push origin $c.branch 2>&1 | Out-Null
@@ -105,6 +165,16 @@ foreach ($c in $clients) {
                     Write-Step "OK" "Committed (local)" "Green"
                     Write-Log "OK (local): $($c.name)"
                 }
+
+                # 7. Warn about new migrations
+                if ($newMigrations.Count -gt 0) {
+                    Write-Host ""
+                    Write-Host "  [!!] NEW MIGRATIONS -- run manually in $($c.name):" -ForegroundColor Yellow
+                    foreach ($m in $newMigrations) { Write-Host "       $m" -ForegroundColor Yellow }
+                    Write-Host "       Command: npx drizzle-kit push" -ForegroundColor DarkYellow
+                    Write-Log "MIGRATIONS: $($c.name) -- $($newMigrations -join ', ')"
+                }
+
                 $results.synced++
             } else {
                 Write-Step "--" "No changes" "DarkGray"

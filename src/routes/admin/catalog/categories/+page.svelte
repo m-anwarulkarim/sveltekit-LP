@@ -130,19 +130,25 @@
 		});
 		if (!confirmed) return;
 
-		categories = categories.map((c) => (c.id === id ? { ...c, isTrash: true } : c));
-		showToast('ক্যাটাগরি মুছে ফেলা হয়েছে');
-
 		try {
 			const fd = new FormData();
 			fd.append('id', id);
-			await fetch('?/deleteCategory', {
+			const res = await fetch('?/deleteCategory', {
 				method: 'POST',
 				body: fd
 			});
+			const json = await res.json().catch(() => ({}));
+			if (!res.ok || json?.data?.success === false) {
+				const msg = json?.data?.message || 'ক্যাটাগরি মুছতে সমস্যা হয়েছে।';
+				toast.error(msg);
+				return;
+			}
+			categories = categories.map((c) => (c.id === id ? { ...c, isTrash: true } : c));
+			showToast('ক্যাটাগরি মুছে ফেলা হয়েছে');
 			await invalidateAll();
 		} catch (e) {
 			console.error('Error deleting category on server:', e);
+			toast.error('ক্যাটাগরি মুছতে সমস্যা হয়েছে।');
 		}
 	}
 
@@ -167,20 +173,27 @@
 
 		const count = selectedIds.length;
 		const toDelete = [...selectedIds];
-		categories = categories.filter((c) => !toDelete.includes(c.id));
-		selectedIds = [];
-		showToast(`${count}টি ক্যাটাগরি সফলভাবে মুছে ফেলা হয়েছে`);
 
 		try {
 			const fd = new FormData();
 			fd.append('ids', JSON.stringify(toDelete));
-			await fetch('?/bulkDelete', {
+			const res = await fetch('?/bulkDelete', {
 				method: 'POST',
 				body: fd
 			});
+			const json = await res.json().catch(() => ({}));
+			if (!res.ok || json?.data?.success === false) {
+				const msg = json?.data?.message || 'ক্যাটাগরি মুছতে সমস্যা হয়েছে।';
+				toast.error(msg);
+				return;
+			}
+			categories = categories.filter((c) => !toDelete.includes(c.id));
+			selectedIds = [];
+			showToast(`${count}টি ক্যাটাগরি সফলভাবে মুছে ফেলা হয়েছে`);
 			await invalidateAll();
 		} catch (e) {
 			console.error('Error bulk deleting categories:', e);
+			toast.error('ক্যাটাগরি মুছতে সমস্যা হয়েছে।');
 		}
 	}
 </script>

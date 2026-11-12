@@ -425,7 +425,7 @@
 
 		<!-- 4. SIGNATURE: Multi-Package Selection (Sarder Seed Style) -->
 		{#if packages.length > 0}
-			<div class="space-y-3">
+			<div id="direct-packages" class="space-y-3 scroll-mt-20">
 				<div class="flex items-center justify-between">
 					<h3 class="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
 						<span>প্যাকেজ নির্বাচন করুন</span>
@@ -539,42 +539,60 @@
 					</div>
 				</CardHeader>
 
-				<CardContent class="p-5 sm:p-7 space-y-5">
+				<CardContent class="p-4 sm:p-7 space-y-5">
 					<form onsubmit={handleDirectOrder} class="space-y-5">
 
 						<!-- Selected Package Summary Pill inside form -->
-						<div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
-							<div class="flex items-center gap-3">
+						<div class="p-3 sm:p-3.5 rounded-2xl bg-emerald-50/50 border border-emerald-200/80 space-y-2.5">
+							<div class="flex items-center justify-between gap-2 border-b border-emerald-100/80 pb-2">
+								<span class="text-[11px] font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-1.5">
+									<CheckCircle2 class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+									<span>নির্বাচিত অফার</span>
+								</span>
+								{#if packages.length > 1}
+									<button
+										type="button"
+										onclick={() => {
+											const el = document.getElementById('direct-packages');
+											if (el) el.scrollIntoView({ behavior: 'smooth' });
+										}}
+										class="text-xs text-emerald-700 hover:text-emerald-800 font-bold underline cursor-pointer flex items-center gap-1 shrink-0"
+									>
+										<span>প্যাকেজ পরিবর্তন</span>
+										<ArrowRight class="w-3 h-3" />
+									</button>
+								{/if}
+							</div>
+
+							<div class="flex items-center gap-3 min-w-0">
 								<img
 									src={activeImage}
 									alt="Selected Product"
-									class="w-12 h-12 rounded-xl object-cover border border-slate-200"
+									class="w-12 h-12 rounded-xl object-cover border border-emerald-200 shrink-0 bg-white"
 								/>
-								<div>
-									<h4 class="text-xs sm:text-sm font-bold text-slate-900 leading-tight">
-										{currentPackage ? (currentPackage.title + (currentPackage.subtitle ? ' — ' + currentPackage.subtitle : '')) : (product?.name || headline)}
-									</h4>
-									<p class="text-xs font-black text-emerald-700 mt-0.5">
-										{formatTaka(unitPrice)}
-										{#if currentPackage?.freeDelivery}
-											<span class="text-[10px] text-emerald-600 font-bold ml-1">(ডেলিভারি ফ্রি)</span>
+								<div class="min-w-0 flex-1">
+									<h4 class="text-xs sm:text-sm font-bold text-slate-900 leading-snug">
+										{currentPackage ? currentPackage.title : (product?.name || headline)}
+										{#if currentPackage?.subtitle}
+											<span class="text-[11px] text-slate-500 font-normal"> — {currentPackage.subtitle}</span>
 										{/if}
-									</p>
+									</h4>
+									<div class="flex items-center gap-2 mt-1 flex-wrap">
+										<span class="text-sm sm:text-base font-black text-emerald-700 font-mono">
+											{formatTaka(unitPrice)}
+										</span>
+										{#if currentPackage?.freeDelivery}
+											<span class="text-[10px] font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200">
+												ডেলিভারি ফ্রি
+											</span>
+										{:else}
+											<span class="text-[10px] font-medium text-slate-500">
+												(+৳{currentPackage?.deliveryFee || 45} ডেলিভারি)
+											</span>
+										{/if}
+									</div>
 								</div>
 							</div>
-
-							<Button
-								type="button"
-								variant="ghost"
-								size="sm"
-								class="text-xs text-slate-600 hover:text-emerald-700 font-bold underline cursor-pointer"
-								onclick={() => {
-									const el = document.getElementById('direct-checkout-form');
-									if (el) el.scrollIntoView({ behavior: 'smooth' });
-								}}
-							>
-								প্যাকেজ পরিবর্তন
-							</Button>
 						</div>
 
 						<!-- Step 1: Customer Name -->

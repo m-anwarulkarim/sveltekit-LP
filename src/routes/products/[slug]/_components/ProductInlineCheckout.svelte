@@ -26,9 +26,6 @@
 	} from '#lib/components/ui';
 	import {
 		Star,
-		Plus,
-		Minus,
-		ShoppingBag,
 		ShieldCheck,
 		Truck,
 		CheckCircle2,
@@ -578,33 +575,30 @@
 					{/if}
 				</div>
 
-				<!-- Package selector (only when this product has packages enabled) -->
+				<!-- Variant / Bundle Selector -->
 				{#if showBundles}
-					<div class="space-y-2">
-						<span class="text-xs font-bold text-slate-700 block">প্যাকেজ বেছে নিন:</span>
-						<div class="grid grid-cols-3 gap-2" role="radiogroup" aria-label="প্যাকেজ">
-							{#each variantOptions as variant}
-								{@const isSelected = selectedVariantId === variant.id}
-								<button
-									type="button"
-									role="radio"
-									aria-checked={isSelected}
-									onclick={() => (selectedVariantId = variant.id)}
-									class="p-2 sm:p-3 rounded-xl border text-center transition-all flex flex-col items-center gap-0.5 cursor-pointer {isSelected
-										? 'bg-[#2563eb] text-white border-[#2563eb] shadow-xs ring-2 ring-blue-300'
-										: 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'}"
-								>
-									<span class="text-xs sm:text-sm font-black">{variant.name}</span>
-									<span class="text-[11px] sm:text-xs font-bold font-mono">
-										{formatTaka(getBundlePrice(product.price, variant))}
-									</span>
-									<span class="text-[10px] font-semibold {isSelected ? 'text-blue-100' : variant.discount > 0 ? 'text-rose-600' : 'text-slate-400'}">
-										{variant.subtitle}
-									</span>
-								</button>
-							{/each}
-						</div>
+				<div class="space-y-1.5">
+					<span class="text-xs font-bold text-slate-700 block">
+						প্যাকেজ / ভ্যারিয়েন্ট বেছে নিন:
+					</span>
+					<div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+						{#each variantOptions as variant}
+							{@const isSelected = selectedVariantId === variant.id}
+							<button
+								type="button"
+								onclick={() => (selectedVariantId = variant.id)}
+								class="p-2.5 text-xs font-bold text-left rounded-xl border transition-all flex flex-col items-start gap-0.5 cursor-pointer {isSelected
+									? 'bg-[#2563eb] text-white border-[#2563eb] shadow-xs ring-2 ring-blue-300'
+									: 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'}"
+							>
+								<span>{variant.name}</span>
+								<span class="text-[10px] font-medium {isSelected ? 'text-blue-100' : 'text-slate-400'}">
+									{variant.subtitle}
+								</span>
+							</button>
+						{/each}
 					</div>
+				</div>
 				{/if}
 			</div>
 
@@ -706,32 +700,42 @@
 					</div>
 
 					<!-- ডেলিভারি এরিয়া বাটন সিলেক্টর (ঢাকা / ঢাকার বাইরে) -->
-										<div>
+					<div>
 						<span class="block text-xs font-bold text-slate-800 mb-1.5">
 							ডেলিভারি এরিয়া বেছে নিন <span class="text-rose-500">*</span>
 						</span>
-						<div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="ডেলিভারি এরিয়া">
-							{#each deliveryOptions as opt}
-								{@const isSelected = district === opt.key}
-								<button
-									type="button"
-									role="radio"
-									aria-checked={isSelected}
-									onclick={() => (district = opt.key)}
-									class="relative px-2 py-2.5 rounded-xl border text-center transition-all cursor-pointer {isSelected
-										? 'border-emerald-600 bg-emerald-50/70 shadow-2xs ring-1 ring-emerald-600'
-										: 'border-slate-200 bg-slate-50/60 hover:bg-slate-100'}"
-								>
-									{#if isSelected}
-										<Check class="absolute top-1.5 right-1.5 w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
-									{/if}
-									<div class="text-xs sm:text-sm font-bold text-slate-900">{opt.label}</div>
-									<div class="text-[11px] text-slate-500 mt-0.5">
-										<span class="font-mono font-bold text-emerald-700">{opt.fee === 0 ? 'ফ্রি' : formatTaka(opt.fee)}</span>
-										<span class="mx-0.5">•</span>{opt.time}
-									</div>
-								</button>
-							{/each}
+						<div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+							<button
+								type="button"
+								onclick={() => (district = 'dhaka')}
+								class="p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between {district === 'dhaka'
+									? 'border-emerald-600 bg-emerald-50/70 shadow-2xs ring-1 ring-emerald-600'
+									: 'border-slate-200 bg-slate-50/60 hover:bg-slate-100'}"
+							>
+								<div>
+									<div class="text-xs font-bold text-slate-900">ঢাকা সিটির ভিতরে</div>
+									<div class="text-[10px] text-slate-500 mt-0.5">ডেলিভারি চার্জ: ৳৬০ (১২-২৪ ঘণ্টা)</div>
+								</div>
+								{#if district === 'dhaka'}
+									<Check class="w-4 h-4 text-emerald-600 stroke-[3]" />
+								{/if}
+							</button>
+
+							<button
+								type="button"
+								onclick={() => (district = 'outside')}
+								class="p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between {district === 'outside'
+									? 'border-emerald-600 bg-emerald-50/70 shadow-2xs ring-1 ring-emerald-600'
+									: 'border-slate-200 bg-slate-50/60 hover:bg-slate-100'}"
+							>
+								<div>
+									<div class="text-xs font-bold text-slate-900">ঢাকার বাহিরে (সারাদেশ)</div>
+									<div class="text-[10px] text-slate-500 mt-0.5">ডেলিভারি চার্জ: ৳১২০ (২৪-৪৮ ঘণ্টা)</div>
+								</div>
+								{#if district === 'outside'}
+									<Check class="w-4 h-4 text-emerald-600 stroke-[3]" />
+								{/if}
+							</button>
 						</div>
 					</div>
 
@@ -819,7 +823,7 @@
 					<!-- Live Order Bill Summary -->
 					<div class="p-3.5 rounded-xl bg-slate-50/90 border border-slate-200/80 space-y-2 text-xs text-slate-600">
 						<div class="flex justify-between items-center">
-							<span>পণ্য মূল্য ({quantity}টি {selectedVariant.name}):</span>
+							<span>পণ্য মূল্য {showBundles ? `(${selectedVariant.name})` : ''}:</span>
 							<span class="font-bold text-slate-900 font-mono">{formatTaka(activePrice)}</span>
 						</div>
 						<div class="flex justify-between items-center">

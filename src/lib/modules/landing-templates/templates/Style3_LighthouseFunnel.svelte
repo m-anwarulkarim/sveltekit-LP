@@ -367,10 +367,12 @@
 					{headline}
 				</h1>
 
-				<!-- Subheadline -->
-				<p class="text-sm sm:text-base text-slate-600 leading-relaxed font-medium max-w-2xl mx-auto">
-					{subheadline}
-				</p>
+				<!-- Subheadline (supports HTML / Rich Text) -->
+				{#if subheadline}
+					<div class="lp-rich-text text-sm sm:text-base text-slate-600 leading-relaxed font-medium max-w-2xl mx-auto">
+						{@html subheadline}
+					</div>
+				{/if}
 
 				<!-- 3 Quick Hero Feature Pills -->
 				<div class="flex flex-wrap items-center justify-center gap-2 pt-2">
@@ -854,9 +856,9 @@
 				<h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
 					{headline} এর স্পষ্ট উপকারিতা
 				</h2>
-				<p class="text-xs sm:text-sm text-slate-500 font-medium">
-					{subheadline || 'প্রিমিয়াম কোয়ালিটি উপাদান ও নির্ভরযোগ্য মান যা ব্যবহারের সাথে সাথেই স্পষ্ট পরিবর্তন অনুভব করাবে।'}
-				</p>
+				<div class="lp-rich-text text-xs sm:text-sm text-slate-500 font-medium">
+					{@html subheadline || 'প্রিমিয়াম কোয়ালিটি উপাদান ও নির্ভরযোগ্য মান যা ব্যবহারের সাথে সাথেই স্পষ্ট পরিবর্তন অনুভব করাবে।'}
+				</div>
 			</div>
 
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -1060,4 +1062,89 @@
 	</div>
 
 </div>
+
+<style>
+	:global(.lp-rich-text) {
+		word-break: break-word;
+	}
+	:global(.lp-rich-text p) {
+		margin-bottom: 0.5em;
+	}
+	:global(.lp-rich-text p:last-child) {
+		margin-bottom: 0;
+	}
+	:global(.lp-rich-text ul),
+	:global(.lp-rich-text ol) {
+		margin-top: 0.5em;
+		margin-bottom: 0.5em;
+		padding-left: 1.5em;
+	}
+	:global(.lp-rich-text ul) {
+		list-style-type: disc;
+	}
+	:global(.lp-rich-text ol) {
+		list-style-type: decimal;
+	}
+	:global(.lp-rich-text li) {
+		margin-top: 0.25em;
+		margin-bottom: 0.25em;
+	}
+	:global(.lp-rich-text strong),
+	:global(.lp-rich-text b) {
+		font-weight: 700;
+		color: #0f172a;
+	}
+	:global(.lp-rich-text em),
+	:global(.lp-rich-text i) {
+		font-style: italic;
+	}
+	:global(.lp-rich-text a) {
+		color: #e8007c;
+		text-decoration: underline;
+	}
+	:global(.lp-rich-text a:hover) {
+		color: #c70068;
+	}
+	:global(.lp-rich-text h1),
+	:global(.lp-rich-text h2),
+	:global(.lp-rich-text h3),
+	:global(.lp-rich-text h4) {
+		font-weight: 800;
+		color: #0f172a;
+		margin-top: 0.75em;
+		margin-bottom: 0.25em;
+	}
+	:global(.lp-rich-text h1) { font-size: 1.5em; }
+	:global(.lp-rich-text h2) { font-size: 1.25em; }
+	:global(.lp-rich-text h3) { font-size: 1.1em; }
+	:global(.lp-rich-text br) {
+		content: '';
+		display: block;
+		margin-top: 0.5em;
+	}
+	:global(.lp-rich-text img) {
+		max-width: 100%;
+		height: auto;
+		border-radius: 0.75rem;
+		margin-top: 0.5em;
+		margin-bottom: 0.5em;
+	}
+	:global(.lp-rich-text table) {
+		width: 100%;
+		border-collapse: collapse;
+		margin-top: 0.5em;
+		margin-bottom: 0.5em;
+	}
+	:global(.lp-rich-text th),
+	:global(.lp-rich-text td) {
+		border: 1px solid #e2e8f0;
+		padding: 0.5em 0.75em;
+		text-align: left;
+		font-size: 0.875em;
+	}
+	:global(.lp-rich-text th) {
+		background-color: #f8fafc;
+		font-weight: 700;
+	}
+</style>
 

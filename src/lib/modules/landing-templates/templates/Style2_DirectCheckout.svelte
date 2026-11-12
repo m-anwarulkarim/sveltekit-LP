@@ -340,11 +340,11 @@
 				{headline}
 			</h1>
 
-			<!-- Subtitle -->
+			<!-- Subtitle (supports HTML / Rich Text) -->
 			{#if subheadline}
-				<p class="text-sm sm:text-base text-slate-600 leading-relaxed font-medium">
-					{subheadline}
-				</p>
+				<div class="lp-rich-text text-sm sm:text-base text-slate-600 leading-relaxed font-medium">
+					{@html subheadline}
+				</div>
 			{/if}
 
 			<!-- Bullet Features (Dynamic from config or sensible defaults) -->
@@ -352,7 +352,7 @@
 				{#each displayBullets as bullet}
 					<div class="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs">
 						<CheckCircle2 class="w-4 h-4 text-emerald-600 shrink-0" />
-						<span>{bullet}</span>
+						<span>{@html bullet}</span>
 					</div>
 				{/each}
 			</div>
@@ -497,9 +497,9 @@
 					</div>
 					<span>{config?.trustBox1Title || 'নিশ্চিন্তে অর্ডার করুন'}</span>
 				</div>
-				<p class="text-xs text-slate-600 leading-relaxed pl-9">
-					{config?.trustBox1Desc || 'কোনো অগ্রিম টাকা দিতে হবে না। অর্ডার প্লেস করার পর আমাদের প্রতিনিধি ফোনে কথা বলে কনফার্ম করবেন এবং পণ্য হাতে পেয়ে দেখে টাকা পরিশোধ করবেন।'}
-				</p>
+				<div class="text-xs text-slate-600 leading-relaxed pl-9">
+					{@html config?.trustBox1Desc || 'কোনো অগ্রিম টাকা দিতে হবে না। অর্ডার প্লেস করার পর আমাদের প্রতিনিধি ফোনে কথা বলে কনফার্ম করবেন এবং পণ্য হাতে পেয়ে দেখে টাকা পরিশোধ করবেন।'}
+				</div>
 			</Card>
 
 			<!-- Trust Box 2 -->
@@ -510,9 +510,9 @@
 					</div>
 					<span>{config?.trustBox2Title || '🤝 আমাদের প্রতিশ্রুতি'}</span>
 				</div>
-				<p class="text-xs text-slate-600 leading-relaxed pl-9">
-					{config?.trustBox2Desc || 'আমরা সর্বোচ্চ কোয়ালিটি এবং সন্তুষ্টি নিশ্চিত করি। কোনো সমস্যা প্রমাণিত হলে সম্পূর্ণ পরিবর্তন অথবা মানিব্যাক গ্যারান্টি।'}
-				</p>
+				<div class="text-xs text-slate-600 leading-relaxed pl-9">
+					{@html config?.trustBox2Desc || 'আমরা সর্বোচ্চ কোয়ালিটি এবং সন্তুষ্টি নিশ্চিত করি। কোনো সমস্যা প্রমাণিত হলে সম্পূর্ণ পরিবর্তন অথবা মানিব্যাক গ্যারান্টি।'}
+				</div>
 			</Card>
 		</div>
 
@@ -768,3 +768,88 @@
 	</div>
 
 </div>
+
+<style>
+	:global(.lp-rich-text) {
+		word-break: break-word;
+	}
+	:global(.lp-rich-text p) {
+		margin-bottom: 0.5em;
+	}
+	:global(.lp-rich-text p:last-child) {
+		margin-bottom: 0;
+	}
+	:global(.lp-rich-text ul),
+	:global(.lp-rich-text ol) {
+		margin-top: 0.5em;
+		margin-bottom: 0.5em;
+		padding-left: 1.5em;
+	}
+	:global(.lp-rich-text ul) {
+		list-style-type: disc;
+	}
+	:global(.lp-rich-text ol) {
+		list-style-type: decimal;
+	}
+	:global(.lp-rich-text li) {
+		margin-top: 0.25em;
+		margin-bottom: 0.25em;
+	}
+	:global(.lp-rich-text strong),
+	:global(.lp-rich-text b) {
+		font-weight: 700;
+		color: #0f172a;
+	}
+	:global(.lp-rich-text em),
+	:global(.lp-rich-text i) {
+		font-style: italic;
+	}
+	:global(.lp-rich-text a) {
+		color: #059669;
+		text-decoration: underline;
+	}
+	:global(.lp-rich-text a:hover) {
+		color: #047857;
+	}
+	:global(.lp-rich-text h1),
+	:global(.lp-rich-text h2),
+	:global(.lp-rich-text h3),
+	:global(.lp-rich-text h4) {
+		font-weight: 800;
+		color: #0f172a;
+		margin-top: 0.75em;
+		margin-bottom: 0.25em;
+	}
+	:global(.lp-rich-text h1) { font-size: 1.5em; }
+	:global(.lp-rich-text h2) { font-size: 1.25em; }
+	:global(.lp-rich-text h3) { font-size: 1.1em; }
+	:global(.lp-rich-text br) {
+		content: '';
+		display: block;
+		margin-top: 0.5em;
+	}
+	:global(.lp-rich-text img) {
+		max-width: 100%;
+		height: auto;
+		border-radius: 0.75rem;
+		margin-top: 0.5em;
+		margin-bottom: 0.5em;
+	}
+	:global(.lp-rich-text table) {
+		width: 100%;
+		border-collapse: collapse;
+		margin-top: 0.5em;
+		margin-bottom: 0.5em;
+	}
+	:global(.lp-rich-text th),
+	:global(.lp-rich-text td) {
+		border: 1px solid #e2e8f0;
+		padding: 0.5em 0.75em;
+		text-align: left;
+		font-size: 0.875em;
+	}
+	:global(.lp-rich-text th) {
+		background-color: #f8fafc;
+		font-weight: 700;
+	}
+</style>

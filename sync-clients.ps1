@@ -166,13 +166,25 @@ foreach ($c in $clients) {
                     Write-Log "OK (local): $($c.name)"
                 }
 
-                # 7. Warn about new migrations
+                # 7. Auto-apply new migrations to D1 (remote)
                 if ($newMigrations.Count -gt 0) {
                     Write-Host ""
-                    Write-Host "  [!!] NEW MIGRATIONS -- run manually in $($c.name):" -ForegroundColor Yellow
-                    foreach ($m in $newMigrations) { Write-Host "       $m" -ForegroundColor Yellow }
-                    Write-Host "       Command: npx drizzle-kit push" -ForegroundColor DarkYellow
-                    Write-Log "MIGRATIONS: $($c.name) -- $($newMigrations -join ', ')"
+                    Write-Step ">>" "Applying $($newMigrations.Count) new migration(s) to D1..." "Cyan"
+                    foreach ($m in $newMigrations) { Write-Step ".." $m "DarkGray" }
+
+                    Push-Location $path
+                    $migrateOut = npx wrangler d1 migrations apply DB --remote 2>&1
+                    $migrateOk  = $LASTEXITCODE -eq 0
+                    Pop-Location
+
+                    if ($migrateOk) {
+                        Write-Step "OK" "Migrations applied to D1 (remote)" "Green"
+                        Write-Log "MIGRATED: $($c.name) -- $($newMigrations -join ', ')"
+                    } else {
+                        Write-Step "!!" "Migration failed -- check manually" "Yellow"
+                        Write-Step ".." ($migrateOut | Select-Object -Last 3 | Out-String).Trim() "DarkGray"
+                        Write-Log "MIGRATE_FAIL: $($c.name) -- $($newMigrations -join ', ')"
+                    }
                 }
 
                 $results.synced++

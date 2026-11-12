@@ -8,6 +8,7 @@ import { NotificationService } from '#lib/server/services/notification.service';
 import { AdminProfileService } from '#lib/server/services/admin-profile.service';
 import { SecurityService } from '#lib/server/services/security.service';
 import { CustomerService } from '#lib/server/services/customer.service';
+import { SettingsService, DEFAULT_WEBSITE_INFO } from '#lib/server/services/settings.service';
 import {
 	ADMIN_MENU_LIST,
 	hasMenuAccess,
@@ -216,6 +217,16 @@ export const load: LayoutServerLoad = async ({ platform, url, locals }) => {
 		console.error('Failed to query D1 database:', error);
 	}
 
+	let websiteInfo = DEFAULT_WEBSITE_INFO;
+	try {
+		if (isD1Connected) {
+			const db = getDb(platform);
+			websiteInfo = await SettingsService.getWebsiteInfo(db);
+		}
+	} catch {
+		// fall back to default
+	}
+
 	const totalOrders = summary?.totalOrders ?? 0;
 	const activeOrders = summary?.activeOrders ?? 0;
 	const totalRevenue = summary?.totalRevenue ?? 0;
@@ -223,6 +234,7 @@ export const load: LayoutServerLoad = async ({ platform, url, locals }) => {
 	return {
 		isD1Connected,
 		ownerProfile,
+		websiteInfo,
 		currentAdmin,
 		unreadNotificationsCount,
 		blockedIpsCount,

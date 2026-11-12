@@ -148,12 +148,12 @@
 					
 					<div class="flex flex-col">
 						<div class="flex items-center gap-1.5">
-							<span class="font-['Outfit'] font-black text-lg text-slate-900 tracking-wide">Haq Plus</span>
+							<span class="font-['Outfit'] font-black text-lg text-slate-900 tracking-wide">{page.data?.websiteInfo?.websiteName || 'Haq Plus'}</span>
 							<span class="px-1.5 py-0.2 rounded text-[8px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-700 border border-indigo-200">
 								PRO
 							</span>
 						</div>
-						<span class="text-[11px] text-slate-400 font-mono -mt-0.5">seedbd.shop</span>
+						<span class="text-[11px] text-slate-400 font-mono -mt-0.5">{page.url.host}</span>
 					</div>
 				</a>
 

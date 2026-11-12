@@ -89,7 +89,7 @@
 					<polyline points="9 21 9 12 15 12 15 21" />
 				</svg>
 				<span class="text-[6.5px] font-black text-pink-500 uppercase tracking-tighter leading-none -mt-0.5">
-					Haq Plus
+					{page.data?.websiteInfo?.websiteName || 'Haq Plus'}
 				</span>
 			</div>
 		</a>
@@ -162,7 +162,7 @@
 				{:else if isAdminControlActive}
 					<span>Vendor Admins</span>
 				{:else}
-					<span>Haq Plus Control</span>
+					<span>{page.data?.websiteInfo?.websiteName || 'Haq Plus'} Control</span>
 				{/if}
 			</h1>
 
@@ -269,7 +269,7 @@
 				/>
 			{:else}
 				<div class="text-[7px] sm:text-[7.5px] font-black uppercase tracking-tighter text-center leading-[1.05] bg-gradient-to-tr from-pink-400 to-indigo-400 bg-clip-text text-transparent">
-					COLOR<br/>LIGHT
+					{(page.data?.websiteInfo?.websiteName || 'Haq Plus').slice(0, 8)}
 				</div>
 			{/if}
 		</a>

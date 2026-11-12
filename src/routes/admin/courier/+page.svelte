@@ -18,6 +18,7 @@
 		CourierStatsCards,
 		CourierFilterBar,
 		CourierConsignmentsTable,
+		CourierAccountReports,
 		RiderManifestModal
 	} from './_components';
 
@@ -382,6 +383,9 @@
 		onSelectAll={selectAll}
 		onClearSelection={clearSelection}
 	/>
+
+	<!-- 4. Live Account Reports from the Courier Gateway -->
+	<CourierAccountReports />
 </div>
 
 <!-- Printable Rider Manifest Modal -->

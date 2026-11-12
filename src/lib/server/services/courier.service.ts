@@ -60,6 +60,44 @@ export interface CourierHubKPIs {
 	liveBalanceMessage?: string;
 }
 
+export interface CourierPaymentItem {
+	id: string;
+	amount: number;
+	transactionId?: string;
+	paymentMethod?: string;
+	accountNumber?: string;
+	status?: string;
+	totalParcels?: number;
+	createdAt?: string;
+}
+
+export interface CourierReturnRequestItem {
+	id: string;
+	consignmentId?: string;
+	trackingCode?: string;
+	invoice?: string;
+	reason?: string;
+	status?: string;
+	createdAt?: string;
+}
+
+export interface CourierParcelStateItem {
+	state: string;
+	label: string;
+	count: number;
+	codAmount: number;
+}
+
+export interface CourierAccountResult<T> {
+	success: boolean;
+	provider: string;
+	items: T[];
+	message?: string;
+	currentPage?: number;
+	lastPage?: number;
+	total?: number;
+}
+
 export interface CourierMethodSetting {
 	id: CourierProviderId;
 	name: string;
@@ -1263,6 +1301,227 @@ export class CourierService {
 			console.error('getLiveBalance error:', err);
 			return { success: false, balance: 0, currency: 'BDT', provider: 'Courier', message: err.message || 'কানেকশন এরর' };
 		}
+	}
+
+	/**
+	 * Resolves the active gateway's credentials for read-only account lookups.
+	 */
+	private static async getActiveSteadfastCreds(
+		db: DrizzleD1Database<typeof schema>
+	): Promise<{ apiKey: string; secretKey: string } | { error: string }> {
+		const { methods, defaultProvider } = await this.getCourierSettings(db).catch(() => ({
+			methods: [] as CourierMethodSetting[],
+			defaultProvider: 'steadfast' as CourierProviderId
+		}));
+
+		const active =
+			methods.find((m) => m.isEnabled && m.id === defaultProvider) ||
+			methods.find((m) => m.isEnabled && m.id === 'steadfast');
+
+		if (!active) return { error: 'কোনো কুরিয়ার চালু করা নেই। Settings > Courier থেকে সেটআপ করুন।' };
+		if (active.id !== 'steadfast') {
+			return { error: `${active.name}-এর জন্য অ্যাকাউন্ট রিপোর্ট API এখনো যুক্ত করা হয়নি।` };
+		}
+
+		const apiKey = (active.credentials?.apiKey || '').trim();
+		const secretKey = (active.credentials?.secretKey || '').trim();
+		if (!apiKey || !secretKey) return { error: 'Steadfast API Key/Secret কনফিগার করা নেই।' };
+
+		return { apiKey, secretKey };
+	}
+
+	/**
+	 * Shared GET against the Steadfast account endpoints. Classifies the failure
+	 * rather than collapsing it to an empty list, so the UI can tell "no records"
+	 * apart from "the lookup never happened".
+	 */
+	private static async steadfastGet(
+		db: DrizzleD1Database<typeof schema>,
+		path: string
+	): Promise<{ ok: true; data: any } | { ok: false; message: string }> {
+		const creds = await this.getActiveSteadfastCreds(db);
+		if ('error' in creds) return { ok: false, message: creds.error };
+
+		try {
+			const res = await fetch(`https://portal.packzy.com/api/v1/${path}`, {
+				method: 'GET',
+				headers: {
+					'Api-Key': creds.apiKey,
+					'Secret-Key': creds.secretKey,
+					'Content-Type': 'application/json',
+					Accept: 'application/json'
+				},
+				signal: AbortSignal.timeout(10000)
+			});
+
+			const rawText = await res.text();
+			let data: any = null;
+			try {
+				data = JSON.parse(rawText);
+			} catch {
+				/* classified below */
+			}
+
+			if (res.status === 429) {
+				return { ok: false, message: 'Steadfast API লিমিট শেষ। কিছুক্ষণ পর আবার চেষ্টা করুন।' };
+			}
+			if (res.status === 401 || res.status === 403) {
+				return { ok: false, message: 'Steadfast API Key/Secret সঠিক নয় অথবা পারমিশন নেই।' };
+			}
+			if (!res.ok) {
+				return { ok: false, message: `Steadfast সাড়া দেয়নি (HTTP ${res.status})।` };
+			}
+			if (!data) {
+				const clean = rawText.replace(/<[^>]*>/g, '').trim();
+				return { ok: false, message: clean ? clean.slice(0, 120) : 'অপ্রত্যাশিত উত্তর এসেছে।' };
+			}
+
+			return { ok: true, data };
+		} catch (err: any) {
+			const timedOut = err?.name === 'TimeoutError' || err?.name === 'AbortError';
+			return { ok: false, message: timedOut ? 'Steadfast API টাইমআউট হয়েছে।' : 'Steadfast সার্ভারে সংযোগ করা যায়নি।' };
+		}
+	}
+
+	/** Finds the first array in a response regardless of the wrapper key used. */
+	private static firstArray(data: any, depth = 0): any[] {
+		if (Array.isArray(data)) return data;
+		if (!data || typeof data !== 'object' || depth > 4) return [];
+		for (const value of Object.values(data)) {
+			const found = this.firstArray(value, depth + 1);
+			if (found.length > 0) return found;
+		}
+		return [];
+	}
+
+	private static pickNum(row: any, ...keys: string[]): number {
+		for (const k of keys) {
+			if (row?.[k] !== undefined && row[k] !== null && row[k] !== '') return Number(row[k]) || 0;
+		}
+		return 0;
+	}
+
+	private static pickStr(row: any, ...keys: string[]): string {
+		for (const k of keys) {
+			if (row?.[k] !== undefined && row[k] !== null && row[k] !== '') return String(row[k]);
+		}
+		return '';
+	}
+
+	private static readPagination(data: any): { currentPage: number; lastPage: number; total: number } {
+		const meta = data?.meta || data?.pagination || data?.data || data || {};
+		return {
+			currentPage: Number(meta.current_page ?? data?.current_page ?? 1) || 1,
+			lastPage: Number(meta.last_page ?? data?.last_page ?? 1) || 1,
+			total: Number(meta.total ?? data?.total ?? 0) || 0
+		};
+	}
+
+	/**
+	 * Payouts Steadfast has already made to this merchant.
+	 */
+	static async getPaymentHistory(
+		db: DrizzleD1Database<typeof schema>,
+		pageNumber = 1
+	): Promise<CourierAccountResult<CourierPaymentItem>> {
+		const res = await this.steadfastGet(db, `payments?page=${Math.max(1, pageNumber)}`);
+		if (!res.ok) return { success: false, provider: 'Steadfast', items: [], message: res.message };
+
+		const rows = this.firstArray(res.data);
+		const items: CourierPaymentItem[] = rows.map((r: any) => ({
+			id: this.pickStr(r, 'id', 'payment_id', 'uuid'),
+			amount: this.pickNum(r, 'amount', 'total_amount', 'paid_amount', 'net_amount'),
+			transactionId: this.pickStr(r, 'transaction_id', 'trx_id', 'reference'),
+			paymentMethod: this.pickStr(r, 'payment_method', 'method', 'type'),
+			accountNumber: this.pickStr(r, 'account_number', 'account', 'bank_account'),
+			status: this.pickStr(r, 'status', 'payment_status'),
+			totalParcels: this.pickNum(r, 'total_parcel', 'total_parcels', 'parcel_count', 'consignment_count'),
+			createdAt: this.pickStr(r, 'created_at', 'date', 'payment_date', 'updated_at')
+		}));
+
+		return { success: true, provider: 'Steadfast', items, ...this.readPagination(res.data) };
+	}
+
+	/**
+	 * Return requests raised against this merchant's parcels.
+	 */
+	static async getReturnRequests(
+		db: DrizzleD1Database<typeof schema>,
+		pageNumber = 1
+	): Promise<CourierAccountResult<CourierReturnRequestItem>> {
+		const res = await this.steadfastGet(db, `get_return_requests?page=${Math.max(1, pageNumber)}`);
+		if (!res.ok) return { success: false, provider: 'Steadfast', items: [], message: res.message };
+
+		const rows = this.firstArray(res.data);
+		const items: CourierReturnRequestItem[] = rows.map((r: any) => ({
+			id: this.pickStr(r, 'id', 'return_id', 'uuid'),
+			consignmentId: this.pickStr(r, 'consignment_id', 'cid'),
+			trackingCode: this.pickStr(r, 'tracking_code', 'trackingCode'),
+			invoice: this.pickStr(r, 'invoice', 'invoice_no', 'order_id'),
+			reason: this.pickStr(r, 'reason', 'return_reason', 'note', 'remarks'),
+			status: this.pickStr(r, 'status', 'return_status'),
+			createdAt: this.pickStr(r, 'created_at', 'date', 'updated_at')
+		}));
+
+		return { success: true, provider: 'Steadfast', items, ...this.readPagination(res.data) };
+	}
+
+	/**
+	 * Live parcel counts and the cash-on-delivery riding on each dashboard state.
+	 */
+	static async getParcelStates(
+		db: DrizzleD1Database<typeof schema>
+	): Promise<CourierAccountResult<CourierParcelStateItem>> {
+		const res = await this.steadfastGet(db, 'parcel_states');
+		if (!res.ok) return { success: false, provider: 'Steadfast', items: [], message: res.message };
+
+		const payload = res.data?.data ?? res.data ?? {};
+		const items: CourierParcelStateItem[] = [];
+
+		const pushState = (key: string, value: any) => {
+			if (!value || typeof value !== 'object') {
+				const count = Number(value);
+				if (!isNaN(count)) items.push({ state: key, label: this.humanizeState(key), count, codAmount: 0 });
+				return;
+			}
+			items.push({
+				state: key,
+				label: this.humanizeState(key),
+				count: this.pickNum(value, 'count', 'total', 'parcels', 'quantity'),
+				codAmount: this.pickNum(value, 'cod', 'cod_amount', 'total_cod', 'amount')
+			});
+		};
+
+		if (Array.isArray(payload)) {
+			for (const row of payload) {
+				const key = this.pickStr(row, 'state', 'status', 'name') || 'unknown';
+				pushState(key, row);
+			}
+		} else {
+			for (const [key, value] of Object.entries(payload)) {
+				if (key === 'status' || key === 'message') continue;
+				pushState(key, value);
+			}
+		}
+
+		return { success: true, provider: 'Steadfast', items: items.filter((i) => i.count > 0 || i.codAmount > 0) };
+	}
+
+	private static humanizeState(key: string): string {
+		const labels: Record<string, string> = {
+			pending: 'পেন্ডিং',
+			delivered: 'ডেলিভার্ড',
+			delivered_approval_pending: 'ডেলিভারি অনুমোদন বাকি',
+			partial_delivered: 'আংশিক ডেলিভার্ড',
+			partial_delivered_approval_pending: 'আংশিক ডেলিভারি অনুমোদন বাকি',
+			cancelled: 'বাতিল',
+			cancelled_approval_pending: 'বাতিল অনুমোদন বাকি',
+			hold: 'হোল্ড',
+			in_review: 'রিভিউতে',
+			unknown: 'অন্যান্য',
+			unknown_approval_pending: 'অজানা অনুমোদন বাকি'
+		};
+		return labels[key] || key.replace(/_/g, ' ');
 	}
 
 	/**

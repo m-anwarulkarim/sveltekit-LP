@@ -35,12 +35,21 @@ export const load: PageServerLoad = async ({ parent, platform, url }) => {
 			...parentData,
 			trafficSummary: summary,
 			funnel,
+			loadError: null as string | null,
 			activeRange: range,
 			activeFrom: fromParam || null,
 			activeTo: toParam || null
 		};
-	} catch (err) {
+	} catch (err: any) {
 		console.error('Failed to load visitor analytics data:', err);
+
+		// Zeros here would be indistinguishable from a genuinely quiet day, so
+		// the reason is passed to the page instead of being swallowed.
+		const raw = String(err?.message || err || '');
+		const loadError = /no such table|no such column/i.test(raw)
+			? 'ভিজিটর অ্যানালিটিক্স টেবিল এই ডাটাবেজে তৈরি হয়নি। ডাটাবেজ মাইগ্রেশন চালাতে হবে।'
+			: 'ভিজিটর ডেটা লোড করা যায়নি। কিছুক্ষণ পর আবার চেষ্টা করুন।';
+
 		return {
 			...parentData,
 			trafficSummary: {
@@ -57,6 +66,7 @@ export const load: PageServerLoad = async ({ parent, platform, url }) => {
 				recentVisitors: []
 			},
 			funnel: { pageView: 0, viewContent: 0, addToCart: 0, initiateCheckout: 0, purchase: 0, purchaseValue: 0 },
+			loadError,
 			activeRange: range,
 			activeFrom: fromParam || null,
 			activeTo: toParam || null

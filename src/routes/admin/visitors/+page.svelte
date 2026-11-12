@@ -29,7 +29,8 @@
 		Share2,
 		CheckCircle2,
 		ArrowUpRight,
-		SlidersHorizontal
+		SlidersHorizontal,
+		AlertTriangle
 	} from 'lucide-svelte';
 	import { PackageSearch, ShoppingCart, ClipboardCheck, BadgeDollarSign } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
@@ -161,6 +162,20 @@
 </svelte:head>
 
 <div class="space-y-6 max-w-7xl mx-auto pb-16 font-['Anek_Bangla',sans-serif]">
+	{#if data.loadError}
+		<!-- Without this the zeros below read as a quiet day rather than a failed load -->
+		<div class="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4">
+			<AlertTriangle class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+			<div class="space-y-0.5">
+				<p class="text-sm font-bold text-amber-900">ভিজিটর ডেটা দেখানো যাচ্ছে না</p>
+				<p class="text-xs text-amber-800 leading-relaxed">{data.loadError}</p>
+				<p class="text-[11px] text-amber-700">
+					নিচের সব সংখ্যা শূন্য দেখাচ্ছে কারণ তথ্য আনা যায়নি — এটি প্রকৃত ট্রাফিক নয়।
+				</p>
+			</div>
+		</div>
+	{/if}
+
 	<!-- TOP COMMAND HEADER -->
 	<div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
 		<div class="flex items-center gap-3.5">

@@ -10,6 +10,10 @@ export interface CourierStatsBreakdown {
 	delivered: number;
 	cancelled: number;
 	successRate: number;
+	returned?: number;
+	partialDelivered?: number;
+	fraudReported?: number;
+	codAmount?: number;
 }
 
 export interface FraudRiskAssessment {
@@ -109,10 +113,10 @@ export class FraudService {
 					const delivered = cached.deliveredParcels ?? 0;
 					const cancelled = cached.cancelledParcels ?? 0;
 					const isNewCustomer = total === 0 || (delivered === 0 && cancelled === 0);
-					const successRate = total > 0 ? Math.round(((delivered / total) * 100) * 100) / 100 : 100;
+					const successRate = total > 0 ? Math.round(((delivered / total) * 100) * 100) / 100 : 0;
 					const successRateFormatted = total > 0
 						? `${((delivered / total) * 100).toFixed(2).replace(/\.00$/, '')}%`
-						: '100%';
+						: 'N/A';
 
 					let byCourier: { steadfast?: CourierStatsBreakdown; pathao?: CourierStatsBreakdown } | undefined = undefined;
 					let displayName = cached.courierName || 'Steadfast & Pathao';
@@ -257,13 +261,12 @@ export class FraudService {
 			}
 		}
 
-		// Calculate realistic success rate with exact precision
 		const successRate = totalParcels > 0
 			? Math.round(((deliveredParcels / totalParcels) * 100) * 100) / 100
-			: 100;
+			: 0;
 		const successRateFormatted = totalParcels > 0
 			? `${((deliveredParcels / totalParcels) * 100).toFixed(2).replace(/\.00$/, '')}%`
-			: '100%';
+			: 'N/A';
 
 		const isNew = totalParcels === 0 || (deliveredParcels === 0 && cancelledParcels === 0);
 		const riskTag: 'Safe' | 'Moderate' | 'High Risk' = isNew
@@ -377,9 +380,13 @@ export class FraudService {
 				const cancelled = Number(
 					payload.total_cancelled ?? payload.cancelled ?? payload.cancel ?? 0
 				);
-				const successRate = total > 0 ? Math.round((delivered / total) * 100) : 100;
+				const returned = Number(payload.total_returned ?? payload.returned ?? 0);
+				const partialDelivered = Number(payload.total_partial_delivered ?? payload.partial_delivered ?? 0);
+				const fraudReported = Number(payload.fraud_reported ?? payload.reported ?? payload.flagged ?? 0);
+				const codAmount = Number(payload.total_cod ?? payload.cod_amount ?? 0);
+				const successRate = total > 0 ? Math.round((delivered / total) * 100) : 0;
 
-				return { total, delivered, cancelled, successRate };
+				return { total, delivered, cancelled, successRate, returned, partialDelivered, fraudReported, codAmount };
 			} catch (err: any) {
 				console.warn(`Steadfast fetch from ${url} error:`, err?.message);
 			}
@@ -448,7 +455,7 @@ export class FraudService {
 			const delivered = Number(pData.success ?? 0);
 			const cancelled = Number(pData.cancel ?? 0);
 			const successRate = Number(
-				pData.success_rate ?? (total > 0 ? Math.round((delivered / total) * 100) : 100)
+				pData.success_rate ?? (total > 0 ? Math.round((delivered / total) * 100) : 0)
 			);
 
 			return {

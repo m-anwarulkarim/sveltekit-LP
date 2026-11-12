@@ -13,6 +13,10 @@
 		delivered: number;
 		cancelled: number;
 		successRate: number;
+		returned?: number;
+		partialDelivered?: number;
+		fraudReported?: number;
+		codAmount?: number;
 	}
 
 	interface CourierStats {
@@ -35,12 +39,14 @@
 	interface Props {
 		phone: string;
 		stats?: CourierStats | null;
+		storeName?: string;
 		onRefresh?: (updatedStats?: CourierStats) => void;
 	}
 
 	let {
 		phone,
 		stats = $bindable(null),
+		storeName = 'Store',
 		onRefresh
 	}: Props = $props();
 
@@ -53,24 +59,24 @@
 	);
 
 	let displaySuccessRate = $derived.by(() => {
-		if (!stats || stats.total === 0) return 100;
+		if (!stats || stats.total === 0) return 0;
 		return Math.round(((stats.delivered / stats.total) * 100) * 100) / 100;
 	});
 
 	let displaySuccessRateFormatted = $derived.by(() => {
-		if (stats?.successRateFormatted) return stats.successRateFormatted;
-		if (!stats || stats.total === 0) return '100%';
+		if (!stats || stats.total === 0) return 'N/A';
+		if (stats.successRateFormatted && stats.total > 0) return stats.successRateFormatted;
 		return `${((stats.delivered / stats.total) * 100).toFixed(2).replace(/\.00$/, '')}%`;
 	});
 
 	let riskStatus = $derived.by(() => {
 		if (isNewCustomer) {
 			return {
-				tag: 'Safe',
-				label: 'Safe',
-				colorClass: 'bg-emerald-50 text-emerald-700 border-emerald-200/90',
-				barColor: 'bg-emerald-500',
-				textRateColor: 'text-emerald-600'
+				tag: 'New',
+				label: 'নতুন কাস্টমার',
+				colorClass: 'bg-blue-50 text-blue-700 border-blue-200/90',
+				barColor: 'bg-blue-400',
+				textRateColor: 'text-blue-600'
 			};
 		}
 		const rate = displaySuccessRate;
@@ -161,13 +167,20 @@
 		{/if}
 	</div>
 
-	<!-- Sub-header: Haq Plus Brand Identity & Risk Status Pill -->
+	<!-- Sub-header: Source Badge & Risk Status Pill -->
 	<div class="flex items-center justify-between pt-0.5">
 		<div class="flex items-center gap-1.5">
-			<Shield class="w-4 h-4 text-indigo-500" />
-			<span class="text-xs font-black tracking-wider text-slate-800 uppercase">
-				Haq Plus
-			</span>
+			{#if stats?.badgeLabel}
+				<Truck class="w-3.5 h-3.5 text-indigo-500" />
+				<span class="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
+					{stats.badgeLabel}
+				</span>
+			{:else}
+				<Shield class="w-3.5 h-3.5 text-slate-400" />
+				<span class="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
+					{storeName}
+				</span>
+			{/if}
 		</div>
 
 		<span
@@ -220,15 +233,24 @@
 
 		<!-- Overall Delivery Percentage Bar -->
 		<div class="flex items-center gap-3 pt-0.5">
-			<div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-				<div
-					class="h-full rounded-full transition-all duration-500 {riskStatus.barColor}"
-					style="width: {displaySuccessRate}%"
-				></div>
-			</div>
-			<span class="text-sm font-black font-mono {riskStatus.textRateColor} shrink-0">
-				{displaySuccessRateFormatted}
-			</span>
+			{#if isNewCustomer}
+				<div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+					<div class="h-full rounded-full bg-blue-300 transition-all duration-500 w-full opacity-30"></div>
+				</div>
+				<span class="text-xs font-bold text-blue-500 shrink-0">
+					তথ্য নেই
+				</span>
+			{:else}
+				<div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+					<div
+						class="h-full rounded-full transition-all duration-500 {riskStatus.barColor}"
+						style="width: {displaySuccessRate}%"
+					></div>
+				</div>
+				<span class="text-sm font-black font-mono {riskStatus.textRateColor} shrink-0">
+					{displaySuccessRateFormatted}
+				</span>
+			{/if}
 		</div>
 
 		<!-- BY COURIER Breakdown Section -->
@@ -238,37 +260,10 @@
 			</h4>
 
 			{#if stats?.byCourier?.pathao || stats?.byCourier?.steadfast}
-				<!-- Pathao Row -->
-				{#if stats?.byCourier?.pathao}
-					{@const pa = stats.byCourier.pathao}
-					<div class="space-y-1">
-						<div class="flex items-center justify-between text-xs">
-							<div class="flex items-center gap-1.5 text-slate-700 font-bold">
-								<Truck class="w-3.5 h-3.5 text-emerald-600" />
-								<span>Pathao</span>
-							</div>
-							<span class="font-mono font-bold text-slate-600">
-								{pa.delivered}/{pa.total}
-							</span>
-						</div>
-						<div class="flex items-center gap-2">
-							<div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-								<div
-									class="h-full rounded-full bg-emerald-500 transition-all duration-500"
-									style="width: {pa.successRate}%"
-								></div>
-							</div>
-							<span class="text-[11px] font-mono font-bold text-emerald-600 shrink-0 w-8 text-right">
-								{pa.successRate}%
-							</span>
-						</div>
-					</div>
-				{/if}
-
 				<!-- SteadFast Row -->
 				{#if stats?.byCourier?.steadfast}
 					{@const st = stats.byCourier.steadfast}
-					<div class="space-y-1">
+					<div class="space-y-1.5">
 						<div class="flex items-center justify-between text-xs">
 							<div class="flex items-center gap-1.5 text-slate-700 font-bold">
 								<Truck class="w-3.5 h-3.5 text-amber-600" />
@@ -282,11 +277,48 @@
 							<div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
 								<div
 									class="h-full rounded-full bg-amber-500 transition-all duration-500"
-									style="width: {st.successRate}%"
+									style="width: {st.total > 0 ? st.successRate : 0}%"
 								></div>
 							</div>
 							<span class="text-[11px] font-mono font-bold text-amber-600 shrink-0 w-8 text-right">
-								{st.successRate}%
+								{st.total > 0 ? `${st.successRate}%` : 'N/A'}
+							</span>
+						</div>
+						{#if (st.returned && st.returned > 0) || (st.fraudReported && st.fraudReported > 0)}
+							<div class="flex gap-3 text-[10px] pl-5">
+								{#if st.returned && st.returned > 0}
+									<span class="text-orange-600 font-semibold">রিটার্ন: {st.returned}</span>
+								{/if}
+								{#if st.fraudReported && st.fraudReported > 0}
+									<span class="text-rose-600 font-bold">ফ্রড রিপোর্ট: {st.fraudReported}</span>
+								{/if}
+							</div>
+						{/if}
+					</div>
+				{/if}
+
+				<!-- Pathao Row -->
+				{#if stats?.byCourier?.pathao}
+					{@const pa = stats.byCourier.pathao}
+					<div class="space-y-1.5">
+						<div class="flex items-center justify-between text-xs">
+							<div class="flex items-center gap-1.5 text-slate-700 font-bold">
+								<Truck class="w-3.5 h-3.5 text-emerald-600" />
+								<span>Pathao</span>
+							</div>
+							<span class="font-mono font-bold text-slate-600">
+								{pa.delivered}/{pa.total}
+							</span>
+						</div>
+						<div class="flex items-center gap-2">
+							<div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+								<div
+									class="h-full rounded-full bg-emerald-500 transition-all duration-500"
+									style="width: {pa.total > 0 ? pa.successRate : 0}%"
+								></div>
+							</div>
+							<span class="text-[11px] font-mono font-bold text-emerald-600 shrink-0 w-8 text-right">
+								{pa.total > 0 ? `${pa.successRate}%` : 'N/A'}
 							</span>
 						</div>
 					</div>
@@ -308,11 +340,11 @@
 							<div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
 								<div
 									class="h-full rounded-full {riskStatus.barColor} transition-all duration-500"
-									style="width: {displaySuccessRate}%"
+									style="width: {(stats?.total ?? 0) > 0 ? displaySuccessRate : 0}%"
 								></div>
 							</div>
 							<span class="text-[11px] font-mono font-bold text-slate-500 shrink-0 w-8 text-right">
-								{Math.round(displaySuccessRate)}%
+								{(stats?.total ?? 0) > 0 ? `${Math.round(displaySuccessRate)}%` : 'N/A'}
 							</span>
 						</div>
 					</div>

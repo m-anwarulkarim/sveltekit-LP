@@ -240,6 +240,7 @@
 			<CourierFraudCard
 				phone={customerPhone}
 				stats={courierStats}
+				storeName={data.websiteInfo?.websiteName || 'Store'}
 				onRefresh={() => toast.success('কুরিয়ার ফ্রড ডেটা রিলোড হয়েছে!')}
 			/>
 			<OrderCallNotes

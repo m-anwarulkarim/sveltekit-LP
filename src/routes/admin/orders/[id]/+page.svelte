@@ -413,6 +413,7 @@
 			<CourierFraudCard
 				phone={customerPhone}
 				bind:stats={courierStats}
+				storeName={data.websiteInfo?.websiteName || 'Store'}
 			/>
 
 			<!-- Call Notes & Timeline -->

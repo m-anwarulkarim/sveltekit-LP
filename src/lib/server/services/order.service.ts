@@ -598,8 +598,21 @@ export class OrderService {
 			return [];
 		}
 
-		const whereClause = excludeOrderId
-			? and(or(...matchConditions), ne(schema.orders.id, excludeOrderId))
+		const cleanExclude = (excludeOrderId || '').trim();
+		const noHashExclude = cleanExclude.replace(/^#/, '');
+
+		const whereClause = cleanExclude
+			? and(
+					or(...matchConditions),
+					ne(schema.orders.id, cleanExclude),
+					or(
+						sql`${schema.orders.orderNumber} IS NULL`,
+						and(
+							ne(schema.orders.orderNumber, cleanExclude),
+							ne(schema.orders.orderNumber, noHashExclude)
+						)
+					)
+			  )
 			: or(...matchConditions);
 
 		return await db

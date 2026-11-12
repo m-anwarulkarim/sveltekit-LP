@@ -43,6 +43,7 @@
 			.filter((o: any) => (o.customerPhone || o.customerEmail || '').includes(q))
 			.map((o: any) => ({
 				id: o.id,
+				orderNumber: o.orderNumber || o.order_number || (o.id ? o.id.slice(0, 8) : ''),
 				status: o.status,
 				total: o.total,
 				date: o.createdAt ? new Date(o.createdAt).toLocaleDateString('bn-BD') : 'আজ'

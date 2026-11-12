@@ -140,13 +140,16 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 		foundOrder.id
 	).catch(() => []);
 
-	const pastOrders = pastOrderRows.map((o) => ({
-		id: o.id,
-		orderNumber: (o as any).orderNumber || o.id.slice(0, 8),
-		status: o.status,
-		total: o.total,
-		date: o.createdAt ? new Date(o.createdAt).toLocaleDateString('bn-BD') : 'আজ'
-	}));
+	const pastOrders = pastOrderRows.map((o) => {
+		const rawNum = (o as any).orderNumber || (o as any).order_number || '';
+		return {
+			id: o.id,
+			orderNumber: rawNum ? String(rawNum).trim() : (o.id ? o.id.slice(0, 8) : ''),
+			status: o.status,
+			total: o.total,
+			date: o.createdAt ? new Date(o.createdAt).toLocaleDateString('bn-BD') : 'আজ'
+		};
+	});
 
 	// Fraud & Courier Telemetry from FraudService (Dynamically checking Steadfast / Pathao / Local)
 	let courierStats: any = {

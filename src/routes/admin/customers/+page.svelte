@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import { enhance } from '$app/forms';
 	import {
 		Users,
@@ -1129,11 +1129,11 @@
 								<div class="flex items-center justify-between gap-3 mb-2">
 									<div class="flex items-center gap-2">
 										<a
-											href="/admin/orders/{ord.id}"
+											href="/admin/orders/{ord.orderNumber ? ord.orderNumber.replace(/^#/, '') : ord.id}"
 											target="_blank"
 											class="font-mono font-bold text-sm text-indigo-600 hover:underline flex items-center gap-1"
 										>
-											<span>{ord.orderNumber || ord.id}</span>
+											<span>{ord.orderNumber ? (ord.orderNumber.startsWith('#') ? ord.orderNumber : '#' + ord.orderNumber) : '#' + ord.id.slice(0, 8)}</span>
 											<ExternalLink class="w-3 h-3 text-indigo-400" />
 										</a>
 										<span class="text-[11px] text-slate-400 font-mono">

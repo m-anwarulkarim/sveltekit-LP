@@ -11,6 +11,7 @@
 
 	interface PastOrder {
 		id: string;
+		orderNumber?: string | null;
 		status: string;
 		total: number;
 		date: string;
@@ -56,6 +57,52 @@
 		const parts = name.trim().split(/\s+/);
 		if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
 		return (parts[0][0] + parts[1][0]).toUpperCase();
+	}
+
+	function formatDisplayOrderNumber(order: PastOrder): string {
+		const num = (order.orderNumber || '').trim();
+		if (num) {
+			return num.startsWith('#') ? num : `#${num}`;
+		}
+		if (order.id) {
+			const shortId = order.id.includes('-') || order.id.length > 10 ? order.id.slice(0, 8) : order.id;
+			return `#${shortId}`;
+		}
+		return '#—';
+	}
+
+	function getOrderUrl(order: PastOrder): string {
+		const num = (order.orderNumber || '').trim().replace(/^#/, '');
+		return `/admin/orders/${num || order.id}`;
+	}
+
+	function isCurrentOrder(order: PastOrder): boolean {
+		if (!currentOrderId) return false;
+		const cleanCurrent = currentOrderId.replace(/^#/, '').trim();
+		const cleanNum = (order.orderNumber || '').replace(/^#/, '').trim();
+		return order.id === currentOrderId || (cleanNum !== '' && cleanNum === cleanCurrent);
+	}
+
+	const STATUS_CATALOG: Record<string, { label: string; class: string }> = {
+		pending: { label: 'পেন্ডিং', class: 'bg-amber-100 text-amber-800' },
+		confirmed: { label: 'কনফার্মড', class: 'bg-emerald-100 text-emerald-800' },
+		processing: { label: 'প্রসেসিং', class: 'bg-indigo-100 text-indigo-800' },
+		printed: { label: 'প্রিন্টেড', class: 'bg-violet-100 text-violet-800' },
+		entry_done: { label: 'এন্ট্রি ডান', class: 'bg-sky-100 text-sky-800' },
+		shipped: { label: 'শিপড', class: 'bg-blue-100 text-blue-800' },
+		delivered: { label: 'ডেলিভার্ড', class: 'bg-emerald-100 text-emerald-800' },
+		cancelled: { label: 'বাতিল', class: 'bg-rose-100 text-rose-800' },
+		returned: { label: 'রিটার্ন', class: 'bg-rose-100 text-rose-800' },
+		hold: { label: 'হোল্ড', class: 'bg-slate-100 text-slate-800' },
+		busy: { label: 'বিজি', class: 'bg-yellow-100 text-yellow-800' },
+		no_response: { label: 'নো রেসপন্স', class: 'bg-slate-100 text-slate-700' }
+	};
+
+	function getStatusInfo(status: string) {
+		return STATUS_CATALOG[status] || {
+			label: status,
+			class: status === 'confirmed' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+		};
 	}
 </script>
 
@@ -141,18 +188,21 @@
 				</span>
 				<div class="space-y-1 max-h-36 overflow-y-auto pr-1">
 					{#each pastOrders as order}
+						{@const isSelected = isCurrentOrder(order)}
+						{@const statusInfo = getStatusInfo(order.status)}
 						<a
-							href="/admin/orders/{order.id}"
-							class="flex items-center justify-between p-2 rounded-lg text-xs font-semibold hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200 {order.id === currentOrderId ? 'bg-indigo-50/60 border-indigo-200' : 'bg-slate-50/60'}"
+							href={getOrderUrl(order)}
+							title="অর্ডার #{order.orderNumber || order.id} বিস্তারিত দেখুন"
+							class="flex items-center justify-between p-2 rounded-lg text-xs font-semibold hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200 {isSelected ? 'bg-indigo-50/70 border-indigo-200 shadow-2xs' : 'bg-slate-50/60'}"
 						>
-							<div class="flex items-center gap-2">
-								<span class="font-mono text-slate-900 font-bold">#{order.id}</span>
-								<span class="text-[10px] text-slate-400">{order.date}</span>
+							<div class="flex items-center gap-2 min-w-0">
+								<span class="font-mono text-slate-900 font-bold shrink-0">{formatDisplayOrderNumber(order)}</span>
+								<span class="text-[10px] text-slate-400 shrink-0">{order.date}</span>
 							</div>
-							<div class="flex items-center gap-2">
-								<span class="font-mono font-bold text-slate-700">৳{order.total}</span>
-								<span class="text-[10px] px-1.5 py-0.2 rounded font-bold {order.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
-									{order.status}
+							<div class="flex items-center gap-2 shrink-0">
+								<span class="font-mono font-bold text-slate-700">৳{Number(order.total || 0).toLocaleString('en-US')}</span>
+								<span class="text-[10px] px-1.5 py-0.5 rounded font-bold {statusInfo.class}">
+									{statusInfo.label}
 								</span>
 							</div>
 						</a>

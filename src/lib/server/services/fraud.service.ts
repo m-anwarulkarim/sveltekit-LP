@@ -59,7 +59,19 @@ export class FraudService {
 
 		let fraudSettings: any = {};
 		try {
-			fraudSettings = (await SettingsService.getSettings(db, 'fraud_check')) || {};
+			fraudSettings = (await SettingsService.getSettingsGroup(db, 'fraud_check')) || {};
+			if (!fraudSettings || Object.keys(fraudSettings).length === 0) {
+				const singleRow = await db
+					.select()
+					.from(schema.storeSettings)
+					.where(eq(schema.storeSettings.key, 'fraud_check'))
+					.get();
+				if (singleRow && singleRow.value) {
+					try {
+						fraudSettings = JSON.parse(singleRow.value);
+					} catch {}
+				}
+			}
 		} catch (err) {
 			console.error('Failed to get fraud settings:', err);
 		}

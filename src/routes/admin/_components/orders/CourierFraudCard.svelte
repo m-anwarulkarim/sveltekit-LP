@@ -4,8 +4,7 @@
 		RotateCw,
 		Truck,
 		AlertCircle,
-		Settings,
-		CheckCircle2
+		Settings
 	} from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 

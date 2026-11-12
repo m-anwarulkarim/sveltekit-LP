@@ -41,6 +41,9 @@ export interface FraudRiskAssessment {
  */
 export class FraudService {
 	private static readonly CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 Hours
+	// An empty result is often a transient courier-API failure rather than a real
+	// zero-history customer, so it is retried far sooner than a populated one.
+	private static readonly EMPTY_CACHE_TTL_MS = 10 * 60 * 1000; // 10 Minutes
 
 	/**
 	 * Inspects phone number delivery history across configured couriers
@@ -106,8 +109,11 @@ export class FraudService {
 					.where(eq(schema.courierFraudCache.phone, phone))
 					.get();
 
-				if (cached && now - new Date(cached.lastCheckedAt).getTime() < this.CACHE_TTL_MS) {
-					const total = cached.totalParcels ?? 0;
+				const cachedTotal = cached?.totalParcels ?? 0;
+				const ttl = cachedTotal > 0 ? this.CACHE_TTL_MS : this.EMPTY_CACHE_TTL_MS;
+
+				if (cached && now - new Date(cached.lastCheckedAt).getTime() < ttl) {
+					const total = cachedTotal;
 					const delivered = cached.deliveredParcels ?? 0;
 					const cancelled = cached.cancelledParcels ?? 0;
 					const isNewCustomer = total === 0 || (delivered === 0 && cancelled === 0);
@@ -378,51 +384,105 @@ export class FraudService {
 
 				console.log(`[FraudCheck] Steadfast API response from ${url}:`, JSON.stringify(data).slice(0, 500));
 
-				const payload = data?.data || data?.Summaries?.Steadfast || data || {};
-				const total = Number(
-					payload.total_parcels ?? payload.Total_parcels ?? payload.parcel_volume
-					?? payload.total ?? payload.consignment_count ?? 0
-				);
-				const delivered = Number(
-					payload.total_delivered ?? payload.delivered_parcel ?? payload.delivered
-					?? payload.success ?? payload.delivery_count ?? 0
-				);
-				const cancelled = Number(
-					payload.total_cancelled ?? payload.cancelled_parcel ?? payload.cancelled
-					?? payload.cancel ?? payload.cancel_count ?? 0
-				);
-				const returned = Number(
-					payload.total_returned ?? payload.returned ?? payload.return_count ?? 0
-				);
-				const partialDelivered = Number(
-					payload.total_partial_delivered ?? payload.partial_delivered
-					?? payload.partial_delivery_count ?? 0
-				);
-				const fraudReported = Number(
-					payload.fraud_reported ?? payload.merchant_reports ?? payload.reported
-					?? payload.flagged ?? payload.report_count ?? 0
-				);
-				const codAmount = Number(payload.total_cod ?? payload.cod_amount ?? 0);
+				const parsed = this.extractSteadfastStats(data);
+				if (parsed) return parsed;
 
-				if (total === 0 && delivered === 0 && cancelled === 0) {
-					const deliveryPct = Number(payload.delivery_percentage ?? payload.delivered_percentage ?? 0);
-					const cancelPct = Number(payload.cancel_percentage ?? payload.cancelled_percentage ?? 0);
-					if (deliveryPct > 0 || cancelPct > 0) {
-						const inferredTotal = Number(payload.parcel_volume ?? payload.total_parcels ?? 0);
-						if (inferredTotal > 0) {
-							const inferredDelivered = Math.round((deliveryPct / 100) * inferredTotal);
-							const inferredCancelled = Math.round((cancelPct / 100) * inferredTotal);
-							const successRate = inferredTotal > 0 ? Math.round((inferredDelivered / inferredTotal) * 100) : 0;
-							return { total: inferredTotal, delivered: inferredDelivered, cancelled: inferredCancelled, successRate, returned, partialDelivered, fraudReported, codAmount };
-						}
-					}
-				}
-
-				const successRate = total > 0 ? Math.round((delivered / total) * 100) : 0;
-				return { total, delivered, cancelled, successRate, returned, partialDelivered, fraudReported, codAmount };
+				console.warn(`[FraudCheck] No recognizable fraud fields from ${url}, trying next endpoint.`);
 			} catch (err: any) {
 				console.warn(`Steadfast fetch from ${url} error:`, err?.message);
 			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Steadfast has shipped several shapes for this payload and nests it
+	 * inconsistently, so values are located by key name at any depth rather
+	 * than by a fixed path. Returns null when nothing recognizable is present,
+	 * which lets the caller fall through to the next endpoint instead of
+	 * reporting a real customer as having no history.
+	 */
+	private static extractSteadfastStats(data: any): CourierStatsBreakdown | null {
+		const found = new Map<string, number>();
+
+		const walk = (node: any, depth: number) => {
+			if (!node || typeof node !== 'object' || depth > 6) return;
+			for (const [key, value] of Object.entries(node)) {
+				if (typeof value === 'number' || (typeof value === 'string' && value.trim() !== '' && !isNaN(Number(value)))) {
+					const normalizedKey = key.toLowerCase().replace(/[^a-z]/g, '');
+					if (!found.has(normalizedKey)) found.set(normalizedKey, Number(value));
+				} else if (typeof value === 'object') {
+					walk(value, depth + 1);
+				}
+			}
+		};
+		walk(data, 0);
+
+		const pick = (...keys: string[]): number | undefined => {
+			for (const k of keys) {
+				const v = found.get(k);
+				if (v !== undefined) return v;
+			}
+			return undefined;
+		};
+
+		const total = pick('totalparcels', 'parcelvolume', 'totalparcel', 'consignmentcount', 'totalorder', 'totalorders', 'total');
+		const delivered = pick('totaldelivered', 'deliveredparcel', 'deliveredparcels', 'delivered', 'successparcel', 'deliverycount', 'success');
+		const cancelled = pick('totalcancelled', 'cancelledparcel', 'cancelledparcels', 'cancelled', 'canceledparcel', 'canceled', 'cancelcount', 'cancel');
+		const deliveryPct = pick('deliverypercentage', 'deliveredpercentage', 'successrate', 'deliveryratio', 'score');
+		const cancelPct = pick('cancelpercentage', 'cancelledpercentage', 'canceledpercentage');
+
+		const returned = pick('totalreturned', 'returnedparcel', 'returned', 'returncount') ?? 0;
+		const partialDelivered = pick('totalpartialdelivered', 'partialdelivered', 'partialdeliverycount') ?? 0;
+		const fraudReported = pick('fraudreported', 'merchantreports', 'merchantreport', 'reported', 'reportcount', 'flagged', 'totalreports') ?? 0;
+		const codAmount = pick('totalcod', 'codamount') ?? 0;
+
+		// Counts present: authoritative.
+		if (delivered !== undefined || cancelled !== undefined) {
+			const d = delivered ?? 0;
+			const c = cancelled ?? 0;
+			const t = total ?? d + c;
+			return {
+				total: t,
+				delivered: d,
+				cancelled: c,
+				successRate: t > 0 ? Math.round((d / t) * 100) : 0,
+				returned,
+				partialDelivered,
+				fraudReported,
+				codAmount
+			};
+		}
+
+		// Only a volume + percentages came back: reconstruct the counts.
+		if (total !== undefined && total > 0 && (deliveryPct !== undefined || cancelPct !== undefined)) {
+			const d = Math.round(((deliveryPct ?? 0) / 100) * total);
+			const c = cancelPct !== undefined ? Math.round((cancelPct / 100) * total) : Math.max(total - d, 0);
+			return {
+				total,
+				delivered: d,
+				cancelled: c,
+				successRate: Math.round((d / total) * 100),
+				returned,
+				partialDelivered,
+				fraudReported,
+				codAmount
+			};
+		}
+
+		// A genuine zero-history customer still reports a volume of 0.
+		if (total === 0) {
+			return {
+				total: 0,
+				delivered: 0,
+				cancelled: 0,
+				successRate: 0,
+				returned,
+				partialDelivered,
+				fraudReported,
+				codAmount
+			};
 		}
 
 		return null;

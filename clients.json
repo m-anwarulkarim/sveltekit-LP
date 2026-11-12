@@ -1,0 +1,14 @@
+[
+  {
+    "name": "faris shop new",
+    "branch": "main",
+    "github": true,
+    "note": "Faris local shop project"
+  }
+  ,{
+    "name": "poltisheba",
+    "branch": "main",
+    "github": true,
+    "note": "Poltisheba project"
+  }
+]

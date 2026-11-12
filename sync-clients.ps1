@@ -203,6 +203,22 @@ foreach ($c in $clients) {
     Write-Host "+-- done" -ForegroundColor DarkGray
 }
 
+# Push Test Dashboard itself to GitHub
+if (-not $dryRun -and -not $only) {
+    Write-Host ""
+    Write-Host "+-- Test Dashboard (core)" -ForegroundColor Cyan
+    Write-Step ">>" "Pushing to GitHub (origin)..." "Gray"
+    git -C $CORE push origin main 2>&1 | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Step "OK" "Pushed to GitHub" "Green"
+        Write-Log "OK (core push): Test Dashboard"
+    } else {
+        Write-Step "!!" "Push failed -- run: git push origin main" "Yellow"
+        Write-Log "FAIL (core push): Test Dashboard"
+    }
+    Write-Host "+-- done" -ForegroundColor DarkGray
+}
+
 $elapsed = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
 
 Write-Host ""

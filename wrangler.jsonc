@@ -6,8 +6,7 @@
 	"compatibility_flags": ["nodejs_compat"],
 	"vars": {
 		"ORIGIN": "https://seedbd.shop",
-		"R2_PUBLIC_URL": "https://pub-fe7043cdba5e4550a7e594df8db06129.r2.dev",
-		"BETTER_AUTH_SECRET": "sDVHN55YKBnEqrsW9Tm9lRvY4sWhP4q4"
+		"R2_PUBLIC_URL": "https://pub-fe7043cdba5e4550a7e594df8db06129.r2.dev"
 	},
 	"assets": {
 		"binding": "ASSETS",

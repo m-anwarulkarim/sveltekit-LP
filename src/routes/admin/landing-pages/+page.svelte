@@ -4,6 +4,7 @@
 	import { confirmModal } from '#lib/stores/confirm.svelte';
 	import { toast } from 'svelte-sonner';
 	import { submitAction } from '#lib/client/submit-action';
+	import { plainText } from '#lib/utils/html-safe';
 	import {
 		Globe,
 		RefreshCw,
@@ -310,7 +311,7 @@
 								{lp.title}
 							</h3>
 							<p class="text-xs text-slate-500 leading-relaxed line-clamp-2">
-								{lp.config?.subheadline || lp.metaDescription || 'হাই-কনভার্সন অ্যানিমেটেড ল্যান্ডিং পেজ'}
+								{plainText(lp.config?.subheadline || lp.metaDescription) || 'হাই-কনভার্সন অ্যানিমেটেড ল্যান্ডিং পেজ'}
 							</p>
 						</div>
 

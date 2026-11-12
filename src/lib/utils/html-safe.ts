@@ -12,8 +12,16 @@ export function jsonLdScript(data: unknown): string {
 /** Turns rich text into plain text for meta tags and short previews. */
 export function plainText(html: string | null | undefined, maxLength = 200): string {
 	const text = (html ?? '')
+		.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+		.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+		.replace(/<!--[\s\S]*?-->/g, ' ')
 		.replace(/<[^>]*>/g, ' ')
 		.replace(/&nbsp;/g, ' ')
+		.replace(/&amp;/g, '&')
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&quot;/g, '"')
+		.replace(/&#39;/g, "'")
 		.replace(/\s+/g, ' ')
 		.trim();
 	return text.length > maxLength ? `${text.slice(0, maxLength).trimEnd()}…` : text;

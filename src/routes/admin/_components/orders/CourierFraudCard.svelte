@@ -1,25 +1,36 @@
 <script lang="ts">
-	import { Card, Badge } from '#lib/components/ui';
 	import {
-		ShieldAlert,
-		ShieldCheck,
+		Shield,
 		RotateCw,
 		Truck,
-		AlertTriangle,
-		CheckCircle2,
 		AlertCircle,
-		Settings
+		Settings,
+		CheckCircle2
 	} from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
+
+	interface CourierBreakdownItem {
+		total: number;
+		delivered: number;
+		cancelled: number;
+		successRate: number;
+	}
 
 	interface CourierStats {
 		total: number;
 		delivered: number;
 		cancelled: number;
 		successRate: number;
+		successRateFormatted?: string;
+		riskTag?: 'Safe' | 'Moderate' | 'High Risk' | string;
 		courierName?: string;
 		badgeLabel?: string;
 		isConfigured?: boolean;
+		byCourier?: {
+			steadfast?: CourierBreakdownItem;
+			pathao?: CourierBreakdownItem;
+			[key: string]: CourierBreakdownItem | undefined;
+		};
 	}
 
 	interface Props {
@@ -42,35 +53,47 @@
 		!stats || stats.total === 0 || (stats.delivered === 0 && stats.cancelled === 0)
 	);
 
+	let displaySuccessRate = $derived.by(() => {
+		if (!stats || stats.total === 0) return 100;
+		return Math.round(((stats.delivered / stats.total) * 100) * 100) / 100;
+	});
+
+	let displaySuccessRateFormatted = $derived.by(() => {
+		if (stats?.successRateFormatted) return stats.successRateFormatted;
+		if (!stats || stats.total === 0) return '100%';
+		return `${((stats.delivered / stats.total) * 100).toFixed(2).replace(/\.00$/, '')}%`;
+	});
+
 	let riskStatus = $derived.by(() => {
 		if (isNewCustomer) {
 			return {
-				level: 'unknown',
-				label: 'নতুন কাস্টমার (রেকর্ড নেই)',
-				color: 'text-slate-700 bg-slate-50 border-slate-200',
+				tag: 'Safe',
+				label: 'Safe',
+				colorClass: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
 				barColor: 'bg-emerald-500'
 			};
 		}
-		if (stats!.successRate >= 80) {
+		const rate = displaySuccessRate;
+		if (rate >= 70) {
 			return {
-				level: 'low',
-				label: 'নিরাপদ কাস্টমার (Low Risk)',
-				color: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+				tag: 'Safe',
+				label: 'Safe',
+				colorClass: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
 				barColor: 'bg-emerald-500'
 			};
 		}
-		if (stats!.successRate >= 50) {
+		if (rate >= 50) {
 			return {
-				level: 'medium',
-				label: 'মাঝারি ঝুঁকি (ফোন ভেরিফাই করুন)',
-				color: 'text-amber-700 bg-amber-50 border-amber-200',
+				tag: 'Moderate',
+				label: 'Moderate',
+				colorClass: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
 				barColor: 'bg-amber-500'
 			};
 		}
 		return {
-			level: 'high',
-			label: 'উচ্চ ঝুঁকি (অগ্রিম ডেলিভারি চার্জ নিন!)',
-			color: 'text-rose-700 bg-rose-50 border-rose-200',
+			tag: 'High Risk',
+			label: 'High Risk',
+			colorClass: 'bg-rose-500/10 text-rose-400 border-rose-500/30',
 			barColor: 'bg-rose-500'
 		};
 	});
@@ -91,17 +114,17 @@
 				if (data.success && data.stats) {
 					stats = data.stats;
 					if (data.stats.isConfigured) {
-						toast.success(`${data.stats.courierName} থেকে লাইভ ডেটা আপডেট হয়েছে!`);
+						toast.success('কুরিয়ার লাইভ ডেটা সফলভাবে আপডেট হয়েছে!');
 					} else {
-						toast.error('কোনো কুরিয়ার API কনফিগার করা নেই! Settings > Courier থেকে API সেটআপ করুন।');
+						toast.info('কোনো কুরিয়ার API চালু নেই। লোকাল হিস্ট্রি লোড হয়েছে।');
 					}
 					onRefresh?.(data.stats);
 				}
 			} else {
-				toast.error('কুরিয়ার সার্ভারের সাথে সংযোগ করা যায়নি');
+				toast.error('কুরিয়ার সার্ভার থেকে তথ্য পাওয়া যায়নি');
 			}
 		} catch (err) {
-			console.error('Failed to refresh live courier data:', err);
+			console.error('Failed to refresh courier fraud check:', err);
 			toast.error('কুরিয়ার ডেটা রিলোড ব্যর্থ হয়েছে');
 		} finally {
 			setTimeout(() => {
@@ -111,122 +134,203 @@
 	}
 </script>
 
-<Card class="p-4 bg-white/90 shadow-xs border-slate-200/90 space-y-3 font-['Anek_Bangla',sans-serif]">
-	<!-- Header -->
-	<div class="flex items-center justify-between pb-2 border-b border-slate-100">
+<!-- Dark Theme Fraud Check Card matching user exact visual style -->
+<div class="rounded-2xl bg-[#141b26] border border-slate-800/90 p-4 text-white shadow-xl space-y-3.5 font-sans">
+	<!-- Top Bar: Fraud Check title & Refresh Button -->
+	<div class="flex items-center justify-between pb-1">
 		<div class="flex items-center gap-2">
-			<ShieldCheck class="w-4 h-4 text-indigo-600" />
-			<h3 class="text-xs font-black text-slate-900 uppercase tracking-wider">
-				ফ্রড ও কুরিয়ার হিস্ট্রি
+			<Shield class="w-4 h-4 text-slate-300" />
+			<h3 class="text-sm font-semibold text-slate-100 tracking-wide">
+				Fraud Check
 			</h3>
 		</div>
 
-		<div class="flex items-center gap-2">
-			<Badge
-				variant={stats?.isConfigured ? 'purple' : 'outline'}
-				class="text-[9px] font-bold py-0.5 px-1.5 uppercase tracking-wider {stats?.isConfigured ? '' : 'text-amber-700 border-amber-300 bg-amber-50'}"
+		{#if hasPhone}
+			<button
+				type="button"
+				onclick={handleRefreshClick}
+				disabled={isRefreshing}
+				class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/70 transition-colors cursor-pointer"
+				title="কুরিয়ার লাইভ সার্ভার থেকে রিফ্রেশ করুন"
 			>
-				{stats?.isConfigured ? (stats.badgeLabel || 'COURIER LIVE') : 'API আনকনফিগার্ড'}
-			</Badge>
+				<RotateCw class="w-4 h-4 {isRefreshing ? 'animate-spin text-emerald-400' : ''}" />
+			</button>
+		{/if}
+	</div>
 
-			{#if hasPhone}
-				<button
-					type="button"
-					onclick={handleRefreshClick}
-					disabled={isRefreshing}
-					class="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-slate-100 transition-colors cursor-pointer"
-					title="লাইভ কুরিয়ার এপিআই থেকে রিফ্রেশ করুন"
-				>
-					<RotateCw class="w-3.5 h-3.5 {isRefreshing ? 'animate-spin text-indigo-600' : ''}" />
-				</button>
-			{/if}
+	<!-- Sub-header: ECOMAH / Brand Identity & Risk Status Pill -->
+	<div class="flex items-center justify-between pt-0.5">
+		<div class="flex items-center gap-1.5">
+			<Shield class="w-4 h-4 text-slate-400" />
+			<span class="text-xs font-bold tracking-wider text-slate-200 uppercase">
+				ECOMAH
+			</span>
 		</div>
+
+		<span
+			class="px-3 py-0.5 rounded-full text-xs font-semibold border {riskStatus.colorClass}"
+		>
+			{riskStatus.label}
+		</span>
 	</div>
 
 	{#if !hasPhone}
-		<!-- Empty / Inactive state when no phone is typed -->
-		<div class="py-6 px-3 text-center text-slate-400 space-y-1.5 bg-slate-50/60 rounded-xl border border-slate-100">
-			<ShieldAlert class="w-7 h-7 mx-auto text-slate-300 stroke-1" />
-			<p class="text-xs font-bold text-slate-600">কুরিয়ার হিস্ট্রি খালি</p>
-			<p class="text-[11px] text-slate-400 leading-relaxed">
-				কাস্টমারের ফোন নম্বর অনুযায়ী যুক্তকৃত Steadfast বা Pathao কুরিয়ার থেকে লাইভ ডেলিভারি রেট ও রেকর্ড আসবে।
-			</p>
-		</div>
-	{:else if !stats?.isConfigured}
-		<!-- Unconfigured Courier State -->
-		<div class="p-3.5 bg-amber-50/70 rounded-xl border border-amber-200 space-y-2 text-center">
-			<div class="flex items-center justify-center gap-1.5 text-xs font-bold text-amber-800">
-				<AlertCircle class="w-4 h-4 text-amber-600" />
-				<span>কুরিয়ার API কনফিগার করা নেই</span>
-			</div>
-			<p class="text-[11px] text-slate-600 leading-relaxed">
-				কাস্টমারের পার্সেল হিস্ট্রি ও ডেলিভারি সাকসেস রেট লাইভ দেখতে সেটিংস থেকে আপনার কুরিয়ার API Key যুক্ত করুন।
-			</p>
-			<div class="pt-1.5 border-t border-amber-200/80">
-				<a
-					href="/admin/settings/courier"
-					class="text-xs text-indigo-700 font-bold hover:underline inline-flex items-center gap-1"
-				>
-					<Settings class="w-3.5 h-3.5 text-indigo-600" />
-					<span>Settings > Courier থেকে API সেটআপ করুন ➔</span>
-				</a>
-			</div>
-		</div>
-	{:else if isNewCustomer}
-		<!-- Phone is typed, and courier IS configured, but no delivery history -->
-		<div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2 text-center">
-			<div class="flex items-center justify-center gap-1.5 text-xs font-bold text-slate-800">
-				<CheckCircle2 class="w-4 h-4 text-emerald-500" />
-				<span>নতুন কাস্টমার (রেকর্ড নেই)</span>
-			</div>
-			<p class="text-[11px] text-slate-500">
-				যুক্তকৃত কুরিয়ারে ({stats?.courierName || 'কুরিয়ার নেটওয়ার্ক'}) এই ফোন নম্বরে পূর্ববর্তী কোনো ক্যান্সেল বা রিটার্ন হিস্ট্রি পাওয়া যায়নি।
-			</p>
+		<!-- Empty Phone State -->
+		<div class="py-6 px-3 text-center text-slate-400 space-y-1 bg-[#1a2232]/50 rounded-xl border border-slate-800/60">
+			<Shield class="w-6 h-6 mx-auto text-slate-500 stroke-1" />
+			<p class="text-xs font-medium text-slate-300">ফোন নম্বর প্রদান করুন</p>
+			<p class="text-[11px] text-slate-500">গ্রাহকের ফোন নম্বর অনুযায়ী কুরিয়ার ডেলিভারি রেকর্ড প্রদর্শিত হবে</p>
 		</div>
 	{:else}
-		<!-- Risk Assessment Status Pill for Returning / Evaluated Customer -->
-		<div class="flex items-center justify-between p-2 rounded-xl border text-xs font-bold {riskStatus.color}">
-			<div class="flex items-center gap-1.5">
-				{#if riskStatus.level === 'low'}
-					<CheckCircle2 class="w-4 h-4 text-emerald-600 shrink-0" />
-				{:else if riskStatus.level === 'high'}
-					<AlertTriangle class="w-4 h-4 text-rose-600 shrink-0" />
-				{:else}
-					<Truck class="w-4 h-4 text-amber-600 shrink-0" />
-				{/if}
-				<span>{riskStatus.label}</span>
+		<!-- 3 Stat Blocks (Total / Received / Cancel) -->
+		<div class="grid grid-cols-3 gap-2.5">
+			<!-- Total -->
+			<div class="bg-[#1a2232] rounded-xl py-3 px-2 text-center border border-slate-800/80 shadow-xs">
+				<span class="text-xl font-bold font-mono text-white block">
+					{stats?.total ?? 0}
+				</span>
+				<span class="text-xs text-slate-400 font-medium block mt-0.5">
+					Total
+				</span>
 			</div>
-			<span class="font-mono text-sm">{stats!.successRate}%</span>
+
+			<!-- Received -->
+			<div class="bg-[#1a2232] rounded-xl py-3 px-2 text-center border border-slate-800/80 shadow-xs">
+				<span class="text-xl font-bold font-mono text-emerald-400 block">
+					{stats?.delivered ?? 0}
+				</span>
+				<span class="text-xs text-slate-400 font-medium block mt-0.5">
+					Received
+				</span>
+			</div>
+
+			<!-- Cancel -->
+			<div class="bg-[#1a2232] rounded-xl py-3 px-2 text-center border border-slate-800/80 shadow-xs">
+				<span class="text-xl font-bold font-mono text-rose-500 block">
+					{stats?.cancelled ?? 0}
+				</span>
+				<span class="text-xs text-slate-400 font-medium block mt-0.5">
+					Cancel
+				</span>
+			</div>
 		</div>
 
-		<!-- Progress Bar -->
-		<div class="space-y-1">
-			<div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+		<!-- Overall Delivery Percentage Bar -->
+		<div class="flex items-center gap-3 pt-0.5">
+			<div class="flex-1 h-2 bg-slate-800/90 rounded-full overflow-hidden">
 				<div
 					class="h-full rounded-full transition-all duration-500 {riskStatus.barColor}"
-					style="width: {stats!.successRate}%"
+					style="width: {displaySuccessRate}%"
 				></div>
 			</div>
-			<div class="flex justify-between text-[10px] text-slate-400 font-medium">
-				<span>সাকসেস রেট</span>
-				<span class="font-semibold text-slate-600">{stats!.courierName || 'কুরিয়ার নেটওয়ার্ক'}</span>
-			</div>
+			<span class="text-sm font-bold font-mono text-emerald-400 shrink-0">
+				{displaySuccessRateFormatted}
+			</span>
 		</div>
 
-		<!-- Mini Metrics Grid -->
-		<div class="grid grid-cols-3 gap-2 text-center pt-1">
-			<div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
-				<span class="text-[10px] font-bold text-slate-500 block">মোট অর্ডার</span>
-				<span class="text-sm font-black font-mono text-slate-900">{stats!.total}</span>
-			</div>
-			<div class="bg-emerald-50/60 p-2 rounded-xl border border-emerald-100">
-				<span class="text-[10px] font-bold text-emerald-700 block">রিসিভড</span>
-				<span class="text-sm font-black font-mono text-emerald-700">{stats!.delivered}</span>
-			</div>
-			<div class="bg-rose-50/60 p-2 rounded-xl border border-rose-100">
-				<span class="text-[10px] font-bold text-rose-700 block">ক্যান্সেল</span>
-				<span class="text-sm font-black font-mono text-rose-700">{stats!.cancelled}</span>
-			</div>
+		<!-- BY COURIER Breakdown Section -->
+		<div class="pt-2 border-t border-slate-800/80 space-y-3">
+			<h4 class="text-[10px] font-bold tracking-wider uppercase text-slate-400">
+				BY COURIER
+			</h4>
+
+			{#if stats?.byCourier?.pathao || stats?.byCourier?.steadfast}
+				<!-- Pathao Row -->
+				{#if stats?.byCourier?.pathao}
+					{@const pa = stats.byCourier.pathao}
+					<div class="space-y-1">
+						<div class="flex items-center justify-between text-xs">
+							<div class="flex items-center gap-1.5 text-slate-200 font-medium">
+								<Truck class="w-3.5 h-3.5 text-emerald-400" />
+								<span>Pathao</span>
+							</div>
+							<span class="font-mono font-bold text-slate-300">
+								{pa.delivered}/{pa.total}
+							</span>
+						</div>
+						<div class="flex items-center gap-2">
+							<div class="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+								<div
+									class="h-full rounded-full bg-emerald-500 transition-all duration-500"
+									style="width: {pa.successRate}%"
+								></div>
+							</div>
+							<span class="text-[11px] font-mono font-bold text-emerald-400 shrink-0 w-8 text-right">
+								{pa.successRate}%
+							</span>
+						</div>
+					</div>
+				{/if}
+
+				<!-- SteadFast Row -->
+				{#if stats?.byCourier?.steadfast}
+					{@const st = stats.byCourier.steadfast}
+					<div class="space-y-1">
+						<div class="flex items-center justify-between text-xs">
+							<div class="flex items-center gap-1.5 text-slate-200 font-medium">
+								<Truck class="w-3.5 h-3.5 text-amber-400" />
+								<span>SteadFast</span>
+							</div>
+							<span class="font-mono font-bold text-slate-300">
+								{st.delivered}/{st.total}
+							</span>
+						</div>
+						<div class="flex items-center gap-2">
+							<div class="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+								<div
+									class="h-full rounded-full bg-amber-500 transition-all duration-500"
+									style="width: {st.successRate}%"
+								></div>
+							</div>
+							<span class="text-[11px] font-mono font-bold text-amber-400 shrink-0 w-8 text-right">
+								{st.successRate}%
+							</span>
+						</div>
+					</div>
+				{/if}
+			{:else}
+				<!-- Fallback when individual courier breakdown isn't populated yet -->
+				<div class="space-y-2">
+					<div class="space-y-1">
+						<div class="flex items-center justify-between text-xs">
+							<div class="flex items-center gap-1.5 text-slate-300 font-medium">
+								<Truck class="w-3.5 h-3.5 text-slate-400" />
+								<span>{stats?.courierName || 'SteadFast / Pathao'}</span>
+							</div>
+							<span class="font-mono font-bold text-slate-300">
+								{stats?.delivered ?? 0}/{stats?.total ?? 0}
+							</span>
+						</div>
+						<div class="flex items-center gap-2">
+							<div class="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+								<div
+									class="h-full rounded-full {riskStatus.barColor} transition-all duration-500"
+									style="width: {displaySuccessRate}%"
+								></div>
+							</div>
+							<span class="text-[11px] font-mono font-bold text-slate-400 shrink-0 w-8 text-right">
+								{Math.round(displaySuccessRate)}%
+							</span>
+						</div>
+					</div>
+
+					{#if !stats?.isConfigured}
+						<div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between gap-2 mt-2">
+							<div class="flex items-center gap-1.5 text-[11px] text-amber-300">
+								<AlertCircle class="w-3.5 h-3.5 shrink-0 text-amber-400" />
+								<span>কুরিয়ার API কনফিগার করা নেই</span>
+							</div>
+							<a
+								href="/admin/settings/fraud-check-api"
+								class="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 inline-flex items-center gap-1 hover:underline"
+							>
+								<Settings class="w-3 h-3" />
+								<span>সেটআপ</span>
+							</a>
+						</div>
+					{/if}
+				</div>
+			{/if}
 		</div>
 	{/if}
-</Card>
+</div>

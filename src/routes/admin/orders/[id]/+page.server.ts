@@ -171,9 +171,12 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 					delivered: risk.deliveredParcels,
 					cancelled: risk.cancelledParcels,
 					successRate: risk.successRate,
+					successRateFormatted: risk.successRateFormatted,
+					riskTag: risk.riskTag,
 					courierName: risk.courierName,
 					badgeLabel: risk.badgeLabel,
-					isConfigured: risk.isConfigured
+					isConfigured: risk.isConfigured,
+					byCourier: risk.byCourier
 				};
 			}
 		}

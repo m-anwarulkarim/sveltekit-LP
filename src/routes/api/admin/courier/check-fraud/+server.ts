@@ -24,10 +24,12 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 				delivered: assessment.deliveredParcels,
 				cancelled: assessment.cancelledParcels,
 				successRate: assessment.successRate,
+				successRateFormatted: assessment.successRateFormatted,
 				riskTag: assessment.riskTag,
 				courierName: assessment.courierName,
 				badgeLabel: assessment.badgeLabel,
-				isConfigured: assessment.isConfigured
+				isConfigured: assessment.isConfigured,
+				byCourier: assessment.byCourier
 			}
 		});
 	} catch (e: any) {

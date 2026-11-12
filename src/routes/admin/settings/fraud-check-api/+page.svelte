@@ -10,18 +10,35 @@
 	let isSaved = $state(false);
 	let saveMessage = $state('Fraud Check API Settings Saved!');
 
-	let enableCourierFraudCheck = $state(saved.enableCourierFraudCheck ?? false);
+	let enableCourierFraudCheck = $state(saved.enableCourierFraudCheck ?? true);
 	let returnRateThreshold = $state(saved.returnRateThreshold ?? 25);
 	let autoBlockBadIps = $state(saved.autoBlockBadIps ?? false);
 	let steadFastApiKey = $state(saved.steadFastApiKey ?? '');
+	let steadFastSecretKey = $state(saved.steadFastSecretKey ?? '');
+	let pathaoApiKey = $state(saved.pathaoApiKey ?? '');
 	let pathaoSecret = $state(saved.pathaoSecret ?? '');
+	let pathaoUsername = $state(saved.pathaoUsername ?? '');
+	let pathaoPassword = $state(saved.pathaoPassword ?? '');
 
 	let isSaving = $state(false);
 	async function triggerSave(msg = 'Fraud Check API Settings Saved!') {
 		if (isSaving) return;
 		isSaving = true;
 		const fd = new FormData();
-		fd.append('settings', JSON.stringify({ enableCourierFraudCheck, returnRateThreshold, autoBlockBadIps, steadFastApiKey, pathaoSecret }));
+		fd.append(
+			'settings',
+			JSON.stringify({
+				enableCourierFraudCheck,
+				returnRateThreshold,
+				autoBlockBadIps,
+				steadFastApiKey,
+				steadFastSecretKey,
+				pathaoApiKey,
+				pathaoSecret,
+				pathaoUsername,
+				pathaoPassword
+			})
+		);
 		const res = await submitAction('?/save', fd);
 		isSaving = false;
 		if (!res.ok) {
@@ -100,14 +117,57 @@
 				</div>
 			</div>
 
-			<div class="space-y-1.5">
-				<label class="text-xs font-bold text-slate-700">Steadfast Fraud Checker API Key</label>
-				<Input type="password" bind:value={steadFastApiKey} class="font-mono text-sm" />
+			<!-- Steadfast Credentials -->
+			<div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+				<div class="flex items-center justify-between">
+					<h4 class="text-xs font-bold text-slate-800 flex items-center gap-2">
+						<span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+						Steadfast Courier API (Fraud Check & Score)
+					</h4>
+					<span class="text-[10px] font-mono text-slate-400">/api/v1/fraud_check/score</span>
+				</div>
+				<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+					<div class="space-y-1">
+						<label class="text-[11px] font-bold text-slate-600">Steadfast API Key</label>
+						<Input type="password" bind:value={steadFastApiKey} placeholder="যেমন: 0y5n7641gq0z5j42h3b1f1e7" class="font-mono text-xs" />
+					</div>
+					<div class="space-y-1">
+						<label class="text-[11px] font-bold text-slate-600">Steadfast Secret Key</label>
+						<Input type="password" bind:value={steadFastSecretKey} placeholder="Steadfast ড্যাশবোর্ডের Secret Key" class="font-mono text-xs" />
+					</div>
+				</div>
+				<p class="text-[11px] text-slate-400">
+					Steadfast ড্যাশবোর্ড > API guide > Authentication থেকে আপনার Api-Key ও Secret-Key সংগ্রহ করুন।
+				</p>
 			</div>
 
-			<div class="space-y-1.5">
-				<label class="text-xs font-bold text-slate-700">Pathao Client Secret</label>
-				<Input type="password" bind:value={pathaoSecret} class="font-mono text-sm" />
+			<!-- Pathao Credentials -->
+			<div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+				<div class="flex items-center justify-between">
+					<h4 class="text-xs font-bold text-slate-800 flex items-center gap-2">
+						<span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+						Pathao Courier API (Success Rate Check)
+					</h4>
+					<span class="text-[10px] font-mono text-slate-400">/api/v1/user/success-rate</span>
+				</div>
+				<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+					<div class="space-y-1">
+						<label class="text-[11px] font-bold text-slate-600">Pathao Client ID (API Key)</label>
+						<Input type="password" bind:value={pathaoApiKey} placeholder="Pathao Developer Client ID" class="font-mono text-xs" />
+					</div>
+					<div class="space-y-1">
+						<label class="text-[11px] font-bold text-slate-600">Pathao Client Secret</label>
+						<Input type="password" bind:value={pathaoSecret} placeholder="Pathao Client Secret" class="font-mono text-xs" />
+					</div>
+					<div class="space-y-1">
+						<label class="text-[11px] font-bold text-slate-600">Pathao Username / Email</label>
+						<Input type="text" bind:value={pathaoUsername} placeholder="মার্চেন্ট ইমেইল বা ইউজারনেম" class="text-xs" />
+					</div>
+					<div class="space-y-1">
+						<label class="text-[11px] font-bold text-slate-600">Pathao Password</label>
+						<Input type="password" bind:value={pathaoPassword} placeholder="মার্চেন্ট পাসওয়ার্ড" class="text-xs" />
+					</div>
+				</div>
 			</div>
 		</div>
 

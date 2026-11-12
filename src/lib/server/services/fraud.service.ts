@@ -3,6 +3,14 @@ import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from '../db/schema';
 import { normalizeBdPhone } from '../utils/phone';
 import { CourierService } from './courier.service';
+import { SettingsService } from './settings.service';
+
+export interface CourierStatsBreakdown {
+	total: number;
+	delivered: number;
+	cancelled: number;
+	successRate: number;
+}
 
 export interface FraudRiskAssessment {
 	phone: string;
@@ -10,12 +18,17 @@ export interface FraudRiskAssessment {
 	deliveredParcels: number;
 	cancelledParcels: number;
 	successRate: number;
-	riskTag: 'Low Risk' | 'Moderate' | 'High Risk';
+	successRateFormatted: string;
+	riskTag: 'Safe' | 'Moderate' | 'High Risk';
 	isCached: boolean;
 	requiresAdvancePayment: boolean;
 	courierName?: string;
 	badgeLabel?: string;
 	isConfigured?: boolean;
+	byCourier?: {
+		steadfast?: CourierStatsBreakdown;
+		pathao?: CourierStatsBreakdown;
+	};
 }
 
 /**
@@ -36,7 +49,7 @@ export class FraudService {
 		const phone = normalizeBdPhone(rawPhone);
 		const now = Date.now();
 
-		// 1. Fetch store's active courier settings FIRST to see if any real courier is configured
+		// 1. Fetch store's active courier settings & dedicated fraud check settings
 		let courierSettings = { methods: [] as any[] };
 		try {
 			courierSettings = await CourierService.getCourierSettings(db);
@@ -44,40 +57,34 @@ export class FraudService {
 			console.error('Failed to get courier settings for fraud check:', err);
 		}
 
-		const steadfastMethod = courierSettings.methods.find(
-			(m) => m.id === 'steadfast' && m.isEnabled && m.credentials?.apiKey && m.credentials?.secretKey
-		);
-		const pathaoMethod = courierSettings.methods.find(
-			(m) =>
-				m.id === 'pathao' &&
-				m.isEnabled &&
-				m.credentials?.apiKey &&
-				m.credentials?.secretKey &&
-				m.credentials?.username &&
-				m.credentials?.password
-		);
-
-		let isConfigured = !!(steadfastMethod || pathaoMethod);
-
-		// If no courier API is configured, return unconfigured status immediately!
-		if (!isConfigured) {
-			return {
-				phone,
-				totalParcels: 0,
-				deliveredParcels: 0,
-				cancelledParcels: 0,
-				successRate: 100,
-				riskTag: 'Low Risk',
-				isCached: false,
-				requiresAdvancePayment: false,
-				courierName: 'কোনো কুরিয়ার যুক্ত নেই',
-				badgeLabel: 'API আনকনফিগার্ড',
-				isConfigured: false
-			};
+		let fraudSettings: any = {};
+		try {
+			fraudSettings = (await SettingsService.getSettings(db, 'fraud_check')) || {};
+		} catch (err) {
+			console.error('Failed to get fraud settings:', err);
 		}
 
+		const steadfastMethod = courierSettings.methods.find(
+			(m) => m.id === 'steadfast' && m.isEnabled
+		);
+		const pathaoMethod = courierSettings.methods.find(
+			(m) => m.id === 'pathao' && m.isEnabled
+		);
+
+		const stApiKey = (fraudSettings.steadFastApiKey || steadfastMethod?.credentials?.apiKey || '').trim();
+		const stSecretKey = (fraudSettings.steadFastSecretKey || steadfastMethod?.credentials?.secretKey || '').trim();
+		const hasSteadfast = !!(stApiKey && stSecretKey);
+
+		const paApiKey = (fraudSettings.pathaoApiKey || pathaoMethod?.credentials?.apiKey || '').trim();
+		const paSecret = (fraudSettings.pathaoSecret || pathaoMethod?.credentials?.secretKey || '').trim();
+		const paUser = (fraudSettings.pathaoUsername || pathaoMethod?.credentials?.username || '').trim();
+		const paPass = (fraudSettings.pathaoPassword || pathaoMethod?.credentials?.password || '').trim();
+		const hasPathao = !!(paApiKey && paSecret && paUser && paPass);
+
+		const isConfigured = hasSteadfast || hasPathao;
+
 		// 2. Check in-database courier fraud cache if not force refreshing (Only if courier IS configured)
-		if (!forceRefresh) {
+		if (!forceRefresh && isConfigured) {
 			try {
 				const cached = await db
 					.select()
@@ -86,22 +93,48 @@ export class FraudService {
 					.get();
 
 				if (cached && now - new Date(cached.lastCheckedAt).getTime() < this.CACHE_TTL_MS) {
-					const successRate = cached.successRate ?? 100;
 					const total = cached.totalParcels ?? 0;
-					const isNewCustomer = total === 0 || ((cached.deliveredParcels ?? 0) === 0 && (cached.cancelledParcels ?? 0) === 0);
+					const delivered = cached.deliveredParcels ?? 0;
+					const cancelled = cached.cancelledParcels ?? 0;
+					const isNewCustomer = total === 0 || (delivered === 0 && cancelled === 0);
+					const successRate = total > 0 ? Math.round(((delivered / total) * 100) * 100) / 100 : 100;
+					const successRateFormatted = total > 0
+						? `${((delivered / total) * 100).toFixed(2).replace(/\.00$/, '')}%`
+						: '100%';
+
+					let byCourier: { steadfast?: CourierStatsBreakdown; pathao?: CourierStatsBreakdown } | undefined = undefined;
+					let displayName = cached.courierName || 'Steadfast & Pathao';
+
+					if (cached.courierName && cached.courierName.startsWith('{')) {
+						try {
+							const parsedMeta = JSON.parse(cached.courierName);
+							byCourier = parsedMeta.byCourier;
+							displayName = parsedMeta.name || displayName;
+						} catch {}
+					}
+
+					const riskTag: 'Safe' | 'Moderate' | 'High Risk' = isNewCustomer
+						? 'Safe'
+						: successRate >= 70
+							? 'Safe'
+							: successRate >= 50
+								? 'Moderate'
+								: 'High Risk';
 
 					return {
 						phone,
 						totalParcels: total,
-						deliveredParcels: cached.deliveredParcels ?? 0,
-						cancelledParcels: cached.cancelledParcels ?? 0,
-						successRate: isNewCustomer ? 100 : successRate,
-						riskTag: isNewCustomer ? 'Low Risk' : ((cached.riskTag as any) || (successRate >= 80 ? 'Low Risk' : successRate >= 50 ? 'Moderate' : 'High Risk')),
+						deliveredParcels: delivered,
+						cancelledParcels: cancelled,
+						successRate,
+						successRateFormatted,
+						riskTag,
 						isCached: true,
 						requiresAdvancePayment: !isNewCustomer && successRate < 50 && total >= 3,
-						courierName: cached.courierName || 'Steadfast & Pathao',
-						badgeLabel: this.getBadgeLabel(cached.courierName || ''),
-						isConfigured: true
+						courierName: displayName,
+						badgeLabel: this.getBadgeLabel(displayName),
+						isConfigured: true,
+						byCourier
 					};
 				}
 			} catch (cacheErr) {
@@ -112,68 +145,72 @@ export class FraudService {
 		let totalParcels = 0;
 		let deliveredParcels = 0;
 		let cancelledParcels = 0;
-		let successRate = 100;
 		let courierName = 'কুরিয়ার এপিআই কনফিগার করা নেই';
 		let badgeLabel = 'API আনকনফিগার্ড';
+		const byCourier: { steadfast?: CourierStatsBreakdown; pathao?: CourierStatsBreakdown } = {};
 
 		// 3. Query couriers based on what is added/configured
-		if (steadfastMethod && pathaoMethod) {
+		if (hasSteadfast && hasPathao) {
 			// BOTH STEADFAST & PATHAO CONFIGURED: Query both concurrently
-			isConfigured = true;
 			const [stResult, paResult] = await Promise.allSettled([
-				this.fetchSteadfastFraud(phone, steadfastMethod.credentials),
-				this.fetchPathaoFraud(phone, pathaoMethod.credentials)
+				this.fetchSteadfastFraud(phone, { apiKey: stApiKey, secretKey: stSecretKey }),
+				this.fetchPathaoFraud(phone, { apiKey: paApiKey, secretKey: paSecret, username: paUser, password: paPass })
 			]);
 
 			const stData = stResult.status === 'fulfilled' ? stResult.value : null;
 			const paData = paResult.status === 'fulfilled' ? paResult.value : null;
 
+			if (stData) {
+				byCourier.steadfast = stData;
+				totalParcels += stData.total;
+				deliveredParcels += stData.delivered;
+				cancelledParcels += stData.cancelled;
+			}
+
+			if (paData) {
+				byCourier.pathao = paData;
+				totalParcels += paData.total;
+				deliveredParcels += paData.delivered;
+				cancelledParcels += paData.cancelled;
+			}
+
 			if (stData && paData) {
-				totalParcels = stData.total + paData.total;
-				deliveredParcels = stData.delivered + paData.delivered;
-				cancelledParcels = stData.cancelled + paData.cancelled;
 				courierName = 'Steadfast + Pathao (সমন্বিত)';
 				badgeLabel = 'STEADFAST + PATHAO';
 			} else if (stData) {
-				totalParcels = stData.total;
-				deliveredParcels = stData.delivered;
-				cancelledParcels = stData.cancelled;
 				courierName = 'Steadfast Courier';
 				badgeLabel = 'STEADFAST LIVE';
 			} else if (paData) {
-				totalParcels = paData.total;
-				deliveredParcels = paData.delivered;
-				cancelledParcels = paData.cancelled;
 				courierName = 'Pathao Courier';
 				badgeLabel = 'PATHAO LIVE';
 			}
-		} else if (steadfastMethod) {
+		} else if (hasSteadfast) {
 			// ONLY STEADFAST CONFIGURED
-			isConfigured = true;
 			courierName = 'Steadfast Courier';
 			badgeLabel = 'STEADFAST LIVE';
 
-			const stData = await this.fetchSteadfastFraud(phone, steadfastMethod.credentials);
+			const stData = await this.fetchSteadfastFraud(phone, { apiKey: stApiKey, secretKey: stSecretKey });
 			if (stData) {
+				byCourier.steadfast = stData;
 				totalParcels = stData.total;
 				deliveredParcels = stData.delivered;
 				cancelledParcels = stData.cancelled;
 			}
-		} else if (pathaoMethod) {
+		} else if (hasPathao) {
 			// ONLY PATHAO CONFIGURED
-			isConfigured = true;
 			courierName = 'Pathao Courier';
 			badgeLabel = 'PATHAO LIVE';
 
-			const paData = await this.fetchPathaoFraud(phone, pathaoMethod.credentials);
+			const paData = await this.fetchPathaoFraud(phone, { apiKey: paApiKey, secretKey: paSecret, username: paUser, password: paPass });
 			if (paData) {
+				byCourier.pathao = paData;
 				totalParcels = paData.total;
 				deliveredParcels = paData.delivered;
 				cancelledParcels = paData.cancelled;
 			}
 		}
 
-		// 4. Fallback to local store records if no courier API is configured or all remote calls returned null
+		// 4. Fallback to local store records if no courier API is configured or remote calls returned 0
 		if (!isConfigured) {
 			try {
 				const customerOrders = await db
@@ -184,7 +221,6 @@ export class FraudService {
 					.from(schema.orders)
 					.where(eq(schema.orders.customerPhone, phone));
 
-				// Past finalized orders (excluding pending)
 				const delivered = customerOrders.filter((o) => o.status === 'delivered').length;
 				const cancelled = customerOrders.filter(
 					(o) => o.status === 'cancelled' || o.status === 'returned'
@@ -209,19 +245,19 @@ export class FraudService {
 			}
 		}
 
-		// Calculate realistic success rate
-		if (totalParcels > 0) {
-			successRate = Math.round((deliveredParcels / totalParcels) * 100);
-		} else {
-			// New customer with 0 history is NEVER 0% risk!
-			successRate = 100;
-		}
+		// Calculate realistic success rate with exact precision
+		const successRate = totalParcels > 0
+			? Math.round(((deliveredParcels / totalParcels) * 100) * 100) / 100
+			: 100;
+		const successRateFormatted = totalParcels > 0
+			? `${((deliveredParcels / totalParcels) * 100).toFixed(2).replace(/\.00$/, '')}%`
+			: '100%';
 
 		const isNew = totalParcels === 0 || (deliveredParcels === 0 && cancelledParcels === 0);
-		const riskTag = isNew
-			? 'Low Risk'
-			: successRate >= 80
-				? 'Low Risk'
+		const riskTag: 'Safe' | 'Moderate' | 'High Risk' = isNew
+			? 'Safe'
+			: successRate >= 70
+				? 'Safe'
 				: successRate >= 50
 					? 'Moderate'
 					: 'High Risk';
@@ -229,6 +265,11 @@ export class FraudService {
 		// 5. Update or insert into cache if courier is configured
 		if (isConfigured) {
 			try {
+				const cacheJson = JSON.stringify({
+					name: courierName,
+					byCourier: Object.keys(byCourier).length > 0 ? byCourier : undefined
+				});
+
 				await db
 					.insert(schema.courierFraudCache)
 					.values({
@@ -236,8 +277,8 @@ export class FraudService {
 						totalParcels,
 						deliveredParcels,
 						cancelledParcels,
-						successRate,
-						courierName,
+						successRate: Math.round(successRate),
+						courierName: cacheJson,
 						riskTag,
 						lastCheckedAt: new Date()
 					})
@@ -247,8 +288,8 @@ export class FraudService {
 							totalParcels,
 							deliveredParcels,
 							cancelledParcels,
-							successRate,
-							courierName,
+							successRate: Math.round(successRate),
+							courierName: cacheJson,
 							riskTag,
 							lastCheckedAt: new Date()
 						}
@@ -264,12 +305,14 @@ export class FraudService {
 			deliveredParcels,
 			cancelledParcels,
 			successRate,
+			successRateFormatted,
 			riskTag,
 			isCached: false,
 			requiresAdvancePayment: !isNew && riskTag === 'High Risk',
 			courierName,
 			badgeLabel,
-			isConfigured
+			isConfigured,
+			byCourier: Object.keys(byCourier).length > 0 ? byCourier : undefined
 		};
 	}
 
@@ -279,38 +322,58 @@ export class FraudService {
 	private static async fetchSteadfastFraud(
 		phone: string,
 		credentials: Record<string, string>
-	): Promise<{ total: number; delivered: number; cancelled: number; successRate: number } | null> {
-		const apiKey = credentials.apiKey;
-		const secretKey = credentials.secretKey;
+	): Promise<CourierStatsBreakdown | null> {
+		const apiKey = (credentials.apiKey || '').trim();
+		const secretKey = (credentials.secretKey || '').trim();
 		if (!apiKey || !secretKey) return null;
 
-		try {
-			const res = await fetch(`https://portal.packzy.com/api/v1/fraud_check/score/${phone}`, {
-				method: 'GET',
-				headers: {
-					'Api-Key': apiKey,
-					'Secret-Key': secretKey,
-					'Content-Type': 'application/json'
-				},
-				signal: AbortSignal.timeout(6000)
-			});
+		const cleanPhone = normalizeBdPhone(phone);
+		if (!cleanPhone) return null;
 
-			if (!res.ok) {
-				console.warn('Steadfast fraud API response status:', res.status);
-				return null;
+		const endpoints = [
+			`https://portal.packzy.com/api/v1/fraud_check/score/${cleanPhone}`,
+			`https://portal.steadfast.com.bd/api/v1/fraud_check/score/${cleanPhone}`,
+			`https://portal.packzy.com/api/v1/fraud_check/${cleanPhone}`
+		];
+
+		for (const url of endpoints) {
+			try {
+				const res = await fetch(url, {
+					method: 'GET',
+					headers: {
+						'Api-Key': apiKey,
+						'Secret-Key': secretKey,
+						'Content-Type': 'application/json',
+						Accept: 'application/json'
+					},
+					signal: AbortSignal.timeout(6000)
+				});
+
+				if (!res.ok) {
+					console.warn(`Steadfast API ${url} failed with status:`, res.status);
+					continue;
+				}
+
+				const data = (await res.json()) as any;
+				const payload = data?.data || data?.Summaries?.Steadfast || data || {};
+				const total = Number(
+					payload.total_parcels ?? payload.Total_parcels ?? payload.total ?? 0
+				);
+				const delivered = Number(
+					payload.total_delivered ?? payload.delivered ?? payload.success ?? 0
+				);
+				const cancelled = Number(
+					payload.total_cancelled ?? payload.cancelled ?? payload.cancel ?? 0
+				);
+				const successRate = total > 0 ? Math.round((delivered / total) * 100) : 100;
+
+				return { total, delivered, cancelled, successRate };
+			} catch (err: any) {
+				console.warn(`Steadfast fetch from ${url} error:`, err?.message);
 			}
-
-			const data = (await res.json()) as any;
-			const total = Number(data.total_parcels ?? data.Total_parcels ?? data.total ?? 0);
-			const delivered = Number(data.total_delivered ?? data.delivered ?? 0);
-			const cancelled = Number(data.total_cancelled ?? data.cancelled ?? 0);
-			const successRate = total > 0 ? Math.round((delivered / total) * 100) : 100;
-
-			return { total, delivered, cancelled, successRate };
-		} catch (err) {
-			console.error('Steadfast fraud fetch error:', err);
-			return null;
 		}
+
+		return null;
 	}
 
 	/**
@@ -319,7 +382,7 @@ export class FraudService {
 	private static async fetchPathaoFraud(
 		phone: string,
 		credentials: Record<string, string>
-	): Promise<{ total: number; delivered: number; cancelled: number; successRate: number } | null> {
+	): Promise<CourierStatsBreakdown | null> {
 		const { apiKey, secretKey, username, password } = credentials;
 		if (!apiKey || !secretKey || !username || !password) return null;
 

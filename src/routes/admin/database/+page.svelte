@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
+	import type { PageData } from './$types';
 	import {
 		Database,
 		Download,
@@ -21,11 +23,13 @@
 		X,
 		Loader2,
 		Code,
-		Table as TableIcon
+		Table as TableIcon,
+		Search,
+		AlertTriangle
 	} from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 
-	let { data }: { data: any } = $props();
+	let { data }: { data: PageData } = $props();
 
 	// Modal States
 	let isImportModalOpen = $state(false);
@@ -37,13 +41,45 @@
 	let selectedFile = $state<File | null>(null);
 	let isAnalyzing = $state(false);
 	let isImporting = $state(false);
-	let previewData = $state<any>(null);
+	let isDragging = $state(false);
+	let previewData = $state<{
+		success?: boolean;
+		error?: string;
+		total?: number;
+		columns?: string[];
+		previewRows?: any[];
+		hasHtmlDescription?: boolean;
+	} | null>(null);
 	let fileInputRef: HTMLInputElement | null = null;
 
+	// Database Seeding State
+	let isSeeding = $state(false);
+
 	// Live Sales Summary Modal State
+	interface SalesSummaryItem {
+		name: string;
+		quantity: number;
+		revenue: number;
+		ordersCount: number;
+	}
 	let isSalesModalOpen = $state(false);
 	let isLoadingSales = $state(false);
-	let salesItems = $state<any[]>([]);
+	let salesItems = $state<SalesSummaryItem[]>([]);
+	let salesSearch = $state('');
+
+	let filteredSalesItems = $derived(
+		salesItems.filter((item) =>
+			item.name.toLowerCase().includes(salesSearch.trim().toLowerCase())
+		)
+	);
+
+	let totalSoldPieces = $derived(
+		salesItems.reduce((acc, item) => acc + (Number(item.quantity) || 0), 0)
+	);
+
+	let totalRevenue = $derived(
+		salesItems.reduce((acc, item) => acc + (Number(item.revenue) || 0), 0)
+	);
 
 	function openImportModal(entity: typeof importEntity, label: string) {
 		importEntity = entity;
@@ -58,6 +94,7 @@
 		isImportModalOpen = false;
 		selectedFile = null;
 		previewData = null;
+		isDragging = false;
 	}
 
 	async function handleFileSelected(e: Event) {
@@ -69,12 +106,31 @@
 
 	function handleDrop(e: DragEvent) {
 		e.preventDefault();
+		isDragging = false;
 		if (!e.dataTransfer || !e.dataTransfer.files || e.dataTransfer.files.length === 0) return;
 		const file = e.dataTransfer.files[0];
 		processFile(file);
 	}
 
+	function formatFileSize(bytes: number): string {
+		if (bytes < 1024) return bytes + ' B';
+		if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+		return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+	}
+
 	async function processFile(file: File) {
+		// Client-side file size and format guard
+		if (file.size > 15 * 1024 * 1024) {
+			toast.error('ফাইলের সাইজ ১৫ মেগাবাইটের বেশি হতে পারবে না।');
+			return;
+		}
+
+		const ext = file.name.split('.').pop()?.toLowerCase();
+		if (ext !== 'json' && ext !== 'csv') {
+			toast.error('শুধুমাত্র .JSON বা .CSV ফরম্যাটের ফাইল নির্বাচন করুন।');
+			return;
+		}
+
 		selectedFile = file;
 		if (importEntity === 'full_backup') {
 			// Full backup doesn't need field preview
@@ -92,7 +148,14 @@
 				body: fd
 			});
 
-			const json = await res.json();
+			const json = (await res.json()) as {
+				success: boolean;
+				error?: string;
+				total?: number;
+				columns?: string[];
+				previewRows?: any[];
+				hasHtmlDescription?: boolean;
+			};
 			if (json.success) {
 				previewData = json;
 			} else {
@@ -125,13 +188,19 @@
 				body: fd
 			});
 
-			const result = await res.json();
+			const result = (await res.json()) as {
+				success: boolean;
+				message?: string;
+				errors?: string[];
+				total?: number;
+				inserted?: number;
+				updated?: number;
+			};
 			if (result.success) {
 				toast.success(result.message || 'ইমপোর্ট সফল হয়েছে!', { id: toastId });
 				closeImportModal();
-				setTimeout(() => {
-					window.location.reload();
-				}, 1200);
+				// Seamlessly revalidate server load without page flash
+				await invalidateAll();
 			} else {
 				toast.error(result.message || 'ইমপোর্ট ব্যর্থ হয়েছে।', { id: toastId });
 				if (Array.isArray(result.errors) && result.errors.length > 0) {
@@ -148,6 +217,7 @@
 	async function viewLiveSales() {
 		isSalesModalOpen = true;
 		isLoadingSales = true;
+		salesSearch = '';
 		try {
 			const res = await fetch('/api/admin/data-transfer/export?entity=sales_summary&format=json');
 			const json = await res.json();
@@ -162,6 +232,15 @@
 	}
 </script>
 
+<svelte:window
+	onkeydown={(e) => {
+		if (e.key === 'Escape') {
+			if (isImportModalOpen && !isImporting) closeImportModal();
+			if (isSalesModalOpen) isSalesModalOpen = false;
+		}
+	}}
+/>
+
 <svelte:head>
 	<title>ইমপোর্ট / এক্সপোর্ট ও ডাটা ব্যাকআপ | Admin</title>
 </svelte:head>
@@ -175,9 +254,22 @@
 					<Database class="w-5 h-5" />
 				</div>
 				<div>
-					<h1 class="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
-						ডাটা ব্যাকআপ ও ইমপোর্ট / এক্সপোর্ট
-					</h1>
+					<div class="flex flex-wrap items-center gap-2">
+						<h1 class="text-lg font-black text-slate-900 tracking-tight">
+							ডাটা ব্যাকআপ ও ইমপোর্ট / এক্সপোর্ট
+						</h1>
+						{#if data.isD1Connected}
+							<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+								<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+								D1 ডাটাবেস সক্রিয়
+							</span>
+						{:else}
+							<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+								<AlertTriangle class="w-3.5 h-3.5 text-amber-600" />
+								লোকাল / মেমরি মোড
+							</span>
+						{/if}
+					</div>
 					<p class="text-xs text-slate-500 font-medium">
 						ক্লাউডফ্লেয়ার D1 ডাটাবেস থেকে ১-ক্লিকে ফুল ব্যাকআপ, রিস্টোর, এবং রিচ HTML পণ্য ডাটা আদান-প্রদান
 					</p>
@@ -569,19 +661,54 @@
 					স্টোরে টেস্ট ডাটা ইনস্টল করতে বা ডিফল্ট বীজ পণ্যগুলো পুনরায় সাজাতে এই অ্যাকশন ব্যবহার করুন।
 				</p>
 
-				<div class="flex items-center justify-end pt-2 border-t border-slate-100">
-					<form method="POST" action="?/seedDatabase" use:enhance>
+				<div class="flex items-center justify-between pt-2 border-t border-slate-100">
+					{#if data.userRole !== 'Owner'}
+						<p class="text-[11px] text-amber-600 font-medium">
+							*শুধুমাত্র স্টোর ওনার (Owner) অ্যাকাউন্ট থেকে রিসেট অনুমোদিত।
+						</p>
+					{:else}
+						<p class="text-[11px] text-slate-400">
+							টেস্ট ডাটা রি-পপুলেট করতে ব্যবহার করুন
+						</p>
+					{/if}
+
+					<form
+						method="POST"
+						action="?/seedDatabase"
+						use:enhance={() => {
+							isSeeding = true;
+							const toastId = toast.loading('D1 ডাটাবেজ স্যাম্পল প্রোডাক্ট দিয়ে রিসেট করা হচ্ছে...');
+							return async ({ result, update }) => {
+								isSeeding = false;
+								if (result.type === 'success') {
+									toast.success((result.data as any)?.message || 'ডাটাবেজ সফলভাবে সিড করা হয়েছে!', { id: toastId });
+									await update();
+								} else if (result.type === 'failure') {
+									toast.error((result.data as any)?.message || 'ডাটাবেজ সিড ব্যর্থ হয়েছে!', { id: toastId });
+								} else {
+									await update();
+								}
+							};
+						}}
+					>
 						<button
 							type="submit"
+							disabled={isSeeding || data.userRole !== 'Owner'}
 							onclick={(e) => {
-								if (!confirm('আপনি কি নিশ্চিত যে স্যাম্পল প্রোডাক্ট দিয়ে ডাটাবেজ রিসেট করতে চান?')) {
+								if (!confirm('সতর্কতা: এটি বর্তমান সমস্ত প্রোডাক্ট মুছে স্যাম্পল প্রোডাক্ট দিয়ে রিসেট করবে! আপনি কি নিশ্চিত?')) {
 									e.preventDefault();
 								}
 							}}
-							class="py-2 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+							title={data.userRole !== 'Owner' ? 'শুধুমাত্র Owner পারমিশন রয়েছে' : 'স্যাম্পল প্রোডাক্ট রিসেট'}
+							class="py-2 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
 						>
-							<RefreshCw class="w-3.5 h-3.5" />
-							<span>D1 ডাটাবেজ সিড করুন</span>
+							{#if isSeeding}
+								<Loader2 class="w-3.5 h-3.5 animate-spin" />
+								<span>রিসেট হচ্ছে...</span>
+							{:else}
+								<RefreshCw class="w-3.5 h-3.5" />
+								<span>D1 ডাটাবেজ সিড করুন</span>
+							{/if}
 						</button>
 					</form>
 				</div>
@@ -594,7 +721,16 @@
 <!-- INTERACTIVE IMPORT & LIVE HTML PREVIEW MODAL -->
 <!-- ==================================================== -->
 {#if isImportModalOpen}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<div
+		role="dialog"
+		aria-modal="true"
+		onclick={(e) => {
+			if (e.target === e.currentTarget && !isImporting) closeImportModal();
+		}}
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200"
+	>
 		<div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden">
 			<!-- Modal Header -->
 			<div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
@@ -613,6 +749,7 @@
 					onclick={closeImportModal}
 					disabled={isImporting}
 					class="w-8 h-8 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
+					aria-label="মডাল বন্ধ করুন"
 				>
 					<X class="w-4 h-4" />
 				</button>
@@ -621,13 +758,26 @@
 			<!-- Modal Body -->
 			<div class="p-6 overflow-y-auto space-y-5">
 				<!-- Drag & Drop Zone -->
-				<!-- svelte-ignore a11y_click_events_have_key_events -->
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
-					ondragover={(e) => e.preventDefault()}
+					role="button"
+					tabindex="0"
+					ondragover={(e) => {
+						e.preventDefault();
+						isDragging = true;
+					}}
+					ondragenter={() => (isDragging = true)}
+					ondragleave={() => (isDragging = false)}
 					ondrop={handleDrop}
 					onclick={() => fileInputRef?.click()}
-					class="border-2 border-dashed border-indigo-200 hover:border-indigo-400 bg-indigo-50/30 hover:bg-indigo-50/60 rounded-2xl p-6 text-center cursor-pointer transition-all space-y-2"
+					onkeydown={(e) => {
+						if (e.key === 'Enter' || e.key === ' ') {
+							e.preventDefault();
+							fileInputRef?.click();
+						}
+					}}
+					class="border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all space-y-2 {isDragging
+						? 'border-[#5845eb] bg-indigo-100/70 scale-[1.01]'
+						: 'border-indigo-200 hover:border-indigo-400 bg-indigo-50/30 hover:bg-indigo-50/60'}"
 				>
 					<input
 						type="file"
@@ -646,12 +796,26 @@
 					</div>
 
 					<div>
-						<p class="text-xs font-bold text-slate-800">
-							{selectedFile ? selectedFile.name : 'ফাইল এখানে ড্রপ করুন অথবা ব্রাউজ করুন'}
-						</p>
-						<p class="text-[11px] text-slate-400 mt-0.5">
-							সমর্থিত ফরম্যাট: .JSON, .CSV (UTF-8)
-						</p>
+						{#if selectedFile}
+							<div class="flex items-center justify-center gap-2">
+								<span class="text-xs font-bold text-slate-900 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 shadow-2xs">
+									{selectedFile.name}
+								</span>
+								<span class="text-[11px] text-slate-500 font-mono">
+									({formatFileSize(selectedFile.size)})
+								</span>
+							</div>
+							<p class="text-[11px] text-[#5845eb] font-semibold mt-1">
+								ফাইল পরিবর্তন করতে পুনরায় ক্লিক করুন বা ড্রপ করুন
+							</p>
+						{:else}
+							<p class="text-xs font-bold text-slate-800">
+								ফাইল এখানে ড্রপ করুন অথবা ব্রাউজ করতে ক্লিক করুন
+							</p>
+							<p class="text-[11px] text-slate-400 mt-0.5">
+								সমর্থিত ফরম্যাট: .JSON, .CSV (UTF-8, সর্বোচ্চ ১৫ MB)
+							</p>
+						{/if}
 					</div>
 				</div>
 
@@ -661,7 +825,7 @@
 						<div class="flex items-center justify-between">
 							<span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
 								<CheckCircle2 class="w-4 h-4 text-emerald-600" />
-								<span>শনাক্তকৃত রেকর্ড: <strong>{previewData.total}</strong> টি</span>
+								<span>শনাক্তকৃত রেকর্ড: <strong>{previewData.total ?? 0}</strong> টি</span>
 							</span>
 
 							{#if previewData.hasHtmlDescription}
@@ -730,16 +894,26 @@
 <!-- LIVE SALES SUMMARY REPORT MODAL -->
 <!-- ==================================================== -->
 {#if isSalesModalOpen}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-		<div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden">
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<div
+		role="dialog"
+		aria-modal="true"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) isSalesModalOpen = false;
+		}}
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200"
+	>
+		<div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[88vh] flex flex-col overflow-hidden">
+			<!-- Modal Header -->
 			<div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
 				<div class="flex items-center gap-2.5">
-					<div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center">
+					<div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center font-bold">
 						<FileSpreadsheet class="w-4 h-4" />
 					</div>
 					<div>
 						<h3 class="text-sm font-black text-slate-900">পণ্য বিক্রয় রিপোর্ট (মোট পিস)</h3>
-						<p class="text-[11px] text-slate-400">সর্বোচ্চ বিক্রিত পণ্যের লাইভ হিসেব</p>
+						<p class="text-[11px] text-slate-400">সর্বোচ্চ বিক্রিত পণ্যের লাইভ হিসেব ও মোট রেভিনিউ</p>
 					</div>
 				</div>
 
@@ -747,54 +921,125 @@
 					type="button"
 					onclick={() => (isSalesModalOpen = false)}
 					class="w-8 h-8 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
+					aria-label="মডাল বন্ধ করুন"
 				>
 					<X class="w-4 h-4" />
 				</button>
 			</div>
 
+			<!-- Modal Body -->
 			<div class="p-6 overflow-y-auto space-y-4">
 				{#if isLoadingSales}
-					<div class="py-12 text-center text-slate-400 space-y-2">
+					<div class="py-14 text-center text-slate-400 space-y-2">
 						<Loader2 class="w-6 h-6 animate-spin mx-auto text-amber-500" />
-						<p class="text-xs font-bold">বিক্রয় রিপোর্ট হিসাব করা হচ্ছে...</p>
+						<p class="text-xs font-bold text-slate-600">বিক্রয় রিপোর্ট হিসাব করা হচ্ছে...</p>
 					</div>
 				{:else if salesItems.length === 0}
-					<div class="py-12 text-center text-slate-400 space-y-1 bg-slate-50 rounded-2xl border border-slate-100">
-						<FileSpreadsheet class="w-8 h-8 mx-auto text-slate-300" />
-						<p class="text-xs font-bold text-slate-600">কোনো সফল বিক্রয় রেকর্ড পাওয়া যায়নি</p>
+					<div class="py-14 text-center text-slate-400 space-y-1.5 bg-slate-50 rounded-2xl border border-slate-100">
+						<FileSpreadsheet class="w-9 h-9 mx-auto text-slate-300" />
+						<p class="text-xs font-bold text-slate-700">কোনো সফল বিক্রয় রেকর্ড পাওয়া যায়নি</p>
+						<p class="text-[11px] text-slate-400">স্টোরে অর্ডার তৈরি হলে স্বয়ংক্রিয়ভাবে এখানে যুক্ত হবে।</p>
 					</div>
 				{:else}
-					<div class="overflow-x-auto rounded-xl border border-slate-200">
-						<table class="w-full text-xs text-left">
-							<thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
-								<tr>
-									<th class="py-3 px-3.5">পণ্যের নাম</th>
-									<th class="py-3 px-3.5 text-center">মোট বিক্রয় (পিস)</th>
-									<th class="py-3 px-3.5 text-right">মোট রেভিনিউ</th>
-									<th class="py-3 px-3.5 text-center">অর্ডার সংখ্যা</th>
-								</tr>
-							</thead>
-							<tbody class="divide-y divide-slate-100">
-								{#each salesItems as item}
-									<tr class="hover:bg-slate-50/60">
-										<td class="py-2.5 px-3.5 font-bold text-slate-900">{item.name}</td>
-										<td class="py-2.5 px-3.5 text-center font-mono font-bold text-emerald-600">{item.quantity} পিস</td>
-										<td class="py-2.5 px-3.5 text-right font-mono font-bold text-slate-900">৳{Number(item.revenue).toLocaleString('en-US')}</td>
-										<td class="py-2.5 px-3.5 text-center font-mono text-slate-500">{item.ordersCount}</td>
-									</tr>
-								{/each}
-							</tbody>
-						</table>
+					<!-- KPI Quick Summary Cards -->
+					<div class="grid grid-cols-3 gap-3">
+						<div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+							<span class="text-[10px] text-slate-500 font-bold block uppercase tracking-wider">পণ্য ধরন</span>
+							<span class="text-base font-black font-mono text-slate-900">{salesItems.length} টি</span>
+						</div>
+						<div class="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200 text-center">
+							<span class="text-[10px] text-emerald-700 font-bold block uppercase tracking-wider">মোট বিক্রয়</span>
+							<span class="text-base font-black font-mono text-emerald-700">{totalSoldPieces.toLocaleString('en-US')} পিস</span>
+						</div>
+						<div class="p-3 bg-amber-50/70 rounded-xl border border-amber-200 text-center">
+							<span class="text-[10px] text-amber-700 font-bold block uppercase tracking-wider">সর্বমোট রেভিনিউ</span>
+							<span class="text-base font-black font-mono text-amber-800">৳{totalRevenue.toLocaleString('en-US')}</span>
+						</div>
 					</div>
+
+					<!-- Search Filter -->
+					<div class="relative">
+						<Search class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+						<input
+							type="text"
+							bind:value={salesSearch}
+							placeholder="পণ্যের নাম দিয়ে সার্চ করুন..."
+							class="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 outline-hidden transition-all"
+						/>
+						{#if salesSearch}
+							<button
+								type="button"
+								onclick={() => (salesSearch = '')}
+								class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+								title="সার্চ ক্লিয়ার করুন"
+							>
+								<X class="w-3.5 h-3.5" />
+							</button>
+						{/if}
+					</div>
+
+					{#if filteredSalesItems.length === 0}
+						<div class="py-8 text-center text-slate-400 space-y-2 bg-slate-50/60 rounded-xl border border-dashed border-slate-200">
+							<p class="text-xs font-bold text-slate-600">"{salesSearch}" এর সাথে মিল রয়েছে এমন কোনো পণ্য নেই</p>
+							<button
+								type="button"
+								onclick={() => (salesSearch = '')}
+								class="text-xs text-[#5845eb] font-bold hover:underline cursor-pointer"
+							>
+								সব পণ্য প্রদর্শন করুন
+							</button>
+						</div>
+					{:else}
+						<!-- Sales Data Table -->
+						<div class="overflow-x-auto rounded-xl border border-slate-200 max-h-72 overflow-y-auto">
+							<table class="w-full text-xs text-left">
+								<thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 sticky top-0 z-10 shadow-2xs">
+									<tr>
+										<th class="py-3 px-3.5">পণ্যের নাম</th>
+										<th class="py-3 px-3.5 text-center">মোট বিক্রয় (পিস)</th>
+										<th class="py-3 px-3.5 text-right">মোট রেভিনিউ</th>
+										<th class="py-3 px-3.5 text-center">অর্ডার সংখ্যা</th>
+									</tr>
+								</thead>
+								<tbody class="divide-y divide-slate-100">
+									{#each filteredSalesItems as item}
+										<tr class="hover:bg-slate-50/70 transition-colors">
+											<td class="py-2.5 px-3.5 font-bold text-slate-900">{item.name}</td>
+											<td class="py-2.5 px-3.5 text-center font-mono font-bold text-emerald-600">{item.quantity} পিস</td>
+											<td class="py-2.5 px-3.5 text-right font-mono font-bold text-slate-900">৳{Number(item.revenue).toLocaleString('en-US')}</td>
+											<td class="py-2.5 px-3.5 text-center font-mono text-slate-500">{item.ordersCount}</td>
+										</tr>
+									{/each}
+								</tbody>
+								<tfoot class="bg-slate-50 border-t-2 border-slate-200 font-bold text-slate-800 sticky bottom-0">
+									<tr>
+										<td class="py-2.5 px-3.5">মোট (ফিল্টারকৃত)</td>
+										<td class="py-2.5 px-3.5 text-center font-mono text-emerald-700">
+											{filteredSalesItems.reduce((acc, i) => acc + (Number(i.quantity) || 0), 0)} পিস
+										</td>
+										<td class="py-2.5 px-3.5 text-right font-mono text-slate-900">
+											৳{filteredSalesItems.reduce((acc, i) => acc + (Number(i.revenue) || 0), 0).toLocaleString('en-US')}
+										</td>
+										<td class="py-2.5 px-3.5 text-center font-mono text-slate-500">
+											{filteredSalesItems.reduce((acc, i) => acc + (Number(i.ordersCount) || 0), 0)}
+										</td>
+									</tr>
+								</tfoot>
+							</table>
+						</div>
+					{/if}
 				{/if}
 			</div>
 
+			<!-- Modal Footer -->
 			<div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-				<span class="text-xs text-slate-500">মোট বিক্রিত পণ্য ধরন: <strong>{salesItems.length}</strong></span>
+				<span class="text-xs text-slate-500">
+					প্রদর্শিত হচ্ছে: <strong>{filteredSalesItems.length}</strong> / {salesItems.length} পণ্য
+				</span>
 				<a
 					href="/api/admin/data-transfer/export?entity=sales_summary&format=csv"
 					download
-					class="px-4 py-2 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition-colors flex items-center gap-1.5"
+					class="px-4 py-2 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
 				>
 					<Download class="w-3.5 h-3.5" />
 					<span>CSV ডাউনলোড</span>

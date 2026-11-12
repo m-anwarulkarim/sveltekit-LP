@@ -61,12 +61,8 @@ export const actions: Actions = {
 			return fail(403, { message: 'শুধুমাত্র Owner এই কাজটি করতে পারবেন।' });
 		}
 
-		if (!platform?.env?.DB) {
-			return fail(500, { message: 'Cloudflare D1 binding unavailable' });
-		}
-
 		try {
-			const db = getDb(platform.env.DB);
+			const db = getDb(platform);
 			await db.delete(schema.products);
 			for (const p of INITIAL_PRODUCTS) {
 				const { variants, tags, status, priority, stock, openingStock, subCategory, isLowStock, ...dbProduct } = p as any;

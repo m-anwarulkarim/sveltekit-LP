@@ -28,4 +28,5 @@ export * from './coupon.service';
 export * from './gtm.service';
 export * from './landing-page.service';
 export * from './bkash.service';
+export * from './data-transfer.service';
 

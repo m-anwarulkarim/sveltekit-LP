@@ -28,6 +28,7 @@ import { load as courierLoad } from '../src/routes/admin/courier/+page.server';
 import { SeoService } from '../src/lib/server/services/seo.service';
 import { SettingsService } from '../src/lib/server/services/settings.service';
 import { CourierService } from '../src/lib/server/services/courier.service';
+import { DataTransferService, CsvHelper } from '../src/lib/server/services/data-transfer.service';
 
 const sqlite = new DatabaseSync(':memory:');
 sqlite.exec('PRAGMA foreign_keys = ON');
@@ -849,6 +850,76 @@ await test('courier: admin courier page load succeeds without throwing', async (
 	assert.ok(Array.isArray(result.consignments));
 	assert.ok(Array.isArray(result.courierMethods));
 	assert.equal(result.defaultProvider, 'steadfast');
+});
+
+await test('data-transfer: CsvHelper parses multi-line HTML fields with quotes and commas', async () => {
+	const sampleCsv = `name,price,description\r\n"Premium Shirt",550,"<div style=""color: red;"">\n  <p>Best item in Bangladesh!</p>\n  <ul><li>100% Cotton</li></ul>\n</div>"`;
+	const parsed = CsvHelper.parse(sampleCsv);
+	assert.equal(parsed.length, 1);
+	assert.equal(parsed[0].name, 'Premium Shirt');
+	assert.equal(parsed[0].price, '550');
+	assert.ok(parsed[0].description.includes('<div style="color: red;">'));
+	assert.ok(parsed[0].description.includes('<ul><li>100% Cotton</li></ul>'));
+});
+
+await test('data-transfer: importProducts preserves raw HTML description with inline styles and updates existing products', async () => {
+	const richHtml = `<div class="features-box" style="background: #fdf2f8; padding: 12px; border-radius: 8px;">\n  <h4 style="color: #be185d;">অরিজিনাল বীজ বৈশিষ্ট্য:</h4>\n  <ul style="list-style-type: disc;">\n    <li>শতভাগ অঙ্কুরোদ্গম হার</li>\n  </ul>\n</div>`;
+
+	const items = [
+		{
+			name: 'টেস্ট লাল শাক বীজ',
+			slug: 'test-lal-shak-seeds',
+			price: 150,
+			category: 'শাকসবজি',
+			description: richHtml,
+			totalStock: 50,
+			image: '/uploads/lal-shak.jpg'
+		}
+	];
+
+	// Initial Import
+	const res1 = await DataTransferService.importProducts(db, items);
+	assert.equal(res1.inserted, 1);
+	assert.equal(res1.updated, 0);
+
+	// Verify DB record contains exact HTML
+	const insertedProduct = await db
+		.select()
+		.from(schema.products)
+		.where(eq(schema.products.slug, 'test-lal-shak-seeds'))
+		.get();
+
+	assert.ok(insertedProduct);
+	assert.equal(insertedProduct.description, richHtml);
+	assert.equal(insertedProduct.price, 150);
+
+	// Re-import with updated price and modified HTML
+	const updatedHtml = richHtml.replace('150', '200');
+	const itemsUpdate = [
+		{
+			name: 'টেস্ট লাল শাক বীজ (আপডেটেড)',
+			slug: 'test-lal-shak-seeds',
+			price: 200,
+			category: 'শাকসবজি',
+			description: updatedHtml,
+			totalStock: 80,
+			image: '/uploads/lal-shak.jpg'
+		}
+	];
+
+	const res2 = await DataTransferService.importProducts(db, itemsUpdate, { updateExisting: true });
+	assert.equal(res2.inserted, 0);
+	assert.equal(res2.updated, 1);
+
+	const updatedProduct = await db
+		.select()
+		.from(schema.products)
+		.where(eq(schema.products.slug, 'test-lal-shak-seeds'))
+		.get();
+
+	assert.equal(updatedProduct?.price, 200);
+	assert.equal(updatedProduct?.totalStock, 80);
+	assert.equal(updatedProduct?.description, updatedHtml);
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

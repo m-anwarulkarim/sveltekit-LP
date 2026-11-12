@@ -900,7 +900,7 @@
 					class="w-full flex items-center {collapsed ? 'justify-center p-3' : 'justify-between px-4 py-3.5'} rounded-2xl transition-all font-semibold text-[15px] {isDatabaseActive
 						? 'bg-[#5845eb] text-white shadow-[0_10px_22px_-4px_rgba(88,69,235,0.38)]'
 						: 'text-slate-800 hover:text-black hover:bg-slate-100/70 group'}"
-					title="Database"
+					title="Database & Backup"
 				>
 					<div class="flex items-center gap-3.5">
 						<svg class="w-5 h-5 shrink-0 {isDatabaseActive ? 'text-white' : 'text-slate-800 group-hover:text-black'}" viewBox="0 0 24 24" fill="currentColor">
@@ -910,7 +910,7 @@
 							<rect x="8" y="15" width="5" height="2" rx="1" fill="white" />
 						</svg>
 						{#if !collapsed}
-							<span>Database</span>
+							<span>Database & Backup</span>
 						{/if}
 					</div>
 					{#if !collapsed}

@@ -138,7 +138,7 @@
 				{:else if isCustomerActive}
 					<span>Customers</span>
 				{:else if isDatabaseActive}
-					<span>Database</span>
+					<span>Database & Backup</span>
 				{:else if isProfileActive}
 					<span>Profile</span>
 				{:else if isSupportActive}

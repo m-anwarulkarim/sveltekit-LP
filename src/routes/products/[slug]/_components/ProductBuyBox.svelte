@@ -223,19 +223,19 @@
 		<span class="text-xs font-bold text-slate-700 block">
 			প্যাকেজ / ভ্যারিয়েন্ট নির্বাচন করুন:
 		</span>
-		<div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+		<div class="grid grid-cols-3 gap-1.5 sm:gap-2">
 			{#each variantOptions as variant}
 				{@const isSelected = selectedVariantId === variant.id}
 				<Button
 					type="button"
 					variant={isSelected ? 'blue' : 'outline'}
 					onclick={() => (selectedVariantId = variant.id)}
-					class="h-auto py-2.5 px-3 text-xs font-bold justify-start text-left rounded-xl transition-all flex flex-col items-start gap-0.5 {isSelected
+					class="h-auto py-2 sm:py-2.5 px-2 sm:px-3 text-[11px] sm:text-xs font-bold justify-start text-left rounded-xl transition-all flex flex-col items-start gap-0.5 {isSelected
 						? 'shadow-xs ring-1 ring-blue-400'
 						: 'hover:border-slate-300'}"
 				>
-					<span>{variant.name}</span>
-					<span class="text-[10px] font-medium {isSelected ? 'text-blue-100' : 'text-slate-400'}">
+					<span class="truncate w-full">{variant.name}</span>
+					<span class="text-[9px] sm:text-[10px] font-medium truncate w-full {isSelected ? 'text-blue-100' : 'text-slate-400'}">
 						{variant.subtitle}
 					</span>
 				</Button>

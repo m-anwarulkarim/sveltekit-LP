@@ -581,18 +581,18 @@
 					<span class="text-xs font-bold text-slate-700 block">
 						প্যাকেজ / ভ্যারিয়েন্ট বেছে নিন:
 					</span>
-					<div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+					<div class="grid grid-cols-3 gap-1.5 sm:gap-2">
 						{#each variantOptions as variant}
 							{@const isSelected = selectedVariantId === variant.id}
 							<button
 								type="button"
 								onclick={() => (selectedVariantId = variant.id)}
-								class="p-2.5 text-xs font-bold text-left rounded-xl border transition-all flex flex-col items-start gap-0.5 cursor-pointer {isSelected
+								class="p-2 sm:p-2.5 text-[11px] sm:text-xs font-bold text-left rounded-xl border transition-all flex flex-col items-start gap-0.5 cursor-pointer {isSelected
 									? 'bg-[#2563eb] text-white border-[#2563eb] shadow-xs ring-2 ring-blue-300'
 									: 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'}"
 							>
-								<span>{variant.name}</span>
-								<span class="text-[10px] font-medium {isSelected ? 'text-blue-100' : 'text-slate-400'}">
+								<span class="truncate w-full">{variant.name}</span>
+								<span class="text-[9px] sm:text-[10px] font-medium truncate w-full {isSelected ? 'text-blue-100' : 'text-slate-400'}">
 									{variant.subtitle}
 								</span>
 							</button>

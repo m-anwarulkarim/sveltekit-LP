@@ -437,46 +437,48 @@
 					</h3>
 				</div>
 
-				<div class="grid gap-2 sm:gap-3 {packages.length === 1 ? 'grid-cols-1 max-w-sm mx-auto' : packages.length === 2 ? 'grid-cols-2 max-w-xl mx-auto' : 'grid-cols-1 sm:grid-cols-3'}">
+				<div class="grid gap-1.5 sm:gap-3 {packages.length === 1 ? 'grid-cols-1 max-w-sm mx-auto' : packages.length === 2 ? 'grid-cols-2 max-w-xl mx-auto' : 'grid-cols-3'}">
 					{#each packages as pkg, idx}
 						<button
 							type="button"
 							onclick={() => (selectedPackageIndex = idx)}
-							class="text-left rounded-2xl p-2.5 sm:p-4 border-2 transition-all relative cursor-pointer flex flex-col justify-between {selectedPackageIndex === idx ? 'border-emerald-600 bg-emerald-50/40 shadow-md ring-2 ring-emerald-500/20' : 'border-slate-200 bg-white hover:border-slate-300 shadow-2xs'}"
+							class="text-left rounded-xl sm:rounded-2xl p-2 sm:p-4 border-2 transition-all relative cursor-pointer flex flex-col justify-between {selectedPackageIndex === idx ? 'border-emerald-600 bg-emerald-50/40 shadow-md ring-2 ring-emerald-500/20' : 'border-slate-200 bg-white hover:border-slate-300 shadow-2xs'}"
 						>
 							<!-- Top badge -->
 							{#if pkg.tag}
-								<span class="absolute -top-2.5 sm:-top-3 right-2 sm:right-3 px-1.5 sm:px-2 py-0.5 rounded-full text-[8.5px] sm:text-[10px] font-black uppercase text-white shadow-xs whitespace-nowrap {pkg.popular ? 'bg-emerald-600' : 'bg-indigo-600'}">
+								<span class="absolute -top-2 sm:-top-3 right-1 sm:right-3 px-1 sm:px-2 py-0.2 sm:py-0.5 rounded-full text-[7.5px] sm:text-[10px] font-black uppercase text-white shadow-xs whitespace-nowrap {pkg.popular ? 'bg-emerald-600' : 'bg-indigo-600'}">
 									{pkg.tag}
 								</span>
 							{/if}
 
 							<div class="space-y-0.5 sm:space-y-1">
-								<div class="flex items-center justify-between gap-1">
-									<span class="text-xs sm:text-sm font-black text-slate-900 leading-tight">{pkg.title}</span>
-									<div class="w-4 h-4 sm:w-5 sm:h-5 rounded-full border flex items-center justify-center shrink-0 transition-colors {selectedPackageIndex === idx ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-300 bg-white'}">
+								<div class="flex items-start justify-between gap-1">
+									<span class="text-[11px] sm:text-sm font-black text-slate-900 leading-tight">{pkg.title}</span>
+									<div class="w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full border flex items-center justify-center shrink-0 transition-colors {selectedPackageIndex === idx ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-300 bg-white'}">
 										{#if selectedPackageIndex === idx}
-											<Check class="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[3]" />
+											<Check class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 stroke-[3]" />
 										{/if}
 									</div>
 								</div>
 								{#if pkg.subtitle}
-									<p class="text-[9.5px] sm:text-[11px] text-slate-500 font-medium leading-tight truncate">{pkg.subtitle}</p>
+									<p class="text-[8.5px] sm:text-[11px] text-slate-500 font-medium leading-tight line-clamp-1 sm:line-clamp-none">{pkg.subtitle}</p>
 								{/if}
 							</div>
 
-							<div class="mt-2.5 sm:mt-4 pt-2 sm:pt-3 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
-								<div>
-									<span class="text-sm sm:text-lg font-black text-slate-900 leading-none">{formatTaka(pkg.price)}</span>
-									<span class="text-[10px] sm:text-xs text-slate-400 line-through ml-0.5 sm:ml-1">{formatTaka(pkg.originalPrice)}</span>
+							<div class="mt-2 sm:mt-4 pt-1.5 sm:pt-3 border-t border-slate-200/80 flex flex-col gap-1">
+								<div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-0.5">
+									<span class="text-xs sm:text-lg font-black text-slate-900 leading-none">{formatTaka(pkg.price)}</span>
+									{#if pkg.originalPrice && pkg.originalPrice > pkg.price}
+										<span class="text-[9px] sm:text-xs text-slate-400 line-through">{formatTaka(pkg.originalPrice)}</span>
+									{/if}
 								</div>
 
 								{#if pkg.freeDelivery}
-									<span class="text-[8.5px] sm:text-[10px] font-extrabold text-emerald-700 bg-emerald-100/90 px-1.5 py-0.5 rounded-md text-center self-start sm:self-auto">
+									<span class="text-[7.5px] sm:text-[10px] font-extrabold text-emerald-700 bg-emerald-100/90 px-1 py-0.5 rounded text-center self-start whitespace-nowrap">
 										ফ্রি ডেলিভারি
 									</span>
 								{:else}
-									<span class="text-[8.5px] sm:text-[10px] font-bold text-slate-500 self-start sm:self-auto">
+									<span class="text-[7.5px] sm:text-[10px] font-bold text-slate-500 self-start whitespace-nowrap">
 										+৳{pkg.deliveryFee} ডেলিভারি
 									</span>
 								{/if}

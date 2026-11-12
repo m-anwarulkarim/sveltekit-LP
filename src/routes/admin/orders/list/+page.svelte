@@ -604,7 +604,7 @@
 				<!-- Header -->
 				<div class="flex justify-between items-start border-b border-black pb-4 mb-4">
 					<div>
-						<h1 class="text-xl font-black">{page.data?.websiteInfo?.websiteName || 'Admin'}</h1>
+						<h1 class="text-xl font-black">{data.websiteInfo?.websiteName || 'Store'}</h1>
 						<p class="text-xs text-gray-700">অনলাইন ই-কমার্স ও লাইফস্টাইল স্টোর</p>
 						<p class="text-xs text-gray-700">হটলাইন: 01700-000000</p>
 					</div>

@@ -480,7 +480,7 @@
 	<!-- Invoice Header -->
 	<div class="flex justify-between items-start border-b border-black pb-4">
 		<div>
-			<h1 class="text-2xl font-black tracking-tight">{page.data?.websiteInfo?.websiteName || data.websiteInfo?.websiteName || 'Admin'}</h1>
+			<h1 class="text-2xl font-black tracking-tight">{data.websiteInfo?.websiteName || 'Store'}</h1>
 			<p class="text-xs text-gray-600">e-Commerce Delivery Invoice & Delivery Challan</p>
 		</div>
 		<div class="text-right">

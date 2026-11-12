@@ -474,23 +474,24 @@
 					</div>
 				</div>
 
-				<!-- Submit Button -->
+				<!-- Submit Button with Shimmer & Pulsing Glow -->
 				<Button
 					type="submit"
 					disabled={isSubmitting}
-					class="w-full py-4 text-base font-bold bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-2xl shadow-xl hover:shadow-2xl transition-all cursor-pointer flex items-center justify-center gap-2 group"
+					class="w-full py-4 text-base sm:text-lg font-black bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl shadow-xl shadow-emerald-600/35 transition-all cursor-pointer flex items-center justify-center gap-2.5 group cta-shimmer-btn glow-btn active:scale-98"
 				>
 					{#if isSubmitting}
 						<Loader2 class="w-5 h-5 animate-spin" />
 						<span>অর্ডার প্রসেস হচ্ছে...</span>
 					{:else}
+						<ShoppingCart class="w-5 h-5" />
 						<span>অর্ডার কনফার্ম করুন • {formatTaka(grandTotal)}</span>
-						<ArrowRight class="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+						<ArrowRight class="w-5 h-5 group-hover:translate-x-1.5 transition-transform animate-pulse" />
 					{/if}
 				</Button>
 
 				<div class="text-center pt-1">
-					<p class="text-[11px] text-slate-500 flex items-center justify-center gap-1.5">
+					<p class="text-[11px] text-slate-500 flex items-center justify-center gap-1.5 font-medium">
 						<ShieldCheck class="w-3.5 h-3.5 text-emerald-600" />
 						<span>১০০% ক্যাশ অন ডেলিভারি ও মানি ব্যাক গ্যারান্টি</span>
 					</p>
@@ -499,4 +500,51 @@
 		</CardContent>
 	</Card>
 </div>
+
+<style>
+	@keyframes cta-shimmer {
+		0% {
+			transform: translateX(-150%) skewX(-20deg);
+		}
+		35%, 100% {
+			transform: translateX(250%) skewX(-20deg);
+		}
+	}
+
+	.cta-shimmer-btn {
+		position: relative;
+		overflow: hidden;
+	}
+
+	.cta-shimmer-btn::after {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 50%;
+		height: 100%;
+		background: linear-gradient(
+			90deg,
+			rgba(255, 255, 255, 0) 0%,
+			rgba(255, 255, 255, 0.45) 50%,
+			rgba(255, 255, 255, 0) 100%
+		);
+		transform: translateX(-150%) skewX(-20deg);
+		animation: cta-shimmer 2.8s ease-in-out infinite;
+		pointer-events: none;
+	}
+
+	@keyframes glow-pulse {
+		0%, 100% {
+			box-shadow: 0 10px 25px -4px rgba(5, 150, 105, 0.4), 0 4px 12px -2px rgba(5, 150, 105, 0.25);
+		}
+		50% {
+			box-shadow: 0 14px 35px 0 rgba(5, 150, 105, 0.65), 0 0 24px 2px rgba(16, 185, 129, 0.4);
+		}
+	}
+
+	.glow-btn {
+		animation: glow-pulse 2.2s infinite;
+	}
+</style>
 

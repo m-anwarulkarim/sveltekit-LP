@@ -29,6 +29,9 @@
 		courierName?: string;
 		badgeLabel?: string;
 		isConfigured?: boolean;
+		apiStatus?: 'ok' | 'rate_limited' | 'auth_failed' | 'unavailable' | 'not_configured';
+		apiMessage?: string;
+		hasData?: boolean;
 		byCourier?: {
 			steadfast?: CourierBreakdownItem;
 			pathao?: CourierBreakdownItem;
@@ -54,8 +57,14 @@
 
 	let hasPhone = $derived(!!phone && phone.trim().length >= 6);
 
+	// An API fault is not the same as a customer with no history, and must never
+	// be shown as a clean record.
+	let apiFault = $derived(
+		!!stats?.apiStatus && stats.apiStatus !== 'ok' && stats.apiStatus !== 'not_configured'
+	);
+
 	let isNewCustomer = $derived(
-		!stats || stats.total === 0 || (stats.delivered === 0 && stats.cancelled === 0)
+		!apiFault && (!stats || stats.total === 0 || (stats.delivered === 0 && stats.cancelled === 0))
 	);
 
 	let displaySuccessRate = $derived.by(() => {
@@ -70,6 +79,15 @@
 	});
 
 	let riskStatus = $derived.by(() => {
+		if (apiFault) {
+			return {
+				tag: 'Unknown',
+				label: stats?.apiStatus === 'rate_limited' ? 'লিমিট শেষ' : 'যাচাই হয়নি',
+				colorClass: 'bg-slate-100 text-slate-600 border-slate-300',
+				barColor: 'bg-slate-300',
+				textRateColor: 'text-slate-500'
+			};
+		}
 		if (isNewCustomer) {
 			return {
 				tag: 'New',
@@ -122,7 +140,10 @@
 				const data: any = await res.json();
 				if (data.success && data.stats) {
 					stats = data.stats;
-					if (data.stats.isConfigured) {
+					const status = data.stats.apiStatus;
+					if (status && status !== 'ok' && status !== 'not_configured') {
+						toast.error(data.stats.apiMessage || 'কুরিয়ার থেকে তথ্য আনা যায়নি');
+					} else if (data.stats.isConfigured) {
 						toast.success('কুরিয়ার লাইভ ডেটা সফলভাবে আপডেট হয়েছে!');
 					} else {
 						toast.info('কোনো কুরিয়ার API চালু নেই। লোকাল হিস্ট্রি লোড হয়েছে।');
@@ -196,6 +217,22 @@
 			<Shield class="w-6 h-6 mx-auto text-slate-400 stroke-1" />
 			<p class="text-xs font-semibold text-slate-600">ফোন নম্বর প্রদান করুন</p>
 			<p class="text-[11px] text-slate-400">গ্রাহকের ফোন নম্বর অনুযায়ী কুরিয়ার ডেলিভারি রেকর্ড প্রদর্শিত হবে</p>
+		</div>
+	{:else if apiFault}
+		<!-- Courier refused the lookup: report that, never an implied clean record -->
+		<div class="py-5 px-3.5 text-center space-y-2 bg-slate-50 rounded-xl border border-slate-200">
+			<AlertCircle class="w-6 h-6 mx-auto text-slate-400 stroke-[1.5]" />
+			<p class="text-xs font-bold text-slate-700">
+				{stats?.apiStatus === 'rate_limited'
+					? 'কুরিয়ার ফ্রড চেক লিমিট শেষ'
+					: 'কুরিয়ার থেকে তথ্য আনা যায়নি'}
+			</p>
+			{#if stats?.apiMessage}
+				<p class="text-[11px] text-slate-500 leading-relaxed">{stats.apiMessage}</p>
+			{/if}
+			<p class="text-[11px] text-slate-400">
+				এই গ্রাহকের ডেলিভারি রেকর্ড জানা যায়নি — একে নিরাপদ বা ঝুঁকিপূর্ণ কোনোটাই ধরা যাবে না।
+			</p>
 		</div>
 	{:else}
 		<!-- 3 Stat Blocks (Total / Received / Cancel) in Light Theme -->

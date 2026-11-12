@@ -29,6 +29,9 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 				courierName: assessment.courierName,
 				badgeLabel: assessment.badgeLabel,
 				isConfigured: assessment.isConfigured,
+				apiStatus: assessment.apiStatus,
+				apiMessage: assessment.apiMessage,
+				hasData: assessment.hasData,
 				byCourier: assessment.byCourier
 			}
 		});

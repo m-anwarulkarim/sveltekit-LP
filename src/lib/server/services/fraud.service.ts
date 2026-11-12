@@ -163,6 +163,8 @@ export class FraudService {
 						courierName: displayName,
 						badgeLabel: this.getBadgeLabel(displayName),
 						isConfigured: true,
+						apiStatus: 'ok',
+						hasData: total > 0,
 						byCourier
 					};
 				}
@@ -177,17 +179,22 @@ export class FraudService {
 		let courierName = 'কুরিয়ার এপিআই কনফিগার করা নেই';
 		let badgeLabel = 'API আনকনফিগার্ড';
 		const byCourier: { steadfast?: CourierStatsBreakdown; pathao?: CourierStatsBreakdown } = {};
+		let apiStatus: FraudApiStatus = isConfigured ? 'ok' : 'not_configured';
+		let apiMessage: string | undefined;
 
 		// 3. Query couriers based on what is added/configured
-		if (hasSteadfast && hasPathao) {
-			// BOTH STEADFAST & PATHAO CONFIGURED: Query both concurrently
-			const [stResult, paResult] = await Promise.allSettled([
-				this.fetchSteadfastFraud(phone, { apiKey: stApiKey, secretKey: stSecretKey }),
-				this.fetchPathaoFraud(phone, { apiKey: paApiKey, secretKey: paSecret, username: paUser, password: paPass })
+		{
+			const [stOutcome, paOutcome] = await Promise.all([
+				hasSteadfast
+					? this.fetchSteadfastFraud(phone, { apiKey: stApiKey, secretKey: stSecretKey })
+					: Promise.resolve(null),
+				hasPathao
+					? this.fetchPathaoFraud(phone, { apiKey: paApiKey, secretKey: paSecret, username: paUser, password: paPass })
+					: Promise.resolve(null)
 			]);
 
-			const stData = stResult.status === 'fulfilled' ? stResult.value : null;
-			const paData = paResult.status === 'fulfilled' ? paResult.value : null;
+			const stData = stOutcome && stOutcome.ok ? stOutcome.stats : null;
+			const paData = paOutcome;
 
 			if (stData) {
 				byCourier.steadfast = stData;
@@ -203,6 +210,13 @@ export class FraudService {
 				cancelledParcels += paData.cancelled;
 			}
 
+			if (stOutcome && !stOutcome.ok) {
+				// The courier refused the lookup. Surface that instead of letting
+				// an empty result read as a customer with no delivery history.
+				apiStatus = stOutcome.status;
+				apiMessage = stOutcome.message;
+			}
+
 			if (stData && paData) {
 				courierName = 'Steadfast + Pathao (সমন্বিত)';
 				badgeLabel = 'STEADFAST + PATHAO';
@@ -212,30 +226,14 @@ export class FraudService {
 			} else if (paData) {
 				courierName = 'Pathao Courier';
 				badgeLabel = 'PATHAO LIVE';
-			}
-		} else if (hasSteadfast) {
-			// ONLY STEADFAST CONFIGURED
-			courierName = 'Steadfast Courier';
-			badgeLabel = 'STEADFAST LIVE';
-
-			const stData = await this.fetchSteadfastFraud(phone, { apiKey: stApiKey, secretKey: stSecretKey });
-			if (stData) {
-				byCourier.steadfast = stData;
-				totalParcels = stData.total;
-				deliveredParcels = stData.delivered;
-				cancelledParcels = stData.cancelled;
-			}
-		} else if (hasPathao) {
-			// ONLY PATHAO CONFIGURED
-			courierName = 'Pathao Courier';
-			badgeLabel = 'PATHAO LIVE';
-
-			const paData = await this.fetchPathaoFraud(phone, { apiKey: paApiKey, secretKey: paSecret, username: paUser, password: paPass });
-			if (paData) {
-				byCourier.pathao = paData;
-				totalParcels = paData.total;
-				deliveredParcels = paData.delivered;
-				cancelledParcels = paData.cancelled;
+			} else if (stOutcome && !stOutcome.ok) {
+				courierName = 'Steadfast Courier';
+				badgeLabel = stOutcome.status === 'rate_limited' ? 'লিমিট শেষ' : 'API ত্রুটি';
+			} else if (hasPathao) {
+				apiStatus = 'unavailable';
+				apiMessage = 'Pathao থেকে ডেটা পাওয়া যায়নি।';
+				courierName = 'Pathao Courier';
+				badgeLabel = 'API ত্রুটি';
 			}
 		}
 
@@ -290,8 +288,9 @@ export class FraudService {
 					? 'Moderate'
 					: 'High Risk';
 
-		// 5. Update or insert into cache if courier is configured
-		if (isConfigured) {
+		// 5. Cache only a genuine answer. Writing a rate-limited or failed lookup
+		// would let a zero stand in for real delivery history until it expires.
+		if (isConfigured && apiStatus === 'ok') {
 			try {
 				const cacheJson = JSON.stringify({
 					name: courierName,
@@ -340,6 +339,9 @@ export class FraudService {
 			courierName,
 			badgeLabel,
 			isConfigured,
+			apiStatus,
+			apiMessage,
+			hasData: apiStatus === 'ok' && totalParcels > 0,
 			byCourier: Object.keys(byCourier).length > 0 ? byCourier : undefined
 		};
 	}

@@ -179,6 +179,9 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 					courierName: risk.courierName,
 					badgeLabel: risk.badgeLabel,
 					isConfigured: risk.isConfigured,
+					apiStatus: risk.apiStatus,
+					apiMessage: risk.apiMessage,
+					hasData: risk.hasData,
 					byCourier: risk.byCourier
 				};
 			}

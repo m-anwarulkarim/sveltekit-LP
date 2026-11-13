@@ -462,30 +462,6 @@
 			onSelect={() => (selectedFooter = 'footer_3')}
 			onPreview={() => openPreview('footer', 'footer_3', 'Footer 3 (Trust Grid E-Commerce)')}
 		/>
-		<ThemeOptionCard
-			id="footer_4"
-			title="Footer 4"
-			schematicType="footer"
-			selected={selectedFooter === 'footer_4'}
-			onSelect={() => (selectedFooter = 'footer_4')}
-			onPreview={() => openPreview('footer', 'footer_4', 'Footer 4 (Centered Boutique)')}
-		/>
-		<ThemeOptionCard
-			id="footer_5"
-			title="Footer 5"
-			schematicType="footer"
-			selected={selectedFooter === 'footer_5'}
-			onSelect={() => (selectedFooter = 'footer_5')}
-			onPreview={() => openPreview('footer', 'footer_5', 'Footer 5 (App Download Hero)')}
-		/>
-		<ThemeOptionCard
-			id="footer_7"
-			title="Footer 7"
-			schematicType="footer"
-			selected={selectedFooter === 'footer_7'}
-			onSelect={() => (selectedFooter = 'footer_7')}
-			onPreview={() => openPreview('footer', 'footer_7', 'Footer 7 (Compact Quick Strip)')}
-		/>
 	</ThemeSectionContainer>
 	<!-- 8. All Products Section Toggle -->
 	<div class="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">

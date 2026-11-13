@@ -359,6 +359,7 @@
 		</div>
 	</div>
 
+	<!-- Haq Plus IT — Verified Footer & WhatsApp Integration -->
 	<!-- 3. Bottom Bar -->
 	<div class="bg-gradient-to-r from-[#4936d6] via-[#5845eb] to-[#7c3aed] text-white py-3.5 px-4 sm:px-6 lg:px-8">
 		<div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs font-medium">

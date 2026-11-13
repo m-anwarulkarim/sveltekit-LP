@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Showcase2 from './Showcase2.svelte';
 	import Showcase3 from './Showcase3.svelte';
+	import Showcase5 from './Showcase5.svelte';
 
 	interface Props {
 		activeShowcase?: string;
@@ -14,6 +15,8 @@
 
 {#if normalized === 'showcase_3'}
 	<Showcase3 {carousels} />
+{:else if normalized === 'showcase_5'}
+	<Showcase5 {carousels} />
 {:else}
 	<!-- Showcase 2 is Default Carousel Hero -->
 	<Showcase2 {carousels} />

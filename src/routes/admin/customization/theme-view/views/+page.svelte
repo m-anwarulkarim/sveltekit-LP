@@ -210,6 +210,16 @@
 			onSelect={() => (selectedShowcase = 'showcase_4')}
 			onPreview={() => openPreview('showcase', 'showcase_4', 'Showcase 4 (Cinematic Hero)')}
 		/>
+		<ThemeOptionCard
+			id="showcase_5"
+			title="Showcase 5"
+			badgeText="IMAGE ONLY"
+			badgeVariant="blue"
+			schematicType="showcase"
+			selected={selectedShowcase === 'showcase_5'}
+			onSelect={() => (selectedShowcase = 'showcase_5')}
+			onPreview={() => openPreview('showcase', 'showcase_5', 'Showcase 5 (Full Image Hero — শুধু ইমেজ, কোনো টেক্সট নেই)')}
+		/>
 	</ThemeSectionContainer>
 
 	<!-- 3. Category Section -->

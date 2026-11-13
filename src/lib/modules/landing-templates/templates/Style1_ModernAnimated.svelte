@@ -15,7 +15,8 @@
 		Lock,
 		Heart,
 		ChevronLeft,
-		ChevronRight
+		ChevronRight,
+		ShoppingCart
 	} from 'lucide-svelte';
 	import LandingCountdown from '../components/LandingCountdown.svelte';
 	import LandingOrderForm from '../components/LandingOrderForm.svelte';

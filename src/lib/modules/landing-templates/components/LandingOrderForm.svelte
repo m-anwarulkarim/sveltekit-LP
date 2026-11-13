@@ -16,6 +16,7 @@
 		ArrowRight,
 		Loader2,
 		ShoppingBag,
+		ShoppingCart,
 		Plus,
 		Minus
 	} from 'lucide-svelte';

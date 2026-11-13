@@ -426,7 +426,15 @@ export class FraudService {
 			const parsed = this.extractSteadfastStats(data);
 			if (parsed) return { ok: true, stats: parsed };
 
-			console.warn('[FraudCheck] Unrecognized Steadfast payload:', JSON.stringify(data).slice(0, 500));
+			console.warn('[FraudCheck] Unrecognized Steadfast payload:', JSON.stringify(data).slice(0, 800));
+			console.warn('[FraudCheck] Top-level keys:', Object.keys(data));
+			if (data && typeof data === 'object') {
+				for (const [k, v] of Object.entries(data)) {
+					if (v && typeof v === 'object' && !Array.isArray(v)) {
+						console.warn(`[FraudCheck]   "${k}" sub-keys:`, Object.keys(v as object));
+					}
+				}
+			}
 			return { ok: false, status: 'unavailable', message: 'Steadfast ডেটার ফরম্যাট চেনা যায়নি।' };
 		} catch (err: any) {
 			console.warn('[FraudCheck] Steadfast fetch error:', err?.message);

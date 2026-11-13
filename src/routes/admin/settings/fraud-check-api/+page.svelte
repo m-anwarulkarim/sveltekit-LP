@@ -45,21 +45,21 @@
 		{
 			id: 'smartpos_bd',
 			name: 'SmartPOS Bangladesh',
-			tag: 'Primary fraud detection API',
+			tag: 'ফোন নম্বর ফ্রড স্কোর যাচাই',
 			color: 'bg-violet-500',
 			badge: 'প্রাইমারি'
 		},
 		{
 			id: 'steadfast',
-			name: 'Steadfast Courier',
-			tag: 'Delivery history & fraud score',
+			name: 'Steadfast',
+			tag: 'অর্ডার ইতিহাস ও ফ্রড স্কোর',
 			color: 'bg-emerald-500',
-			badge: 'ডেলিভারি হিস্ট্রি'
+			badge: 'ফ্রড স্কোর'
 		},
 		{
 			id: 'pathao',
-			name: 'Pathao Courier',
-			tag: 'Customer success rate check',
+			name: 'Pathao',
+			tag: 'গ্রাহকের সফল অর্ডার রেট',
 			color: 'bg-red-500',
 			badge: 'সাকসেস রেট'
 		}
@@ -183,16 +183,16 @@
 		<div class="space-y-3">
 			<div class="flex items-center justify-between gap-4 p-3.5 rounded-2xl bg-blue-50/60 border border-blue-100">
 				<div>
-					<h4 class="text-xs font-bold text-slate-900">কুরিয়ার রিটার্ন হিস্ট্রি চেক সক্রিয় করুন</h4>
-					<p class="text-[11px] text-slate-500 mt-0.5">অর্ডার আসার সময় গ্রাহকের ডেলিভারি ও রিটার্ন পারসেন্টেজ চেক হবে</p>
+					<h4 class="text-xs font-bold text-slate-900">Fraud Check সক্রিয় করুন</h4>
+					<p class="text-[11px] text-slate-500 mt-0.5">নতুন অর্ডারে গ্রাহকের পূর্ববর্তী অর্ডার ইতিহাস ও রিস্ক স্কোর স্বয়ংক্রিয়ভাবে যাচাই হবে</p>
 				</div>
 				<Switch bind:checked={enableCourierFraudCheck} />
 			</div>
 			<div class="grid grid-cols-2 gap-3">
 				<div class="space-y-1.5">
-					<label class="text-xs font-bold text-slate-700">রিটার্ন সতর্কতা থ্রেশহোল্ড (%)</label>
+					<label class="text-xs font-bold text-slate-700">রিস্ক সতর্কতা থ্রেশহোল্ড (%)</label>
 					<Input type="number" bind:value={returnRateThreshold} class="font-mono text-sm" />
-					<span class="text-[10px] text-slate-400">এর বেশি রিটার্ন রেটে সতর্কবার্তা দেখাবে</span>
+					<span class="text-[10px] text-slate-400">সফল ডেলিভারি রেট এর কম হলে সতর্কবার্তা দেখাবে</span>
 				</div>
 				<div class="space-y-1.5">
 					<label class="text-xs font-bold text-slate-700">হাই-রিস্ক আইপি অটো ব্লক</label>
@@ -310,8 +310,8 @@
 						<ShieldCheck class="w-4 h-4 text-white" />
 					</div>
 					<div>
-						<h3 class="text-sm font-bold text-slate-900">Steadfast Courier API</h3>
-						<p class="text-[11px] text-slate-500">ডেলিভারি হিস্ট্রি ও ফ্রড স্কোর চেক</p>
+						<h3 class="text-sm font-bold text-slate-900">Steadfast Fraud Check API</h3>
+						<p class="text-[11px] text-slate-500">অর্ডার ইতিহাস ও ফ্রড স্কোর যাচাই</p>
 					</div>
 				</div>
 				<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -348,7 +348,7 @@
 					</div>
 				</div>
 				<p class="text-[11px] text-slate-400">
-					Steadfast ড্যাশবোর্ড › API guide › Authentication থেকে API-Key ও Secret-Key সংগ্রহ করুন।
+					Steadfast ড্যাশবোর্ড › API guide › Authentication থেকে Api-Key ও Secret-Key সংগ্রহ করুন। এই API ফোন নম্বরের ফ্রড স্কোর রিটার্ন করে।
 				</p>
 			</div>
 
@@ -359,8 +359,8 @@
 						<ShieldCheck class="w-4 h-4 text-white" />
 					</div>
 					<div>
-						<h3 class="text-sm font-bold text-slate-900">Pathao Courier API</h3>
-						<p class="text-[11px] text-slate-500">গ্রাহকের সফল ডেলিভারি রেট যাচাই</p>
+						<h3 class="text-sm font-bold text-slate-900">Pathao Fraud Check API</h3>
+						<p class="text-[11px] text-slate-500">গ্রাহকের সফল অর্ডার রেট যাচাই</p>
 					</div>
 				</div>
 				<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">

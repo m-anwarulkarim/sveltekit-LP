@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Button, Badge, Card } from '#lib/components/ui';
+	import { sanitizeRichText } from '#lib/utils/sanitize-html';
 	import {
 		ShieldCheck,
 		Truck,
@@ -212,7 +213,7 @@
 			<!-- Subheadline (supports HTML like product description) -->
 			{#if config?.subheadline}
 				<div class="lp-rich-text text-sm sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
-					{@html config.subheadline}
+					{@html sanitizeRichText(config.subheadline)}
 				</div>
 			{/if}
 

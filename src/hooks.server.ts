@@ -322,6 +322,7 @@ const handleRequest: Handle = async ({ event, resolve }) => {
 				event.cookies.set('v_sid', vSid, {
 					path: '/',
 					httpOnly: true,
+					secure: !dev,
 					maxAge: 60 * 60 * 24 * 30, // 30 days
 					sameSite: 'lax'
 				});
@@ -381,8 +382,12 @@ export const handle: Handle = async (input) => {
 		// SAMEORIGIN, not DENY: the admin landing page preview may use an iframe.
 		response.headers.set('X-Frame-Options', 'SAMEORIGIN');
 		response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+		response.headers.set(
+			'Content-Security-Policy',
+			"default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://connect.facebook.net https://www.googletagmanager.com https://www.google-analytics.com https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http:; connect-src 'self' https: wss:; frame-src 'self' https://accounts.google.com https://www.facebook.com https://td.doubleclick.net; object-src 'none'; base-uri 'self'"
+		);
 		if (input.event.url.protocol === 'https:') {
-			response.headers.set('Strict-Transport-Security', 'max-age=31536000');
+			response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 		}
 	} catch {
 		// Responses such as Response.redirect() have immutable headers.

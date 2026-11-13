@@ -1,8 +1,10 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { normalizeBdPhone } from '#lib/server/utils/phone';
+import { getDb } from '#lib/server/db/index';
+import { SettingsService } from '#lib/server/services/settings.service';
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, platform }) => {
 	try {
 		const { phone, forceRefresh } = (await request.json()) as {
 			phone?: string;
@@ -15,9 +17,21 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		const normalized = normalizeBdPhone(phone);
 
+		const db = getDb(platform);
+		const fraudSettings = await SettingsService.getSettingsGroup(db, 'fraud_check');
+		const apiKey = (fraudSettings.smartposBdApiKey as string) || '';
+
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+			'Accept': 'application/json'
+		};
+		if (apiKey) {
+			headers['Authorization'] = `Bearer ${apiKey}`;
+		}
+
 		const apiRes = await fetch('https://fraudchecker.smartposbd.com/api/v1/fraud-check', {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+			headers,
 			body: JSON.stringify({ phone: normalized })
 		});
 

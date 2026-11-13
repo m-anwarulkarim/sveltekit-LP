@@ -29,8 +29,11 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
 		const db = getDb(platform);
 
-		// Handle Full Backup Restore
+		// Handle Full Backup Restore — destructive, Owner only
 		if (entity === 'full_backup') {
+			if (locals.admin.role !== 'Owner') {
+				return json({ success: false, message: 'ফুল ব্যাকআপ রিস্টোর শুধু Owner করতে পারবেন।' }, { status: 403 });
+			}
 			let backupJson: any;
 			try {
 				backupJson = JSON.parse(fileContent);

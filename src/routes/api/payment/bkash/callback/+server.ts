@@ -4,6 +4,8 @@ import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { BkashService, type BkashCredentials } from '#lib/server/services/bkash.service';
+import { getAuthSecret } from '#lib/server/secrets';
+import { timingSafeEqual } from '#lib/server/utils/password';
 
 function checkoutError(code: string, orderId: string, message?: string): string {
 	const params = new URLSearchParams({ error: code, orderId });
@@ -43,13 +45,39 @@ async function resolvePayment(creds: BkashCredentials, paymentID: string) {
 	return { failureMessage: executed.message };
 }
 
+async function verifyCallbackSig(orderId: string, sig: string | null): Promise<boolean> {
+	if (!sig) return false;
+	const secret = getAuthSecret();
+	if (!secret) return false;
+	const key = await crypto.subtle.importKey(
+		'raw',
+		new TextEncoder().encode(`bkash-callback:${secret}`),
+		{ name: 'HMAC', hash: 'SHA-256' },
+		false,
+		['sign']
+	);
+	const expected = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(orderId));
+	const expectedStr = btoa(String.fromCharCode(...new Uint8Array(expected)))
+		.replace(/\+/g, '-')
+		.replace(/\//g, '_')
+		.replace(/=+$/, '');
+	return timingSafeEqual(sig, expectedStr);
+}
+
 export const GET: RequestHandler = async ({ url, platform }) => {
 	const paymentID = url.searchParams.get('paymentID');
 	const status = url.searchParams.get('status');
 	const orderId = url.searchParams.get('orderId');
+	const sig = url.searchParams.get('sig');
 
 	if (!orderId) {
 		throw redirect(303, '/checkout?error=missing_order');
+	}
+
+	// If a callback signature was provided, verify it was initiated by our server
+	if (sig && !(await verifyCallbackSig(orderId, sig))) {
+		console.error(`bKash callback signature mismatch for order ${orderId}`);
+		throw redirect(303, checkoutError('bkash_failed', orderId));
 	}
 
 	// Customer cancelled or payment failed at bKash gateway

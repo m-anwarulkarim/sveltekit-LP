@@ -2,13 +2,29 @@ import { json, type RequestHandler } from '@sveltejs/kit';
 import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
 import { eq, or } from 'drizzle-orm';
+import { CourierService } from '#lib/server/services/courier.service';
+import { timingSafeEqual } from '#lib/server/utils/password';
 
 /**
  * Steadfast Webhook Handler
- * Receives parcel status change events from Steadfast servers
+ * Receives parcel status change events from Steadfast servers.
+ * Verifies the request using the configured Steadfast secret key.
  */
 export const POST: RequestHandler = async ({ request, platform }) => {
 	try {
+		const db = getDb(platform);
+
+		// Verify webhook authenticity using Steadfast secret key
+		const { methods } = await CourierService.getCourierSettings(db);
+		const steadfast = methods.find((m) => m.id === 'steadfast');
+		const secretKey = steadfast?.credentials?.secretKey;
+		if (secretKey) {
+			const signature = request.headers.get('x-webhook-secret') || request.headers.get('authorization');
+			if (!signature || !timingSafeEqual(signature.replace(/^Bearer\s+/i, ''), secretKey)) {
+				return json({ success: false, message: 'Unauthorized' }, { status: 401 });
+			}
+		}
+
 		const payload = (await request.json().catch(() => ({}))) as Record<string, unknown>;
 		const consignmentId = String(payload?.consignment_id || payload?.cid || '');
 		const trackingCode = String(payload?.tracking_code || '');
@@ -17,8 +33,6 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 		if (!consignmentId && !trackingCode) {
 			return json({ success: false, message: 'Missing consignment_id or tracking_code' }, { status: 400 });
 		}
-
-		const db = getDb(platform);
 
 		// Find matching order
 		const order = await db
@@ -78,7 +92,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 		return json({ success: true, message: 'Order status updated via webhook' });
 	} catch (error: any) {
 		console.error('Steadfast webhook error:', error);
-		return json({ success: false, message: error.message }, { status: 500 });
+		return json({ success: false, message: 'Internal server error' }, { status: 500 });
 	}
 };
 

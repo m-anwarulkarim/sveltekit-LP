@@ -4,8 +4,26 @@ import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { BkashService } from '#lib/server/services/bkash.service';
+import { getAuthSecret } from '#lib/server/secrets';
 
 const NOT_PAYABLE_STATUSES = new Set(['incomplete', 'cancelled', 'returned']);
+
+async function signCallbackUrl(orderId: string): Promise<string> {
+	const secret = getAuthSecret();
+	if (!secret) return '';
+	const key = await crypto.subtle.importKey(
+		'raw',
+		new TextEncoder().encode(`bkash-callback:${secret}`),
+		{ name: 'HMAC', hash: 'SHA-256' },
+		false,
+		['sign']
+	);
+	const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(orderId));
+	return btoa(String.fromCharCode(...new Uint8Array(sig)))
+		.replace(/\+/g, '-')
+		.replace(/\//g, '_')
+		.replace(/=+$/, '');
+}
 
 export const POST: RequestHandler = async ({ request, url, platform }) => {
 	try {
@@ -42,7 +60,7 @@ export const POST: RequestHandler = async ({ request, url, platform }) => {
 			amount: order.dueAmount || order.total,
 			orderNumber: order.orderNumber || order.id,
 			customerPhone: order.customerPhone || undefined,
-			callbackUrl: `${url.origin}/api/payment/bkash/callback?orderId=${encodeURIComponent(order.id)}`
+			callbackUrl: `${url.origin}/api/payment/bkash/callback?orderId=${encodeURIComponent(order.id)}&sig=${await signCallbackUrl(order.id)}`
 		});
 
 		if (result.success && result.bkashURL) {

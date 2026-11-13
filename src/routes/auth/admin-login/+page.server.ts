@@ -65,6 +65,7 @@ export const actions: Actions = {
 		cookies.set(ADMIN_SESSION_COOKIE, await AdminAuthService.createSessionToken(admin, secret), {
 			path: '/',
 			httpOnly: true,
+			secure: true,
 			sameSite: 'lax',
 			maxAge: ADMIN_SESSION_MAX_AGE
 		});

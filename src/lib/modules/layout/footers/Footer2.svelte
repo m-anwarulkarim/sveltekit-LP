@@ -160,7 +160,7 @@
 		</div>
 
 		<!-- 3. Bottom Bar: Dark Compact Strip with Payment Chips -->
-		<div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 pb-24 md:pb-0 text-xs text-slate-500">
+		<div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 pb-4 md:pb-0 text-xs text-slate-500">
 			<div class="flex items-center gap-2">
 				<ShieldCheck class="w-4 h-4 text-emerald-400" />
 				<span>100% Secure Checkout with SSL Encryption</span>
@@ -187,6 +187,8 @@
 				{footer.copyrightText}
 			</div>
 		</div>
+		<!-- Spacer so fixed mobile bottom nav does not cover text -->
+		<div class="h-20 md:hidden" aria-hidden="true"></div>
 	</div>
 </footer>
 

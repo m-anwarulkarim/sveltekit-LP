@@ -25,8 +25,8 @@ export const actions: Actions = {
 			return fail(400, { message: 'অনুগ্রহ করে সকল ফিল্ড পূরণ করুন।' });
 		}
 
-		if (password.length < 6) {
-			return fail(400, { message: 'পাসওয়ার্ডটি অন্তত ৬ অক্ষরের হতে হবে।' });
+		if (password.length < 8) {
+			return fail(400, { message: 'পাসওয়ার্ডটি অন্তত ৮ অক্ষরের হতে হবে।' });
 		}
 
 		try {

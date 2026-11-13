@@ -185,7 +185,7 @@
 	</div>
 
 	<!-- 3. Bottom White Strip with Payment & Copyright -->
-	<div class="border-t border-slate-200/80 bg-white py-4 px-4 sm:px-6 lg:px-8 pb-24 md:pb-4 text-xs text-slate-500">
+	<div class="border-t border-slate-200/80 bg-white pt-4 pb-4 px-4 sm:px-6 lg:px-8 text-xs text-slate-500">
 		<div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
 			<div>
 				{footer.copyrightText}
@@ -216,6 +216,8 @@
 				<span class="px-2.5 py-1 rounded bg-slate-50 border border-slate-200 font-bold text-slate-700">Mastercard</span>
 			</div>
 		</div>
+		<!-- Spacer so fixed mobile bottom nav does not cover text -->
+		<div class="h-20 md:hidden" aria-hidden="true"></div>
 	</div>
 </footer>
 

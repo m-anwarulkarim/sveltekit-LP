@@ -269,7 +269,7 @@
 	</div>
 
 	<!-- 3. Bottom Gradient Bar -->
-	<div class="bg-gradient-to-r from-[#4936d6] via-[#5845eb] to-[#7c3aed] text-white py-3.5 px-4 sm:px-6 lg:px-8 pb-24 md:pb-3.5">
+	<div class="bg-gradient-to-r from-[#4936d6] via-[#5845eb] to-[#7c3aed] text-white pt-3.5 pb-3.5 px-4 sm:px-6 lg:px-8">
 		<div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-medium">
 			<div>
 				{footer.copyrightText}
@@ -292,6 +292,8 @@
 				</a>
 			</div>
 		</div>
+		<!-- Spacer so fixed mobile bottom nav does not cover text -->
+		<div class="h-20 md:hidden" aria-hidden="true"></div>
 	</div>
 </footer>
 

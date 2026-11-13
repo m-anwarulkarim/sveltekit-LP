@@ -3,6 +3,7 @@
 	import { submitAction } from '#lib/client/submit-action';
 	import { trackMetaEvent } from '#lib/client/meta-pixel';
 	import { trackGtmAddToCart, trackGtmBeginCheckout } from '#lib/client/gtm';
+	import { sanitizeRichText } from '#lib/utils/sanitize-html';
 	import { Button, Badge, Card, CardHeader, CardTitle, CardContent, Input, Textarea, Separator } from '#lib/components/ui';
 	import {
 		ShieldCheck,
@@ -346,7 +347,7 @@
 			<!-- Subtitle (supports HTML / Rich Text) -->
 			{#if subheadline}
 				<div class="lp-rich-text text-sm sm:text-base text-slate-600 leading-relaxed font-medium">
-					{@html subheadline}
+					{@html sanitizeRichText(subheadline)}
 				</div>
 			{/if}
 
@@ -355,7 +356,7 @@
 				{#each displayBullets as bullet}
 					<div class="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs">
 						<CheckCircle2 class="w-4 h-4 text-emerald-600 shrink-0" />
-						<span>{@html bullet}</span>
+						<span>{@html sanitizeRichText(bullet)}</span>
 					</div>
 				{/each}
 			</div>
@@ -505,7 +506,7 @@
 					<span>{config?.trustBox1Title || 'নিশ্চিন্তে অর্ডার করুন'}</span>
 				</div>
 				<div class="text-xs text-slate-600 leading-relaxed pl-9">
-					{@html config?.trustBox1Desc || 'কোনো অগ্রিম টাকা দিতে হবে না। অর্ডার প্লেস করার পর আমাদের প্রতিনিধি ফোনে কথা বলে কনফার্ম করবেন এবং পণ্য হাতে পেয়ে দেখে টাকা পরিশোধ করবেন।'}
+					{@html sanitizeRichText(config?.trustBox1Desc || 'কোনো অগ্রিম টাকা দিতে হবে না। অর্ডার প্লেস করার পর আমাদের প্রতিনিধি ফোনে কথা বলে কনফার্ম করবেন এবং পণ্য হাতে পেয়ে দেখে টাকা পরিশোধ করবেন।')}
 				</div>
 			</Card>
 
@@ -518,7 +519,7 @@
 					<span>{config?.trustBox2Title || '🤝 আমাদের প্রতিশ্রুতি'}</span>
 				</div>
 				<div class="text-xs text-slate-600 leading-relaxed pl-9">
-					{@html config?.trustBox2Desc || 'আমরা সর্বোচ্চ কোয়ালিটি এবং সন্তুষ্টি নিশ্চিত করি। কোনো সমস্যা প্রমাণিত হলে সম্পূর্ণ পরিবর্তন অথবা মানিব্যাক গ্যারান্টি।'}
+					{@html sanitizeRichText(config?.trustBox2Desc || 'আমরা সর্বোচ্চ কোয়ালিটি এবং সন্তুষ্টি নিশ্চিত করি। কোনো সমস্যা প্রমাণিত হলে সম্পূর্ণ পরিবর্তন অথবা মানিব্যাক গ্যারান্টি।')}
 				</div>
 			</Card>
 		</div>

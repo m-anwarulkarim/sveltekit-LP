@@ -7,6 +7,7 @@ const page = makeSettingsPage(
 		enableCourierFraudCheck: true,
 		returnRateThreshold: 25,
 		autoBlockBadIps: false,
+		smartposBdApiKey: '',
 		steadFastApiKey: '',
 		steadFastSecretKey: '',
 		pathaoApiKey: '',
@@ -14,7 +15,7 @@ const page = makeSettingsPage(
 		pathaoUsername: '',
 		pathaoPassword: ''
 	},
-	['steadFastApiKey', 'steadFastSecretKey', 'pathaoApiKey', 'pathaoSecret', 'pathaoPassword']
+	['smartposBdApiKey', 'steadFastApiKey', 'steadFastSecretKey', 'pathaoApiKey', 'pathaoSecret', 'pathaoPassword']
 );
 
 export const load: PageServerLoad = page.load;

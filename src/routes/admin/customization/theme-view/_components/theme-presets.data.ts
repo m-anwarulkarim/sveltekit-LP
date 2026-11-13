@@ -46,8 +46,8 @@ export const THEME_DESIGN_PRESETS: ThemePreset[] = [
 			productCardLabel: 'Product Card 1 (Classic Clean)',
 			header: 'header_1',
 			headerLabel: 'Header 1 (Search-Focused)',
-			showcase: 'showcase_2',
-			showcaseLabel: 'Showcase 2 (Fluid Carousel)',
+			showcase: 'showcase_1',
+			showcaseLabel: 'Showcase 1 (Hero Carousel)',
 			footer: 'footer_1',
 			footerLabel: 'Footer 1 (Full 4-Column)'
 		}
@@ -72,8 +72,8 @@ export const THEME_DESIGN_PRESETS: ThemePreset[] = [
 			productCardLabel: 'Product Card 2 (Minimal Borderless)',
 			header: 'header_2',
 			headerLabel: 'Header 2 (Top Accent Bar)',
-			showcase: 'showcase_3',
-			showcaseLabel: 'Showcase 3 (Grid Showcase)',
+			showcase: 'showcase_2',
+			showcaseLabel: 'Showcase 2 (Split Banner Grid)',
 			footer: 'footer_2',
 			footerLabel: 'Footer 2 (Compact Brand)'
 		}

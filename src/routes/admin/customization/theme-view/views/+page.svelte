@@ -20,7 +20,7 @@
 	let views = $derived(
 		data?.themeConfig?.views || {
 			header: 'header_1',
-			showcase: 'showcase_2',
+			showcase: 'showcase_1',
 			category: 'category_1',
 			productSections: ['tag'],
 			productCard: 'product_card_3',
@@ -186,39 +186,31 @@
 		sectionTag="SHOWCASEVIEWS"
 	>
 		<ThemeOptionCard
+			id="showcase_1"
+			title="Showcase 1"
+			isDefault={true}
+			schematicType="showcase"
+			selected={selectedShowcase === 'showcase_1'}
+			onSelect={() => (selectedShowcase = 'showcase_1')}
+			onPreview={() => openPreview('showcase', 'showcase_1', 'Showcase 1 (Hero Carousel Slider)')}
+		/>
+		<ThemeOptionCard
 			id="showcase_2"
 			title="Showcase 2"
-			isDefault={true}
 			schematicType="showcase"
 			selected={selectedShowcase === 'showcase_2'}
 			onSelect={() => (selectedShowcase = 'showcase_2')}
-			onPreview={() => openPreview('showcase', 'showcase_2', 'Showcase 2 (Hero Carousel Slider)')}
+			onPreview={() => openPreview('showcase', 'showcase_2', 'Showcase 2 (Split Banner Grid)')}
 		/>
 		<ThemeOptionCard
 			id="showcase_3"
 			title="Showcase 3"
-			schematicType="showcase"
-			selected={selectedShowcase === 'showcase_3'}
-			onSelect={() => (selectedShowcase = 'showcase_3')}
-			onPreview={() => openPreview('showcase', 'showcase_3', 'Showcase 3 (Split Promo Grid)')}
-		/>
-		<ThemeOptionCard
-			id="showcase_4"
-			title="Showcase 4"
-			schematicType="showcase"
-			selected={selectedShowcase === 'showcase_4'}
-			onSelect={() => (selectedShowcase = 'showcase_4')}
-			onPreview={() => openPreview('showcase', 'showcase_4', 'Showcase 4 (Cinematic Hero)')}
-		/>
-		<ThemeOptionCard
-			id="showcase_5"
-			title="Showcase 5"
 			badgeText="IMAGE ONLY"
 			badgeVariant="blue"
 			schematicType="showcase"
-			selected={selectedShowcase === 'showcase_5'}
-			onSelect={() => (selectedShowcase = 'showcase_5')}
-			onPreview={() => openPreview('showcase', 'showcase_5', 'Showcase 5 (Full Image Hero — শুধু ইমেজ, কোনো টেক্সট নেই)')}
+			selected={selectedShowcase === 'showcase_3'}
+			onSelect={() => (selectedShowcase = 'showcase_3')}
+			onPreview={() => openPreview('showcase', 'showcase_3', 'Showcase 3 (Full Image Hero — শুধু ইমেজ)')}
 		/>
 	</ThemeSectionContainer>
 

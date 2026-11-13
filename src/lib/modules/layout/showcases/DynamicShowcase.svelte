@@ -8,16 +8,18 @@
 		carousels?: any[];
 	}
 
-	let { activeShowcase = 'showcase_2', carousels = [] }: Props = $props();
+	let { activeShowcase = 'showcase_1', carousels = [] }: Props = $props();
 
-	let normalized = $derived((activeShowcase || 'showcase_2').toLowerCase().trim());
+	let normalized = $derived((activeShowcase || 'showcase_1').toLowerCase().trim());
 </script>
 
-{#if normalized === 'showcase_3'}
+{#if normalized === 'showcase_2'}
+	<!-- Showcase 2: Split Grid (2 banners side by side) -->
 	<Showcase3 {carousels} />
-{:else if normalized === 'showcase_5'}
+{:else if normalized === 'showcase_3'}
+	<!-- Showcase 3: Full Image Only Hero -->
 	<Showcase5 {carousels} />
 {:else}
-	<!-- Showcase 2 is Default Carousel Hero -->
+	<!-- Showcase 1 (default): Carousel Hero with text -->
 	<Showcase2 {carousels} />
 {/if}

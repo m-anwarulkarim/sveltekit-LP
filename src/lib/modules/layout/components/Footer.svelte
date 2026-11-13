@@ -148,7 +148,6 @@
 						</a>
 					</li>
 					<li>
-						<a href="/privacy" class="flex items-center gap-2 text-slate-600 hover:text-[#5845eb] transition-colors group">
 						<a href="/privacy-policy" class="flex items-center gap-2 text-slate-600 hover:text-[#5845eb] transition-colors group">
 							<ChevronRight class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#5845eb] group-hover:translate-x-0.5 transition-all" />
 							<span>Privacy Policy</span>
@@ -360,15 +359,36 @@
 		</div>
 	</div>
 
-	<!-- 3. Bottom Bar: Brand Theme Indigo/Purple Gradient (Matches user request for color match) -->
+	<!-- 3. Bottom Bar -->
 	<div class="bg-gradient-to-r from-[#4936d6] via-[#5845eb] to-[#7c3aed] text-white py-3.5 px-4 sm:px-6 lg:px-8">
 		<div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs font-medium">
 			<div>
 				© 2026 {websiteInfo?.websiteName || 'Store'}. All rights reserved.
 			</div>
-			<div class="text-[11px] text-indigo-100 flex items-center gap-1">
-				<span>Design by</span>
-				<strong class="text-white font-bold">Borbila</strong>
+
+			<!-- Center: Developed by -->
+			<div class="flex flex-col items-center gap-0.5 text-center">
+				<span class="text-[11px] text-indigo-200">✦ আপনার বিশ্বস্ত ই-কমার্স অংশীদার ✦</span>
+				<div class="flex items-center gap-1.5 text-[11px] text-indigo-100">
+					<span>Developed by</span>
+					<a
+						href="tel:01560007230"
+						class="text-white font-bold hover:text-yellow-300 transition-colors"
+					>
+						Haq Plus IT
+					</a>
+					<span class="text-indigo-300">•</span>
+					<a
+						href="tel:01560007230"
+						class="text-yellow-300 font-semibold hover:text-yellow-200 transition-colors tracking-wide"
+					>
+						01560007230
+					</a>
+				</div>
+			</div>
+
+			<div class="text-[11px] text-indigo-200 italic">
+				Powered by Haq Plus Platform
 			</div>
 		</div>
 	</div>

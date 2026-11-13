@@ -54,7 +54,7 @@ export const DEFAULT_THEME_CONFIG: CompleteThemeConfig = {
 	},
 	views: {
 		header: 'header_1',
-		showcase: 'showcase_2',
+		showcase: 'showcase_1',
 		category: 'category_1',
 		productSections: ['tag'],
 		productCard: 'product_card_3',

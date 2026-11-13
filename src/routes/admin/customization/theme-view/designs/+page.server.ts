@@ -15,7 +15,7 @@ export const actions: Actions = {
 		const presetId = data.get('presetId')?.toString() || '';
 		const presetName = data.get('presetName')?.toString() || '';
 		const header = data.get('header')?.toString() || 'header_1';
-		const showcase = data.get('showcase')?.toString() || 'showcase_2';
+		const showcase = data.get('showcase')?.toString() || 'showcase_1';
 		const productCard = data.get('productCard')?.toString() || 'product_card_3';
 		const footer = data.get('footer')?.toString() || 'footer_1';
 

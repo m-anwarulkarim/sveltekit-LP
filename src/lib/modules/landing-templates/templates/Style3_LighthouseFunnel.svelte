@@ -3,7 +3,6 @@
 	import { submitAction } from '#lib/client/submit-action';
 	import { trackMetaEvent } from '#lib/client/meta-pixel';
 	import { trackGtmAddToCart, trackGtmBeginCheckout } from '#lib/client/gtm';
-	import { sanitizeRichText } from '#lib/utils/sanitize-html';
 	import { Button, Badge, Card, CardHeader, CardTitle, CardContent, Input, Textarea, Separator } from '#lib/components/ui';
 	import {
 		ShieldCheck,
@@ -456,7 +455,7 @@
 				<!-- Subheadline (supports HTML / Rich Text) -->
 				{#if subheadline}
 					<div class="lp-rich-text text-xs sm:text-sm md:text-base text-slate-600 leading-relaxed font-medium max-w-2xl mx-auto">
-						{@html sanitizeRichText(subheadline)}
+						{@html subheadline}
 					</div>
 				{/if}
 
@@ -1063,7 +1062,7 @@
 					{headline} এর স্পষ্ট উপকারিতা
 				</h2>
 				<div class="lp-rich-text text-xs sm:text-sm text-slate-500 font-medium">
-					{@html sanitizeRichText(subheadline || 'প্রিমিয়াম কোয়ালিটি উপাদান ও নির্ভরযোগ্য মান যা ব্যবহারের সাথে সাথেই স্পষ্ট পরিবর্তন অনুভব করাবে।')}
+					{@html subheadline || 'প্রিমিয়াম কোয়ালিটি উপাদান ও নির্ভরযোগ্য মান যা ব্যবহারের সাথে সাথেই স্পষ্ট পরিবর্তন অনুভব করাবে।'}
 				</div>
 			</div>
 

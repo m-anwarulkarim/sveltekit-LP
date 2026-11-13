@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
-	import { sanitizeRichText } from '#lib/utils/sanitize-html';
 	import type { PageData } from './$types';
 	import {
 		Database,
@@ -843,7 +842,7 @@
 									<Eye class="w-3 h-3 text-indigo-600" /> প্রথম পণ্যের ডেসক্রিপশন প্রিভিউ (Live HTML Style):
 								</span>
 								<div class="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-slate-800 max-h-36 overflow-y-auto font-sans leading-relaxed shadow-2xs">
-									{@html sanitizeRichText(previewData.previewRows[0].description)}
+									{@html previewData.previewRows[0].description}
 								</div>
 							</div>
 						{/if}

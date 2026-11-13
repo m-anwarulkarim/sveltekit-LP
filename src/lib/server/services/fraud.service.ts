@@ -451,12 +451,30 @@ export class FraudService {
 	private static extractSteadfastStats(data: any): CourierStatsBreakdown | null {
 		const found = new Map<string, number>();
 
+		/** Extracts the leading number from strings like "75%", "4 parcels", "3.5" */
+		const extractNumber = (value: unknown): number | null => {
+			if (typeof value === 'number') return value;
+			if (typeof value !== 'string') return null;
+			const cleaned = value.trim();
+			if (cleaned === '') return null;
+			// Try the whole string first (fast path)
+			if (!isNaN(Number(cleaned))) return Number(cleaned);
+			// Strip trailing %, commas, and unit words: "75%", "4 parcels", "3,500"
+			const match = cleaned.replace(/,/g, '').match(/^-?\d+(\.\d+)?/);
+			return match ? Number(match[0]) : null;
+		};
+
 		const walk = (node: any, depth: number) => {
 			if (!node || typeof node !== 'object' || depth > 6) return;
+			if (Array.isArray(node)) {
+				node.forEach((item) => walk(item, depth + 1));
+				return;
+			}
 			for (const [key, value] of Object.entries(node)) {
-				if (typeof value === 'number' || (typeof value === 'string' && value.trim() !== '' && !isNaN(Number(value)))) {
+				const num = extractNumber(value);
+				if (num !== null) {
 					const normalizedKey = key.toLowerCase().replace(/[^a-z]/g, '');
-					if (!found.has(normalizedKey)) found.set(normalizedKey, Number(value));
+					if (!found.has(normalizedKey)) found.set(normalizedKey, num);
 				} else if (typeof value === 'object') {
 					walk(value, depth + 1);
 				}
@@ -472,11 +490,30 @@ export class FraudService {
 			return undefined;
 		};
 
-		const total = pick('totalparcels', 'parcelvolume', 'totalparcel', 'consignmentcount', 'totalorder', 'totalorders', 'total');
-		const delivered = pick('totaldelivered', 'deliveredparcel', 'deliveredparcels', 'delivered', 'successparcel', 'deliverycount', 'success');
-		const cancelled = pick('totalcancelled', 'cancelledparcel', 'cancelledparcels', 'cancelled', 'canceledparcel', 'canceled', 'cancelcount', 'cancel');
-		const deliveryPct = pick('deliverypercentage', 'deliveredpercentage', 'successrate', 'deliveryratio', 'score');
-		const cancelPct = pick('cancelpercentage', 'cancelledpercentage', 'canceledpercentage');
+		const total = pick(
+			'totalparcels', 'parcelvolume', 'totalparcel', 'consignmentcount',
+			'totalorder', 'totalorders', 'total', 'volume',
+			'totalconsignment', 'parcels', 'orders'
+		);
+		const delivered = pick(
+			'totaldelivered', 'deliveredparcel', 'deliveredparcels', 'delivered',
+			'successparcel', 'deliverycount', 'success', 'totaldelivery',
+			'deliveredcount', 'successcount', 'deliveries'
+		);
+		const cancelled = pick(
+			'totalcancelled', 'cancelledparcel', 'cancelledparcels', 'cancelled',
+			'canceledparcel', 'canceled', 'cancelcount', 'cancel', 'totalcancel',
+			'cancelledcount', 'canceledcount', 'cancels'
+		);
+		const deliveryPct = pick(
+			'deliverypercentage', 'deliveredpercentage', 'successrate',
+			'deliveryratio', 'score', 'deliveryrate', 'deliveredrate',
+			'successpercentage', 'deliveryscore'
+		);
+		const cancelPct = pick(
+			'cancelpercentage', 'cancelledpercentage', 'canceledpercentage',
+			'cancelrate', 'cancelledrate', 'canceledrate'
+		);
 
 		const returned = pick('totalreturned', 'returnedparcel', 'returned', 'returncount') ?? 0;
 		const partialDelivered = pick('totalpartialdelivered', 'partialdelivered', 'partialdeliverycount') ?? 0;

@@ -410,15 +410,15 @@
 				}}
 			/>
 
-			<!-- Courier & Fraud Check -->
+			<!-- SmartPOS Fraud Check -->
+			<SmartPosFraudCard phone={customerPhone} />
+
+			<!-- Courier Fraud Check -->
 			<CourierFraudCard
 				phone={customerPhone}
 				bind:stats={courierStats}
 				storeName={data.websiteInfo?.websiteName || 'Store'}
 			/>
-
-			<!-- SmartPOS Fraud Check -->
-			<SmartPosFraudCard phone={customerPhone} />
 
 			<!-- Call Notes & Timeline -->
 			<OrderCallNotes

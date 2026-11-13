@@ -239,13 +239,13 @@
 
 		<!-- Right: Intelligence -->
 		<div class="lg:col-span-4 space-y-4 flex flex-col">
+			<SmartPosFraudCard phone={customerPhone} />
 			<CourierFraudCard
 				phone={customerPhone}
 				stats={courierStats}
 				storeName={data.websiteInfo?.websiteName || 'Store'}
 				onRefresh={() => toast.success('কুরিয়ার ফ্রড ডেটা রিলোড হয়েছে!')}
 			/>
-			<SmartPosFraudCard phone={customerPhone} />
 			<OrderCallNotes
 				bind:notes={callNotes}
 				onAddNote={handleAddNote}

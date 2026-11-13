@@ -26,7 +26,7 @@
 	let urlType = $state(data?.carousel?.urlType || 'Internal');
 	let targetUrl = $state(data?.carousel?.targetUrl || '/home');
 	let serial = $state(String(data?.carousel?.sortOrder ?? 1));
-	let currentImage = $state(data?.carousel?.image || '/images/banners/banner-home.svg');
+	let currentImage = $state(data?.carousel?.image ?? '');
 	let mobileImage = $state(data?.carousel?.mobileImage || '');
 	let isSaving = $state(false);
 

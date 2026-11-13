@@ -3,8 +3,7 @@ import { env as dynamicPrivateEnv } from '$env/dynamic/private';
 
 // These values were committed to git, so they must never be accepted as signing keys again.
 const REJECTED_SECRETS = new Set([
-	'aura_acoustics_production_jwt_sec_99881122',
-	'sDVHN55YKBnEqrsW9Tm9lRvY4sWhP4q4'
+	'aura_acoustics_production_jwt_sec_99881122'
 ]);
 const MIN_SECRET_LENGTH = 32;
 

@@ -7,12 +7,15 @@
 		Check,
 		Headphones,
 		Loader2,
-		UploadCloud
+		UploadCloud,
+		Image as ImageIcon,
+		Link
 	} from 'lucide-svelte';
 	import { enhance } from '$app/forms';
 	import { toast } from 'svelte-sonner';
 	import { uploadOptimizedImage } from '#lib/utils/image-optimizer';
 	import { Button, Input } from '#lib/components/ui';
+	import MediaPickerModal from '../../../_components/gallery/MediaPickerModal.svelte';
 
 	let { data }: { data?: any } = $props();
 
@@ -32,12 +35,52 @@
 
 	let fileInputRef: HTMLInputElement | null = $state(null);
 	let uploadTarget = $state<'desktop' | 'mobile'>('desktop');
+	let showGallery = $state(false);
+	let showUrlInput = $state(false);
+	let pasteUrl = $state('');
 
 	let totalImagesCount = $derived((currentImage ? 1 : 0) + (mobileImage ? 1 : 0));
 
 	function triggerUpload(target: 'desktop' | 'mobile' = 'desktop') {
 		uploadTarget = target;
 		fileInputRef?.click();
+	}
+
+	function openGallery(target: 'desktop' | 'mobile' = 'desktop') {
+		uploadTarget = target;
+		showGallery = true;
+	}
+
+	function handleGallerySelect(url: string) {
+		if (uploadTarget === 'desktop' || !currentImage) {
+			currentImage = url;
+			toast.success('গ্যালারি থেকে ইমেজ সেট হয়েছে');
+		} else {
+			mobileImage = url;
+			toast.success('গ্যালারি থেকে মোবাইল ইমেজ সেট হয়েছে');
+		}
+	}
+
+	function openUrlInput(target: 'desktop' | 'mobile' = 'desktop') {
+		uploadTarget = target;
+		pasteUrl = '';
+		showUrlInput = true;
+	}
+
+	function applyPastedUrl() {
+		const url = pasteUrl.trim();
+		if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+			toast.error('সঠিক URL দিন (http:// বা https:// দিয়ে শুরু)');
+			return;
+		}
+		if (uploadTarget === 'desktop' || !currentImage) {
+			currentImage = url;
+		} else {
+			mobileImage = url;
+		}
+		toast.success('URL থেকে ইমেজ সেট হয়েছে');
+		pasteUrl = '';
+		showUrlInput = false;
 	}
 
 	// A blob: URL dies with the page; the optimized WebP goes to R2 so the
@@ -195,6 +238,54 @@
 						class="hidden"
 					/>
 				</div>
+
+				<!-- Gallery & URL Buttons -->
+				{#if totalImagesCount < 2}
+					<div class="flex items-center gap-2 mt-2">
+						<button
+							type="button"
+							onclick={() => openGallery(!currentImage ? 'desktop' : 'mobile')}
+							class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 text-[#5845eb] hover:bg-indigo-100 border border-indigo-200 text-xs font-bold transition-colors cursor-pointer"
+						>
+							<ImageIcon class="w-3.5 h-3.5" />
+							<span>গ্যালারি থেকে</span>
+						</button>
+						<button
+							type="button"
+							onclick={() => openUrlInput(!currentImage ? 'desktop' : 'mobile')}
+							class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 text-xs font-bold transition-colors cursor-pointer"
+						>
+							<Link class="w-3.5 h-3.5" />
+							<span>URL পেস্ট</span>
+						</button>
+					</div>
+				{/if}
+
+				<!-- URL Paste Input -->
+				{#if showUrlInput}
+					<div class="flex items-center gap-2 mt-2">
+						<Input
+							bind:value={pasteUrl}
+							placeholder="https://example.com/image.jpg"
+							class="flex-1 text-xs font-mono rounded-xl"
+							onkeydown={(e: KeyboardEvent) => e.key === 'Enter' && (e.preventDefault(), applyPastedUrl())}
+						/>
+						<Button
+							type="button"
+							onclick={applyPastedUrl}
+							class="bg-[#5845eb] hover:bg-[#4936d6] text-white px-3 py-2 rounded-xl text-xs font-bold"
+						>
+							<Check class="w-3.5 h-3.5" />
+						</Button>
+						<button
+							type="button"
+							onclick={() => (showUrlInput = false)}
+							class="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+						>
+							<X class="w-3.5 h-3.5" />
+						</button>
+					</div>
+				{/if}
 			</div>
 
 			<!-- Name & Select Status (2 columns) -->
@@ -309,3 +400,4 @@
 	</div>
 </div>
 
+<MediaPickerModal bind:open={showGallery} onSelect={handleGallerySelect} title="ক্যারোসেল ইমেজ বেছে নিন" />

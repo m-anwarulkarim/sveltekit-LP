@@ -5,8 +5,21 @@ const LEAKED_AUTH_SECRET = 'aura_acoustics_production_jwt_sec_99881122';
 const MIN_SECRET_LENGTH = 32;
 const DEFAULT_AUTH_SECRET = 'sDVHN55YKBnEqrsW9Tm9lRvY4sWhP4q4';
 
+let _platformEnv: Record<string, unknown> | null = null;
+
+/**
+ * Call once from hooks.server.ts on the first request to inject platform.env,
+ * which is the only reliable source for Cloudflare dashboard variables.
+ */
+export function initPlatformEnv(platform: App.Platform | undefined): void {
+	if (!_platformEnv && platform) {
+		_platformEnv = (platform as any).env ?? null;
+	}
+}
+
 function readEnv(name: string): string {
 	const raw =
+		(_platformEnv?.[name] as string | undefined) ||
 		((cfEnv as unknown as Record<string, unknown>)?.[name] as string | undefined) ||
 		dynamicPrivateEnv?.[name] ||
 		'';
@@ -15,7 +28,7 @@ function readEnv(name: string): string {
 
 /**
  * Returns the signing secret.
- * Falls back to DEFAULT_AUTH_SECRET if missing in Cloudflare environment bindings.
+ * Prefers BETTER_AUTH_SECRET from environment; falls back to DEFAULT_AUTH_SECRET.
  */
 export function getAuthSecret(): string {
 	const secret = readEnv('BETTER_AUTH_SECRET');

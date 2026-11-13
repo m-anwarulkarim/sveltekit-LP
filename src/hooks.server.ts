@@ -6,7 +6,7 @@ import { env as cfEnv } from 'cloudflare:workers';
 import { getDb } from '#lib/server/db/index';
 import * as schema from '#lib/server/db/schema';
 import { createAuth, resolveAuthOptions } from '#lib/server/auth';
-import { getAuthSecret } from '#lib/server/secrets';
+import { getAuthSecret, initPlatformEnv } from '#lib/server/secrets';
 import { cached, clearCache } from '#lib/server/cache';
 import { getRateLimitTier, isRateLimitAllowed } from '#lib/server/rate-limit';
 import { SecurityService } from '#lib/server/services/security.service';
@@ -197,6 +197,7 @@ const handleRequest: Handle = async ({ event, resolve }) => {
 	}
 
 	const platform: any = event.platform;
+	initPlatformEnv(event.platform);
 	const { pathname } = event.url;
 	const userAgent = event.request.headers.get('user-agent') || '';
 	const clientIp =

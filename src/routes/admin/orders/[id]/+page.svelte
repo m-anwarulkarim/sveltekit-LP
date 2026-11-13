@@ -418,10 +418,7 @@
 			/>
 
 			<!-- SmartPOS Fraud Check -->
-			<SmartPosFraudCard
-				phone={customerPhone}
-				isConfigured={data.smartPosConfigured}
-			/>
+			<SmartPosFraudCard phone={customerPhone} />
 
 			<!-- Call Notes & Timeline -->
 			<OrderCallNotes

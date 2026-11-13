@@ -245,10 +245,7 @@
 				storeName={data.websiteInfo?.websiteName || 'Store'}
 				onRefresh={() => toast.success('কুরিয়ার ফ্রড ডেটা রিলোড হয়েছে!')}
 			/>
-			<SmartPosFraudCard
-				phone={customerPhone}
-				isConfigured={data.smartPosConfigured}
-			/>
+			<SmartPosFraudCard phone={customerPhone} />
 			<OrderCallNotes
 				bind:notes={callNotes}
 				onAddNote={handleAddNote}

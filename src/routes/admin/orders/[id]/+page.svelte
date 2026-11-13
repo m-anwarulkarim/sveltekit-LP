@@ -12,6 +12,7 @@
 		OrderFinancialFooter,
 		OrderCourierCard,
 		CourierFraudCard,
+		SmartPosFraudCard,
 		CustomerProfileCard,
 		OrderCallNotes,
 		OrderVisitorMetaCard
@@ -414,6 +415,12 @@
 				phone={customerPhone}
 				bind:stats={courierStats}
 				storeName={data.websiteInfo?.websiteName || 'Store'}
+			/>
+
+			<!-- SmartPOS Fraud Check -->
+			<SmartPosFraudCard
+				phone={customerPhone}
+				isConfigured={data.smartPosConfigured}
 			/>
 
 			<!-- Call Notes & Timeline -->

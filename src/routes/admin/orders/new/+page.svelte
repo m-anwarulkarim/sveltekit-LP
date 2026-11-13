@@ -11,6 +11,7 @@
 		ProductUpsellSelector,
 		OrderFinancialFooter,
 		CourierFraudCard,
+		SmartPosFraudCard,
 		CustomerProfileCard,
 		OrderCallNotes,
 		OrderVisitorMetaCard
@@ -243,6 +244,10 @@
 				stats={courierStats}
 				storeName={data.websiteInfo?.websiteName || 'Store'}
 				onRefresh={() => toast.success('কুরিয়ার ফ্রড ডেটা রিলোড হয়েছে!')}
+			/>
+			<SmartPosFraudCard
+				phone={customerPhone}
+				isConfigured={data.smartPosConfigured}
 			/>
 			<OrderCallNotes
 				bind:notes={callNotes}

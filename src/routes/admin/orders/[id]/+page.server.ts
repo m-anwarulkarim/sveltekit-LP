@@ -8,6 +8,7 @@ import { OrderService } from '#lib/server/services/order.service';
 import { FraudService } from '#lib/server/services/fraud.service';
 import { CourierService } from '#lib/server/services/courier.service';
 import { StockService } from '#lib/server/services/stock.service';
+import { SettingsService } from '#lib/server/services/settings.service';
 
 function parseUserDevice(ua?: string | null): string {
 	if (!ua) return 'ওয়েব ব্রাউজার';
@@ -162,6 +163,7 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 		isConfigured: false
 	};
 
+	let smartPosConfigured = false;
 	let courierSettings = { methods: [] as any[], defaultProvider: 'steadfast' as any };
 	try {
 		const db = getDb(platform);
@@ -189,6 +191,12 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 
 		// Load configured courier methods
 		courierSettings = await CourierService.getCourierSettings(db);
+
+		// Check if SmartPOS BD is configured
+		try {
+			const fraudCfg = await SettingsService.getSettingsGroup(db, 'fraud_check');
+			smartPosConfigured = !!(fraudCfg?.smartposBdApiKey?.trim());
+		} catch {}
 	} catch (e) {
 		console.error('Courier stats / settings query error in D1:', e);
 	}
@@ -264,7 +272,8 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 		availableProducts: realProducts,
 		visitorMeta,
 		courierMethods: courierSettings.methods,
-		defaultCourier: courierSettings.defaultProvider
+		defaultCourier: courierSettings.defaultProvider,
+		smartPosConfigured
 	};
 };
 

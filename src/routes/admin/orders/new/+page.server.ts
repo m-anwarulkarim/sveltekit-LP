@@ -1,5 +1,6 @@
 import { ProductService } from '#lib/server/services/product.service';
 import { OrderService } from '#lib/server/services/order.service';
+import { SettingsService } from '#lib/server/services/settings.service';
 import { getDb } from '#lib/server/db/index';
 import type { Actions, PageServerLoad } from './$types';
 import { handleCreateManualOrder } from '#lib/server/orders';
@@ -10,7 +11,14 @@ export const load: PageServerLoad = async ({ platform }) => {
 		OrderService.listOrderHistoryIndex(db),
 		ProductService.listProducts(db, { status: 'published' })
 	]);
-	return { orders, products };
+
+	let smartPosConfigured = false;
+	try {
+		const fraudCfg = await SettingsService.getSettingsGroup(db, 'fraud_check');
+		smartPosConfigured = !!(fraudCfg?.smartposBdApiKey?.trim());
+	} catch {}
+
+	return { orders, products, smartPosConfigured };
 };
 
 export const actions: Actions = {

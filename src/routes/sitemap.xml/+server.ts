@@ -27,6 +27,7 @@ export const GET: RequestHandler = async ({ platform, url }) => {
 		{ url: `${siteUrl}/contact`, priority: '0.5', changefreq: 'monthly' },
 		{ url: `${siteUrl}/shipping`, priority: '0.4', changefreq: 'monthly' },
 		{ url: `${siteUrl}/return-policy`, priority: '0.4', changefreq: 'monthly' },
+		{ url: `${siteUrl}/privacy-policy`, priority: '0.4', changefreq: 'monthly' },
 		{ url: `${siteUrl}/privacy`, priority: '0.3', changefreq: 'monthly' },
 		{ url: `${siteUrl}/terms`, priority: '0.3', changefreq: 'monthly' },
 		{ url: `${siteUrl}/faq`, priority: '0.6', changefreq: 'weekly' }

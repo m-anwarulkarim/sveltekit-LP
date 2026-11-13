@@ -1,72 +1,118 @@
 <script lang="ts">
-	import { ArrowRight, Sparkles, Tag, ShieldCheck } from 'lucide-svelte';
+	import { ArrowRight } from 'lucide-svelte';
 
 	interface Props {
 		carousels?: any[];
 	}
 
 	let { carousels = [] }: Props = $props();
+
+	// Use first 2 carousels if available, otherwise use placeholders
+	let mainBanner = $derived(
+		carousels[0] ?? {
+			id: 'placeholder-1',
+			name: 'নতুন কালেকশন',
+			description: 'সেরা মানের পণ্য সংগ্রহ করুন',
+			image: '/images/banners/banner-home.svg',
+			targetUrl: '/catalog/all-category'
+		}
+	);
+
+	let sideBanner = $derived(
+		carousels[1] ?? {
+			id: 'placeholder-2',
+			name: 'বিশেষ ছাড়',
+			description: 'সীমিত সময়ের অফার',
+			image: '/images/banners/banner-home.svg',
+			targetUrl: '/catalog/all-category'
+		}
+	);
+
+	function isPhoto(image?: string): boolean {
+		return Boolean(image) && !/\.svg($|\?)/i.test(image as string);
+	}
 </script>
 
-<!-- Showcase 3: Split Promotional Grid Banners -->
-<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 font-['Anek_Bangla',sans-serif]">
-	<div class="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
-		<!-- Main Feature Card (Spans 2 cols on desktop) -->
-		<div class="md:col-span-2 relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 p-8 sm:p-10 text-white flex flex-col justify-between min-h-[300px] shadow-xl group">
-			<div class="relative z-10 space-y-3 max-w-md">
-				<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-white/20 backdrop-blur-md text-blue-200 border border-white/20">
-					<Sparkles class="w-3.5 h-3.5 text-amber-300" />
-					এক্সক্লুসিভ অফার
-				</span>
-				<h2 class="text-2xl sm:text-4xl font-black leading-tight tracking-tight">
-					সেরা প্রিমিয়াম কালেকশন ২০২৬
-				</h2>
-				<p class="text-xs sm:text-sm text-slate-300 line-clamp-2">
-					অরিজিনাল ব্র্যান্ডের বিশ্বস্ত গ্যাজেট ও বুকস কালেকশনে পাচ্ছেন আকর্ষণীয় ক্যাশব্যাক ও ফ্রি ডেলিভারি।
-				</p>
-			</div>
+<!-- Showcase 2: Split Promo Grid — real carousel data -->
+<section class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3.5 font-['Anek_Bangla',sans-serif]">
+	<div class="grid grid-cols-1 md:grid-cols-3 gap-3 lg:gap-4">
 
-			<div class="relative z-10 pt-4 flex items-center gap-3">
-				<a
-					href="/catalog/all-category"
-					class="px-5 py-2.5 rounded-2xl bg-white text-slate-900 hover:bg-blue-50 font-bold text-xs sm:text-sm flex items-center gap-2 transition-all shadow-md active:scale-95"
-				>
-					<span>এখনই কিনুন</span>
-					<ArrowRight class="w-4 h-4 text-blue-600" />
-				</a>
-			</div>
+		<!-- Main Banner (2/3 width) -->
+		<a
+			href={mainBanner.targetUrl || '/'}
+			class="md:col-span-2 relative overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-sm bg-slate-800 group block aspect-[2/1] md:aspect-auto md:min-h-[280px]"
+		>
+			{#if isPhoto(mainBanner.image)}
+				<img
+					src={mainBanner.image}
+					alt={mainBanner.name}
+					class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+					loading="eager"
+				/>
+			{:else}
+				<!-- Fallback gradient when no real image -->
+				<div class="absolute inset-0 bg-gradient-to-br from-indigo-900 via-slate-800 to-slate-900">
+					<div class="absolute -right-12 -bottom-12 w-64 h-64 rounded-full bg-indigo-600/30 blur-3xl pointer-events-none"></div>
+					<div class="absolute top-0 right-0 w-1/2 h-full opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none"></div>
+				</div>
+				<div class="absolute inset-0 flex flex-col justify-center px-8 sm:px-10 z-10">
+					<h2 class="text-2xl sm:text-3xl font-black text-white leading-tight">{mainBanner.name}</h2>
+					{#if mainBanner.description}
+						<p class="mt-2 text-sm text-white/70 line-clamp-2">{mainBanner.description}</p>
+					{/if}
+					<span class="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-slate-900 text-xs font-bold w-fit">
+						দেখুন <ArrowRight class="w-3.5 h-3.5" />
+					</span>
+				</div>
+			{/if}
 
-			<!-- Background Glow & Graphic Elements -->
-			<div class="absolute -right-12 -bottom-12 w-64 h-64 rounded-full bg-blue-600/30 blur-3xl pointer-events-none group-hover:scale-110 transition-transform duration-700"></div>
-			<div class="absolute top-0 right-0 w-1/2 h-full opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none"></div>
-		</div>
+			<!-- Hover overlay for photo banners -->
+			{#if isPhoto(mainBanner.image)}
+				<div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+				<div class="absolute bottom-4 left-5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+					<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 text-slate-900 text-xs font-bold">
+						দেখুন <ArrowRight class="w-3 h-3" />
+					</span>
+				</div>
+			{/if}
+		</a>
 
-		<!-- Side Feature Card 1 -->
-		<div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-rose-600 to-pink-700 p-6 sm:p-8 text-white flex flex-col justify-between min-h-[220px] shadow-xl group">
-			<div class="space-y-2">
-				<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-white/20 backdrop-blur-md text-white">
-					<Tag class="w-3 h-3" />
-					ফ্ল্যাশ ডিল
-				</span>
-				<h3 class="text-xl font-black leading-snug">
-					৫০% পর্যন্ত বিশেষ ছাড়
-				</h3>
-				<p class="text-xs text-rose-100">
-					সীমিত সময়ের স্পেশাল ডিসকাউন্ট উপভোগ করুন।
-				</p>
-			</div>
+		<!-- Side Banner (1/3 width) -->
+		<a
+			href={sideBanner.targetUrl || '/'}
+			class="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-sm bg-slate-700 group block aspect-[2/1] md:aspect-auto md:min-h-[280px]"
+		>
+			{#if isPhoto(sideBanner.image)}
+				<img
+					src={sideBanner.image}
+					alt={sideBanner.name}
+					class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+					loading="lazy"
+				/>
+			{:else}
+				<div class="absolute inset-0 bg-gradient-to-br from-rose-700 via-pink-800 to-slate-900">
+					<div class="absolute -right-8 -bottom-8 w-40 h-40 rounded-full bg-white/10 blur-xl pointer-events-none"></div>
+				</div>
+				<div class="absolute inset-0 flex flex-col justify-center px-6 z-10">
+					<h3 class="text-xl font-black text-white leading-tight">{sideBanner.name}</h3>
+					{#if sideBanner.description}
+						<p class="mt-2 text-xs text-white/70 line-clamp-3">{sideBanner.description}</p>
+					{/if}
+					<span class="mt-4 inline-flex items-center gap-1.5 text-white/80 text-xs font-bold hover:text-white">
+						দেখুন <ArrowRight class="w-3.5 h-3.5" />
+					</span>
+				</div>
+			{/if}
 
-			<div class="pt-4">
-				<a
-					href="/catalog/all-category"
-					class="inline-flex items-center gap-1.5 text-xs font-bold text-white hover:underline underline-offset-4"
-				>
-					<span>কালেকশন দেখুন</span>
-					<ArrowRight class="w-3.5 h-3.5" />
-				</a>
-			</div>
-			<div class="absolute -right-8 -bottom-8 w-40 h-40 rounded-full bg-white/10 blur-xl pointer-events-none group-hover:scale-125 transition-transform duration-500"></div>
-		</div>
+			{#if isPhoto(sideBanner.image)}
+				<div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+				<div class="absolute bottom-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+					<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 text-slate-900 text-xs font-bold">
+						দেখুন <ArrowRight class="w-3 h-3" />
+					</span>
+				</div>
+			{/if}
+		</a>
+
 	</div>
 </section>
-

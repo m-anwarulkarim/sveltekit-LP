@@ -149,6 +149,7 @@
 					</li>
 					<li>
 						<a href="/privacy" class="flex items-center gap-2 text-slate-600 hover:text-[#5845eb] transition-colors group">
+						<a href="/privacy-policy" class="flex items-center gap-2 text-slate-600 hover:text-[#5845eb] transition-colors group">
 							<ChevronRight class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#5845eb] group-hover:translate-x-0.5 transition-all" />
 							<span>Privacy Policy</span>
 						</a>

@@ -66,6 +66,7 @@
 	});
 </script>
 
+{#if products && products.length > 0}
 <!-- Reusable Product Section Carousel -->
 <section class="w-full max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 py-2 sm:py-3.5 select-none font-['Anek_Bangla',sans-serif]">
 	
@@ -168,3 +169,4 @@
 	</div>
 
 </section>
+{/if}

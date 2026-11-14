@@ -17,58 +17,7 @@
 		accentColor?: string;
 	}
 
-	const defaultCategories: Category[] = [
-		{
-			id: 'cat-vegetable',
-			name: 'সবজি বীজ',
-			slug: 'sobji-bij',
-			image: '/images/categories/category-vegetables.webp',
-			icon: '🥬',
-			accentColor: '#16a34a'
-		},
-		{
-			id: 'cat-flower',
-			name: 'ফুল বীজ',
-			slug: 'ful-bij',
-			image: '/images/categories/category-ful.webp',
-			icon: '🌸',
-			accentColor: '#ec4899'
-		},
-		{
-			id: 'cat-fruit',
-			name: 'ফল বীজ',
-			slug: 'fol-bij',
-			image: '/images/categories/category-tormuj.webp',
-			icon: '🍉',
-			accentColor: '#ef4444'
-		},
-		{
-			id: 'cat-medicinal',
-			name: 'ঔষধি বীজ',
-			slug: 'oushodi-bij',
-			image: '/images/categories/category-medicinal.webp',
-			icon: '🌿',
-			accentColor: '#059669'
-		},
-		{
-			id: 'cat-tools',
-			name: 'কৃষি টুল ও সরঞ্জাম',
-			slug: 'krishi-tools',
-			image: '/images/categories/category-krishi-tool.webp',
-			icon: '🛠️',
-			accentColor: '#0284c7'
-		},
-		{
-			id: 'cat-pesticide',
-			name: 'কীটনাশক ও সার',
-			slug: 'kitnashok-sar',
-			image: '/images/categories/ab-seed-pesticide-category.webp',
-			icon: '🧪',
-			accentColor: '#7c3aed'
-		}
-	];
-
-	// Derived active categories: live database records when available, fallback to default seed list
+	// Derived active categories: live database records only
 	const activeCategories = $derived.by<Category[]>(() => {
 		if (categories && categories.length > 0) {
 			return categories.map((c) => ({
@@ -80,7 +29,7 @@
 				accentColor: c.accentColor || '#10b981'
 			}));
 		}
-		return defaultCategories;
+		return [];
 	});
 
 	let scrollContainer: HTMLDivElement | null = $state(null);
@@ -111,6 +60,7 @@
 	});
 </script>
 
+{#if activeCategories.length > 0}
 <!-- Shop By Category Container Section -->
 <section class="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3.5 font-['Anek_Bangla',sans-serif]">
 	
@@ -225,3 +175,4 @@
 	</div>
 
 </section>
+{/if}

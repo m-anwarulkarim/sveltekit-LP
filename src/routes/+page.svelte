@@ -28,11 +28,14 @@
 	const popularItems = $derived(getPopularProducts(allProducts).slice(0, SECTION_SIZE));
 
 	const siteName = $derived(data.websiteInfo?.websiteName || 'Store');
+	const siteDescription = $derived(
+		data.websiteInfo?.shortDescription || `${siteName} — সেরা দামে দ্রুত ডেলিভারিতে অনলাইনে অর্ডার করুন।`
+	);
 	const pageTitle = $derived(
-		`${siteName} | বাংলাদেশের সেরা বীজ ও কৃষি সরঞ্জামের অনলাইন শপ`
+		`${siteName} | অনলাইন শপ`
 	);
 	const pageDescription = $derived(
-		`${siteName} — সবজি, ফুল ও ফলের বীজ, কীটনাশক, সার ও কৃষি টুলস। দ্রুত ডেলিভারি ও সেরা দামে অর্ডার করুন।`
+		`${siteName} — ${siteDescription}`
 	);
 </script>
 

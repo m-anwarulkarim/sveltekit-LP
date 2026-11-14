@@ -12,40 +12,30 @@
 	}
 
 	let {
-		category = $bindable('Audio'),
-		subCategory = $bindable('Earphones'),
-		childCategory = $bindable('Wireless'),
+		category = $bindable(''),
+		subCategory = $bindable(''),
+		childCategory = $bindable(''),
 		status = $bindable('published'),
 		badge = $bindable(null),
 		sizeChartImage = $bindable(''),
 		taxonomyTree = []
 	}: Props = $props();
 
-	const defaultCategories = ['Audio', 'Lifestyle', 'Accessories', 'Fragrance & Home', 'Gadgets', 'Fashion'];
-	const defaultSubCategories: Record<string, string[]> = {
-		Audio: ['Headphones', 'Earphones', 'Speakers', 'Amplifiers'],
-		Lifestyle: ['Comfort', 'Decor', 'Stationery'],
-		'Fragrance & Home': ['Camphor Balls', 'Diffusers', 'Scented Candles'],
-		Gadgets: ['Chargers', 'Cables', 'Mounts'],
-		Fashion: ['Shirts', 'Pants', 'Shoes'],
-		Accessories: ['Cases', 'Straps', 'Cleaning Kits']
-	};
-
 	let categoriesList = $derived.by(() => {
 		if (taxonomyTree && taxonomyTree.length > 0) {
 			return taxonomyTree.map((c) => c.name);
 		}
-		return defaultCategories;
+		return [];
 	});
 
 	let subCategoriesList = $derived.by(() => {
-		if (taxonomyTree && taxonomyTree.length > 0) {
+		if (taxonomyTree && taxonomyTree.length > 0 && category) {
 			const currentCat = taxonomyTree.find(
 				(c) => c.name.toLowerCase() === category.toLowerCase() || c.slug === category.toLowerCase()
 			);
 			return currentCat ? currentCat.subCategories.map((s: any) => s.name) : [];
 		}
-		return defaultSubCategories[category] || [];
+		return [];
 	});
 
 	let childCategoriesList = $derived.by(() => {
@@ -117,16 +107,29 @@
 
 		<!-- Category -->
 		<div class="space-y-1.5">
-			<label for="category-hierarchy-input" class="block text-xs font-bold text-slate-700">Category *</label>
-			<select
-				id="category-hierarchy-input"
-				bind:value={category}
-				class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-800 bg-white focus:outline-hidden focus:border-[#5845eb]"
-			>
-				{#each categoriesList as cat}
-					<option value={cat}>{cat}</option>
-				{/each}
-			</select>
+			<label for="category-hierarchy-input" class="block text-xs font-bold text-slate-700">Category</label>
+			{#if categoriesList.length > 0}
+				<select
+					id="category-hierarchy-input"
+					bind:value={category}
+					class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-800 bg-white focus:outline-hidden focus:border-[#5845eb]"
+				>
+					<option value="">Select Category</option>
+					{#each categoriesList as cat}
+						<option value={cat}>{cat}</option>
+					{/each}
+				</select>
+			{:else}
+				<div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-700 text-xs space-y-1.5">
+					<p class="text-[11px] text-slate-500">কোনো ক্যাটাগরি তৈরি করা নেই। সরাসরি নাম লিখুন অথবা <a href="/admin/catalog/categories/new" target="_blank" class="text-blue-600 underline font-bold">ক্যাটাগরি তৈরি করুন</a>:</p>
+					<input
+						type="text"
+						bind:value={category}
+						placeholder="Category name (e.g. Poultry Feed, Shirt)"
+						class="w-full px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 focus:outline-hidden focus:border-[#5845eb]"
+					/>
+				</div>
+			{/if}
 		</div>
 
 		<!-- Sub-Category -->

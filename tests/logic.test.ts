@@ -12,6 +12,8 @@ import { StockService } from '../src/lib/server/services/stock.service';
 import { hashPassword, verifyPassword, needsPasswordUpgrade } from '../src/lib/server/utils/password';
 import { handle, handleError } from '../src/hooks.server';
 import { createAuth } from '../src/lib/server/auth';
+import { ProductService } from '../src/lib/server/services/product.service';
+import { actions as newProductActions } from '../src/routes/admin/products/new/+page.server';
 import { actions as productActions } from '../src/routes/products/[slug]/+page.server';
 import { getRateLimitTier } from '../src/lib/server/rate-limit';
 import { GET as searchApi } from '../src/routes/api/admin/search/+server';
@@ -920,6 +922,36 @@ await test('data-transfer: importProducts preserves raw HTML description with in
 	assert.equal(updatedProduct?.price, 200);
 	assert.equal(updatedProduct?.totalStock, 80);
 	assert.equal(updatedProduct?.description, updatedHtml);
+});
+
+await test('product create: creates a product through ProductService and action', async () => {
+	const payload = {
+		name: 'Test Poultry Feed 1',
+		price: 850,
+		originalPrice: 1000,
+		image: '/images/products/feed.jpg',
+		category: 'ফিড',
+		description: 'টেস্ট বিবরণ',
+		status: 'published'
+	};
+	const created = await ProductService.createProduct(db, payload);
+	assert.ok(created.id);
+	assert.equal(created.name, 'Test Poultry Feed 1');
+
+	// Test form action createProduct
+	const fd = new FormData();
+	fd.append('productData', JSON.stringify({
+		name: 'Test Medicine 2',
+		price: 450,
+		image: '/images/products/med.jpg',
+		category: 'ওষুধ',
+		status: 'published'
+	}));
+	const res = await (newProductActions as any).createProduct({
+		request: new Request('https://shop.test/admin/products/new', { method: 'POST', body: fd }),
+		platform
+	});
+	assert.equal(res.success, true, JSON.stringify(res));
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

@@ -103,6 +103,7 @@
 
 	function fail(message: string, scrollTo = 0) {
 		validationError = message;
+		toast.error(message);
 		window.scrollTo({ top: scrollTo, behavior: 'smooth' });
 	}
 

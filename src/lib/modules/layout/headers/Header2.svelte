@@ -14,7 +14,6 @@
 		Sparkles
 	} from 'lucide-svelte';
 	import { DEFAULT_HEADER_DATA } from './data';
-	import { CATEGORIES_DATA } from '#lib/modules/products/categories.data';
 
 	interface Props {
 		user?: { name?: string; email?: string; image?: string | null } | null;
@@ -34,7 +33,7 @@
 				icon: c.icon || '📦'
 			}));
 		}
-		return CATEGORIES_DATA;
+		return [];
 	});
 
 	const storeConfig = $derived(page.data?.storeConfig);

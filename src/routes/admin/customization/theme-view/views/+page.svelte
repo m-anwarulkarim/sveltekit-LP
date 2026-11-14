@@ -10,8 +10,6 @@
 	import DynamicCategoryView from '#lib/modules/layout/category-views/DynamicCategoryView.svelte';
 	import DynamicProductCard from '#lib/modules/layout/product-cards/DynamicProductCard.svelte';
 	import DynamicBottomNav from '#lib/modules/layout/bottom-navs/DynamicBottomNav.svelte';
-	import { productsData } from '#lib/modules/products/products.data';
-	import { CATEGORIES_DATA } from '#lib/modules/products/categories.data';
 	import { Flame, Sparkles, Tag, ArrowRight, Clock, Eye, LayoutGrid } from 'lucide-svelte';
 
 	let { data, form }: { data: any; form: any } = $props();
@@ -91,8 +89,88 @@
 		}
 	}
 
-	// 4 Sample products for realistic card previews
-	const sampleProducts = productsData.slice(0, 4);
+	// Sample products & categories strictly for admin theme preview modal
+	const sampleProducts = [
+		{
+			id: 'preview-1',
+			name: 'নমুনা পণ্য ১',
+			slug: 'sample-1',
+			tagline: 'প্রিমিয়াম কোয়ালিটি পণ্য',
+			category: 'সাধারণ',
+			categoryLabel: 'সাধারণ',
+			price: 1250,
+			originalPrice: 1850,
+			rating: 5,
+			reviewsCount: 120,
+			discountPercent: 32,
+			image: '/images/placeholder.svg',
+			badge: 'Bestseller',
+			badgeColor: 'bg-blue-600 text-white',
+			features: [],
+			inStock: true
+		},
+		{
+			id: 'preview-2',
+			name: 'নমুনা পণ্য ২',
+			slug: 'sample-2',
+			tagline: 'সেরা অফার ও বিশেষ ছাড়',
+			category: 'সাধারণ',
+			categoryLabel: 'সাধারণ',
+			price: 850,
+			originalPrice: 1200,
+			rating: 4.8,
+			reviewsCount: 85,
+			discountPercent: 29,
+			image: '/images/placeholder.svg',
+			badge: 'Hot Deal',
+			badgeColor: 'bg-rose-600 text-white',
+			features: [],
+			inStock: true
+		},
+		{
+			id: 'preview-3',
+			name: 'নমুনা পণ্য ৩',
+			slug: 'sample-3',
+			tagline: 'জনপ্রিয় কালেকশন',
+			category: 'সাধারণ',
+			categoryLabel: 'সাধারণ',
+			price: 2150,
+			originalPrice: 2600,
+			rating: 4.9,
+			reviewsCount: 64,
+			discountPercent: 17,
+			image: '/images/placeholder.svg',
+			badge: 'Trending',
+			badgeColor: 'bg-amber-600 text-white',
+			features: [],
+			inStock: true
+		},
+		{
+			id: 'preview-4',
+			name: 'নমুনা পণ্য ৪',
+			slug: 'sample-4',
+			tagline: 'সদ্য যুক্ত হওয়া কালেকশন',
+			category: 'সাধারণ',
+			categoryLabel: 'সাধারণ',
+			price: 1550,
+			originalPrice: 1950,
+			rating: 4.7,
+			reviewsCount: 42,
+			discountPercent: 20,
+			image: '/images/placeholder.svg',
+			badge: 'New Arrival',
+			badgeColor: 'bg-violet-600 text-white',
+			features: [],
+			inStock: true
+		}
+	];
+
+	const sampleCategories = [
+		{ id: 'cat-1', name: 'ক্যাটাগরি ১', slug: 'cat-1', icon: '📦', productsCount: 12 },
+		{ id: 'cat-2', name: 'ক্যাটাগরি ২', slug: 'cat-2', icon: '🛍️', productsCount: 8 },
+		{ id: 'cat-3', name: 'ক্যাটাগরি ৩', slug: 'cat-3', icon: '✨', productsCount: 15 },
+		{ id: 'cat-4', name: 'ক্যাটাগরি ৪', slug: 'cat-4', icon: '🔥', productsCount: 6 }
+	];
 </script>
 
 <svelte:head>
@@ -590,7 +668,7 @@
 				</p>
 			</div>
 		{:else}
-			<DynamicCategoryView activeCategory={previewId} categories={CATEGORIES_DATA} />
+			<DynamicCategoryView activeCategory={previewId} categories={sampleCategories} />
 		{/if}
 	{:else if previewType === 'product_section'}
 		<!-- 5. Live Product Section Preview -->

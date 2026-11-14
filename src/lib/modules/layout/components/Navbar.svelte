@@ -29,7 +29,6 @@
 	import { page } from '$app/state';
 
 	import SearchAutocomplete from './SearchAutocomplete.svelte';
-	import { CATEGORIES_DATA } from '#lib/modules/products/categories.data.ts';
 
 	interface Props {
 		user: { name?: string; email?: string; image?: string | null } | null;
@@ -59,14 +58,7 @@
 				productsCount: c.productsCount || 0
 			}));
 		}
-		return CATEGORIES_DATA.map((c) => ({
-			id: c.id,
-			slug: c.slug,
-			name: c.name,
-			nameBn: c.nameBn,
-			icon: c.icon,
-			productsCount: 0
-		}));
+		return [];
 	});
 
 	const storeConfig = $derived(page.data?.storeConfig);

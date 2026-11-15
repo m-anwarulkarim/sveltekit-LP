@@ -9,18 +9,14 @@
 
 	let { landingPage }: Props = $props();
 
-	// Template Registry (Easily switch between Style1, Style2, and Style3)
-	const templateMap: Record<string, any> = {
-		style_1_animated: Style1_ModernAnimated,
-		style_2_direct: Style2_DirectCheckout,
-		style_3_lighthouse: Style3_LighthouseFunnel,
-		default: Style1_ModernAnimated
-	};
-
-	let SelectedTemplate = $derived(
-		templateMap[landingPage?.template || 'default'] || Style1_ModernAnimated
-	);
+	let currentTemplate = $derived(landingPage?.template || 'style_1_animated');
 </script>
 
-<svelte:component this={SelectedTemplate} {landingPage} />
+{#if currentTemplate === 'style_2_direct'}
+	<Style2_DirectCheckout {landingPage} />
+{:else if currentTemplate === 'style_3_lighthouse'}
+	<Style3_LighthouseFunnel {landingPage} />
+{:else}
+	<Style1_ModernAnimated {landingPage} />
+{/if}
 

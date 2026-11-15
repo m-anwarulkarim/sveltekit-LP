@@ -220,11 +220,25 @@
 		try {
 			sessionStorage.setItem('lp-preview-data', JSON.stringify(payload));
 		} catch {}
-		previewIframe?.contentWindow?.postMessage(
-			{ type: 'lp-preview', landingPage: payload },
-			location.origin
-		);
+		if (previewIframe?.contentWindow) {
+			previewIframe.contentWindow.postMessage(
+				{ type: 'lp-preview', landingPage: payload },
+				location.origin
+			);
+		}
 	}
+
+	// Handshake listener: when the preview iframe finishes loading, reply with latest preview data
+	$effect(() => {
+		const handleMessage = (e: MessageEvent) => {
+			if (e.origin !== location.origin) return;
+			if (e.data?.type === 'lp-preview-ready') {
+				pushPreviewToIframe();
+			}
+		};
+		window.addEventListener('message', handleMessage);
+		return () => window.removeEventListener('message', handleMessage);
+	});
 
 	// Live-sync: any form change while the modal is open updates the iframe instantly
 	$effect(() => {
@@ -290,7 +304,14 @@
 
 	function openTemplatePreview(tpl: 'style_1_animated' | 'style_2_direct' | 'style_3_lighthouse') {
 		previewModalTemplate = tpl;
+		const payload = { ...previewLandingPage, template: tpl };
+		try {
+			sessionStorage.setItem('lp-preview-data', JSON.stringify(payload));
+		} catch {}
 		isPreviewModalOpen = true;
+		setTimeout(() => {
+			pushPreviewToIframe();
+		}, 50);
 	}
 
 	function activatePreviewedTemplate() {

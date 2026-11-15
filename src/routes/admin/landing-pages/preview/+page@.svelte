@@ -7,10 +7,17 @@
 	let landingPage = $state<any>(null);
 
 	onMount(() => {
-		try {
-			const raw = sessionStorage.getItem('lp-preview-data');
-			if (raw) landingPage = JSON.parse(raw);
-		} catch {}
+		const loadFromStorage = () => {
+			try {
+				const raw = sessionStorage.getItem('lp-preview-data');
+				if (raw) {
+					const parsed = JSON.parse(raw);
+					if (parsed) landingPage = parsed;
+				}
+			} catch {}
+		};
+
+		loadFromStorage();
 
 		const onMessage = (e: MessageEvent) => {
 			if (e.origin !== location.origin) return;
@@ -19,8 +26,30 @@
 			}
 		};
 		window.addEventListener('message', onMessage);
+
+		// Notify parent builder that the preview iframe is ready to receive data
 		window.parent?.postMessage({ type: 'lp-preview-ready' }, location.origin);
-		return () => window.removeEventListener('message', onMessage);
+
+		// Retries in case postMessage arrived during parent/child hydration window
+		const t1 = setTimeout(() => {
+			if (!landingPage) {
+				loadFromStorage();
+				window.parent?.postMessage({ type: 'lp-preview-ready' }, location.origin);
+			}
+		}, 150);
+
+		const t2 = setTimeout(() => {
+			if (!landingPage) {
+				loadFromStorage();
+				window.parent?.postMessage({ type: 'lp-preview-ready' }, location.origin);
+			}
+		}, 450);
+
+		return () => {
+			clearTimeout(t1);
+			clearTimeout(t2);
+			window.removeEventListener('message', onMessage);
+		};
 	});
 </script>
 

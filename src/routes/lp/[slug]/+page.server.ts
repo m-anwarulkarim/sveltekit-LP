@@ -63,7 +63,9 @@ export const load: PageServerLoad = async ({ params, platform, request, cookies,
 		landingPage.config?.galleryImages?.[0] ||
 		`${siteUrl}/apple-touch-icon.png`;
 
-	const ogImage = heroImage.startsWith('http') ? heroImage : `${siteUrl}${heroImage}`;
+	const ogImage = heroImage.startsWith('http')
+		? heroImage
+		: `${siteUrl}${heroImage.startsWith('/') ? '' : '/'}${heroImage}`;
 	const canonicalUrl = `${siteUrl}/lp/${params.slug}`;
 	const effectivePrice = landingPage.config?.customPrice || product?.price || 0;
 	const effectiveRegularPrice = landingPage.config?.customRegularPrice || product?.originalPrice || 0;

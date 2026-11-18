@@ -203,7 +203,7 @@
 						<th class="py-3.5 px-4">পণ্য ও পরিমাণ</th>
 						<th class="py-3.5 px-4">মোট বিল</th>
 						<th class="py-3.5 px-4">বর্তমান স্ট্যাটাস</th>
-						<th class="py-3.5 px-4">সোর্স</th>
+						<th class="py-3.5 px-4 min-w-[120px]">সোর্স</th>
 						<th class="py-3.5 px-4 text-right">অ্যাকশন</th>
 					</tr>
 				</thead>

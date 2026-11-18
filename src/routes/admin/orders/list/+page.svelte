@@ -367,7 +367,7 @@
 							<th class="py-3.5 px-4">মোট বিল</th>
 							<th class="py-3.5 px-4">কুরিয়ার ট্র্যাকিং</th>
 							<th class="py-3.5 px-4">স্ট্যাটাস</th>
-							<th class="py-3.5 px-4">সোর্স</th>
+							<th class="py-3.5 px-4 min-w-[120px]">সোর্স</th>
 							<th class="py-3.5 px-4 text-right">অ্যাকশন</th>
 						</tr>
 					</thead>

@@ -20,6 +20,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { confirmModal } from '#lib/stores/confirm.svelte';
 	import { toast } from 'svelte-sonner';
+	import { submitAction } from '#lib/client/submit-action';
 	import { CatalogFilterTabs } from '../../_components/catalog';
 	import type { CatalogCategory } from '../../_data.ts';
 
@@ -130,26 +131,16 @@
 		});
 		if (!confirmed) return;
 
-		try {
-			const fd = new FormData();
-			fd.append('id', id);
-			const res = await fetch('?/deleteCategory', {
-				method: 'POST',
-				body: fd
-			});
-			const json = await res.json().catch(() => ({}));
-			if (!res.ok || json?.data?.success === false) {
-				const msg = json?.data?.message || 'ক্যাটাগরি মুছতে সমস্যা হয়েছে।';
-				toast.error(msg);
-				return;
-			}
-			categories = categories.map((c) => (c.id === id ? { ...c, isTrash: true } : c));
-			showToast('ক্যাটাগরি মুছে ফেলা হয়েছে');
-			await invalidateAll();
-		} catch (e) {
-			console.error('Error deleting category on server:', e);
-			toast.error('ক্যাটাগরি মুছতে সমস্যা হয়েছে।');
+		const fd = new FormData();
+		fd.append('id', id);
+		const result = await submitAction('?/deleteCategory', fd, 'ক্যাটাগরি মুছতে সমস্যা হয়েছে।');
+		if (!result.ok) {
+			toast.error(result.message);
+			return;
 		}
+		categories = categories.map((c) => (c.id === id ? { ...c, isTrash: true } : c));
+		showToast('ক্যাটাগরি মুছে ফেলা হয়েছে');
+		await invalidateAll();
 	}
 
 	function restoreFromTrash(id: string) {
@@ -174,27 +165,17 @@
 		const count = selectedIds.length;
 		const toDelete = [...selectedIds];
 
-		try {
-			const fd = new FormData();
-			fd.append('ids', JSON.stringify(toDelete));
-			const res = await fetch('?/bulkDelete', {
-				method: 'POST',
-				body: fd
-			});
-			const json = await res.json().catch(() => ({}));
-			if (!res.ok || json?.data?.success === false) {
-				const msg = json?.data?.message || 'ক্যাটাগরি মুছতে সমস্যা হয়েছে।';
-				toast.error(msg);
-				return;
-			}
-			categories = categories.filter((c) => !toDelete.includes(c.id));
-			selectedIds = [];
-			showToast(`${count}টি ক্যাটাগরি সফলভাবে মুছে ফেলা হয়েছে`);
-			await invalidateAll();
-		} catch (e) {
-			console.error('Error bulk deleting categories:', e);
-			toast.error('ক্যাটাগরি মুছতে সমস্যা হয়েছে।');
+		const fd = new FormData();
+		fd.append('ids', JSON.stringify(toDelete));
+		const result = await submitAction('?/bulkDelete', fd, 'ক্যাটাগরি মুছতে সমস্যা হয়েছে।');
+		if (!result.ok) {
+			toast.error(result.message);
+			return;
 		}
+		categories = categories.filter((c) => !toDelete.includes(c.id));
+		selectedIds = [];
+		showToast(`${count}টি ক্যাটাগরি সফলভাবে মুছে ফেলা হয়েছে`);
+		await invalidateAll();
 	}
 </script>
 

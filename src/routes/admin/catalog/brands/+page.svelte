@@ -24,6 +24,7 @@
 	} from 'lucide-svelte';
 	import { CatalogFilterTabs } from '../../_components/catalog';
 	import { toast } from 'svelte-sonner';
+	import { submitAction } from '#lib/client/submit-action';
 	import type { PageData } from './$types';
 	import type { BrandItem } from '#lib/server/services/brand.service';
 
@@ -112,19 +113,14 @@
 		fd.append('id', brand.id);
 		openActionMenuId = null;
 
-		try {
-			const res = await fetch('?/toggleStatus', { method: 'POST', body: fd });
-			const result = (await res.json()) as any;
-			if (result.type === 'success' || result.status === 200) {
-				await invalidateAll();
-				const label = !brand.isActive ? 'Publish' : 'Draft';
-				toast.success(`স্ট্যাটাস ${label}-এ পরিবর্তিত হয়েছে`);
-			} else {
-				toast.error(result?.data?.message || 'স্ট্যাটাস পরিবর্তন ব্যর্থ');
-			}
-		} catch (err) {
-			toast.error('সমস্যা হয়েছে');
+		const result = await submitAction('?/toggleStatus', fd, 'স্ট্যাটাস পরিবর্তন ব্যর্থ');
+		if (!result.ok) {
+			toast.error(result.message);
+			return;
 		}
+		await invalidateAll();
+		const label = !brand.isActive ? 'Publish' : 'Draft';
+		toast.success(`স্ট্যাটাস ${label}-এ পরিবর্তিত হয়েছে`);
 	}
 
 	async function moveToTrash(id: string) {
@@ -141,18 +137,13 @@
 		const fd = new FormData();
 		fd.append('id', id);
 
-		try {
-			const res = await fetch('?/trashBrand', { method: 'POST', body: fd });
-			const result = (await res.json()) as any;
-			if (result.type === 'success' || result.status === 200) {
-				await invalidateAll();
-				toast.success('ব্র্যান্ড ট্র্যাশে পাঠানো হয়েছে');
-			} else {
-				toast.error(result?.data?.message || 'ব্যর্থ হয়েছে');
-			}
-		} catch (err) {
-			toast.error('সমস্যা হয়েছে');
+		const result = await submitAction('?/trashBrand', fd, 'ব্যর্থ হয়েছে');
+		if (!result.ok) {
+			toast.error(result.message);
+			return;
 		}
+		await invalidateAll();
+		toast.success('ব্র্যান্ড ট্র্যাশে পাঠানো হয়েছে');
 	}
 
 	async function restoreFromTrash(id: string) {
@@ -160,18 +151,13 @@
 		fd.append('id', id);
 		openActionMenuId = null;
 
-		try {
-			const res = await fetch('?/restoreBrand', { method: 'POST', body: fd });
-			const result = (await res.json()) as any;
-			if (result.type === 'success' || result.status === 200) {
-				await invalidateAll();
-				toast.success('ব্র্যান্ড রিস্টোর করা হয়েছে');
-			} else {
-				toast.error(result?.data?.message || 'ব্যর্থ হয়েছে');
-			}
-		} catch (err) {
-			toast.error('সমস্যা হয়েছে');
+		const result = await submitAction('?/restoreBrand', fd, 'ব্যর্থ হয়েছে');
+		if (!result.ok) {
+			toast.error(result.message);
+			return;
 		}
+		await invalidateAll();
+		toast.success('ব্র্যান্ড রিস্টোর করা হয়েছে');
 	}
 
 	async function deletePermanently(id: string) {
@@ -188,18 +174,13 @@
 		const fd = new FormData();
 		fd.append('id', id);
 
-		try {
-			const res = await fetch('?/deleteBrand', { method: 'POST', body: fd });
-			const result = (await res.json()) as any;
-			if (result.type === 'success' || result.status === 200) {
-				await invalidateAll();
-				toast.success('ব্র্যান্ড স্থায়ীভাবে মুছে ফেলা হয়েছে');
-			} else {
-				toast.error(result?.data?.message || 'মুছে ফেলতে ব্যর্থ');
-			}
-		} catch (err) {
-			toast.error('সমস্যা হয়েছে');
+		const result = await submitAction('?/deleteBrand', fd, 'মুছে ফেলতে ব্যর্থ');
+		if (!result.ok) {
+			toast.error(result.message);
+			return;
 		}
+		await invalidateAll();
+		toast.success('ব্র্যান্ড স্থায়ীভাবে মুছে ফেলা হয়েছে');
 	}
 
 	async function handleBulkAction(action: 'publish' | 'draft' | 'trash' | 'restore' | 'delete') {
@@ -219,19 +200,14 @@
 		fd.append('ids', JSON.stringify(selectedIds));
 		fd.append('action', action);
 
-		try {
-			const res = await fetch('?/bulkAction', { method: 'POST', body: fd });
-			const result = (await res.json()) as any;
-			if (result.type === 'success' || result.status === 200) {
-				await invalidateAll();
-				toast.success(result?.data?.message || 'বাল্ক অ্যাকশন সম্পন্ন হয়েছে!');
-				selectedIds = [];
-			} else {
-				toast.error(result?.data?.message || 'ব্যর্থ হয়েছে');
-			}
-		} catch (err) {
-			toast.error('বাল্ক অ্যাকশনে সমস্যা হয়েছে');
+		const result = await submitAction('?/bulkAction', fd, 'বাল্ক অ্যাকশনে সমস্যা হয়েছে');
+		if (!result.ok) {
+			toast.error(result.message);
+			return;
 		}
+		await invalidateAll();
+		toast.success((result.data?.message as string) || 'বাল্ক অ্যাকশন সম্পন্ন হয়েছে!');
+		selectedIds = [];
 	}
 </script>
 

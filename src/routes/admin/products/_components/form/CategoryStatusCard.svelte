@@ -53,6 +53,20 @@
 		return [];
 	});
 
+	// A category/sub-category switch invalidates whatever was picked below it —
+	// drop stale selections so the form never silently saves a mismatched sub/child.
+	$effect(() => {
+		if (subCategory && !subCategoriesList.includes(subCategory)) {
+			subCategory = '';
+		}
+	});
+
+	$effect(() => {
+		if (childCategory && !childCategoriesList.includes(childCategory)) {
+			childCategory = '';
+		}
+	});
+
 	const availableBadges = [
 		'Bestseller',
 		'Popular',

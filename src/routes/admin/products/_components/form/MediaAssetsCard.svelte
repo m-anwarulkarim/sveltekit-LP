@@ -45,8 +45,15 @@
 			image = newUrls[0];
 		}
 
-		// Avoid duplicates
-		const uniqueNew = newUrls.filter((url) => !images.includes(url));
+		// Avoid duplicates — both against what's already saved and within this very batch
+		// (uploading the same file twice in one go still produces distinct URLs).
+		const seen = new Set(images);
+		const uniqueNew: string[] = [];
+		for (const url of newUrls) {
+			if (seen.has(url)) continue;
+			seen.add(url);
+			uniqueNew.push(url);
+		}
 		images = [...images, ...uniqueNew];
 
 		// If images was empty, ensure primary image is also set

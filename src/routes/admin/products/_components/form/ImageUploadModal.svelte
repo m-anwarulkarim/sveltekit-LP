@@ -131,6 +131,14 @@
 	function processFiles(files: File[]) {
 		files.forEach((file) => {
 			if (!file.type.startsWith('image/')) return;
+
+			// Same file picked twice (reopened the picker, drag + click both fired) —
+			// skip it so one photo doesn't get queued, uploaded, and shown several times.
+			const alreadyQueued = uploadedFiles.some(
+				(f) => f.file.name === file.name && f.file.size === file.size && f.file.lastModified === file.lastModified
+			);
+			if (alreadyQueued) return;
+
 			const reader = new FileReader();
 			reader.onload = (event) => {
 				const preview = event.target?.result as string;

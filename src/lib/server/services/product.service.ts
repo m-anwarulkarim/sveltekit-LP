@@ -452,7 +452,7 @@ export class ProductService {
 		brandId: string | null | undefined
 	) {
 		const images = input.images
-			? [input.image, ...input.images.filter((u) => u !== input.image)]
+			? [...new Set([input.image, ...input.images])].filter((u): u is string => !!u)
 			: undefined;
 
 		return compact({

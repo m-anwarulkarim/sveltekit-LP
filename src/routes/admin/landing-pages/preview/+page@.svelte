@@ -27,21 +27,27 @@
 		};
 		window.addEventListener('message', onMessage);
 
+		const notifyParent = () => {
+			try {
+				window.parent?.postMessage({ type: 'lp-preview-ready' }, location.origin);
+			} catch {}
+		};
+
 		// Notify parent builder that the preview iframe is ready to receive data
-		window.parent?.postMessage({ type: 'lp-preview-ready' }, location.origin);
+		notifyParent();
 
 		// Retries in case postMessage arrived during parent/child hydration window
 		const t1 = setTimeout(() => {
 			if (!landingPage) {
 				loadFromStorage();
-				window.parent?.postMessage({ type: 'lp-preview-ready' }, location.origin);
+				notifyParent();
 			}
 		}, 150);
 
 		const t2 = setTimeout(() => {
 			if (!landingPage) {
 				loadFromStorage();
-				window.parent?.postMessage({ type: 'lp-preview-ready' }, location.origin);
+				notifyParent();
 			}
 		}, 450);
 

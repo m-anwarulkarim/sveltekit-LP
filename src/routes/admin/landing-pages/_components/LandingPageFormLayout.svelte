@@ -216,15 +216,25 @@
 	let previewIframe: HTMLIFrameElement | undefined = $state();
 
 	function pushPreviewToIframe() {
-		const payload = { ...previewLandingPage, template: previewModalTemplate };
 		try {
-			sessionStorage.setItem('lp-preview-data', JSON.stringify(payload));
-		} catch {}
-		if (previewIframe?.contentWindow) {
-			previewIframe.contentWindow.postMessage(
-				{ type: 'lp-preview', landingPage: payload },
-				location.origin
-			);
+			// Convert Svelte 5 reactive proxy into a clean JSON-serializable object
+			// This prevents DataCloneError: Failed to execute 'postMessage' on 'Window': [object Object] could not be cloned
+			const rawPayload = { ...previewLandingPage, template: previewModalTemplate };
+			const jsonString = JSON.stringify(rawPayload);
+			const cleanPayload = JSON.parse(jsonString);
+
+			try {
+				sessionStorage.setItem('lp-preview-data', jsonString);
+			} catch {}
+
+			if (previewIframe?.contentWindow) {
+				previewIframe.contentWindow.postMessage(
+					{ type: 'lp-preview', landingPage: cleanPayload },
+					location.origin
+				);
+			}
+		} catch (e) {
+			console.warn('[LandingPreview] postMessage error ignored:', e);
 		}
 	}
 
@@ -304,8 +314,8 @@
 
 	function openTemplatePreview(tpl: 'style_1_animated' | 'style_2_direct' | 'style_3_lighthouse') {
 		previewModalTemplate = tpl;
-		const payload = { ...previewLandingPage, template: tpl };
 		try {
+			const payload = { ...previewLandingPage, template: tpl };
 			sessionStorage.setItem('lp-preview-data', JSON.stringify(payload));
 		} catch {}
 		isPreviewModalOpen = true;

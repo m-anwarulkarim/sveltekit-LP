@@ -69,6 +69,20 @@
 	{/if}
 </svelte:head>
 
+{#if data.landingPage?.status !== 'Published'}
+	<div class="sticky top-0 z-50 bg-amber-400 text-slate-950 px-4 py-2.5 text-center text-xs sm:text-sm font-bold shadow-md flex flex-wrap items-center justify-center gap-3 font-['Anek_Bangla',sans-serif]">
+		<span>
+			⚠️ এই ল্যান্ডিং পেজটি বর্তমানে <strong>{data.landingPage?.status || 'Draft'}</strong> মোডে আছে — পাবলিশ না করা পর্যন্ত অর্ডার গ্রহণ করবে না।
+		</span>
+		<a
+			href={`/admin/landing-pages/${data.landingPage?.id}/edit`}
+			class="inline-flex items-center px-3 py-1 rounded-lg bg-slate-950 text-white text-xs font-bold hover:bg-slate-800 transition-colors"
+		>
+			এডিট করে Published করুন
+		</a>
+	</div>
+{/if}
+
 <DynamicLandingEngine landingPage={data.landingPage} />
 
 

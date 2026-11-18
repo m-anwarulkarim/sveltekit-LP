@@ -139,7 +139,10 @@
 			return;
 		}
 
-		const cleanPhone = phone.trim().replace(/\D/g, '');
+		const normalizedPhone = phone
+			.trim()
+			.replace(/[০-৯]/g, (d) => String('০১২৩৪৫৬৭৮৯'.indexOf(d)));
+		const cleanPhone = normalizedPhone.replace(/\D/g, '');
 		if (!name.trim()) {
 			toast.error('অনুগ্রহ করে আপনার নাম লিখুন');
 			return;
@@ -157,7 +160,7 @@
 		if (network.isOffline) {
 			network.openOfflineOrderModal({
 				customerName: name.trim(),
-				customerPhone: phone.trim(),
+				customerPhone: normalizedPhone,
 				shippingAddress: address.trim(),
 				total: price,
 				retryAction: () => handleSubmit(e)
@@ -170,7 +173,7 @@
 		try {
 			const fd = new FormData();
 			fd.append('customerName', name.trim());
-			fd.append('customerPhone', phone.trim());
+			fd.append('customerPhone', normalizedPhone);
 			fd.append('shippingAddress', address.trim());
 			fd.append('deliveryArea', currentPackage?.freeDelivery ? 'inside_dhaka' : (district === 'dhaka' ? 'inside_dhaka' : 'outside_dhaka'));
 			fd.append('paymentMethod', 'cod');

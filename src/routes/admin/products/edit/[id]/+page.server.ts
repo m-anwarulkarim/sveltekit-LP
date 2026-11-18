@@ -13,16 +13,24 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 
 	try {
 		const db = getDb(platform);
+		let targetId = params.id;
+		try {
+			targetId = decodeURIComponent(params.id);
+		} catch {}
+
 		const [found, mediaList, tree, brandNames] = await Promise.all([
-			ProductService.getForEdit(db, params.id),
-			MediaService.listMedia(db, { limit: 60 }),
-			CategoryService.getTaxonomyTree(db),
-			ProductService.listBrandNames(db)
+			ProductService.getForEdit(db, targetId).catch((err) => {
+				console.error('[ProductEdit] getForEdit failed:', err);
+				return null;
+			}),
+			MediaService.listMedia(db, { limit: 60 }).catch(() => []),
+			CategoryService.getTaxonomyTree(db).catch(() => []),
+			ProductService.listBrandNames(db).catch(() => [])
 		]);
 		product = found;
 		galleryImages = mediaList || [];
 		taxonomyTree = tree || [];
-		brands = brandNames;
+		brands = brandNames || [];
 	} catch (e) {
 		console.error('Failed to query product/taxonomy from D1:', e);
 	}

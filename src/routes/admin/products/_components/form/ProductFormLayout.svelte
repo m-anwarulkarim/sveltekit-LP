@@ -79,7 +79,11 @@
 
 	// Media Assets
 	let image = $state(initialProduct?.image || '');
-	let images = $state<string[]>(initialProduct?.images || (initialProduct?.image ? [initialProduct.image] : []));
+	let images = $state<string[]>(
+		(initialProduct?.images || (initialProduct?.image ? [initialProduct.image] : [])).filter(
+			(x): x is string => typeof x === 'string' && x.trim().length > 0
+		)
+	);
 
 	// Category & Status
 	let category = $state(initialProduct?.category || firstCategory);

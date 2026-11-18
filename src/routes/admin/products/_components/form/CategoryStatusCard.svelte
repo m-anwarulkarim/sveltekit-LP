@@ -23,31 +23,44 @@
 
 	let categoriesList = $derived.by(() => {
 		if (taxonomyTree && taxonomyTree.length > 0) {
-			return taxonomyTree.map((c) => c.name);
+			return taxonomyTree.map((c) => c?.name || '').filter(Boolean);
 		}
 		return [];
 	});
 
 	let subCategoriesList = $derived.by(() => {
 		if (taxonomyTree && taxonomyTree.length > 0 && category) {
+			const catLower = String(category).toLowerCase();
 			const currentCat = taxonomyTree.find(
-				(c) => c.name.toLowerCase() === category.toLowerCase() || c.slug === category.toLowerCase()
+				(c) =>
+					(c?.name && String(c.name).toLowerCase() === catLower) ||
+					(c?.slug && String(c.slug).toLowerCase() === catLower)
 			);
-			return currentCat ? currentCat.subCategories.map((s: any) => s.name) : [];
+			return currentCat && Array.isArray(currentCat.subCategories)
+				? currentCat.subCategories.map((s: any) => s?.name || '').filter(Boolean)
+				: [];
 		}
 		return [];
 	});
 
 	let childCategoriesList = $derived.by(() => {
-		if (taxonomyTree && taxonomyTree.length > 0) {
+		if (taxonomyTree && taxonomyTree.length > 0 && category && subCategory) {
+			const catLower = String(category).toLowerCase();
+			const subLower = String(subCategory).toLowerCase();
 			const currentCat = taxonomyTree.find(
-				(c) => c.name.toLowerCase() === category.toLowerCase() || c.slug === category.toLowerCase()
+				(c) =>
+					(c?.name && String(c.name).toLowerCase() === catLower) ||
+					(c?.slug && String(c.slug).toLowerCase() === catLower)
 			);
-			if (currentCat && subCategory) {
+			if (currentCat && Array.isArray(currentCat.subCategories)) {
 				const currentSub = currentCat.subCategories.find(
-					(s: any) => s.name.toLowerCase() === subCategory.toLowerCase() || s.slug === subCategory.toLowerCase()
+					(s: any) =>
+						(s?.name && String(s.name).toLowerCase() === subLower) ||
+						(s?.slug && String(s.slug).toLowerCase() === subLower)
 				);
-				return currentSub ? currentSub.childCategories.map((ch: any) => ch.name) : [];
+				return currentSub && Array.isArray(currentSub.childCategories)
+					? currentSub.childCategories.map((ch: any) => ch?.name || '').filter(Boolean)
+					: [];
 			}
 		}
 		return [];

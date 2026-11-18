@@ -189,30 +189,53 @@ export class ProductService {
 	 * The product as the admin form expects it: names instead of ids, variants and specs included.
 	 */
 	static async getForEdit(db: Db, idOrSlug: string) {
+		let decoded = idOrSlug;
+		try {
+			decoded = decodeURIComponent(idOrSlug);
+		} catch {}
+
 		const row = await db
 			.select()
 			.from(schema.products)
-			.where(or(eq(schema.products.id, idOrSlug), eq(schema.products.slug, idOrSlug)))
+			.where(
+				or(
+					eq(schema.products.id, idOrSlug),
+					eq(schema.products.slug, idOrSlug),
+					eq(schema.products.id, decoded),
+					eq(schema.products.slug, decoded)
+				)
+			)
 			.get();
 		if (!row) return null;
 
 		const [categories, brand, variants, specs] = await Promise.all([
-			db.select({ id: schema.categories.id, name: schema.categories.name }).from(schema.categories).all(),
+			db
+				.select({ id: schema.categories.id, name: schema.categories.name })
+				.from(schema.categories)
+				.all()
+				.catch(() => []),
 			row.brandId
-				? db.select({ name: schema.brands.name }).from(schema.brands).where(eq(schema.brands.id, row.brandId)).get()
+				? db
+						.select({ name: schema.brands.name })
+						.from(schema.brands)
+						.where(eq(schema.brands.id, row.brandId))
+						.get()
+						.catch(() => undefined)
 				: Promise.resolve(undefined),
 			db
 				.select()
 				.from(schema.productVariants)
 				.where(eq(schema.productVariants.productId, row.id))
 				.orderBy(asc(schema.productVariants.createdAt))
-				.all(),
+				.all()
+				.catch(() => []),
 			db
 				.select()
 				.from(schema.productSpecs)
 				.where(eq(schema.productSpecs.productId, row.id))
 				.orderBy(asc(schema.productSpecs.sortOrder))
 				.all()
+				.catch(() => [])
 		]);
 		const nameOf = (id: string | null) => categories.find((c) => c.id === id)?.name ?? '';
 
@@ -220,12 +243,18 @@ export class ProductService {
 			if (!json) return [];
 			try {
 				const parsed = JSON.parse(json);
-				return Array.isArray(parsed) ? parsed.filter((v) => typeof v === 'string') : [];
+				return Array.isArray(parsed)
+					? parsed.filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
+					: [];
 			} catch {
 				return [];
 			}
 		};
 		const gallery = parseList(row.galleryImages);
+		const primaryImage = (row.image && typeof row.image === 'string' && row.image.trim().length > 0) ? row.image.trim() : '';
+		const initialImages = gallery.length > 0
+			? gallery
+			: (primaryImage ? [primaryImage] : []);
 
 		return {
 			id: row.id,
@@ -263,8 +292,8 @@ export class ProductService {
 				price: v.price ?? row.price,
 				image: v.image ?? ''
 			})),
-			image: row.image,
-			images: gallery.length > 0 ? gallery : [row.image],
+			image: primaryImage,
+			images: initialImages,
 			sizeChartImage: row.sizeChartImage ?? '',
 			description: row.description,
 			returnPolicy: row.returnPolicy ?? '',
